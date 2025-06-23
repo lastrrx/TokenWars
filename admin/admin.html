@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Betting Admin Panel</title>
+    <link rel="stylesheet" href="admin.css">
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Admin Authentication Screen -->
+    <div id="auth-screen" class="auth-container">
+        <div class="auth-box">
+            <h1>Admin Panel Access</h1>
+            <p class="auth-description">Connect your admin wallet and enter your PIN</p>
+            
+            <div class="auth-steps">
+                <div class="auth-step" id="step-wallet">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Connect Admin Wallet</h3>
+                        <button id="connect-admin-wallet" class="btn btn-primary">
+                            Connect Wallet
+                        </button>
+                        <div id="wallet-status" class="wallet-status hidden">
+                            <span class="wallet-address"></span>
+                            <span class="status-icon">✓</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="auth-step disabled" id="step-pin">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Enter Admin PIN</h3>
+                        <input type="password" id="admin-pin" placeholder="Enter 6-digit PIN" 
+                               maxlength="6" pattern="[0-9]{6}" disabled>
+                        <button id="verify-pin" class="btn btn-primary" disabled>
+                            Verify Access
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="auth-error" class="error-message hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main Admin Panel -->
+    <div id="admin-panel" class="admin-panel hidden">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="header-container">
+                <h1>Token Betting Admin</h1>
+                <div class="header-actions">
+                    <span class="admin-wallet"></span>
+                    <button id="logout" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Navigation -->
+        <nav class="admin-nav">
+            <ul class="nav-menu">
+                <li><a href="#dashboard" class="nav-item active">Dashboard</a></li>
+                <li><a href="#competitions" class="nav-item">Competitions</a></li>
+                <li><a href="#users" class="nav-item">Users</a></li>
+                <li><a href="#analytics" class="nav-item">Analytics</a></li>
+                <li><a href="#settings" class="nav-item">Settings</a></li>
+            </ul>
+        </nav>
+
+        <!-- Admin Content -->
+        <main class="admin-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="admin-section">
+                <h2>Dashboard Overview</h2>
+                
+                <!-- Key Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>Total Volume</h3>
+                        <p class="metric-value" id="total-volume">0 SOL</p>
+                        <p class="metric-change positive">+12.5%</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Active Users</h3>
+                        <p class="metric-value" id="active-users">0</p>
+                        <p class="metric-change positive">+5.2%</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Platform Revenue</h3>
+                        <p class="metric-value" id="platform-revenue">0 SOL</p>
+                        <p class="metric-change positive">+8.7%</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Active Competitions</h3>
+                        <p class="metric-value" id="active-competitions">0</p>
+                        <p class="metric-change">0%</p>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="system-status">
+                    <h3>System Status</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Solana Network</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Price Oracles</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Database</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Smart Contracts</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="recent-activity">
+                    <h3>Recent Activity</h3>
+                    <div id="activity-feed" class="activity-feed">
+                        <!-- Activity items will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Competitions Management Section -->
+            <section id="competitions" class="admin-section hidden">
+                <h2>Competition Management</h2>
+                
+                <!-- Create Competition -->
+                <div class="create-competition">
+                    <h3>Create New Competition</h3>
+                    <form id="create-competition-form" class="competition-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Token Selection Method</label>
+                                <select id="selection-method" required>
+                                    <option value="automatic">Automatic (Algorithm)</option>
+                                    <option value="manual">Manual Selection</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Start Time</label>
+                                <input type="datetime-local" id="start-time" required>
+                            </div>
+                        </div>
+                        
+                        <div id="manual-selection" class="form-row hidden">
+                            <div class="form-group">
+                                <label>Token A</label>
+                                <input type="text" id="token-a" placeholder="Token address or symbol">
+                            </div>
+                            <div class="form-group">
+                                <label>Token B</label>
+                                <input type="text" id="token-b" placeholder="Token address or symbol">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Duration (hours)</label>
+                                <input type="number" id="duration" value="24" min="1" max="168" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Market Cap Range</label>
+                                <select id="market-cap-range">
+                                    <option value="5-50">$5M - $50M</option>
+                                    <option value="50-250">$50M - $250M</option>
+                                    <option value="250-1000">$250M - $1B</option>
+                                    <option value="1000+">$1B+</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Create Competition</button>
+                    </form>
+                </div>
+
+                <!-- Active Competitions -->
+                <div class="competitions-list">
+                    <h3>Active Competitions</h3>
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tokens</th>
+                                    <th>Status</th>
+                                    <th>Participants</th>
+                                    <th>Pool Size</th>
+                                    <th>End Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="competitions-tbody">
+                                <!-- Competition rows will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Management Section -->
+            <section id="users" class="admin-section hidden">
+                <h2>User Management</h2>
+                
+                <!-- User Search -->
+                <div class="user-search">
+                    <input type="text" id="user-search-input" 
+                           placeholder="Search by wallet address or username">
+                    <button class="btn btn-primary" onclick="searchUsers()">Search</button>
+                </div>
+
+                <!-- Users Table -->
+                <div class="users-list">
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Wallet</th>
+                                    <th>Username</th>
+                                    <th>Total Bets</th>
+                                    <th>Win Rate</th>
+                                    <th>Total Volume</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody">
+                                <!-- User rows will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- User Details Modal -->
+                <div id="user-details-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <span class="close-modal">&times;</span>
+                        <div id="user-details-content">
+                            <!-- User details will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="admin-section hidden">
+                <h2>Platform Analytics</h2>
+                
+                <!-- Analytics Controls -->
+                <div class="analytics-controls">
+                    <select id="analytics-period">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="all">All Time</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="exportAnalytics()">
+                        Export Data
+                    </button>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Volume Over Time</h3>
+                        <canvas id="volume-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>User Growth</h3>
+                        <canvas id="users-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Competition Participation</h3>
+                        <canvas id="participation-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Revenue Breakdown</h3>
+                        <canvas id="revenue-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Analytics Summary -->
+                <div class="analytics-summary">
+                    <h3>Key Insights</h3>
+                    <div id="insights-container">
+                        <!-- Insights will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="admin-section hidden">
+                <h2>Platform Settings</h2>
+                
+                <!-- Platform Configuration -->
+                <div class="settings-group">
+                    <h3>Platform Configuration</h3>
+                    <form id="platform-settings-form">
+                        <div class="form-group">
+                            <label>Platform Fee (%)</label>
+                            <input type="number" id="platform-fee" value="15" min="0" max="50" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Default Bet Amount (SOL)</label>
+                            <input type="number" id="bet-amount" value="0.1" min="0.01" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Default Competition Duration (hours)</label>
+                            <input type="number" id="default-duration" value="24" min="1" max="168">
+                        </div>
+                        <div class="form-group">
+                            <label>Platform Wallet</label>
+                            <input type="text" id="platform-wallet" placeholder="Platform wallet address">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </form>
+                </div>
+
+                <!-- Admin Management -->
+                <div class="settings-group">
+                    <h3>Admin Management</h3>
+                    <button class="btn btn-secondary" onclick="showAddAdmin()">Add Admin</button>
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Wallet Address</th>
+                                    <th>Role</th>
+                                    <th>Added</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admins-tbody">
+                                <!-- Admin rows will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Emergency Controls -->
+                <div class="settings-group danger-zone">
+                    <h3>Emergency Controls</h3>
+                    <p class="warning-text">⚠️ Use these controls only in emergency situations</p>
+                    <button class="btn btn-danger" onclick="pausePlatform()">
+                        Pause All Competitions
+                    </button>
+                    <button class="btn btn-danger" onclick="emergencyWithdraw()">
+                        Enable Emergency Withdrawals
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
