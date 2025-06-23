@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TokenWars - Professional Solana Token Predictions</title>
+    
+    <!-- Professional Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Solana Web3.js -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    
+    <!-- Chart.js for price charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Professional Grid Background -->
+    <div class="background-pattern"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#markets" class="logo">TOKENWARS</a>
+            
+            <ul class="nav-links">
+                <li><a href="#markets" class="nav-link active">Markets</a></li>
+                <li><a href="#competitions" class="nav-link">Competitions</a></li>
+                <li><a href="#analytics" class="nav-link">Analytics</a></li>
+                <li><a href="#rankings" class="nav-link">Rankings</a></li>
+                <li><a href="#portfolio" class="nav-link">Portfolio</a></li>
+                <li id="connectWalletBtn">
+                    <button class="btn-connect" id="connect-wallet">Connect Wallet</button>
+                </li>
+                <li id="wallet-info" class="hidden">
+                    <div class="user-info">
+                        <span class="user-avatar" id="userAvatar">🎯</span>
+                        <span class="user-name" id="userName">User</span>
+                        <span class="wallet-balance" id="wallet-balance">0.00 SOL</span>
+                        <button class="btn-disconnect" id="disconnect-wallet">Disconnect</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1 class="hero-title">PREDICT. COMPETE. PROFIT.</h1>
+        <p class="hero-subtitle">Professional token prediction markets on Solana</p>
+        
+        <!-- Live Market Ticker -->
+        <div class="live-ticker">
+            <div class="ticker-content" id="ticker-content">
+                <!-- Ticker items will be dynamically loaded -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Markets Section (Active Competitions) -->
+        <section id="markets" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">ACTIVE MARKETS</h2>
+                    <div class="section-filters">
+                        <select id="filter-status" class="filter-select">
+                            <option value="all">All Markets</option>
+                            <option value="active">Active</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <select id="sort-by" class="filter-select">
+                            <option value="time">Time Remaining</option>
+                            <option value="pool">Pool Size</option>
+                            <option value="participants">Participants</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="competitions-grid" id="competitions-grid">
+                    <div class="loading">Loading markets...</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Competitions Section -->
+        <section id="competitions" class="section hidden">
+            <div class="container">
+                <h2 class="section-title">TOURNAMENT MODE</h2>
+                <p class="section-subtitle">Compete in weekly tournaments for bigger prizes</p>
+                <!-- Tournament content here -->
+            </div>
+        </section>
+        
+        <!-- Analytics Section -->
+        <section id="analytics" class="section hidden">
+            <div class="container">
+                <h2 class="section-title">MARKET ANALYTICS</h2>
+                
+                <!-- Platform Stats -->
+                <div class="platform-stats-grid">
+                    <div class="platform-stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="total-volume">0 SOL</div>
+                        <div class="stat-label">Total Volume</div>
+                    </div>
+                    <div class="platform-stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value" id="total-predictions">0</div>
+                        <div class="stat-label">Predictions Made</div>
+                    </div>
+                    <div class="platform-stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="active-users">0</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="platform-stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value" id="avg-win-rate">0%</div>
+                        <div class="stat-label">Avg Win Rate</div>
+                    </div>
+                </div>
+                
+                <!-- Charts container -->
+                <div class="charts-container">
+                    <canvas id="volume-chart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Rankings Section (Leaderboard) -->
+        <section id="rankings" class="section hidden">
+            <div class="container">
+                <h2 class="section-title">LEADERBOARD</h2>
+                
+                <div class="leaderboard-filters">
+                    <button class="filter-btn active" data-period="daily">Today</button>
+                    <button class="filter-btn" data-period="weekly">This Week</button>
+                    <button class="filter-btn" data-period="monthly">This Month</button>
+                    <button class="filter-btn" data-period="all-time">All Time</button>
+                </div>
+                
+                <div class="leaderboard-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>User</th>
+                                <th>Win Rate</th>
+                                <th>Total Winnings</th>
+                                <th>Streak</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Leaderboard rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Portfolio Section (User Profile) -->
+        <section id="portfolio" class="section hidden">
+            <div class="container">
+                <h2 class="section-title">MY PORTFOLIO</h2>
+                
+                <!-- Profile Stats -->
+                <div class="profile-stats">
+                    <div class="stat-card primary">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value" id="user-win-rate">0%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="net-profit">0 SOL</div>
+                        <div class="stat-label">Net Profit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value" id="current-streak">0</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value" id="total-wins">0/0</div>
+                        <div class="stat-label">Wins/Total</div>
+                    </div>
+                </div>
+                
+                <!-- Username Management -->
+                <div class="username-section">
+                    <h3>Username</h3>
+                    <div id="username-display" class="hidden">
+                        <span id="current-username"></span>
+                        <button class="btn btn-secondary" id="change-username">Change</button>
+                    </div>
+                    <div id="username-form">
+                        <input type="text" id="username-input" placeholder="Choose a username" maxlength="20">
+                        <button class="btn btn-primary" id="save-username">Save Username</button>
+                        <p class="input-hint">3-20 characters, letters, numbers, and underscores only</p>
+                    </div>
+                </div>
+                
+                <!-- Token Performance -->
+                <div class="token-performance-section">
+                    <h3 class="section-subtitle">Performance by Token</h3>
+                    <div class="token-performance-grid" id="token-performance-grid">
+                        <!-- Token performance cards will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Betting History -->
+                <div class="betting-history">
+                    <h3 class="section-subtitle">Recent Predictions</h3>
+                    <div id="betting-history-container">
+                        <!-- Betting history will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Achievements -->
+                <div class="achievements-section">
+                    <h3 class="section-subtitle">Achievements</h3>
+                    <div class="achievements-grid" id="achievements-grid">
+                        <!-- Achievements will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Competition Details Modal -->
+    <div id="competition-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close" id="close-modal">&times;</span>
+            <div id="modal-body">
+                <!-- Competition details will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Achievement Notification Container -->
+    <div id="achievement-notifications"></div>
+    
+    <!-- General Notifications Container -->
+    <div id="notifications" class="notifications"></div>
+    
+    <!-- Professional Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>TOKENWARS</h4>
+                <p class="footer-text">Professional prediction markets for Solana tokens.</p>
+            </div>
+            <div class="footer-section">
+                <h4>RESOURCES</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Documentation</a></li>
+                    <li><a href="#">API Access</a></li>
+                    <li><a href="#">Smart Contracts</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>COMMUNITY</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Discord</a></li>
+                    <li><a href="#">Twitter</a></li>
+                    <li><a href="#">Telegram</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>LEGAL</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Risk Disclosure</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+    <script src="competition.js"></script>
+    <script src="user.js"></script>
+</body>
+</html>
