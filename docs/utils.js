@@ -1,63 +1,145 @@
-// Utility Functions for TokenWars with Supabase Integration
+// Enhanced Utility Functions for Token Wars
+// Includes price formatting, market cap formatting, token validation, and display utilities
 
 // ==============================================
-// FORMATTING FUNCTIONS
+// PRICE AND FINANCIAL FORMATTING
 // ==============================================
 
-// Format SOL amounts consistently
+/**
+ * Format price for display with appropriate precision
+ * @param {number|string} price - The price to format
+ * @param {string} currency - Currency symbol (default: '$')
+ * @returns {string} Formatted price string
+ */
+function formatPrice(price, currency = '$') {
+    if (!price || isNaN(price)) return `${currency}0.00`;
+    
+    const num = parseFloat(price);
+    
+    if (num === 0) return `${currency}0.00`;
+    
+    // Handle very small numbers with scientific notation
+    if (num < 0.000001) {
+        return `${currency}${num.toExponential(2)}`;
+    }
+    
+    // Handle small numbers with more decimal places
+    if (num < 0.01) {
+        return `${currency}${num.toFixed(6)}`;
+    }
+    
+    // Handle numbers less than 1 with 4 decimal places
+    if (num < 1) {
+        return `${currency}${num.toFixed(4)}`;
+    }
+    
+    // Handle numbers less than 1000 with 2 decimal places
+    if (num < 1000) {
+        return `${currency}${num.toFixed(2)}`;
+    }
+    
+    // Handle larger numbers with appropriate formatting
+    return `${currency}${num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
+}
+
+/**
+ * Format market cap for display
+ * @param {number|string} marketCap - Market cap value
+ * @param {boolean} includeSymbol - Whether to include $ symbol
+ * @returns {string} Formatted market cap string
+ */
+function formatMarketCap(marketCap, includeSymbol = true) {
+    if (!marketCap || isNaN(marketCap)) return 'N/A';
+    
+    const num = parseFloat(marketCap);
+    const symbol = includeSymbol ? '$' : '';
+    
+    if (num >= 1e12) {
+        return `${symbol}${(num / 1e12).toFixed(2)}T`;
+    } else if (num >= 1e9) {
+        return `${symbol}${(num / 1e9).toFixed(2)}B`;
+    } else if (num >= 1e6) {
+        return `${symbol}${(num / 1e6).toFixed(1)}M`;
+    } else if (num >= 1e3) {
+        return `${symbol}${(num / 1e3).toFixed(0)}K`;
+    } else {
+        return `${symbol}${num.toLocaleString()}`;
+    }
+}
+
+/**
+ * Format percentage change with appropriate styling info
+ * @param {number|string} percentage - Percentage to format
+ * @param {boolean} includeSign - Whether to include + for positive values
+ * @returns {object} Object with text and isPositive properties
+ */
+function formatPercentageChange(percentage, includeSign = true) {
+    if (!percentage && percentage !== 0) {
+        return { text: 'N/A', isPositive: null };
+    }
+    
+    const num = parseFloat(percentage);
+    const isPositive = num >= 0;
+    const sign = includeSign && isPositive ? '+' : '';
+    
+    return {
+        text: `${sign}${num.toFixed(2)}%`,
+        isPositive: isPositive,
+        className: isPositive ? 'positive' : 'negative'
+    };
+}
+
+/**
+ * Format SOL amounts for display
+ * @param {number|string} amount - SOL amount
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted SOL amount
+ */
 function formatSOL(amount, decimals = 3) {
-    if (amount === null || amount === undefined) return '0.000';
+    if (!amount && amount !== 0) return '0.000';
+    
     const num = parseFloat(amount);
-    if (isNaN(num)) return '0.000';
     return num.toFixed(decimals);
 }
 
-// Format large numbers with appropriate suffixes
-function formatLargeNumber(num) {
-    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toString();
+/**
+ * Format volume for display
+ * @param {number|string} volume - Volume value
+ * @returns {string} Formatted volume string
+ */
+function formatVolume(volume) {
+    if (!volume || isNaN(volume)) return 'N/A';
+    
+    const num = parseFloat(volume);
+    
+    if (num >= 1e9) {
+        return `$${(num / 1e9).toFixed(2)}B`;
+    } else if (num >= 1e6) {
+        return `$${(num / 1e6).toFixed(1)}M`;
+    } else if (num >= 1e3) {
+        return `$${(num / 1e3).toFixed(0)}K`;
+    } else {
+        return `$${num.toLocaleString()}`;
+    }
 }
 
-// Format percentages with color coding
-function formatPercent(percent, showSign = true) {
-    const num = parseFloat(percent);
-    if (isNaN(num)) return '0.0%';
-    
-    const sign = showSign && num > 0 ? '+' : '';
-    const formatted = `${sign}${num.toFixed(1)}%`;
-    
-    return formatted;
-}
+// ==============================================
+// TIME AND DATE FORMATTING
+// ==============================================
 
-// Format price with appropriate decimal places
-function formatPrice(price) {
-    if (!price || price === 0) return '0.0000';
-    
-    const num = parseFloat(price);
-    if (isNaN(num)) return '0.0000';
-    
-    if (num < 0.0001) return num.toExponential(2);
-    if (num < 0.01) return num.toFixed(6);
-    if (num < 1) return num.toFixed(4);
-    if (num < 1000) return num.toFixed(2);
-    
-    return formatLargeNumber(num);
-}
-
-// Format wallet addresses for display
-function formatWalletAddress(address, startChars = 6, endChars = 4) {
-    if (!address) return '';
-    if (address.startsWith('DEMO')) return address;
-    if (address.length <= startChars + endChars) return address;
-    
-    return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
-}
-
-// Format time differences
-function formatTimeDifference(future, now = new Date()) {
-    const diff = future - now;
+/**
+ * Format time difference for display
+ * @param {Date|string} targetTime - Target time
+ * @param {Date} currentTime - Current time (default: now)
+ * @returns {string} Formatted time difference
+ */
+function formatTimeDifference(targetTime, currentTime = new Date()) {
+    const target = new Date(targetTime);
+    const current = new Date(currentTime);
+    const diff = target - current;
     
     if (diff <= 0) return 'Expired';
     
@@ -66,105 +148,362 @@ function formatTimeDifference(future, now = new Date()) {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
     
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${seconds}s`;
-    return `${seconds}s`;
+    if (days > 0) {
+        return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+    } else {
+        return `${seconds}s`;
+    }
 }
 
-// Format dates for display
-function formatDate(dateString, options = {}) {
-    const date = new Date(dateString);
-    const defaultOptions = {
+/**
+ * Format relative time (e.g., "5 minutes ago")
+ * @param {Date|string} date - Date to format
+ * @returns {string} Relative time string
+ */
+function formatRelativeTime(date) {
+    const now = new Date();
+    const target = new Date(date);
+    const diff = Math.abs(now - target);
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+    } else if (hours > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else if (minutes > 0) {
+        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else {
+        return 'Just now';
+    }
+}
+
+/**
+ * Format date and time for display
+ * @param {Date|string} date - Date to format
+ * @param {boolean} includeTime - Whether to include time
+ * @returns {string} Formatted date string
+ */
+function formatDateTime(date, includeTime = true) {
+    if (!date) return 'N/A';
+    
+    const d = new Date(date);
+    const options = {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: 'numeric'
     };
     
-    return date.toLocaleDateString('en-US', { ...defaultOptions, ...options });
-}
-
-// ==============================================
-// VALIDATION FUNCTIONS
-// ==============================================
-
-// Validate username format
-function validateUsername(username) {
-    if (!username) return { valid: false, message: 'Username is required' };
-    if (username.length < 3) return { valid: false, message: 'Username must be at least 3 characters' };
-    if (username.length > 20) return { valid: false, message: 'Username must be less than 20 characters' };
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        return { valid: false, message: 'Username can only contain letters, numbers, and underscores' };
-    }
-    if (username.toLowerCase().includes('admin') || username.toLowerCase().includes('official')) {
-        return { valid: false, message: 'Username cannot contain reserved words' };
+    if (includeTime) {
+        options.hour = '2-digit';
+        options.minute = '2-digit';
     }
     
-    return { valid: true, message: 'Username is valid' };
+    return d.toLocaleDateString(undefined, options);
 }
 
-// Validate Solana wallet address
+// ==============================================
+// TOKEN VALIDATION AND UTILITIES
+// ==============================================
+
+/**
+ * Validate token symbol format
+ * @param {string} symbol - Token symbol to validate
+ * @returns {boolean} Whether symbol is valid
+ */
+function validateTokenSymbol(symbol) {
+    if (!symbol || typeof symbol !== 'string') return false;
+    
+    const validation = window.TOKEN_VALIDATION;
+    if (!validation) return true; // Fallback if config not loaded
+    
+    // Check length
+    if (symbol.length < validation.MIN_SYMBOL_LENGTH || 
+        symbol.length > validation.MAX_SYMBOL_LENGTH) {
+        return false;
+    }
+    
+    // Check format (letters, numbers, underscore only)
+    if (!/^[A-Z0-9_]+$/i.test(symbol)) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Validate token name format
+ * @param {string} name - Token name to validate
+ * @returns {boolean} Whether name is valid
+ */
+function validateTokenName(name) {
+    if (!name || typeof name !== 'string') return false;
+    
+    const validation = window.TOKEN_VALIDATION;
+    if (!validation) return true; // Fallback if config not loaded
+    
+    // Check length
+    if (name.length < validation.MIN_NAME_LENGTH || 
+        name.length > validation.MAX_NAME_LENGTH) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Validate Solana wallet address
+ * @param {string} address - Wallet address to validate
+ * @returns {boolean} Whether address is valid
+ */
 function validateWalletAddress(address) {
-    if (!address) return false;
-    if (address.startsWith('DEMO')) return true; // Demo addresses
+    if (!address || typeof address !== 'string') return false;
     
-    // Basic Solana address validation (base58, 32-44 chars)
-    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
-    return address.length >= 32 && address.length <= 44 && base58Regex.test(address);
+    // Demo addresses are valid
+    if (address.startsWith('DEMO')) return true;
+    
+    const validation = window.TOKEN_VALIDATION;
+    if (!validation) {
+        // Basic validation fallback
+        return address.length === 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(address);
+    }
+    
+    // Check length
+    if (address.length !== validation.VALID_ADDRESS_LENGTH) return false;
+    
+    // Check format (Base58)
+    if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(address)) return false;
+    
+    return true;
 }
 
-// Validate SOL amount
-function validateSOLAmount(amount) {
-    const num = parseFloat(amount);
-    if (isNaN(num)) return { valid: false, message: 'Invalid amount' };
-    if (num <= 0) return { valid: false, message: 'Amount must be positive' };
-    if (num > 1000) return { valid: false, message: 'Amount too large' };
+/**
+ * Validate username format
+ * @param {string} username - Username to validate
+ * @returns {object} Validation result with isValid and error properties
+ */
+function validateUsername(username) {
+    if (!username || typeof username !== 'string') {
+        return { isValid: false, error: 'Username is required' };
+    }
     
-    return { valid: true, message: 'Valid amount' };
+    if (username.length < 3) {
+        return { isValid: false, error: 'Username must be at least 3 characters' };
+    }
+    
+    if (username.length > 20) {
+        return { isValid: false, error: 'Username must be 20 characters or less' };
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return { isValid: false, error: 'Username can only contain letters, numbers, and underscores' };
+    }
+    
+    return { isValid: true, error: null };
 }
 
 // ==============================================
-// DATA MANIPULATION FUNCTIONS
+// STRING AND TEXT UTILITIES
 // ==============================================
 
-// Sort array by multiple criteria
-function multiSort(array, criteria) {
-    return array.sort((a, b) => {
-        for (const criterion of criteria) {
-            const { key, direction = 'asc' } = criterion;
-            const aVal = getNestedValue(a, key);
-            const bVal = getNestedValue(b, key);
-            
-            let comparison = 0;
-            if (aVal > bVal) comparison = 1;
-            if (aVal < bVal) comparison = -1;
-            
-            if (comparison !== 0) {
-                return direction === 'desc' ? -comparison : comparison;
-            }
-        }
-        return 0;
-    });
+/**
+ * Truncate string with ellipsis
+ * @param {string} str - String to truncate
+ * @param {number} maxLength - Maximum length
+ * @param {string} suffix - Suffix to add (default: '...')
+ * @returns {string} Truncated string
+ */
+function truncateString(str, maxLength, suffix = '...') {
+    if (!str || typeof str !== 'string') return '';
+    if (str.length <= maxLength) return str;
+    return str.substring(0, maxLength - suffix.length) + suffix;
 }
 
-// Get nested object value by string path
-function getNestedValue(obj, path) {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+/**
+ * Capitalize first letter of each word
+ * @param {string} str - String to capitalize
+ * @returns {string} Capitalized string
+ */
+function capitalizeWords(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/\w\S*/g, (txt) => 
+        txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
 }
 
-// Group array by key
-function groupBy(array, key) {
-    return array.reduce((groups, item) => {
-        const groupKey = getNestedValue(item, key);
-        groups[groupKey] = groups[groupKey] || [];
-        groups[groupKey].push(item);
-        return groups;
-    }, {});
+/**
+ * Format wallet address for display
+ * @param {string} address - Wallet address
+ * @param {number} prefixLength - Length of prefix to show
+ * @param {number} suffixLength - Length of suffix to show
+ * @returns {string} Formatted address
+ */
+function formatWalletAddress(address, prefixLength = 8, suffixLength = 8) {
+    if (!address || typeof address !== 'string') return '';
+    if (address.startsWith('DEMO')) return address;
+    if (address.length <= prefixLength + suffixLength) return address;
+    
+    return `${address.slice(0, prefixLength)}...${address.slice(-suffixLength)}`;
 }
 
-// Debounce function for search/filter inputs
+// ==============================================
+// COMPARISON AND RANKING UTILITIES
+// ==============================================
+
+/**
+ * Calculate market cap ratio between two tokens
+ * @param {number} marketCap1 - First token market cap
+ * @param {number} marketCap2 - Second token market cap
+ * @returns {number} Ratio (larger/smaller)
+ */
+function calculateMarketCapRatio(marketCap1, marketCap2) {
+    if (!marketCap1 || !marketCap2 || isNaN(marketCap1) || isNaN(marketCap2)) {
+        return null;
+    }
+    
+    const num1 = parseFloat(marketCap1);
+    const num2 = parseFloat(marketCap2);
+    
+    return Math.max(num1, num2) / Math.min(num1, num2);
+}
+
+/**
+ * Determine if two tokens are compatible for pairing
+ * @param {object} token1 - First token data
+ * @param {object} token2 - Second token data
+ * @returns {object} Compatibility result
+ */
+function checkTokenCompatibility(token1, token2) {
+    if (!token1 || !token2) {
+        return { compatible: false, reason: 'Missing token data' };
+    }
+    
+    // Check market cap compatibility
+    const ratio = calculateMarketCapRatio(token1.market_cap, token2.market_cap);
+    if (!ratio) {
+        return { compatible: false, reason: 'Missing market cap data' };
+    }
+    
+    const tolerance = window.APP_CONFIG?.TOKEN_SELECTION?.MARKET_CAP_TOLERANCE || 0.10;
+    const compatible = (ratio - 1) <= tolerance;
+    
+    return {
+        compatible: compatible,
+        ratio: ratio,
+        reason: compatible ? null : `Market cap difference too large (${ratio.toFixed(2)}x)`
+    };
+}
+
+/**
+ * Calculate performance percentage
+ * @param {number} startPrice - Starting price
+ * @param {number} endPrice - Ending price
+ * @returns {number} Performance percentage
+ */
+function calculatePerformance(startPrice, endPrice) {
+    if (!startPrice || !endPrice || isNaN(startPrice) || isNaN(endPrice)) {
+        return null;
+    }
+    
+    const start = parseFloat(startPrice);
+    const end = parseFloat(endPrice);
+    
+    return ((end - start) / start) * 100;
+}
+
+// ==============================================
+// STORAGE AND CACHING UTILITIES
+// ==============================================
+
+/**
+ * Safe localStorage wrapper with error handling
+ * @param {string} key - Storage key
+ * @param {any} value - Value to store (will be JSON stringified)
+ * @returns {boolean} Success status
+ */
+function setLocalStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (error) {
+        console.warn('Failed to save to localStorage:', error);
+        return false;
+    }
+}
+
+/**
+ * Safe localStorage getter with error handling
+ * @param {string} key - Storage key
+ * @param {any} defaultValue - Default value if not found
+ * @returns {any} Stored value or default
+ */
+function getLocalStorage(key, defaultValue = null) {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn('Failed to read from localStorage:', error);
+        return defaultValue;
+    }
+}
+
+/**
+ * Remove item from localStorage safely
+ * @param {string} key - Storage key
+ * @returns {boolean} Success status
+ */
+function removeLocalStorage(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn('Failed to remove from localStorage:', error);
+        return false;
+    }
+}
+
+// ==============================================
+// NOTIFICATION AND UI UTILITIES
+// ==============================================
+
+/**
+ * Create notification data object
+ * @param {string} message - Notification message
+ * @param {string} type - Notification type (success, error, warning, info)
+ * @param {number} duration - Duration in milliseconds
+ * @returns {object} Notification object
+ */
+function createNotification(message, type = 'info', duration = 5000) {
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    return {
+        id: Date.now() + Math.random(),
+        message: message,
+        type: type,
+        icon: icons[type] || icons.info,
+        duration: duration,
+        timestamp: new Date()
+    };
+}
+
+/**
+ * Debounce function to limit rapid function calls
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in milliseconds
+ * @returns {Function} Debounced function
+ */
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -177,14 +516,17 @@ function debounce(func, wait) {
     };
 }
 
-// Throttle function for scroll/resize events
+/**
+ * Throttle function to limit function execution rate
+ * @param {Function} func - Function to throttle
+ * @param {number} limit - Limit in milliseconds
+ * @returns {Function} Throttled function
+ */
 function throttle(func, limit) {
     let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
+    return function(...args) {
         if (!inThrottle) {
-            func.apply(context, args);
+            func.apply(this, args);
             inThrottle = true;
             setTimeout(() => inThrottle = false, limit);
         }
@@ -192,371 +534,143 @@ function throttle(func, limit) {
 }
 
 // ==============================================
-// STATISTICAL FUNCTIONS
+// SORTING AND FILTERING UTILITIES
 // ==============================================
 
-// Calculate win rate
-function calculateWinRate(wins, total) {
-    if (total === 0) return 0;
-    return (wins / total) * 100;
-}
-
-// Calculate ROI (Return on Investment)
-function calculateROI(totalReturns, totalInvestment) {
-    if (totalInvestment === 0) return 0;
-    return ((totalReturns - totalInvestment) / totalInvestment) * 100;
-}
-
-// Calculate streak (current winning/losing streak)
-function calculateStreak(results) {
-    if (!results || results.length === 0) return 0;
+/**
+ * Sort competitions by different criteria
+ * @param {Array} competitions - Array of competitions
+ * @param {string} sortBy - Sort criteria (time, pool, participants)
+ * @param {string} order - Sort order (asc, desc)
+ * @returns {Array} Sorted competitions
+ */
+function sortCompetitions(competitions, sortBy = 'time', order = 'asc') {
+    if (!Array.isArray(competitions)) return [];
     
-    let streak = 0;
-    const lastResult = results[results.length - 1];
-    
-    for (let i = results.length - 1; i >= 0; i--) {
-        if (results[i] === lastResult) {
-            streak++;
-        } else {
-            break;
-        }
-    }
-    
-    return lastResult === 'win' ? streak : -streak;
-}
-
-// Calculate average
-function calculateAverage(numbers) {
-    if (!numbers || numbers.length === 0) return 0;
-    const sum = numbers.reduce((acc, num) => acc + parseFloat(num || 0), 0);
-    return sum / numbers.length;
-}
-
-// ==============================================
-// UI HELPER FUNCTIONS
-// ==============================================
-
-// Show loading state
-function showLoading(elementId, message = 'Loading...') {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <div class="loading-message">${message}</div>
-            </div>
-        `;
-    }
-}
-
-// Show error state
-function showError(elementId, message = 'An error occurred') {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <div class="error-state">
-                <div class="error-icon">⚠️</div>
-                <div class="error-message">${message}</div>
-                <button class="retry-button" onclick="location.reload()">Retry</button>
-            </div>
-        `;
-    }
-}
-
-// Show empty state
-function showEmpty(elementId, title = 'No data', message = 'Nothing to display') {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📭</div>
-                <div class="empty-title">${title}</div>
-                <div class="empty-message">${message}</div>
-            </div>
-        `;
-    }
-}
-
-// Copy text to clipboard
-async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-        showNotification('Copied to clipboard!', 'success');
-        return true;
-    } catch (err) {
-        console.error('Failed to copy to clipboard:', err);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showNotification('Copied to clipboard!', 'success');
-        return true;
-    }
-}
-
-// Smooth scroll to element
-function scrollToElement(elementId, offset = 0) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        const elementPosition = element.offsetTop - offset;
-        window.scrollTo({
-            top: elementPosition,
-            behavior: 'smooth'
-        });
-    }
-}
-
-// ==============================================
-// LOCAL STORAGE HELPERS
-// ==============================================
-
-// Safe local storage operations
-const storage = {
-    set: (key, value) => {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            console.error('Failed to save to localStorage:', error);
-            return false;
-        }
-    },
-    
-    get: (key, defaultValue = null) => {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : defaultValue;
-        } catch (error) {
-            console.error('Failed to read from localStorage:', error);
-            return defaultValue;
-        }
-    },
-    
-    remove: (key) => {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (error) {
-            console.error('Failed to remove from localStorage:', error);
-            return false;
-        }
-    },
-    
-    clear: () => {
-        try {
-            localStorage.clear();
-            return true;
-        } catch (error) {
-            console.error('Failed to clear localStorage:', error);
-            return false;
-        }
-    }
-};
-
-// ==============================================
-// NOTIFICATION SYSTEM
-// ==============================================
-
-// Show notification
-function showNotification(message, type = 'info', duration = 5000) {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
-    
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    
-    const icon = getNotificationIcon(type);
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">${icon}</div>
-            <div class="notification-message">${message}</div>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
-    `;
-    
-    // Style the notification
-    Object.assign(notification.style, {
-        position: 'fixed',
-        top: '2rem',
-        right: '2rem',
-        padding: '1rem',
-        borderRadius: '0.75rem',
-        color: 'white',
-        fontWeight: '500',
-        zIndex: '10000',
-        minWidth: '300px',
-        maxWidth: '500px',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-        transform: 'translateX(100%)',
-        transition: 'transform 0.3s ease'
-    });
-    
-    // Set background color based on type
-    const colors = {
-        success: 'linear-gradient(135deg, #22c55e, #16a34a)',
-        error: 'linear-gradient(135deg, #ef4444, #dc2626)',
-        warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
-        info: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+    const sortFunctions = {
+        time: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+        pool: (a, b) => (a.total_pool || 0) - (b.total_pool || 0),
+        participants: (a, b) => (a.total_bets || 0) - (b.total_bets || 0)
     };
     
-    notification.style.background = colors[type] || colors.info;
+    const sortFunc = sortFunctions[sortBy] || sortFunctions.time;
+    const sorted = [...competitions].sort(sortFunc);
     
-    // Add to DOM and animate in
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 10);
+    return order === 'desc' ? sorted.reverse() : sorted;
+}
+
+/**
+ * Filter competitions by status
+ * @param {Array} competitions - Array of competitions
+ * @param {string|Array} status - Status or array of statuses to filter by
+ * @returns {Array} Filtered competitions
+ */
+function filterCompetitionsByStatus(competitions, status) {
+    if (!Array.isArray(competitions)) return [];
     
-    // Auto remove after duration
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }
-    }, duration);
-}
-
-// Get notification icon based on type
-function getNotificationIcon(type) {
-    const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
-    };
-    return icons[type] || icons.info;
-}
-
-// Specific notification functions
-function showSuccessNotification(message) {
-    showNotification(message, 'success');
-}
-
-function showErrorNotification(message) {
-    showNotification(message, 'error');
-}
-
-function showWarningNotification(message) {
-    showNotification(message, 'warning');
-}
-
-function showInfoNotification(message) {
-    showNotification(message, 'info');
+    const statusArray = Array.isArray(status) ? status : [status];
+    
+    return competitions.filter(competition => 
+        statusArray.includes(competition.status)
+    );
 }
 
 // ==============================================
-// ANIMATION HELPERS
+// MATHEMATICAL UTILITIES
 // ==============================================
 
-// Fade in animation
-function fadeIn(element, duration = 300) {
-    element.style.opacity = '0';
-    element.style.display = 'block';
-    
-    const start = performance.now();
-    
-    function animate(currentTime) {
-        const elapsed = currentTime - start;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        element.style.opacity = progress.toString();
-        
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        }
-    }
-    
-    requestAnimationFrame(animate);
+/**
+ * Calculate percentage with safe division
+ * @param {number} part - Part value
+ * @param {number} total - Total value
+ * @param {number} decimals - Decimal places
+ * @returns {number} Percentage
+ */
+function calculatePercentage(part, total, decimals = 2) {
+    if (!total || total === 0) return 0;
+    return parseFloat(((part / total) * 100).toFixed(decimals));
 }
 
-// Fade out animation
-function fadeOut(element, duration = 300) {
-    const start = performance.now();
-    const startOpacity = parseFloat(element.style.opacity) || 1;
-    
-    function animate(currentTime) {
-        const elapsed = currentTime - start;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        element.style.opacity = (startOpacity * (1 - progress)).toString();
-        
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            element.style.display = 'none';
-        }
-    }
-    
-    requestAnimationFrame(animate);
+/**
+ * Clamp value between min and max
+ * @param {number} value - Value to clamp
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @returns {number} Clamped value
+ */
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Generate random number between min and max
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @returns {number} Random number
+ */
+function randomBetween(min, max) {
+    return Math.random() * (max - min) + min;
 }
 
 // ==============================================
-// EXPORT UTILITY FUNCTIONS
+// EXPORT UTILITIES FOR GLOBAL ACCESS
 // ==============================================
 
-// Make all utilities available globally
+// Export all utility functions for global use
 window.utils = {
-    // Formatting
-    formatSOL,
-    formatLargeNumber,
-    formatPercent,
+    // Price and financial formatting
     formatPrice,
-    formatWalletAddress,
+    formatMarketCap,
+    formatPercentageChange,
+    formatSOL,
+    formatVolume,
+    
+    // Time and date formatting
     formatTimeDifference,
-    formatDate,
+    formatRelativeTime,
+    formatDateTime,
     
-    // Validation
-    validateUsername,
+    // Token validation
+    validateTokenSymbol,
+    validateTokenName,
     validateWalletAddress,
-    validateSOLAmount,
+    validateUsername,
     
-    // Data manipulation
-    multiSort,
-    getNestedValue,
-    groupBy,
+    // String utilities
+    truncateString,
+    capitalizeWords,
+    formatWalletAddress,
+    
+    // Comparison utilities
+    calculateMarketCapRatio,
+    checkTokenCompatibility,
+    calculatePerformance,
+    
+    // Storage utilities
+    setLocalStorage,
+    getLocalStorage,
+    removeLocalStorage,
+    
+    // UI utilities
+    createNotification,
     debounce,
     throttle,
     
-    // Statistics
-    calculateWinRate,
-    calculateROI,
-    calculateStreak,
-    calculateAverage,
+    // Sorting and filtering
+    sortCompetitions,
+    filterCompetitionsByStatus,
     
-    // UI helpers
-    showLoading,
-    showError,
-    showEmpty,
-    copyToClipboard,
-    scrollToElement,
-    
-    // Storage
-    storage,
-    
-    // Notifications
-    showNotification,
-    showSuccessNotification,
-    showErrorNotification,
-    showWarningNotification,
-    showInfoNotification,
-    
-    // Animations
-    fadeIn,
-    fadeOut
+    // Mathematical utilities
+    calculatePercentage,
+    clamp,
+    randomBetween
 };
 
-// Also make common functions available directly
+// Make specific functions available globally for backward compatibility
+window.formatPrice = formatPrice;
+window.formatMarketCap = formatMarketCap;
 window.formatSOL = formatSOL;
+window.truncateString = truncateString;
+window.formatTimeDifference = formatTimeDifference;
 window.formatWalletAddress = formatWalletAddress;
-window.showNotification = showNotification;
-window.showErrorNotification = showErrorNotification;
-window.showSuccessNotification = showSuccessNotification;
+window.validateUsername = validateUsername;
