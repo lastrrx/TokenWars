@@ -636,8 +636,7 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <!-- IMPORTANT: Load configuration first, then utils, then other scripts -->
+    <!-- Scripts - CRITICAL ORDER: Load in this exact sequence -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
@@ -645,20 +644,51 @@
     <script src="competition.js"></script>
     <script src="user.js"></script>
     
-    <!-- Initialize the app -->
+    <!-- Initialize the app after all scripts are loaded -->
     <script>
         // Initialize the application when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             console.log('TokenWars initializing...');
             
-            // Initialize Supabase connection
-            if (typeof initializeSupabase === 'function') {
-                initializeSupabase();
-            }
-            
-            // Initialize the main app
-            if (typeof initializeApp === 'function') {
-                initializeApp();
+            try {
+                // Wait for config to be available
+                let configRetries = 0;
+                while (!window.SUPABASE_CONFIG && configRetries < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    configRetries++;
+                }
+                
+                if (!window.SUPABASE_CONFIG) {
+                    throw new Error('Configuration failed to load');
+                }
+                
+                console.log('Config loaded, initializing Supabase...');
+                
+                // Initialize Supabase connection
+                if (typeof window.initializeSupabase === 'function') {
+                    await window.initializeSupabase();
+                } else {
+                    console.error('initializeSupabase function not available');
+                }
+                
+                console.log('Supabase initialized, starting app...');
+                
+                // Initialize the main app
+                if (typeof window.initializeApp === 'function') {
+                    await window.initializeApp();
+                } else {
+                    console.error('initializeApp function not available');
+                }
+                
+                console.log('TokenWars initialization complete!');
+                
+            } catch (error) {
+                console.error('Failed to initialize TokenWars:', error);
+                const dbStatus = document.getElementById('dbStatus');
+                if (dbStatus) {
+                    dbStatus.className = 'db-status disconnected';
+                    dbStatus.textContent = 'Initialization Failed';
+                }
             }
         });
     </script>
