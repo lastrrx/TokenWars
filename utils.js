@@ -1,430 +1,170 @@
-/**
- * TokenWars Utility Functions - Merged Version
- * Combines all utility functions from both implementations
- */
+// Utility Functions for TokenWars with Supabase Integration
 
-// From our version - financial formatting utilities
-/**
- * Format numbers with appropriate suffixes
- */
-function formatNumber(num) {
-    if (num >= 1e9) return `${(num / 1e9).toFixed(2)}
+// ==============================================
+// FORMATTING FUNCTIONS
+// ==============================================
 
-// Local storage wrapper with error handling (enhanced from both versions)
-const storage = {
-    get(key) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : null;
-        } catch (error) {
-            console.error('Storage get error:', error);
-            return null;
-        }
-    },
-    
-    set(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            console.error('Storage set error:', error);
-            return false;
-        }
-    },
-    
-    remove(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (error) {
-            console.error('Storage remove error:', error);
-            return false;
-        }
-    },
-    
-    clear() {
-        try {
-            localStorage.clear();
-            return true;
-        } catch (error) {
-            console.error('Storage clear error:', error);
-            return false;
-        }
-    }
-};
-
-// Session storage wrapper (from co-dev version)
-const session = {
-    get(key) {
-        try {
-            const item = sessionStorage.getItem(key);
-            return item ? JSON.parse(item) : null;
-        } catch (error) {
-            console.error('Session get error:', error);
-            return null;
-        }
-    },
-    
-    set(key, value) {
-        try {
-            sessionStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            console.error('Session set error:', error);
-            return false;
-        }
-    }
-};
-
-// Notification utilities (from our version)
-/**
- * Show toast notification
- */
-function showToast(message, type = 'info') {
-    const container = document.getElementById('notifications');
-    if (!container) return;
-    
-    const toast = document.createElement('div');
-    toast.className = `notification ${type}`;
-    toast.textContent = message;
-    
-    container.appendChild(toast);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        toast.remove();
-    }, 5000);
+// Format SOL amounts consistently
+function formatSOL(amount, decimals = 3) {
+    if (amount === null || amount === undefined) return '0.000';
+    const num = parseFloat(amount);
+    if (isNaN(num)) return '0.000';
+    return num.toFixed(decimals);
 }
 
-// API error handling (from our version)
-/**
- * Handle API errors with user-friendly messages
- */
-function handleAPIError(error) {
-    console.error('API Error:', error);
-    
-    if (error.response) {
-        // Server responded with error
-        switch (error.response.status) {
-            case 400:
-                showNotification('Invalid request. Please check your input.', 'error');
-                break;
-            case 401:
-                showNotification('Authentication required. Please connect your wallet.', 'error');
-                break;
-            case 404:
-                showNotification('Resource not found.', 'error');
-                break;
-            case 500:
-                showNotification('Server error. Please try again later.', 'error');
-                break;
-            default:
-                showNotification('An error occurred. Please try again.', 'error');
-        }
-    } else if (error.request) {
-        // Request made but no response
-        showNotification('Network error. Please check your connection.', 'error');
-    } else {
-        // Something else happened
-        showNotification('An unexpected error occurred.', 'error');
-    }
-}
-
-// Solana transaction helpers (from our version)
-/**
- * Send transaction with proper error handling
- */
-async function sendTransaction(connection, transaction, wallet) {
-    try {
-        const signature = await wallet.sendTransaction(transaction, connection);
-        
-        // Wait for confirmation
-        const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-        
-        if (confirmation.value.err) {
-            throw new Error('Transaction failed');
-        }
-        
-        return signature;
-    } catch (error) {
-        console.error('Transaction error:', error);
-        throw error;
-    }
-}
-
-// Price calculation helpers (from our version)
-/**
- * Calculate potential win amount
- */
-function calculatePotentialWin(pool, entryFee, yourSideBets, totalBets) {
-    const totalPool = pool + entryFee;
-    const platformFee = totalPool * 0.15;
-    const winnerPool = totalPool - platformFee;
-    const estimatedWinners = yourSideBets + 1;
-    
-    return winnerPool / estimatedWinners;
-}
-
-/**
- * Calculate ROI
- */
-function calculateROI(invested, returned) {
-    if (invested === 0) return 0;
-    return ((returned - invested) / invested * 100).toFixed(2);
-}
-
-// Additional utilities from co-dev version
-/**
- * Parse URL query parameters
- */
-function getQueryParams() {
-    const params = new URLSearchParams(window.location.search);
-    const result = {};
-    for (const [key, value] of params) {
-        result[key] = value;
-    }
-    return result;
-}
-
-/**
- * Generate unique ID
- */
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-/**
- * Deep clone object
- */
-function deepClone(obj) {
-    if (obj === null || typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return new Date(obj.getTime());
-    if (obj instanceof Array) return obj.map(item => deepClone(item));
-    
-    const clonedObj = {};
-    for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            clonedObj[key] = deepClone(obj[key]);
-        }
-    }
-    return clonedObj;
-}
-
-/**
- * Check if user is on mobile device
- */
-function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-/**
- * Request animation frame wrapper
- */
-const raf = window.requestAnimationFrame || 
-    window.webkitRequestAnimationFrame || 
-    window.mozRequestAnimationFrame || 
-    function(callback) { return setTimeout(callback, 1000 / 60); };
-
-/**
- * Cancel animation frame wrapper
- */
-const cancelRaf = window.cancelAnimationFrame || 
-    window.webkitCancelAnimationFrame || 
-    window.mozCancelAnimationFrame || 
-    function(id) { clearTimeout(id); };
-
-/**
- * Check if element is in viewport
- */
-function isInViewport(element) {
-    const rect = element.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
-
-// Export all utility functions as a global utils object
-window.utils = {
-    // Number formatting
-    formatNumber,
-    formatSOL,
-    formatPercentage,
-    calculatePercentageChange,
-    formatTokenPrice,
-    formatPrice,
-    formatLargeNumber,
-    
-    // Date/time formatting
-    formatDate,
-    formatRelativeTime,
-    
-    // Wallet utilities
-    truncateAddress,
-    isValidSolanaAddress,
-    
-    // Function utilities
-    debounce,
-    throttle,
-    
-    // Clipboard
-    copyToClipboard,
-    
-    // Storage
-    storage,
-    session,
-    
-    // Notifications
-    showToast,
-    handleAPIError,
-    
-    // Solana helpers
-    sendTransaction,
-    calculatePotentialWin,
-    calculateROI,
-    
-    // General utilities
-    getQueryParams,
-    generateId,
-    deepClone,
-    isMobile,
-    raf,
-    cancelRaf,
-    isInViewport
-};
-
-// Also export individual functions for backward compatibility
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = window.utils;
-}B`;
-    if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
-    if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
-    return num.toFixed(2);
-}
-
-/**
- * Format SOL amount
- */
-function formatSOL(amount) {
-    return `${parseFloat(amount).toFixed(3)} SOL`;
-}
-
-/**
- * Format percentage with + or - sign
- */
-function formatPercentage(percent) {
-    const formatted = parseFloat(percent).toFixed(2);
-    return percent >= 0 ? `+${formatted}%` : `${formatted}%`;
-}
-
-/**
- * Calculate percentage change
- */
-function calculatePercentageChange(oldValue, newValue) {
-    if (oldValue === 0) return 0;
-    return ((newValue - oldValue) / oldValue * 100).toFixed(2);
-}
-
-/**
- * Token price formatting
- */
-function formatTokenPrice(price) {
-    if (price >= 1) return `$${price.toFixed(2)}`;
-    if (price >= 0.01) return `$${price.toFixed(4)}`;
-    if (price >= 0.0001) return `$${price.toFixed(6)}`;
-    return `$${price.toFixed(8)}`;
-}
-
-// From co-dev version - enhanced formatting utilities
-/**
- * Format price with appropriate decimal places
- */
-function formatPrice(price) {
-    if (price >= 1) {
-        return price.toFixed(2);
-    } else if (price >= 0.01) {
-        return price.toFixed(4);
-    } else {
-        return price.toFixed(6);
-    }
-}
-
-/**
- * Format large numbers with abbreviations
- */
+// Format large numbers with appropriate suffixes
 function formatLargeNumber(num) {
-    if (num >= 1e9) {
-        return (num / 1e9).toFixed(2) + 'B';
-    } else if (num >= 1e6) {
-        return (num / 1e6).toFixed(2) + 'M';
-    } else if (num >= 1e3) {
-        return (num / 1e3).toFixed(2) + 'K';
-    }
-    return num.toFixed(2);
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return num.toString();
 }
 
-/**
- * Format date to readable string
- */
-function formatDate(dateString) {
+// Format percentages with color coding
+function formatPercent(percent, showSign = true) {
+    const num = parseFloat(percent);
+    if (isNaN(num)) return '0.0%';
+    
+    const sign = showSign && num > 0 ? '+' : '';
+    const formatted = `${sign}${num.toFixed(1)}%`;
+    
+    return formatted;
+}
+
+// Format price with appropriate decimal places
+function formatPrice(price) {
+    if (!price || price === 0) return '0.0000';
+    
+    const num = parseFloat(price);
+    if (isNaN(num)) return '0.0000';
+    
+    if (num < 0.0001) return num.toExponential(2);
+    if (num < 0.01) return num.toFixed(6);
+    if (num < 1) return num.toFixed(4);
+    if (num < 1000) return num.toFixed(2);
+    
+    return formatLargeNumber(num);
+}
+
+// Format wallet addresses for display
+function formatWalletAddress(address, startChars = 6, endChars = 4) {
+    if (!address) return '';
+    if (address.startsWith('DEMO')) return address;
+    if (address.length <= startChars + endChars) return address;
+    
+    return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+}
+
+// Format time differences
+function formatTimeDifference(future, now = new Date()) {
+    const diff = future - now;
+    
+    if (diff <= 0) return 'Expired';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+}
+
+// Format dates for display
+function formatDate(dateString, options = {}) {
     const date = new Date(dateString);
-    const options = {
+    const defaultOptions = {
+        year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
     };
-    return date.toLocaleDateString('en-US', options);
+    
+    return date.toLocaleDateString('en-US', { ...defaultOptions, ...options });
 }
 
-/**
- * Format relative time (e.g., "2 hours ago")
- */
-function formatRelativeTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
-    
-    return formatDate(dateString);
-}
+// ==============================================
+// VALIDATION FUNCTIONS
+// ==============================================
 
-// Wallet and address utilities
-/**
- * Truncate wallet address
- */
-function truncateAddress(address) {
-    if (!address) return '';
-    return `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
-}
-
-/**
- * Validate Solana address
- */
-function isValidSolanaAddress(address) {
-    try {
-        // Check if it's a valid base58 string and has correct length
-        const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-        return base58Regex.test(address);
-    } catch (error) {
-        return false;
+// Validate username format
+function validateUsername(username) {
+    if (!username) return { valid: false, message: 'Username is required' };
+    if (username.length < 3) return { valid: false, message: 'Username must be at least 3 characters' };
+    if (username.length > 20) return { valid: false, message: 'Username must be less than 20 characters' };
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return { valid: false, message: 'Username can only contain letters, numbers, and underscores' };
     }
+    if (username.toLowerCase().includes('admin') || username.toLowerCase().includes('official')) {
+        return { valid: false, message: 'Username cannot contain reserved words' };
+    }
+    
+    return { valid: true, message: 'Username is valid' };
 }
 
-// Enhanced debounce and throttle functions
-/**
- * Debounce function for input handling
- */
+// Validate Solana wallet address
+function validateWalletAddress(address) {
+    if (!address) return false;
+    if (address.startsWith('DEMO')) return true; // Demo addresses
+    
+    // Basic Solana address validation (base58, 32-44 chars)
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
+    return address.length >= 32 && address.length <= 44 && base58Regex.test(address);
+}
+
+// Validate SOL amount
+function validateSOLAmount(amount) {
+    const num = parseFloat(amount);
+    if (isNaN(num)) return { valid: false, message: 'Invalid amount' };
+    if (num <= 0) return { valid: false, message: 'Amount must be positive' };
+    if (num > 1000) return { valid: false, message: 'Amount too large' };
+    
+    return { valid: true, message: 'Valid amount' };
+}
+
+// ==============================================
+// DATA MANIPULATION FUNCTIONS
+// ==============================================
+
+// Sort array by multiple criteria
+function multiSort(array, criteria) {
+    return array.sort((a, b) => {
+        for (const criterion of criteria) {
+            const { key, direction = 'asc' } = criterion;
+            const aVal = getNestedValue(a, key);
+            const bVal = getNestedValue(b, key);
+            
+            let comparison = 0;
+            if (aVal > bVal) comparison = 1;
+            if (aVal < bVal) comparison = -1;
+            
+            if (comparison !== 0) {
+                return direction === 'desc' ? -comparison : comparison;
+            }
+        }
+        return 0;
+    });
+}
+
+// Get nested object value by string path
+function getNestedValue(obj, path) {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+}
+
+// Group array by key
+function groupBy(array, key) {
+    return array.reduce((groups, item) => {
+        const groupKey = getNestedValue(item, key);
+        groups[groupKey] = groups[groupKey] || [];
+        groups[groupKey].push(item);
+        return groups;
+    }, {});
+}
+
+// Debounce function for search/filter inputs
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -437,32 +177,386 @@ function debounce(func, wait) {
     };
 }
 
-/**
- * Throttle function for rate limiting
- */
+// Throttle function for scroll/resize events
 function throttle(func, limit) {
     let inThrottle;
-    return function(...args) {
+    return function() {
+        const args = arguments;
+        const context = this;
         if (!inThrottle) {
-            func.apply(this, args);
+            func.apply(context, args);
             inThrottle = true;
             setTimeout(() => inThrottle = false, limit);
         }
     };
 }
 
-// Clipboard utilities
-/**
- * Copy text to clipboard
- */
+// ==============================================
+// STATISTICAL FUNCTIONS
+// ==============================================
+
+// Calculate win rate
+function calculateWinRate(wins, total) {
+    if (total === 0) return 0;
+    return (wins / total) * 100;
+}
+
+// Calculate ROI (Return on Investment)
+function calculateROI(totalReturns, totalInvestment) {
+    if (totalInvestment === 0) return 0;
+    return ((totalReturns - totalInvestment) / totalInvestment) * 100;
+}
+
+// Calculate streak (current winning/losing streak)
+function calculateStreak(results) {
+    if (!results || results.length === 0) return 0;
+    
+    let streak = 0;
+    const lastResult = results[results.length - 1];
+    
+    for (let i = results.length - 1; i >= 0; i--) {
+        if (results[i] === lastResult) {
+            streak++;
+        } else {
+            break;
+        }
+    }
+    
+    return lastResult === 'win' ? streak : -streak;
+}
+
+// Calculate average
+function calculateAverage(numbers) {
+    if (!numbers || numbers.length === 0) return 0;
+    const sum = numbers.reduce((acc, num) => acc + parseFloat(num || 0), 0);
+    return sum / numbers.length;
+}
+
+// ==============================================
+// UI HELPER FUNCTIONS
+// ==============================================
+
+// Show loading state
+function showLoading(elementId, message = 'Loading...') {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <div class="loading-message">${message}</div>
+            </div>
+        `;
+    }
+}
+
+// Show error state
+function showError(elementId, message = 'An error occurred') {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">⚠️</div>
+                <div class="error-message">${message}</div>
+                <button class="retry-button" onclick="location.reload()">Retry</button>
+            </div>
+        `;
+    }
+}
+
+// Show empty state
+function showEmpty(elementId, title = 'No data', message = 'Nothing to display') {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <div class="empty-title">${title}</div>
+                <div class="empty-message">${message}</div>
+            </div>
+        `;
+    }
+}
+
+// Copy text to clipboard
 async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
-        showNotification('Copied to clipboard', 'success');
+        showNotification('Copied to clipboard!', 'success');
         return true;
-    } catch (error) {
-        console.error('Failed to copy:', error);
-        showNotification('Failed to copy', 'error');
-        return false;
+    } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('Copied to clipboard!', 'success');
+        return true;
     }
 }
+
+// Smooth scroll to element
+function scrollToElement(elementId, offset = 0) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        const elementPosition = element.offsetTop - offset;
+        window.scrollTo({
+            top: elementPosition,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// ==============================================
+// LOCAL STORAGE HELPERS
+// ==============================================
+
+// Safe local storage operations
+const storage = {
+    set: (key, value) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.error('Failed to save to localStorage:', error);
+            return false;
+        }
+    },
+    
+    get: (key, defaultValue = null) => {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (error) {
+            console.error('Failed to read from localStorage:', error);
+            return defaultValue;
+        }
+    },
+    
+    remove: (key) => {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (error) {
+            console.error('Failed to remove from localStorage:', error);
+            return false;
+        }
+    },
+    
+    clear: () => {
+        try {
+            localStorage.clear();
+            return true;
+        } catch (error) {
+            console.error('Failed to clear localStorage:', error);
+            return false;
+        }
+    }
+};
+
+// ==============================================
+// NOTIFICATION SYSTEM
+// ==============================================
+
+// Show notification
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icon = getNotificationIcon(type);
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    // Style the notification
+    Object.assign(notification.style, {
+        position: 'fixed',
+        top: '2rem',
+        right: '2rem',
+        padding: '1rem',
+        borderRadius: '0.75rem',
+        color: 'white',
+        fontWeight: '500',
+        zIndex: '10000',
+        minWidth: '300px',
+        maxWidth: '500px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+        transform: 'translateX(100%)',
+        transition: 'transform 0.3s ease'
+    });
+    
+    // Set background color based on type
+    const colors = {
+        success: 'linear-gradient(135deg, #22c55e, #16a34a)',
+        error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+        warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        info: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+    };
+    
+    notification.style.background = colors[type] || colors.info;
+    
+    // Add to DOM and animate in
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, duration);
+}
+
+// Get notification icon based on type
+function getNotificationIcon(type) {
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    return icons[type] || icons.info;
+}
+
+// Specific notification functions
+function showSuccessNotification(message) {
+    showNotification(message, 'success');
+}
+
+function showErrorNotification(message) {
+    showNotification(message, 'error');
+}
+
+function showWarningNotification(message) {
+    showNotification(message, 'warning');
+}
+
+function showInfoNotification(message) {
+    showNotification(message, 'info');
+}
+
+// ==============================================
+// ANIMATION HELPERS
+// ==============================================
+
+// Fade in animation
+function fadeIn(element, duration = 300) {
+    element.style.opacity = '0';
+    element.style.display = 'block';
+    
+    const start = performance.now();
+    
+    function animate(currentTime) {
+        const elapsed = currentTime - start;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        element.style.opacity = progress.toString();
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        }
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// Fade out animation
+function fadeOut(element, duration = 300) {
+    const start = performance.now();
+    const startOpacity = parseFloat(element.style.opacity) || 1;
+    
+    function animate(currentTime) {
+        const elapsed = currentTime - start;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        element.style.opacity = (startOpacity * (1 - progress)).toString();
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            element.style.display = 'none';
+        }
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// ==============================================
+// EXPORT UTILITY FUNCTIONS
+// ==============================================
+
+// Make all utilities available globally
+window.utils = {
+    // Formatting
+    formatSOL,
+    formatLargeNumber,
+    formatPercent,
+    formatPrice,
+    formatWalletAddress,
+    formatTimeDifference,
+    formatDate,
+    
+    // Validation
+    validateUsername,
+    validateWalletAddress,
+    validateSOLAmount,
+    
+    // Data manipulation
+    multiSort,
+    getNestedValue,
+    groupBy,
+    debounce,
+    throttle,
+    
+    // Statistics
+    calculateWinRate,
+    calculateROI,
+    calculateStreak,
+    calculateAverage,
+    
+    // UI helpers
+    showLoading,
+    showError,
+    showEmpty,
+    copyToClipboard,
+    scrollToElement,
+    
+    // Storage
+    storage,
+    
+    // Notifications
+    showNotification,
+    showSuccessNotification,
+    showErrorNotification,
+    showWarningNotification,
+    showInfoNotification,
+    
+    // Animations
+    fadeIn,
+    fadeOut
+};
+
+// Also make common functions available directly
+window.formatSOL = formatSOL;
+window.formatWalletAddress = formatWalletAddress;
+window.showNotification = showNotification;
+window.showErrorNotification = showErrorNotification;
+window.showSuccessNotification = showSuccessNotification;
