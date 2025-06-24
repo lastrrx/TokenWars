@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How It Works - TokenWars</title>
+    <title>TokenWars Platform Guide</title>
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,44 +17,51 @@
     <link rel="stylesheet" href="styles.css">
     
     <style>
-        /* How It Works Specific Styles */
-        .how-it-works-title {
+        /* Page specific styles */
+        body {
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Page Header */
+        .page-header {
+            text-align: center;
+            padding: 6rem 2rem 2rem;
+        }
+
+        .page-title {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 700;
             background: linear-gradient(135deg, #8b5cf6, #ec4899, #06b6d4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: #9ca3af;
+            font-weight: 300;
         }
 
         /* Hero Section */
         .hero-section {
-            padding: 3rem 0;
+            padding: 4rem 2rem;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-            animation: heroGlow 10s ease-in-out infinite alternate;
-        }
-
-        @keyframes heroGlow {
-            0% { transform: rotate(0deg) scale(1); }
-            100% { transform: rotate(180deg) scale(1.1); }
+            background: rgba(139, 92, 246, 0.05);
+            margin-bottom: 6rem;
         }
 
         .hero-subtitle {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             color: #d1d5db;
             margin-bottom: 2rem;
             font-weight: 300;
-            opacity: 0.9;
         }
 
         .trust-badge {
@@ -67,48 +74,49 @@
             border-radius: 2rem;
             color: #10b981;
             font-weight: 600;
-            margin-top: 1rem;
-            animation: trustPulse 3s ease-in-out infinite;
         }
 
-        @keyframes trustPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
+        /* Content Sections */
+        .content-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
         }
 
-        /* Content Section Container */
         .content-section {
-            margin-bottom: 6rem; /* Increased from 4rem */
-            scroll-margin-top: 100px;
-            padding: 0 1rem; /* Added padding */
-        }
-
-        .section-header {
-            margin-bottom: 2rem;
+            margin-bottom: 8rem;
             text-align: center;
         }
 
+        /* Section Number */
         .section-number {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
+            display: inline-flex;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, #8b5cf6, #ec4899);
             border-radius: 50%;
             color: white;
             font-weight: 700;
-            display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.2rem;
+            margin: 0 auto 2rem;
+            font-size: 1.5rem;
+        }
+
+        .section-header {
+            margin-bottom: 4rem;
         }
 
         .section-title {
             font-family: 'Orbitron', monospace;
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: #ffffff;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
         }
 
         .section-description {
@@ -117,6 +125,511 @@
             max-width: 600px;
             margin: 0 auto;
         }
+
+        /* Timeframe Cards Container */
+        .timeframe-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .timeframe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .timeframe-card {
+            background: rgba(31, 41, 55, 0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeframe-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #ec4899);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .timeframe-card:hover {
+            transform: translateY(-8px);
+            border-color: #8b5cf6;
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+        }
+
+        .timeframe-card:hover::before {
+            opacity: 1;
+        }
+
+        .timeframe-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeframe-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeframe-duration {
+            font-size: 1.3rem;
+            color: #10b981;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .timeframe-description {
+            font-size: 0.95rem;
+            color: #9ca3af;
+            line-height: 1.5;
+        }
+
+        .timeframe-footer {
+            text-align: center;
+            color: #8b5cf6;
+            font-weight: 600;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+        }
+
+        /* How Predictions Work Steps */
+        .prediction-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            margin: 4rem 0;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .step-card {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-icon {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .step-description {
+            color: #9ca3af;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Token Matching Visual */
+        .matching-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .matching-demo {
+            background: rgba(31, 41, 55, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 3rem 2rem;
+            margin: 3rem 0;
+        }
+
+        .matching-title {
+            text-align: center;
+            color: #8b5cf6;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .matching-examples {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .match-example {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Prize Distribution Calculator */
+        .prize-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .prize-calculator {
+            background: rgba(31, 41, 55, 0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 3rem;
+            margin-top: 3rem;
+        }
+
+        /* TWAP Section */
+        .twap-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .twap-visual {
+            background: rgba(31, 41, 55, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 3rem;
+            margin-top: 3rem;
+        }
+
+        .twap-benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        /* Escrow Flow */
+        .escrow-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .escrow-flow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            margin: 4rem 0;
+            align-items: center;
+        }
+
+        .escrow-step {
+            text-align: center;
+            position: relative;
+        }
+
+        .escrow-icon {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .escrow-label {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .escrow-desc {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .contract-button-container {
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .contract-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            color: #8b5cf6;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .contract-link:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Transparency Box */
+        .transparency-box {
+            background: rgba(16, 185, 129, 0.05);
+            border: 2px solid rgba(16, 185, 129, 0.2);
+            border-radius: 1rem;
+            padding: 3rem;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .transparency-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .transparency-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        /* Platform Features */
+        .features-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        /* Competition Types */
+        .competition-types-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .types-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        /* FAQ */
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Getting Started */
+        .getting-started {
+            background: rgba(139, 92, 246, 0.05);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1.5rem;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin-top: 4rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .content-section {
+                margin-bottom: 6rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .timeframe-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .prediction-steps,
+            .escrow-flow {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-background"></div>
+    <div class="geometric-patterns"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">TokenWars</a>
+            
+            <ul class="nav-links">
+                <li><a href="index.html#markets">Markets</a></li>
+                <li><a href="index.html#competitions">Competitions</a></li>
+                <li><a href="index.html#leaderboard">Leaderboard</a></li>
+                <li><a href="index.html#portfolio">Portfolio</a></li>
+                <li><a href="how-it-works.html" class="active">Guide</a></li>
+                
+                <!-- Wallet Connection States -->
+                <li id="connectWalletBtn"><a href="index.html" class="btn-primary">Connect Wallet</a></li>
+                <li id="traderInfo" style="display: none;">
+                    <div id="navTraderAvatar">🎯</div>
+                    <span id="navTraderName">Trader</span>
+                    <button class="nav-disconnect" onclick="disconnectWallet()">Disconnect</button>
+                </li>
+            </ul>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">TokenWars Platform Guide</h1>
+        <p class="page-subtitle">Smart predictions. Multiple timeframes. Real rewards.</p>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <h2 class="hero-subtitle">Your Path to Token Trading Success</h2>
+        <div class="trust-badge">
+            🔐 Secured by Solana Smart Contracts & TWAP Pricing
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <!-- Competition Timeframes Section -->
+        <section class="content-section">
+            <div class="section-number">1</div>
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span>⏱️</span> Competition Timeframes
+                </h2>
+                <p class="section-description">Choose the prediction window that matches your trading style</p>
+            </div>
+
+            <div class="timeframe-container">
+                <div class="timeframe-grid">
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">⚡</div>
+                        <div class="timeframe-name">QUICK</div>
+                        <div class="timeframe-duration">1 Hour</div>
+                        <div class="timeframe-description">For active traders who love fast action</div>
+                    </div>
+
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">📅</div>
+                        <div class="timeframe-name">DAILY</div>
+                        <div class="timeframe-duration">24 Hours</div>
+                        <div class="timeframe-description">Most popular - perfect for daily predictions</div>
+                    </div>
+
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">📊</div>
+                        <div class="timeframe-name">WEEKLY</div>
+                        <div class="timeframe-duration">7 Days</div>
+                        <div class="timeframe-description">For swing traders with longer-term views</div>
+                    </div>
+                </div>
+                
+                <p class="timeframe-footer">
+                    Same 0.1 SOL entry fee • Same prize distribution • Different strategies!
+                </p>
+            </div>
+        </section>
+
+        <!-- Continue with other sections following the same pattern... -->
+    </div>
+
+    <script>
+        // Mobile Navigation
+        function initializeMobileNavigation() {
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            
+            if (!mobileToggle || !navLinks || !hamburger) return;
+            
+            mobileToggle.addEventListener('click', function() {
+                const isOpen = navLinks.classList.contains('active');
+                if (isOpen) {
+                    closeMobileMenu();
+                } else {
+                    openMobileMenu();
+                }
+            });
+        }
+
+        function openMobileMenu() {
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            navLinks.classList.add('active');
+            hamburger.classList.add('active');
+            mobileToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            navLinks.classList.remove('active');
+            hamburger.classList.remove('active');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMobileNavigation();
+        });
+    </script>
+</body>
+</html>
 
         /* Timeframe Cards */
         .timeframe-grid {
@@ -206,15 +719,15 @@
         }
 
         .step-icon {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             background: linear-gradient(135deg, #8b5cf6, #ec4899);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            margin: 0 auto 1rem;
+            font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
             box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
             animation: stepFloat 3s ease-in-out infinite;
             animation-delay: calc(var(--step) * 0.2s);
