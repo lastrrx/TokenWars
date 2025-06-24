@@ -1,590 +1,645 @@
-// Add these functions to your existing app.js file at the beginning
+// Main Application Logic with Supabase Integration
+// This file handles wallet connection, user authentication, and app initialization
 
-// ========================================
-// WALLET CONNECTION MODAL FUNCTIONALITY
-// ========================================
-
-// Global state for modal
+// Global state
+let walletProvider = null;
+let connectedWallet = null;
+let currentUser = null;
 let currentStep = 1;
-let selectedWallet = null;
 let selectedAvatar = '🎯';
-let traderData = {
-    username: '',
-    avatar: '🎯',
-    wallet: '',
-    walletType: ''
-};
+let agreementAccepted = false;
 
-// Modal control functions
+// Initialize the application
+async function initializeApp() {
+    console.log('Initializing TokenWars app...');
+    
+    try {
+        // Check if user was previously connected
+        const lastWallet = localStorage.getItem('tokenWars_lastWallet');
+        if (lastWallet) {
+            console.log('Attempting to reconnect to last wallet:', lastWallet);
+            // Try to reconnect automatically
+            setTimeout(() => selectWallet(lastWallet), 1000);
+        }
+        
+        // Initialize wallet status checking
+        updateWalletStatus();
+        
+        // Set up periodic wallet status updates
+        setInterval(updateWalletStatus, 5000);
+        
+        console.log('App initialization complete');
+    } catch (error) {
+        console.error('App initialization failed:', error);
+        showErrorNotification('Failed to initialize application');
+    }
+}
+
+// Update wallet availability status
+function updateWalletStatus() {
+    const wallets = {
+        phantom: window.phantom?.solana,
+        solflare: window.solflare,
+        backpack: window.backpack
+    };
+    
+    Object.entries(wallets).forEach(([name, provider]) => {
+        const statusElement = document.getElementById(`${name}Status`);
+        if (statusElement) {
+            statusElement.textContent = provider ? '✓ Installed' : '⚠ Not Installed';
+            statusElement.style.color = provider ? '#22c55e' : '#f59e0b';
+        }
+    });
+}
+
+// ==============================================
+// WALLET CONNECTION FUNCTIONS
+// ==============================================
+
+// Open wallet connection modal
 function openWalletModal() {
-    const modal = document.getElementById('walletModal');
-    if (modal) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        checkWalletAvailability();
+    document.getElementById('walletModal').style.display = 'flex';
+    goToStep(1);
+    updateWalletStatus();
+}
+
+// Close wallet connection modal
+function closeWalletModal() {
+    document.getElementById('walletModal').style.display = 'none';
+    resetModal();
+}
+
+// Reset modal to initial state
+function resetModal() {
+    currentStep = 1;
+    selectedAvatar = '🎯';
+    agreementAccepted = false;
+    
+    // Reset form inputs
+    document.getElementById('traderUsername').value = '';
+    document.getElementById('agreementCheckbox').classList.remove('checked');
+    document.getElementById('createProfileBtn').disabled = true;
+    document.getElementById('finalizeBtn').disabled = true;
+    
+    // Reset avatar selection
+    document.querySelectorAll('.avatar-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    document.querySelector('[data-avatar="🎯"]').classList.add('selected');
+    
+    updateTraderPreview();
+}
+
+// Select wallet type
+async function selectWallet(walletType) {
+    console.log('Selecting wallet:', walletType);
+    
+    document.getElementById('selectedWalletName').textContent = 
+        walletType.charAt(0).toUpperCase() + walletType.slice(1);
+    document.getElementById('connectedWalletType').textContent = 
+        walletType.charAt(0).toUpperCase() + walletType.slice(1);
+    
+    goToStep(2);
+    
+    try {
+        if (walletType === 'demo') {
+            await connectDemoWallet();
+        } else {
+            await connectRealWallet(walletType);
+        }
+    } catch (error) {
+        console.error('Wallet connection failed:', error);
+        showErrorNotification(`Failed to connect to ${walletType} wallet: ${error.message}`);
         goToStep(1);
     }
 }
 
-function closeWalletModal() {
-    const modal = document.getElementById('walletModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-}
-
-// Navigation step functions
-function goToStep(stepNum) {
-    currentStep = stepNum;
-    
-    // Update step indicators
-    for (let i = 1; i <= 5; i++) {
-        const indicator = document.getElementById(`step${i}Indicator`);
-        const content = document.getElementById(`step${i}Content`);
-        
-        if (indicator) {
-            indicator.classList.remove('active', 'completed');
-            if (i < stepNum) indicator.classList.add('completed');
-            if (i === stepNum) indicator.classList.add('active');
-        }
-        
-        if (content) {
-            content.classList.remove('active');
-            if (i === stepNum) content.classList.add('active');
-        }
-    }
-    
-    // Handle step 2.5
-    const step2_5 = document.getElementById('step2_5Content');
-    if (step2_5) {
-        step2_5.classList.remove('active');
-        if (stepNum === 2.5) step2_5.classList.add('active');
-    }
-    
-    // Update modal title based on step
-    updateModalTitle(stepNum);
-}
-
-// Update modal title
-function updateModalTitle(step) {
-    const title = document.getElementById('modalTitle');
-    const subtitle = document.getElementById('modalSubtitle');
-    
-    switch (step) {
-        case 1:
-            title.textContent = 'Connect Wallet';
-            subtitle.textContent = 'Choose your preferred Solana wallet to get started';
-            break;
-        case 2:
-            title.textContent = 'Connecting...';
-            subtitle.textContent = 'Please approve the connection in your wallet';
-            break;
-        case 2.5:
-            title.textContent = 'Wallet Connected';
-            subtitle.textContent = 'Confirming wallet details';
-            break;
-        case 3:
-            title.textContent = 'Create Your Trader Profile';
-            subtitle.textContent = 'Choose a unique username and avatar';
-            break;
-        case 4:
-            title.textContent = 'Platform Rules';
-            subtitle.textContent = 'Important information before you start';
-            break;
-        case 5:
-            title.textContent = 'Welcome to TokenWars!';
-            subtitle.textContent = 'You\'re ready to predict';
-            break;
-    }
-}
-
-// Check wallet availability
-function checkWalletAvailability() {
-    console.log('🔍 Checking wallet availability...');
-    
-    // Check Phantom
-    if (window.solana && window.solana.isPhantom) {
-        document.getElementById('phantomStatus').textContent = '✅ Ready';
-        document.getElementById('phantomStatus').style.color = '#10b981';
-    } else {
-        document.getElementById('phantomStatus').textContent = '⚠️ Install Extension';
-        document.getElementById('phantomStatus').style.color = '#f59e0b';
-    }
-
-    // Check Solflare
-    if (window.solflare && window.solflare.isSolflare) {
-        document.getElementById('solflareStatus').textContent = '✅ Ready';
-        document.getElementById('solflareStatus').style.color = '#10b981';
-    } else {
-        document.getElementById('solflareStatus').textContent = '⚠️ Install Extension';
-        document.getElementById('solflareStatus').style.color = '#f59e0b';
-    }
-
-    // Check Backpack
-    if (window.backpack) {
-        document.getElementById('backpackStatus').textContent = '✅ Ready';
-        document.getElementById('backpackStatus').style.color = '#10b981';
-    } else {
-        document.getElementById('backpackStatus').textContent = '⚠️ Install Extension';
-        document.getElementById('backpackStatus').style.color = '#f59e0b';
-    }
-
-    // Demo mode always available
-    document.getElementById('demoStatus').textContent = '✓ Available';
-    document.getElementById('demoStatus').style.color = '#8b5cf6';
-}
-
-// Select wallet
-async function selectWallet(walletType) {
-    selectedWallet = walletType;
-    
-    goToStep(2);
-    
-    const walletNames = {
-        'phantom': 'Phantom',
-        'solflare': 'Solflare', 
-        'backpack': 'Backpack',
-        'demo': 'Demo Mode'
-    };
-    
-    document.getElementById('selectedWalletName').textContent = walletNames[walletType];
-    
+// Connect to demo wallet (for testing)
+async function connectDemoWallet() {
     try {
-        // For demo mode, skip actual wallet connection
-        if (walletType === 'demo') {
-            // Generate demo wallet address
-            const demoAddress = 'Demo' + Math.random().toString(36).substr(2, 9).toUpperCase();
-            handleWalletConnection(walletType, demoAddress);
-            return;
-        }
+        // Generate a demo wallet address
+        const demoAddress = 'DEMO' + Math.random().toString(36).substring(2, 15).toUpperCase();
         
-        // Use existing connectWallet function
-        const result = await connectWallet(walletType);
+        connectedWallet = {
+            address: demoAddress,
+            provider: 'demo'
+        };
         
-        if (result.success) {
-            handleWalletConnection(walletType, result.publicKey);
-        } else {
-            throw new Error(result.error || 'Connection failed');
-        }
+        localStorage.setItem('tokenWars_lastWallet', 'demo');
+        localStorage.setItem('tokenWars_demoAddress', demoAddress);
         
+        await handleWalletConnection();
     } catch (error) {
-        console.error('Connection error:', error);
-        showConnectionError(error.message);
+        console.error('Demo wallet connection failed:', error);
+        throw error;
+    }
+}
+
+// Connect to real Solana wallet
+async function connectRealWallet(walletType) {
+    try {
+        let provider;
+        
+        switch (walletType) {
+            case 'phantom':
+                if (!window.phantom?.solana) {
+                    throw new Error('Phantom wallet not installed');
+                }
+                provider = window.phantom.solana;
+                break;
+                
+            case 'solflare':
+                if (!window.solflare) {
+                    throw new Error('Solflare wallet not installed');
+                }
+                provider = window.solflare;
+                break;
+                
+            case 'backpack':
+                if (!window.backpack) {
+                    throw new Error('Backpack wallet not installed');
+                }
+                provider = window.backpack;
+                break;
+                
+            default:
+                throw new Error('Unsupported wallet type');
+        }
+        
+        // Connect to wallet
+        const response = await provider.connect();
+        
+        connectedWallet = {
+            address: response.publicKey.toString(),
+            provider: walletType,
+            providerObject: provider
+        };
+        
+        walletProvider = provider;
+        localStorage.setItem('tokenWars_lastWallet', walletType);
+        
+        await handleWalletConnection();
+    } catch (error) {
+        console.error('Real wallet connection failed:', error);
+        throw error;
     }
 }
 
 // Handle successful wallet connection
-function handleWalletConnection(walletType, walletAddress) {
-    traderData.wallet = walletAddress;
-    traderData.walletType = walletType;
-    
-    // Show wallet confirmation step
-    showWalletConfirmation(walletType, walletAddress);
-    
-    // Check for existing profile
-    checkExistingProfile(walletAddress);
-}
-
-// Show wallet confirmation
-function showWalletConfirmation(walletType, walletAddress) {
-    goToStep(2.5);
-    
-    // Update wallet type
-    document.getElementById('connectedWalletType').textContent = 
-        walletType.charAt(0).toUpperCase() + walletType.slice(1);
-    
-    // Update wallet address
-    document.getElementById('connectedWalletAddress').textContent = walletAddress;
-    
-    // Start checking for profile
-    updateTraderStatus('checking', 'Checking for existing profile...');
-}
-
-// Check for existing trader profile
-async function checkExistingProfile(walletAddress) {
+async function handleWalletConnection() {
     try {
-        // Check localStorage or API for existing profile
-        const savedProfile = localStorage.getItem(`trader_${walletAddress}`);
+        console.log('Wallet connected:', connectedWallet.address);
         
-        if (savedProfile) {
-            const profile = JSON.parse(savedProfile);
-            traderData.username = profile.username;
-            traderData.avatar = profile.avatar;
-            
-            updateTraderStatus('found', `Profile "${profile.username}" found!`);
-            showContinueButton('existing', 'Load My Profile');
+        // Update UI with wallet address
+        document.getElementById('connectedWalletAddress').textContent = 
+            formatWalletAddress(connectedWallet.address);
+        
+        goToStep(2.5); // Wallet confirmation step
+        
+        // Check if user exists in database
+        document.getElementById('traderStatusText').textContent = 'Checking for existing profile...';
+        
+        const existingUser = await window.supabaseClient.getOrCreateUser(connectedWallet.address);
+        
+        if (existingUser) {
+            // User exists, complete login
+            currentUser = existingUser;
+            document.getElementById('traderStatusIcon').textContent = '✅';
+            document.getElementById('traderStatusText').textContent = `Welcome back, ${existingUser.username}!`;
+            document.getElementById('continueBtn').textContent = 'Continue to Dashboard';
+            document.getElementById('continueBtn').onclick = completedOnboarding;
         } else {
-            updateTraderStatus('new', 'No profile found. Ready to create your trader profile!');
-            showContinueButton('new', 'Create Profile');
+            // New user, needs profile creation
+            document.getElementById('traderStatusIcon').textContent = '🎯';
+            document.getElementById('traderStatusText').textContent = 'No profile found. Let\'s create one!';
+            document.getElementById('continueBtn').textContent = 'Create Profile';
+            document.getElementById('continueBtn').onclick = () => goToStep(3);
         }
+        
+        // Show confirmation actions
+        document.getElementById('confirmationActions').style.display = 'flex';
+        
     } catch (error) {
-        console.error('Profile check error:', error);
-        updateTraderStatus('new', 'Ready to create your trader profile!');
-        showContinueButton('new', 'Create Profile');
+        console.error('Error handling wallet connection:', error);
+        showErrorNotification('Failed to connect to database');
+        goToStep(1);
     }
 }
 
-// Update trader status
-function updateTraderStatus(status, message) {
-    const statusDiv = document.querySelector('.trader-status-check');
-    const icon = document.getElementById('traderStatusIcon');
-    const text = document.getElementById('traderStatusText');
-    
-    statusDiv.className = `trader-status-check ${status}`;
-    text.textContent = message;
-    
-    switch (status) {
-        case 'checking':
-            icon.textContent = '🔍';
-            break;
-        case 'found':
-            icon.textContent = '✅';
-            break;
-        case 'new':
-            icon.textContent = '🌟';
-            break;
-    }
-}
-
-// Show continue button
-function showContinueButton(type, buttonText) {
-    const actions = document.getElementById('confirmationActions');
-    const continueBtn = document.getElementById('continueBtn');
-    
-    if (actions) actions.style.display = 'flex';
-    if (continueBtn) {
-        continueBtn.textContent = buttonText;
-        continueBtn.onclick = () => continueFromConfirmation(type);
-    }
-}
-
-// Continue from confirmation
-function continueFromConfirmation(type) {
-    if (type === 'existing') {
-        // Load existing profile
+// Continue from confirmation step
+function continueFromConfirmation() {
+    if (currentUser) {
+        // Existing user
         completedOnboarding();
     } else {
-        // Go to profile creation
+        // New user
         goToStep(3);
     }
 }
 
+// ==============================================
+// USER PROFILE CREATION
+// ==============================================
+
 // Update trader preview
 function updateTraderPreview() {
-    const usernameInput = document.getElementById('traderUsername');
-    const username = usernameInput.value.trim();
+    const username = document.getElementById('traderUsername').value || 'Trader Username';
+    const avatar = selectedAvatar || '🎯';
     
-    // Update trader data
-    traderData.username = username;
+    document.getElementById('previewName').textContent = username;
+    document.getElementById('previewAvatar').textContent = avatar;
     
-    // Update preview
-    document.getElementById('previewName').textContent = username || 'Trader Username';
-    document.getElementById('previewAvatar').textContent = traderData.avatar;
-    
-    // Validate username
+    // Validate username and enable/disable button
     const isValid = validateUsername(username);
-    document.getElementById('createProfileBtn').disabled = !isValid;
+    const createBtn = document.getElementById('createProfileBtn');
+    createBtn.disabled = !isValid;
+    
+    if (isValid && username !== 'Trader Username') {
+        createBtn.disabled = false;
+    } else {
+        createBtn.disabled = true;
+    }
 }
 
 // Validate username
 function validateUsername(username) {
+    if (!username || username === 'Trader Username') return false;
     if (username.length < 3 || username.length > 20) return false;
-    return /^[a-zA-Z0-9_]+$/.test(username);
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) return false;
+    return true;
 }
 
 // Select avatar
-function selectAvatar(avatar) {
-    selectedAvatar = avatar;
-    traderData.avatar = avatar;
+function selectAvatar(emoji) {
+    selectedAvatar = emoji;
     
-    // Update avatar grid selection
+    // Update UI
     document.querySelectorAll('.avatar-option').forEach(option => {
         option.classList.remove('selected');
     });
-    document.querySelector(`[data-avatar="${avatar}"]`).classList.add('selected');
+    document.querySelector(`[data-avatar="${emoji}"]`).classList.add('selected');
     
-    // Update preview
     updateTraderPreview();
 }
 
 // Toggle agreement checkbox
 function toggleAgreement() {
+    agreementAccepted = !agreementAccepted;
+    
     const checkbox = document.getElementById('agreementCheckbox');
     const finalizeBtn = document.getElementById('finalizeBtn');
     
-    checkbox.classList.toggle('checked');
-    finalizeBtn.disabled = !checkbox.classList.contains('checked');
+    if (agreementAccepted) {
+        checkbox.classList.add('checked');
+        finalizeBtn.disabled = false;
+    } else {
+        checkbox.classList.remove('checked');
+        finalizeBtn.disabled = true;
+    }
 }
 
 // Finalize profile creation
 async function finalizeProfile() {
+    const username = document.getElementById('traderUsername').value;
+    
+    if (!validateUsername(username)) {
+        showErrorNotification('Please enter a valid username');
+        return;
+    }
+    
+    if (!agreementAccepted) {
+        showErrorNotification('Please accept the platform rules');
+        return;
+    }
+    
     try {
-        // Save profile
-        const profile = {
-            username: traderData.username,
-            avatar: traderData.avatar,
-            wallet: traderData.wallet,
-            walletType: traderData.walletType,
-            createdAt: new Date().toISOString()
-        };
+        document.getElementById('finalizeBtn').disabled = true;
+        document.getElementById('finalizeBtn').textContent = 'Creating Profile...';
         
-        // Save to localStorage
-        localStorage.setItem(`trader_${traderData.wallet}`, JSON.stringify(profile));
+        // Check username availability
+        const isAvailable = await window.supabaseClient.checkUsernameAvailability(username);
+        if (!isAvailable) {
+            throw new Error('Username is already taken');
+        }
         
-        // Update app state
-        AppState.wallet = traderData.wallet;
-        AppState.username = traderData.username;
-        AppState.isConnected = true;
+        // Create user profile
+        currentUser = await window.supabaseClient.createUserProfile(
+            connectedWallet.address,
+            username,
+            selectedAvatar
+        );
         
-        // Show success
+        console.log('User profile created:', currentUser);
         goToStep(5);
         
     } catch (error) {
-        console.error('Profile creation error:', error);
-        alert('Failed to create profile. Please try again.');
+        console.error('Profile creation failed:', error);
+        showErrorNotification(`Failed to create profile: ${error.message}`);
+        document.getElementById('finalizeBtn').disabled = false;
+        document.getElementById('finalizeBtn').textContent = 'Join TokenWars';
     }
 }
 
-// Complete onboarding
+// Complete onboarding process
 function completedOnboarding() {
     closeWalletModal();
-    
-    // Update UI to show connected state
-    updateConnectedUI();
-    
-    // Show main content
+    updateUIForConnectedUser();
+    loadUserDashboard();
+}
+
+// ==============================================
+// UI UPDATE FUNCTIONS
+// ==============================================
+
+// Update UI for connected user
+function updateUIForConnectedUser() {
+    // Hide disconnected state
     document.getElementById('heroDisconnected').style.display = 'none';
+    document.getElementById('connectWalletBtn').style.display = 'none';
+    
+    // Show connected state
     document.getElementById('heroConnected').style.display = 'block';
+    document.getElementById('traderInfo').style.display = 'flex';
     document.getElementById('mainContent').style.display = 'block';
     
-    // Update nav
-    document.getElementById('connectWalletBtn').style.display = 'none';
-    document.getElementById('traderInfo').style.display = 'flex';
-    document.getElementById('navTraderAvatar').textContent = traderData.avatar;
-    document.getElementById('navTraderName').textContent = traderData.username;
-    document.getElementById('heroTraderNameText').textContent = traderData.username;
+    // Update user info in navigation
+    document.getElementById('navTraderName').textContent = currentUser.username;
+    document.getElementById('navTraderAvatar').textContent = selectedAvatar;
     
-    // Load initial data
-    loadMarkets();
-}
-
-// Update connected UI
-function updateConnectedUI() {
-    // Update navigation
-    document.getElementById('connectWalletBtn').style.display = 'none';
-    document.getElementById('traderInfo').style.display = 'flex';
-    document.getElementById('navTraderAvatar').textContent = traderData.avatar || '🎯';
-    document.getElementById('navTraderName').textContent = traderData.username || 'Trader';
+    // Update hero welcome message
+    document.getElementById('heroTraderNameText').textContent = currentUser.username;
     
-    // Update hero
-    document.getElementById('heroDisconnected').style.display = 'none';
-    document.getElementById('heroConnected').style.display = 'block';
-    document.getElementById('heroTraderNameText').textContent = traderData.username || 'Trader';
+    console.log('UI updated for connected user:', currentUser.username);
 }
 
-// Show connection error
-function showConnectionError(message) {
-    goToStep(1);
-    showNotification(`Connection Failed: ${message}`, 'error');
+// Load user dashboard
+async function loadUserDashboard() {
+    try {
+        // Load initial data
+        await Promise.all([
+            loadActiveCompetitions(),
+            loadUserPortfolio(),
+            loadLeaderboard()
+        ]);
+        
+        // Set up real-time subscriptions
+        setupRealtimeSubscriptions();
+        
+        console.log('User dashboard loaded');
+    } catch (error) {
+        console.error('Failed to load dashboard:', error);
+        showErrorNotification('Failed to load dashboard data');
+    }
 }
 
-// ========================================
-// SECTION NAVIGATION
-// ========================================
+// Load active competitions
+async function loadActiveCompetitions() {
+    try {
+        const competitions = await window.supabaseClient.getActiveCompetitions();
+        displayCompetitions(competitions);
+    } catch (error) {
+        console.error('Failed to load competitions:', error);
+        document.getElementById('competitions-grid').innerHTML = 
+            '<div class="error-message">Failed to load competitions</div>';
+    }
+}
 
+// Load user portfolio
+async function loadUserPortfolio() {
+    if (!currentUser) return;
+    
+    try {
+        const [bets, leaderboardPos] = await Promise.all([
+            window.supabaseClient.getUserBets(currentUser.wallet_address),
+            window.supabaseClient.getUserLeaderboardPosition(currentUser.wallet_address)
+        ]);
+        
+        displayUserPortfolio(bets, leaderboardPos);
+    } catch (error) {
+        console.error('Failed to load portfolio:', error);
+        document.getElementById('portfolio-content').innerHTML = 
+            '<div class="error-message">Failed to load portfolio</div>';
+    }
+}
+
+// Load leaderboard
+async function loadLeaderboard() {
+    try {
+        const leaderboard = await window.supabaseClient.getLeaderboard();
+        displayLeaderboard(leaderboard);
+    } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        document.getElementById('leaderboard-content').innerHTML = 
+            '<div class="error-message">Failed to load leaderboard</div>';
+    }
+}
+
+// ==============================================
+// REAL-TIME SUBSCRIPTIONS
+// ==============================================
+
+// Set up real-time subscriptions
+function setupRealtimeSubscriptions() {
+    // Subscribe to competition updates
+    window.supabaseClient.subscribeToCompetitions((payload) => {
+        console.log('Competition update:', payload);
+        loadActiveCompetitions(); // Refresh competitions
+    });
+    
+    // Subscribe to leaderboard updates
+    window.supabaseClient.subscribeToLeaderboard((payload) => {
+        console.log('Leaderboard update:', payload);
+        loadLeaderboard(); // Refresh leaderboard
+    });
+}
+
+// ==============================================
+// NAVIGATION FUNCTIONS
+// ==============================================
+
+// Go to specific step in modal
+function goToStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Hide all step indicators
+    document.querySelectorAll('.step-indicator').forEach(indicator => {
+        indicator.classList.remove('active');
+    });
+    
+    // Show current step
+    let stepElement;
+    if (step === 2.5) {
+        stepElement = document.getElementById('step2_5Content');
+        document.getElementById('step2Indicator').classList.add('active');
+    } else {
+        stepElement = document.getElementById(`step${step}Content`);
+        document.getElementById(`step${step}Indicator`).classList.add('active');
+    }
+    
+    if (stepElement) {
+        stepElement.classList.add('active');
+        currentStep = step;
+    }
+}
+
+// Show different sections
 function showMarkets() {
     hideAllSections();
     document.getElementById('markets').style.display = 'block';
-    updateActiveNav('markets');
-    loadMarkets();
+    updateActiveNavLink('markets');
 }
 
 function showCompetitions() {
-    hideAllSections();
-    document.getElementById('competitions').style.display = 'block';
-    updateActiveNav('competitions');
+    showMarkets(); // Same as markets for now
 }
 
 function showLeaderboard() {
     hideAllSections();
     document.getElementById('leaderboard').style.display = 'block';
-    updateActiveNav('leaderboard');
-    loadLeaderboard();
+    updateActiveNavLink('leaderboard');
 }
 
 function showPortfolio() {
     hideAllSections();
     document.getElementById('portfolio').style.display = 'block';
-    updateActiveNav('portfolio');
-    initializeUserProfile();
+    updateActiveNavLink('portfolio');
 }
 
 function hideAllSections() {
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => section.style.display = 'none');
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+    });
 }
 
-function updateActiveNav(section) {
-    // Remove active class from all nav links
+function updateActiveNavLink(activeSection) {
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.classList.remove('active');
     });
     
-    // Add active class to current section
-    const activeLink = document.querySelector(`.nav-links a[href="#${section}"]`);
-    if (activeLink) activeLink.classList.add('active');
-}
-
-// ========================================
-// MOBILE NAVIGATION
-// ========================================
-
-function initializeMobileNavigation() {
-    const mobileToggle = document.querySelector('.mobile-menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
-    const hamburger = document.querySelector('.hamburger');
-    
-    if (!mobileToggle || !navLinks || !hamburger) return;
-    
-    mobileToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isOpen = navLinks.classList.contains('active');
-        if (isOpen) {
-            closeMobileMenu();
-        } else {
-            openMobileMenu();
-        }
-    });
-    
-    const navLinksItems = navLinks.querySelectorAll('a');
-    navLinksItems.forEach(link => {
-        link.addEventListener('click', function() {
-            closeMobileMenu();
-        });
-    });
-    
-    document.addEventListener('click', function(event) {
-        const isClickInsideNav = navLinks.contains(event.target) || 
-                                mobileToggle.contains(event.target);
-        if (!isClickInsideNav && navLinks.classList.contains('active')) {
-            closeMobileMenu();
-        }
-    });
-}
-
-function openMobileMenu() {
-    const mobileToggle = document.querySelector('.mobile-menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
-    const hamburger = document.querySelector('.hamburger');
-    
-    navLinks.classList.add('active');
-    hamburger.classList.add('active');
-    mobileToggle.setAttribute('aria-expanded', 'true');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeMobileMenu() {
-    const mobileToggle = document.querySelector('.mobile-menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
-    const hamburger = document.querySelector('.hamburger');
-    
-    navLinks.classList.remove('active');
-    hamburger.classList.remove('active');
-    mobileToggle.setAttribute('aria-expanded', 'false');
-    document.body.style.overflow = '';
-}
-
-// ========================================
-// INITIALIZATION UPDATES
-// ========================================
-
-// Update your existing DOMContentLoaded event listener to include:
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 TokenWars initialized with new UI!');
-    
-    // Initialize mobile navigation
-    initializeMobileNavigation();
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth >= 768) {
-            closeMobileMenu();
-        }
-    });
-    
-    // Modal close handlers
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('walletModal');
-        if (event.target === modal) {
-            closeWalletModal();
-        }
-    });
-    
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeWalletModal();
-        }
-    });
-    
-    // Check for saved session
-    checkSavedSession();
-});
-
-// Check for saved session
-function checkSavedSession() {
-    const savedWallet = localStorage.getItem('connected_wallet');
-    if (savedWallet) {
-        const profile = localStorage.getItem(`trader_${savedWallet}`);
-        if (profile) {
-            const profileData = JSON.parse(profile);
-            traderData = {
-                username: profileData.username,
-                avatar: profileData.avatar,
-                wallet: savedWallet,
-                walletType: profileData.walletType || 'unknown'
-            };
-            
-            AppState.wallet = savedWallet;
-            AppState.username = profileData.username;
-            AppState.isConnected = true;
-            
-            updateConnectedUI();
-            document.getElementById('mainContent').style.display = 'block';
-        }
+    const activeLink = document.querySelector(`[href="#${activeSection}"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
     }
 }
 
-// Update disconnectWallet function
+// ==============================================
+// WALLET DISCONNECT
+// ==============================================
+
+// Disconnect wallet
 async function disconnectWallet() {
     try {
-        // Clear app state
-        AppState.wallet = null;
-        AppState.isConnected = false;
-        AppState.username = null;
+        // Clear user context in database
+        await window.supabaseClient.clearUserContext();
         
-        // Clear saved session
-        localStorage.removeItem('connected_wallet');
+        // Disconnect from wallet provider
+        if (walletProvider && walletProvider.disconnect) {
+            await walletProvider.disconnect();
+        }
+        
+        // Clear local state
+        connectedWallet = null;
+        currentUser = null;
+        walletProvider = null;
+        
+        // Clear local storage
+        localStorage.removeItem('tokenWars_lastWallet');
+        localStorage.removeItem('tokenWars_demoAddress');
         
         // Reset UI
-        document.getElementById('connectWalletBtn').style.display = 'block';
-        document.getElementById('traderInfo').style.display = 'none';
         document.getElementById('heroDisconnected').style.display = 'block';
         document.getElementById('heroConnected').style.display = 'none';
+        document.getElementById('connectWalletBtn').style.display = 'block';
+        document.getElementById('traderInfo').style.display = 'none';
         document.getElementById('mainContent').style.display = 'none';
         
-        // Reset trader data
-        traderData = {
-            username: '',
-            avatar: '🎯',
-            wallet: '',
-            walletType: ''
-        };
-        
-        showNotification('Wallet disconnected', 'info');
+        console.log('Wallet disconnected successfully');
+        showNotification('Wallet disconnected', 'success');
         
     } catch (error) {
-        console.error('Disconnect error:', error);
-        showNotification('Error disconnecting wallet', 'error');
+        console.error('Error disconnecting wallet:', error);
+        showErrorNotification('Failed to disconnect wallet');
     }
 }
+
+// ==============================================
+// UTILITY FUNCTIONS
+// ==============================================
+
+// Format wallet address for display
+function formatWalletAddress(address) {
+    if (!address) return '';
+    if (address.startsWith('DEMO')) return address;
+    return `${address.slice(0, 8)}...${address.slice(-8)}`;
+}
+
+// Show error notification
+function showErrorNotification(message) {
+    showNotification(message, 'error');
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Style the notification
+    Object.assign(notification.style, {
+        position: 'fixed',
+        top: '2rem',
+        right: '2rem',
+        padding: '1rem 1.5rem',
+        borderRadius: '0.5rem',
+        color: 'white',
+        fontWeight: '500',
+        zIndex: '10000',
+        minWidth: '300px',
+        maxWidth: '500px'
+    });
+    
+    // Set background color based on type
+    if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    } else if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+    } else {
+        notification.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+    }
+    
+    // Add to DOM
+    document.body.appendChild(notification);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Make functions globally available
+window.app = {
+    initializeApp,
+    openWalletModal,
+    closeWalletModal,
+    selectWallet,
+    goToStep,
+    continueFromConfirmation,
+    updateTraderPreview,
+    selectAvatar,
+    toggleAgreement,
+    finalizeProfile,
+    completedOnboarding,
+    disconnectWallet,
+    showMarkets,
+    showCompetitions,
+    showLeaderboard,
+    showPortfolio,
+    getCurrentUser: () => currentUser,
+    getConnectedWallet: () => connectedWallet
+};
