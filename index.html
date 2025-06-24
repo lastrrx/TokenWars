@@ -8,6 +8,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Supabase Client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
     <!-- Solana Web3.js -->
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     
@@ -196,9 +199,56 @@
             color: #d1d5db;
             line-height: 1.6;
         }
+
+        /* Loading and Error States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #8b5cf6;
+        }
+
+        .error-message {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        /* Database connection status */
+        .db-status {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            z-index: 1000;
+        }
+
+        .db-status.connected {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #22c55e;
+        }
+
+        .db-status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
+    <!-- Database Connection Status -->
+    <div id="dbStatus" class="db-status disconnected">
+        Database: Connecting...
+    </div>
+
     <!-- Animated Background -->
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
@@ -334,6 +384,30 @@
                 
                 <div class="competitions-grid" id="competitions-grid">
                     <div class="loading">Loading markets...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section id="leaderboard" class="section" style="display: none;">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">LEADERBOARD</h2>
+                </div>
+                <div id="leaderboard-content">
+                    <div class="loading">Loading leaderboard...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section id="portfolio" class="section" style="display: none;">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">MY PORTFOLIO</h2>
+                </div>
+                <div id="portfolio-content">
+                    <div class="loading">Loading portfolio...</div>
                 </div>
             </div>
         </section>
@@ -563,14 +637,30 @@
     </div>
 
     <!-- Scripts -->
+    <!-- IMPORTANT: Load configuration first, then utils, then other scripts -->
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
     <script src="app.js"></script>
     <script src="competition.js"></script>
     <script src="user.js"></script>
     
-    <!-- Additional modal and navigation scripts -->
+    <!-- Initialize the app -->
     <script>
-        // Modal and navigation functionality will be integrated into app.js
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('TokenWars initializing...');
+            
+            // Initialize Supabase connection
+            if (typeof initializeSupabase === 'function') {
+                initializeSupabase();
+            }
+            
+            // Initialize the main app
+            if (typeof initializeApp === 'function') {
+                initializeApp();
+            }
+        });
     </script>
 </body>
 </html>
