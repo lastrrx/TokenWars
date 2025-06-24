@@ -29,3 +29,9 @@ const APP_CONFIG = {
 // Export for use in other files
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.APP_CONFIG = APP_CONFIG;
+
+// Debug log to confirm config is loaded
+console.log('Config loaded successfully:', { 
+    supabaseUrl: SUPABASE_CONFIG.url,
+    hasAnonKey: !!SUPABASE_CONFIG.anonKey 
+});
