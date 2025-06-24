@@ -185,6 +185,9 @@
         .section-header {
             text-align: center;
             margin-bottom: 4rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .section-number {
@@ -198,7 +201,7 @@
             font-weight: 700;
             font-size: 1.5rem;
             color: white;
-            margin: 0 auto 1.5rem;
+            margin-bottom: 1.5rem;
             box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
         }
 
@@ -1147,25 +1150,20 @@
                 <div class="calculator-controls">
                     <div class="slider-control">
                         <div class="slider-label">
-                            <span>Total Participants</span>
-                            <span class="slider-value" id="participantsValue">500</span>
-                        </div>
-                        <input type="range" id="participantsSlider" min="100" max="1000" value="500" step="50">
-                    </div>
-
-                    <div class="slider-control">
-                        <div class="slider-label">
                             <span>Token A vs Token B Split</span>
                             <span class="slider-value" id="splitValue">60% vs 40%</span>
                         </div>
                         <input type="range" id="splitSlider" min="10" max="90" value="60" step="5">
                     </div>
+                    <p style="text-align: center; color: #9ca3af; margin-top: 1rem; font-size: 0.95rem;">
+                        Drag the slider to see how predictions affect payouts
+                    </p>
                 </div>
 
                 <div class="distribution-visual">
                     <div class="team-box team-a">
                         <h4 class="team-name">Token A Believers</h4>
-                        <div class="team-players" id="teamACount">300</div>
+                        <div class="team-players"><span id="teamAPercent">60</span>% of players</div>
                         <div class="payout-info">
                             <div class="payout-label">If Token A wins, each gets:</div>
                             <div class="payout-amount" id="payoutA">1.42 SOL</div>
@@ -1175,7 +1173,7 @@
 
                     <div class="team-box team-b">
                         <h4 class="team-name">Token B Believers</h4>
-                        <div class="team-players" id="teamBCount">200</div>
+                        <div class="team-players"><span id="teamBPercent">40</span>% of players</div>
                         <div class="payout-info">
                             <div class="payout-label">If Token B wins, each gets:</div>
                             <div class="payout-amount" id="payoutB">2.13 SOL</div>
@@ -1186,9 +1184,7 @@
 
                 <div class="pool-summary">
                     <p style="font-size: 1.1rem; color: #8b5cf6; font-weight: 600;">
-                        Total Prize Pool: <span id="totalPool">50 SOL</span> | 
-                        Winners Pool (85%): <span id="winnersPool">42.5 SOL</span> | 
-                        Platform Fee (15%): <span id="platformFee">7.5 SOL</span>
+                        Example: 100 players × 0.1 SOL = 10 SOL pool | Winners get 85% (8.5 SOL) | Platform fee 15% (1.5 SOL)
                     </p>
                 </div>
             </div>
@@ -1367,44 +1363,37 @@
     <script>
         // Prize Calculator Logic
         function updatePrizeCalculator() {
-            const participants = parseInt(document.getElementById('participantsSlider').value);
             const split = parseInt(document.getElementById('splitSlider').value);
             
             // Update display values
-            document.getElementById('participantsValue').textContent = participants;
             document.getElementById('splitValue').textContent = `${split}% vs ${100-split}%`;
             
-            // Calculate team sizes
-            const teamASize = Math.round(participants * split / 100);
-            const teamBSize = participants - teamASize;
+            // Update team percentages
+            document.getElementById('teamAPercent').textContent = split;
+            document.getElementById('teamBPercent').textContent = 100 - split;
             
-            document.getElementById('teamACount').textContent = teamASize;
-            document.getElementById('teamBCount').textContent = teamBSize;
+            // Calculate payouts based on percentage split
+            // Assuming 100 players as example: 100 * 0.1 = 10 SOL total, 8.5 SOL to winners
+            const winnersPool = 8.5; // 85% of 10 SOL
             
-            // Calculate pools
-            const totalPool = participants * 0.1;
-            const winnersPool = totalPool * 0.85;
-            const platformFee = totalPool * 0.15;
+            // Calculate payouts based on percentage of winners
+            const payoutA = split > 0 ? (winnersPool / (split / 100)).toFixed(2) : 0;
+            const payoutB = (100 - split) > 0 ? (winnersPool / ((100 - split) / 100)).toFixed(2) : 0;
             
-            document.getElementById('totalPool').textContent = totalPool.toFixed(1) + ' SOL';
-            document.getElementById('winnersPool').textContent = winnersPool.toFixed(1) + ' SOL';
-            document.getElementById('platformFee').textContent = platformFee.toFixed(1) + ' SOL';
+            // Cap the payouts at the total pool to avoid unrealistic numbers
+            const cappedPayoutA = Math.min(payoutA, winnersPool).toFixed(2);
+            const cappedPayoutB = Math.min(payoutB, winnersPool).toFixed(2);
             
-            // Calculate payouts
-            const payoutA = teamASize > 0 ? (winnersPool / teamASize).toFixed(2) : 0;
-            const payoutB = teamBSize > 0 ? (winnersPool / teamBSize).toFixed(2) : 0;
+            const returnA = (cappedPayoutA / 0.1).toFixed(1);
+            const returnB = (cappedPayoutB / 0.1).toFixed(1);
             
-            const returnA = teamASize > 0 ? (payoutA / 0.1).toFixed(1) : 0;
-            const returnB = teamBSize > 0 ? (payoutB / 0.1).toFixed(1) : 0;
-            
-            document.getElementById('payoutA').textContent = payoutA + ' SOL';
-            document.getElementById('payoutB').textContent = payoutB + ' SOL';
+            document.getElementById('payoutA').textContent = cappedPayoutA + ' SOL';
+            document.getElementById('payoutB').textContent = cappedPayoutB + ' SOL';
             document.getElementById('returnA').textContent = returnA + 'x return!';
             document.getElementById('returnB').textContent = returnB + 'x return!';
         }
 
         // Initialize calculator
-        document.getElementById('participantsSlider').addEventListener('input', updatePrizeCalculator);
         document.getElementById('splitSlider').addEventListener('input', updatePrizeCalculator);
         
         // Set initial values
