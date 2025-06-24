@@ -209,12 +209,11 @@
             <a href="index.html" class="logo">TokenWars</a>
             
             <ul class="nav-links">
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="#markets" onclick="showMarkets()">Markets</a></li>
-                <li><a href="#competitions" onclick="showCompetitions()">Competitions</a></li>
-                <li><a href="#leaderboard" onclick="showLeaderboard()">Leaderboard</a></li>
-                <li><a href="#portfolio" onclick="showPortfolio()">Portfolio</a></li>
-                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="competition.html">Markets</a></li>
+                <li><a href="competition.html">Competitions</a></li>
+                <li><a href="user.html">Leaderboard</a></li>
+                <li><a href="user.html">Portfolio</a></li>
+                <li><a href="how-it-works.html">Guide</a></li>
                 
                 <!-- Disconnected State -->
                 <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal()">Connect Wallet</a></li>
@@ -261,7 +260,7 @@
                 </div>
                 
                 <div class="cta-buttons">
-                    <a href="#markets" class="btn-hero-primary" onclick="showMarkets()">View Markets</a>
+                    <a href="competition.html" class="btn-hero-primary">View Markets</a>
                     <a href="#learn-more" class="btn-secondary">Learn More</a>
                 </div>
             </div>
@@ -309,37 +308,7 @@
     </div>
 
     <!-- Main Content Container (Hidden by default, shown after connection) -->
-    <main class="main-content" id="mainContent" style="display: none;">
-        <!-- Content sections will be dynamically shown/hidden -->
-        
-        <!-- Markets Section -->
-        <section id="markets" class="section" style="display: none;">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="section-title">ACTIVE MARKETS</h2>
-                    <div class="section-filters">
-                        <select id="filter-status" class="filter-select">
-                            <option value="all">All Markets</option>
-                            <option value="active">Active</option>
-                            <option value="upcoming">Upcoming</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                        <select id="sort-by" class="filter-select">
-                            <option value="time">Time Remaining</option>
-                            <option value="pool">Pool Size</option>
-                            <option value="participants">Participants</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="competitions-grid" id="competitions-grid">
-                    <div class="loading">Loading markets...</div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Other sections... -->
-    </main>
+    <!-- This section can be removed or simplified since you have separate pages -->
 
     <!-- Wallet Connection Modal -->
     <div class="wallet-modal" id="walletModal">
