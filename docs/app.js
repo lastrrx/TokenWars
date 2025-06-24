@@ -1,5 +1,5 @@
 // Main Application Logic with Enhanced Token Integration
-// This file handles wallet connection, user authentication, app initialization, and token management
+// FIXED VERSION: Better error handling and initialization order
 
 // Global state
 let walletProvider = null;
@@ -13,6 +13,24 @@ let agreementAccepted = false;
 let tokenUpdateInterval = null;
 let priceUpdateInterval = null;
 let competitionStatusInterval = null;
+
+// Expose main functions globally immediately
+window.initializeApp = initializeApp;
+window.openWalletModal = openWalletModal;
+window.closeWalletModal = closeWalletModal;
+window.selectWallet = selectWallet;
+window.goToStep = goToStep;
+window.continueFromConfirmation = continueFromConfirmation;
+window.updateTraderPreview = updateTraderPreview;
+window.selectAvatar = selectAvatar;
+window.toggleAgreement = toggleAgreement;
+window.finalizeProfile = finalizeProfile;
+window.completedOnboarding = completedOnboarding;
+window.disconnectWallet = disconnectWallet;
+window.showMarkets = showMarkets;
+window.showCompetitions = showCompetitions;
+window.showLeaderboard = showLeaderboard;
+window.showPortfolio = showPortfolio;
 
 // Initialize the application
 async function initializeApp() {
@@ -33,74 +51,176 @@ async function initializeApp() {
         // Set up periodic wallet status updates
         setInterval(updateWalletStatus, 5000);
         
-        // Initialize token management system
-        await initializeTokenSystem();
+        // Initialize token management system with error handling
+        try {
+            await initializeTokenSystem();
+        } catch (tokenError) {
+            console.warn('Token system initialization failed, continuing with basic functionality:', tokenError);
+            showNotification('Token system starting in demo mode', 'warning');
+        }
         
         // Start background services
         startBackgroundServices();
         
-        console.log('App initialization complete with token system');
+        console.log('App initialization complete');
+        showNotification('TokenWars initialized successfully!', 'success');
+        
     } catch (error) {
         console.error('App initialization failed:', error);
-        showErrorNotification('Failed to initialize application');
+        showErrorNotification('Failed to initialize application - some features may not work');
     }
 }
 
-// Initialize token management system
+// Initialize token management system with better error handling
 async function initializeTokenSystem() {
     try {
         console.log('Initializing token management system...');
         
-        // Check if token list needs updating
-        const shouldUpdate = await shouldUpdateTokens();
-        
-        if (shouldUpdate) {
-            console.log('Token list needs updating...');
-            showNotification('Updating token list for better predictions...', 'info');
-            
-            // Update tokens in background
-            updateTokensInBackground();
-        } else {
-            console.log('Token list is up to date');
+        // Check if services are available
+        if (!window.tokenService) {
+            console.warn('Token service not available yet, creating instance...');
+            if (window.TokenService) {
+                window.tokenService = new window.TokenService();
+            } else {
+                throw new Error('TokenService class not loaded');
+            }
         }
+
+        if (!window.priceService) {
+            console.warn('Price service not available yet, creating instance...');
+            if (window.PriceService) {
+                window.priceService = new window.PriceService();
+            } else {
+                throw new Error('PriceService class not loaded');
+            }
+        }
+
+        // Initialize services
+        await window.tokenService.initialize();
+        await window.priceService.initialize();
         
         // Load any existing competitions with real-time data
         await loadCompetitionsWithTokenData();
         
+        console.log('Token system initialized successfully');
+        
     } catch (error) {
         console.error('Token system initialization failed:', error);
-        // Don't fail the entire app if token system has issues
-        console.log('Continuing with basic functionality...');
+        throw error;
     }
 }
 
-// Check if tokens need updating
-async function shouldUpdateTokens() {
+// Load competitions with enhanced token data
+async function loadCompetitionsWithTokenData() {
     try {
-        const tokens = await window.tokenService.getValidTokens();
-        const updateInterval = window.APP_CONFIG.UPDATE_INTERVALS.TOKEN_LIST_REFRESH;
+        if (!window.supabaseClient) {
+            console.warn('Database not available for loading competitions');
+            return;
+        }
+
+        const competitions = await window.supabaseClient.getActiveCompetitions();
         
-        // Check if we have no tokens or if it's been too long since last update
-        if (tokens.length === 0) {
-            return true;
+        if (competitions && competitions.length > 0) {
+            // Enhance competitions with real-time price data if price service is available
+            let enhancedCompetitions = competitions;
+            
+            if (window.priceService && window.priceService.isReady()) {
+                enhancedCompetitions = await Promise.all(
+                    competitions.map(async (competition) => {
+                        try {
+                            // Get current market data for both tokens
+                            const [tokenAData, tokenBData] = await Promise.all([
+                                competition.token_a_address ? 
+                                    window.priceService.getMarketData(competition.token_a_address) : null,
+                                competition.token_b_address ? 
+                                    window.priceService.getMarketData(competition.token_b_address) : null
+                            ]);
+                            
+                            return {
+                                ...competition,
+                                token_a_market_data: tokenAData,
+                                token_b_market_data: tokenBData
+                            };
+                        } catch (error) {
+                            console.warn(`Failed to get market data for competition ${competition.competition_id}:`, error);
+                            return competition;
+                        }
+                    })
+                );
+            }
+            
+            // Display enhanced competitions
+            if (window.competition?.displayCompetitions) {
+                window.competition.displayCompetitions(enhancedCompetitions);
+            } else {
+                console.warn('Competition display function not available');
+            }
+        } else {
+            console.log('No active competitions found');
         }
         
-        // Check last update time
-        if (window.tokenService.lastTokenUpdate) {
-            const timeSinceUpdate = Date.now() - window.tokenService.lastTokenUpdate.getTime();
-            return timeSinceUpdate > updateInterval;
-        }
-        
-        return true; // Default to updating if we can't determine
     } catch (error) {
-        console.error('Error checking token update status:', error);
-        return false;
+        console.error('Failed to load competitions with token data:', error);
+        // Don't fail the app, just show basic message
+        const competitionsGrid = document.getElementById('competitions-grid');
+        if (competitionsGrid) {
+            competitionsGrid.innerHTML = '<div class="loading">No competitions available yet</div>';
+        }
+    }
+}
+
+// Start background services for real-time updates
+function startBackgroundServices() {
+    console.log('Starting background services...');
+    
+    try {
+        // Only start services if the required components are available
+        if (window.APP_CONFIG && window.tokenService) {
+            // Token list refresh (every hour)
+            tokenUpdateInterval = setInterval(async () => {
+                try {
+                    console.log('Performing scheduled token list update...');
+                    await updateTokensInBackground();
+                } catch (error) {
+                    console.warn('Scheduled token update failed:', error);
+                }
+            }, window.APP_CONFIG.UPDATE_INTERVALS?.TOKEN_LIST_REFRESH || 3600000);
+        }
+        
+        if (window.APP_CONFIG && window.priceService) {
+            // Price updates for active competitions (every minute)
+            priceUpdateInterval = setInterval(async () => {
+                try {
+                    await updateActivePrices();
+                } catch (error) {
+                    console.warn('Price update failed:', error);
+                }
+            }, window.APP_CONFIG.UPDATE_INTERVALS?.PRICE_UPDATES || 60000);
+        }
+        
+        // Competition status updates (every 30 seconds)
+        competitionStatusInterval = setInterval(async () => {
+            try {
+                await updateCompetitionStatuses();
+            } catch (error) {
+                console.warn('Competition status update failed:', error);
+            }
+        }, window.APP_CONFIG.UPDATE_INTERVALS?.COMPETITION_STATUS || 30000);
+        
+        console.log('Background services started successfully');
+    } catch (error) {
+        console.error('Failed to start background services:', error);
     }
 }
 
 // Update tokens in background without blocking UI
 async function updateTokensInBackground() {
     try {
+        if (!window.tokenService) {
+            console.warn('Token service not available for background update');
+            return;
+        }
+
         // Start token update process
         const tokens = await window.tokenService.updateTokenList();
         
@@ -108,12 +228,16 @@ async function updateTokensInBackground() {
             console.log(`Updated ${tokens.length} tokens successfully`);
             showNotification(`Updated ${tokens.length} tokens for better predictions!`, 'success');
             
-            // Generate new token pairs
-            const pairs = window.tokenService.generateTokenPairs(tokens);
-            console.log(`Generated ${pairs.length} token pairs`);
-            
-            // Store pairs in database
-            await window.supabaseClient.storeTokenPairs(pairs);
+            // Generate new token pairs if service supports it
+            if (window.tokenService.generateTokenPairs) {
+                const pairs = await window.tokenService.generateTokenPairs(tokens);
+                console.log(`Generated ${pairs.length} token pairs`);
+                
+                // Store pairs in database if available
+                if (window.supabaseClient?.storeTokenPairs) {
+                    await window.supabaseClient.storeTokenPairs(pairs);
+                }
+            }
             
             // Refresh competitions if user is connected
             if (connectedUser) {
@@ -127,78 +251,13 @@ async function updateTokensInBackground() {
     }
 }
 
-// Load competitions with enhanced token data
-async function loadCompetitionsWithTokenData() {
-    try {
-        const competitions = await window.supabaseClient.getActiveCompetitions();
-        
-        if (competitions && competitions.length > 0) {
-            // Enhance competitions with real-time price data
-            const enhancedCompetitions = await Promise.all(
-                competitions.map(async (competition) => {
-                    try {
-                        // Get current market data for both tokens
-                        const [tokenAData, tokenBData] = await Promise.all([
-                            competition.token_a_address ? 
-                                window.priceService.getMarketData(competition.token_a_address) : null,
-                            competition.token_b_address ? 
-                                window.priceService.getMarketData(competition.token_b_address) : null
-                        ]);
-                        
-                        return {
-                            ...competition,
-                            token_a_market_data: tokenAData,
-                            token_b_market_data: tokenBData
-                        };
-                    } catch (error) {
-                        console.warn(`Failed to get market data for competition ${competition.competition_id}:`, error);
-                        return competition;
-                    }
-                })
-            );
-            
-            // Display enhanced competitions
-            if (window.competition?.displayCompetitions) {
-                window.competition.displayCompetitions(enhancedCompetitions);
-            }
-        }
-        
-    } catch (error) {
-        console.error('Failed to load competitions with token data:', error);
-        // Fallback to basic competition loading
-        if (window.competition?.displayCompetitions) {
-            const basicCompetitions = await window.supabaseClient.getActiveCompetitions();
-            window.competition.displayCompetitions(basicCompetitions || []);
-        }
-    }
-}
-
-// Start background services for real-time updates
-function startBackgroundServices() {
-    console.log('Starting background services...');
-    
-    // Token list refresh (every hour)
-    tokenUpdateInterval = setInterval(async () => {
-        console.log('Performing scheduled token list update...');
-        await updateTokensInBackground();
-    }, window.APP_CONFIG.UPDATE_INTERVALS.TOKEN_LIST_REFRESH);
-    
-    // Price updates for active competitions (every minute)
-    priceUpdateInterval = setInterval(async () => {
-        await updateActivePrices();
-    }, window.APP_CONFIG.UPDATE_INTERVALS.PRICE_UPDATES);
-    
-    // Competition status updates (every 30 seconds)
-    competitionStatusInterval = setInterval(async () => {
-        await updateCompetitionStatuses();
-    }, window.APP_CONFIG.UPDATE_INTERVALS.COMPETITION_STATUS);
-    
-    console.log('Background services started successfully');
-}
-
 // Update prices for active competitions
 async function updateActivePrices() {
     try {
+        if (!window.priceService) {
+            return;
+        }
+
         // Only update if we have active competitions visible
         const competitionCards = document.querySelectorAll('.competition-card');
         if (competitionCards.length === 0) return;
@@ -232,30 +291,34 @@ async function updateActivePrices() {
 
 // Update token prices in the UI
 function updateTokenPricesInUI(tokenAddress, price) {
-    // Find all elements displaying this token's price
-    const tokenElements = document.querySelectorAll(`[data-address="${tokenAddress}"]`);
-    
-    tokenElements.forEach(tokenElement => {
-        const priceElement = tokenElement.querySelector('.token-price[data-price]');
-        if (priceElement) {
-            const oldPrice = parseFloat(priceElement.getAttribute('data-price'));
-            const newPrice = parseFloat(price);
-            
-            // Update price display
-            priceElement.textContent = `$${formatPrice(newPrice)}`;
-            priceElement.setAttribute('data-price', newPrice);
-            
-            // Add visual indicator for price changes
-            if (oldPrice && oldPrice !== newPrice) {
-                const changeClass = newPrice > oldPrice ? 'price-increase' : 'price-decrease';
-                priceElement.classList.add(changeClass);
+    try {
+        // Find all elements displaying this token's price
+        const tokenElements = document.querySelectorAll(`[data-address="${tokenAddress}"]`);
+        
+        tokenElements.forEach(tokenElement => {
+            const priceElement = tokenElement.querySelector('.token-price[data-price]');
+            if (priceElement) {
+                const oldPrice = parseFloat(priceElement.getAttribute('data-price'));
+                const newPrice = parseFloat(price);
                 
-                setTimeout(() => {
-                    priceElement.classList.remove(changeClass);
-                }, 2000);
+                // Update price display
+                priceElement.textContent = `$${formatPrice(newPrice)}`;
+                priceElement.setAttribute('data-price', newPrice);
+                
+                // Add visual indicator for price changes
+                if (oldPrice && oldPrice !== newPrice) {
+                    const changeClass = newPrice > oldPrice ? 'price-increase' : 'price-decrease';
+                    priceElement.classList.add(changeClass);
+                    
+                    setTimeout(() => {
+                        priceElement.classList.remove(changeClass);
+                    }, 2000);
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.warn('Error updating token prices in UI:', error);
+    }
 }
 
 // Update competition statuses
@@ -276,7 +339,7 @@ async function updateCompetitionStatuses() {
                 if (now >= endTime) {
                     console.log(`Competition ${competitionId} should transition status`);
                     
-                    // Refresh this specific competition
+                    // Refresh this specific competition if update function exists
                     if (window.competition?.updateCompetitionDisplay) {
                         await window.competition.updateCompetitionDisplay(competitionId);
                     }
@@ -309,7 +372,7 @@ function stopBackgroundServices() {
     }
     
     // Clean up price service
-    if (window.priceService) {
+    if (window.priceService && window.priceService.cleanup) {
         window.priceService.cleanup();
     }
     
@@ -339,15 +402,21 @@ function updateWalletStatus() {
 
 // Open wallet connection modal
 function openWalletModal() {
-    document.getElementById('walletModal').style.display = 'flex';
-    goToStep(1);
-    updateWalletStatus();
+    const modal = document.getElementById('walletModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        goToStep(1);
+        updateWalletStatus();
+    }
 }
 
 // Close wallet connection modal
 function closeWalletModal() {
-    document.getElementById('walletModal').style.display = 'none';
-    resetModal();
+    const modal = document.getElementById('walletModal');
+    if (modal) {
+        modal.style.display = 'none';
+        resetModal();
+    }
 }
 
 // Reset modal to initial state
@@ -357,16 +426,24 @@ function resetModal() {
     agreementAccepted = false;
     
     // Reset form inputs
-    document.getElementById('traderUsername').value = '';
-    document.getElementById('agreementCheckbox').classList.remove('checked');
-    document.getElementById('createProfileBtn').disabled = true;
-    document.getElementById('finalizeBtn').disabled = true;
+    const usernameInput = document.getElementById('traderUsername');
+    if (usernameInput) usernameInput.value = '';
+    
+    const agreementCheckbox = document.getElementById('agreementCheckbox');
+    if (agreementCheckbox) agreementCheckbox.classList.remove('checked');
+    
+    const createBtn = document.getElementById('createProfileBtn');
+    if (createBtn) createBtn.disabled = true;
+    
+    const finalizeBtn = document.getElementById('finalizeBtn');
+    if (finalizeBtn) finalizeBtn.disabled = true;
     
     // Reset avatar selection
     document.querySelectorAll('.avatar-option').forEach(option => {
         option.classList.remove('selected');
     });
-    document.querySelector('[data-avatar="🎯"]').classList.add('selected');
+    const defaultAvatar = document.querySelector('[data-avatar="🎯"]');
+    if (defaultAvatar) defaultAvatar.classList.add('selected');
     
     updateTraderPreview();
 }
@@ -375,10 +452,15 @@ function resetModal() {
 async function selectWallet(walletType) {
     console.log('Selecting wallet:', walletType);
     
-    document.getElementById('selectedWalletName').textContent = 
-        walletType.charAt(0).toUpperCase() + walletType.slice(1);
-    document.getElementById('connectedWalletType').textContent = 
-        walletType.charAt(0).toUpperCase() + walletType.slice(1);
+    const selectedWalletName = document.getElementById('selectedWalletName');
+    if (selectedWalletName) {
+        selectedWalletName.textContent = walletType.charAt(0).toUpperCase() + walletType.slice(1);
+    }
+    
+    const connectedWalletType = document.getElementById('connectedWalletType');
+    if (connectedWalletType) {
+        connectedWalletType.textContent = walletType.charAt(0).toUpperCase() + walletType.slice(1);
+    }
     
     goToStep(2);
     
@@ -472,37 +554,59 @@ async function handleWalletConnection() {
         console.log('Wallet connected:', connectedWallet.address);
         
         // Update UI with wallet address
-        document.getElementById('connectedWalletAddress').textContent = 
-            formatWalletAddress(connectedWallet.address);
+        const connectedWalletAddress = document.getElementById('connectedWalletAddress');
+        if (connectedWalletAddress) {
+            connectedWalletAddress.textContent = formatWalletAddress(connectedWallet.address);
+        }
         
         goToStep(2.5); // Wallet confirmation step
         
         // Check if user exists in database
-        document.getElementById('traderStatusText').textContent = 'Checking for existing profile...';
+        const traderStatusText = document.getElementById('traderStatusText');
+        if (traderStatusText) {
+            traderStatusText.textContent = 'Checking for existing profile...';
+        }
         
-        const existingUser = await window.supabaseClient.getOrCreateUser(connectedWallet.address);
+        let existingUser = null;
+        if (window.supabaseClient) {
+            try {
+                existingUser = await window.supabaseClient.getOrCreateUser(connectedWallet.address);
+            } catch (error) {
+                console.warn('Database check failed, continuing with profile creation:', error);
+            }
+        }
+        
+        const traderStatusIcon = document.getElementById('traderStatusIcon');
+        const continueBtn = document.getElementById('continueBtn');
         
         if (existingUser) {
             // User exists, complete login
             connectedUser = existingUser;
-            document.getElementById('traderStatusIcon').textContent = '✅';
-            document.getElementById('traderStatusText').textContent = `Welcome back, ${existingUser.username}!`;
-            document.getElementById('continueBtn').textContent = 'Continue to Dashboard';
-            document.getElementById('continueBtn').onclick = completedOnboarding;
+            if (traderStatusIcon) traderStatusIcon.textContent = '✅';
+            if (traderStatusText) traderStatusText.textContent = `Welcome back, ${existingUser.username}!`;
+            if (continueBtn) {
+                continueBtn.textContent = 'Continue to Dashboard';
+                continueBtn.onclick = completedOnboarding;
+            }
         } else {
             // New user, needs profile creation
-            document.getElementById('traderStatusIcon').textContent = '🎯';
-            document.getElementById('traderStatusText').textContent = 'No profile found. Let\'s create one!';
-            document.getElementById('continueBtn').textContent = 'Create Profile';
-            document.getElementById('continueBtn').onclick = () => goToStep(3);
+            if (traderStatusIcon) traderStatusIcon.textContent = '🎯';
+            if (traderStatusText) traderStatusText.textContent = 'No profile found. Let\'s create one!';
+            if (continueBtn) {
+                continueBtn.textContent = 'Create Profile';
+                continueBtn.onclick = () => goToStep(3);
+            }
         }
         
         // Show confirmation actions
-        document.getElementById('confirmationActions').style.display = 'flex';
+        const confirmationActions = document.getElementById('confirmationActions');
+        if (confirmationActions) {
+            confirmationActions.style.display = 'flex';
+        }
         
     } catch (error) {
         console.error('Error handling wallet connection:', error);
-        showErrorNotification('Failed to connect to database');
+        showErrorNotification('Failed to process wallet connection');
         goToStep(1);
     }
 }
@@ -524,21 +628,26 @@ function continueFromConfirmation() {
 
 // Update trader preview
 function updateTraderPreview() {
-    const username = document.getElementById('traderUsername').value || 'Trader Username';
+    const usernameInput = document.getElementById('traderUsername');
+    const username = usernameInput ? usernameInput.value || 'Trader Username' : 'Trader Username';
     const avatar = selectedAvatar || '🎯';
     
-    document.getElementById('previewName').textContent = username;
-    document.getElementById('previewAvatar').textContent = avatar;
+    const previewName = document.getElementById('previewName');
+    const previewAvatar = document.getElementById('previewAvatar');
+    
+    if (previewName) previewName.textContent = username;
+    if (previewAvatar) previewAvatar.textContent = avatar;
     
     // Validate username and enable/disable button
     const isValid = validateUsername(username);
     const createBtn = document.getElementById('createProfileBtn');
-    createBtn.disabled = !isValid;
     
-    if (isValid && username !== 'Trader Username') {
-        createBtn.disabled = false;
-    } else {
-        createBtn.disabled = true;
+    if (createBtn) {
+        if (isValid && username !== 'Trader Username') {
+            createBtn.disabled = false;
+        } else {
+            createBtn.disabled = true;
+        }
     }
 }
 
@@ -558,7 +667,10 @@ function selectAvatar(emoji) {
     document.querySelectorAll('.avatar-option').forEach(option => {
         option.classList.remove('selected');
     });
-    document.querySelector(`[data-avatar="${emoji}"]`).classList.add('selected');
+    const selectedOption = document.querySelector(`[data-avatar="${emoji}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+    }
     
     updateTraderPreview();
 }
@@ -571,17 +683,18 @@ function toggleAgreement() {
     const finalizeBtn = document.getElementById('finalizeBtn');
     
     if (agreementAccepted) {
-        checkbox.classList.add('checked');
-        finalizeBtn.disabled = false;
+        if (checkbox) checkbox.classList.add('checked');
+        if (finalizeBtn) finalizeBtn.disabled = false;
     } else {
-        checkbox.classList.remove('checked');
-        finalizeBtn.disabled = true;
+        if (checkbox) checkbox.classList.remove('checked');
+        if (finalizeBtn) finalizeBtn.disabled = true;
     }
 }
 
 // Finalize profile creation
 async function finalizeProfile() {
-    const username = document.getElementById('traderUsername').value;
+    const usernameInput = document.getElementById('traderUsername');
+    const username = usernameInput ? usernameInput.value : '';
     
     if (!validateUsername(username)) {
         showErrorNotification('Please enter a valid username');
@@ -594,21 +707,34 @@ async function finalizeProfile() {
     }
     
     try {
-        document.getElementById('finalizeBtn').disabled = true;
-        document.getElementById('finalizeBtn').textContent = 'Creating Profile...';
-        
-        // Check username availability
-        const isAvailable = await window.supabaseClient.checkUsernameAvailability(username);
-        if (!isAvailable) {
-            throw new Error('Username is already taken');
+        const finalizeBtn = document.getElementById('finalizeBtn');
+        if (finalizeBtn) {
+            finalizeBtn.disabled = true;
+            finalizeBtn.textContent = 'Creating Profile...';
         }
         
-        // Create user profile
-        connectedUser = await window.supabaseClient.createUserProfile(
-            connectedWallet.address,
-            username,
-            selectedAvatar
-        );
+        // Check username availability if database is available
+        if (window.supabaseClient) {
+            const isAvailable = await window.supabaseClient.checkUsernameAvailability(username);
+            if (!isAvailable) {
+                throw new Error('Username is already taken');
+            }
+            
+            // Create user profile
+            connectedUser = await window.supabaseClient.createUserProfile(
+                connectedWallet.address,
+                username,
+                selectedAvatar
+            );
+        } else {
+            // Create mock user if database not available
+            connectedUser = {
+                wallet_address: connectedWallet.address,
+                username: username,
+                avatar: selectedAvatar,
+                created_at: new Date().toISOString()
+            };
+        }
         
         console.log('User profile created:', connectedUser);
         goToStep(5);
@@ -616,8 +742,11 @@ async function finalizeProfile() {
     } catch (error) {
         console.error('Profile creation failed:', error);
         showErrorNotification(`Failed to create profile: ${error.message}`);
-        document.getElementById('finalizeBtn').disabled = false;
-        document.getElementById('finalizeBtn').textContent = 'Join TokenWars';
+        const finalizeBtn = document.getElementById('finalizeBtn');
+        if (finalizeBtn) {
+            finalizeBtn.disabled = false;
+            finalizeBtn.textContent = 'Join TokenWars';
+        }
     }
 }
 
@@ -635,51 +764,78 @@ async function completedOnboarding() {
 // Update UI for connected user
 function updateUIForConnectedUser() {
     // Hide disconnected state
-    document.getElementById('heroDisconnected').style.display = 'none';
-    document.getElementById('connectWalletBtn').style.display = 'none';
+    const heroDisconnected = document.getElementById('heroDisconnected');
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    
+    if (heroDisconnected) heroDisconnected.style.display = 'none';
+    if (connectWalletBtn) connectWalletBtn.style.display = 'none';
     
     // Show connected state
-    document.getElementById('heroConnected').style.display = 'block';
-    document.getElementById('traderInfo').style.display = 'flex';
-    document.getElementById('mainContent').style.display = 'block';
+    const heroConnected = document.getElementById('heroConnected');
+    const traderInfo = document.getElementById('traderInfo');
+    const mainContent = document.getElementById('mainContent');
+    
+    if (heroConnected) heroConnected.style.display = 'block';
+    if (traderInfo) traderInfo.style.display = 'flex';
+    if (mainContent) mainContent.style.display = 'block';
     
     // Update user info in navigation
-    document.getElementById('navTraderName').textContent = connectedUser.username;
-    document.getElementById('navTraderAvatar').textContent = selectedAvatar;
+    const navTraderName = document.getElementById('navTraderName');
+    const navTraderAvatar = document.getElementById('navTraderAvatar');
+    
+    if (navTraderName && connectedUser) navTraderName.textContent = connectedUser.username;
+    if (navTraderAvatar) navTraderAvatar.textContent = selectedAvatar;
     
     // Update hero welcome message
-    document.getElementById('heroTraderNameText').textContent = connectedUser.username;
+    const heroTraderNameText = document.getElementById('heroTraderNameText');
+    if (heroTraderNameText && connectedUser) {
+        heroTraderNameText.textContent = connectedUser.username;
+    }
     
-    console.log('UI updated for connected user:', connectedUser.username);
+    console.log('UI updated for connected user:', connectedUser?.username || 'Unknown');
 }
 
 // Load user dashboard with enhanced features
 async function loadUserDashboard() {
     try {
-        // Load initial data
+        // Load initial data with error handling
         await Promise.all([
-            loadActiveCompetitions(),
-            loadUserPortfolio(),
-            loadLeaderboard()
+            loadActiveCompetitions().catch(error => {
+                console.warn('Failed to load competitions:', error);
+            }),
+            loadUserPortfolio().catch(error => {
+                console.warn('Failed to load portfolio:', error);
+            }),
+            loadLeaderboard().catch(error => {
+                console.warn('Failed to load leaderboard:', error);
+            })
         ]);
         
-        // Set up real-time subscriptions
-        setupRealtimeSubscriptions();
+        // Set up real-time subscriptions if available
+        try {
+            setupRealtimeSubscriptions();
+        } catch (error) {
+            console.warn('Failed to setup real-time subscriptions:', error);
+        }
         
         // Start token price tracking for user's active bets
-        await startUserTokenTracking();
+        try {
+            await startUserTokenTracking();
+        } catch (error) {
+            console.warn('Failed to start user token tracking:', error);
+        }
         
         console.log('Enhanced user dashboard loaded');
     } catch (error) {
         console.error('Failed to load dashboard:', error);
-        showErrorNotification('Failed to load dashboard data');
+        showErrorNotification('Dashboard loaded with limited functionality');
     }
 }
 
 // Start tracking tokens for user's active bets
 async function startUserTokenTracking() {
     try {
-        if (!connectedUser) return;
+        if (!connectedUser || !window.supabaseClient || !window.priceService) return;
         
         // Get user's active bets
         const userBets = await window.supabaseClient.getUserBets(connectedUser.wallet_address, 10);
@@ -705,18 +861,31 @@ async function startUserTokenTracking() {
     }
 }
 
-// Load active competitions with real-time integration
+// Load active competitions with error handling
 async function loadActiveCompetitions() {
     try {
+        if (!window.supabaseClient) {
+            console.warn('Database not available for loading competitions');
+            const competitionsGrid = document.getElementById('competitions-grid');
+            if (competitionsGrid) {
+                competitionsGrid.innerHTML = '<div class="loading">Competitions loading in demo mode...</div>';
+            }
+            return;
+        }
+
         const competitions = await window.supabaseClient.getActiveCompetitions();
         
         if (window.competition?.displayCompetitions) {
             window.competition.displayCompetitions(competitions);
+        } else {
+            console.warn('Competition display function not available');
         }
     } catch (error) {
         console.error('Failed to load competitions:', error);
-        document.getElementById('competitions-grid').innerHTML = 
-            '<div class="error-message">Failed to load competitions</div>';
+        const competitionsGrid = document.getElementById('competitions-grid');
+        if (competitionsGrid) {
+            competitionsGrid.innerHTML = '<div class="error-message">Failed to load competitions</div>';
+        }
     }
 }
 
@@ -725,6 +894,14 @@ async function loadUserPortfolio() {
     if (!connectedUser) return;
     
     try {
+        if (!window.supabaseClient) {
+            const portfolioContent = document.getElementById('portfolio-content');
+            if (portfolioContent) {
+                portfolioContent.innerHTML = '<div class="loading">Portfolio loading in demo mode...</div>';
+            }
+            return;
+        }
+
         const [bets, leaderboardPos] = await Promise.all([
             window.supabaseClient.getUserBets(connectedUser.wallet_address),
             window.supabaseClient.getUserLeaderboardPosition(connectedUser.wallet_address)
@@ -733,20 +910,32 @@ async function loadUserPortfolio() {
         displayUserPortfolio(bets, leaderboardPos);
     } catch (error) {
         console.error('Failed to load portfolio:', error);
-        document.getElementById('portfolio-content').innerHTML = 
-            '<div class="error-message">Failed to load portfolio</div>';
+        const portfolioContent = document.getElementById('portfolio-content');
+        if (portfolioContent) {
+            portfolioContent.innerHTML = '<div class="error-message">Failed to load portfolio</div>';
+        }
     }
 }
 
 // Load leaderboard
 async function loadLeaderboard() {
     try {
+        if (!window.supabaseClient) {
+            const leaderboardContent = document.getElementById('leaderboard-content');
+            if (leaderboardContent) {
+                leaderboardContent.innerHTML = '<div class="loading">Leaderboard loading in demo mode...</div>';
+            }
+            return;
+        }
+
         const leaderboard = await window.supabaseClient.getLeaderboard();
         displayLeaderboard(leaderboard);
     } catch (error) {
         console.error('Failed to load leaderboard:', error);
-        document.getElementById('leaderboard-content').innerHTML = 
-            '<div class="error-message">Failed to load leaderboard</div>';
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        if (leaderboardContent) {
+            leaderboardContent.innerHTML = '<div class="error-message">Failed to load leaderboard</div>';
+        }
     }
 }
 
@@ -756,24 +945,27 @@ async function loadLeaderboard() {
 
 // Set up real-time subscriptions
 function setupRealtimeSubscriptions() {
-    // Subscribe to competition updates
-    window.supabaseClient.subscribeToCompetitions((payload) => {
-        console.log('Competition update:', payload);
-        loadActiveCompetitions(); // Refresh competitions
-    });
-    
-    // Subscribe to leaderboard updates
-    window.supabaseClient.subscribeToLeaderboard((payload) => {
-        console.log('Leaderboard update:', payload);
-        loadLeaderboard(); // Refresh leaderboard
-    });
-    
-    // Subscribe to token updates if available
-    if (window.supabaseClient.subscribeToTokenUpdates) {
-        window.supabaseClient.subscribeToTokenUpdates((payload) => {
-            console.log('Token update:', payload);
-            // Handle token data updates
+    if (!window.supabaseClient) {
+        console.warn('Supabase client not available for real-time subscriptions');
+        return;
+    }
+
+    try {
+        // Subscribe to competition updates
+        window.supabaseClient.subscribeToCompetitions((payload) => {
+            console.log('Competition update:', payload);
+            loadActiveCompetitions(); // Refresh competitions
         });
+        
+        // Subscribe to leaderboard updates
+        window.supabaseClient.subscribeToLeaderboard((payload) => {
+            console.log('Leaderboard update:', payload);
+            loadLeaderboard(); // Refresh leaderboard
+        });
+        
+        console.log('Real-time subscriptions set up successfully');
+    } catch (error) {
+        console.error('Failed to set up real-time subscriptions:', error);
     }
 }
 
@@ -797,10 +989,12 @@ function goToStep(step) {
     let stepElement;
     if (step === 2.5) {
         stepElement = document.getElementById('step2_5Content');
-        document.getElementById('step2Indicator').classList.add('active');
+        const step2Indicator = document.getElementById('step2Indicator');
+        if (step2Indicator) step2Indicator.classList.add('active');
     } else {
         stepElement = document.getElementById(`step${step}Content`);
-        document.getElementById(`step${step}Indicator`).classList.add('active');
+        const stepIndicator = document.getElementById(`step${step}Indicator`);
+        if (stepIndicator) stepIndicator.classList.add('active');
     }
     
     if (stepElement) {
@@ -812,12 +1006,15 @@ function goToStep(step) {
 // Show different sections
 function showMarkets() {
     hideAllSections();
-    document.getElementById('markets').style.display = 'block';
-    updateActiveNavLink('markets');
-    
-    // Refresh competitions when markets are shown
-    if (connectedUser) {
-        loadActiveCompetitions();
+    const marketsSection = document.getElementById('markets');
+    if (marketsSection) {
+        marketsSection.style.display = 'block';
+        updateActiveNavLink('markets');
+        
+        // Refresh competitions when markets are shown
+        if (connectedUser) {
+            loadActiveCompetitions();
+        }
     }
 }
 
@@ -827,23 +1024,29 @@ function showCompetitions() {
 
 function showLeaderboard() {
     hideAllSections();
-    document.getElementById('leaderboard').style.display = 'block';
-    updateActiveNavLink('leaderboard');
-    
-    // Refresh leaderboard when shown
-    if (connectedUser) {
-        loadLeaderboard();
+    const leaderboardSection = document.getElementById('leaderboard');
+    if (leaderboardSection) {
+        leaderboardSection.style.display = 'block';
+        updateActiveNavLink('leaderboard');
+        
+        // Refresh leaderboard when shown
+        if (connectedUser) {
+            loadLeaderboard();
+        }
     }
 }
 
 function showPortfolio() {
     hideAllSections();
-    document.getElementById('portfolio').style.display = 'block';
-    updateActiveNavLink('portfolio');
-    
-    // Refresh portfolio when shown
-    if (connectedUser) {
-        loadUserPortfolio();
+    const portfolioSection = document.getElementById('portfolio');
+    if (portfolioSection) {
+        portfolioSection.style.display = 'block';
+        updateActiveNavLink('portfolio');
+        
+        // Refresh portfolio when shown
+        if (connectedUser) {
+            loadUserPortfolio();
+        }
     }
 }
 
@@ -880,11 +1083,17 @@ async function disconnectWallet() {
         }
         
         // Clear user context in database
-        await window.supabaseClient.clearUserContext();
+        if (window.supabaseClient?.clearUserContext) {
+            await window.supabaseClient.clearUserContext();
+        }
         
         // Disconnect from wallet provider
         if (walletProvider && walletProvider.disconnect) {
-            await walletProvider.disconnect();
+            try {
+                await walletProvider.disconnect();
+            } catch (error) {
+                console.warn('Wallet disconnect failed:', error);
+            }
         }
         
         // Clear local state
@@ -897,18 +1106,28 @@ async function disconnectWallet() {
         localStorage.removeItem('tokenWars_demoAddress');
         
         // Reset UI
-        document.getElementById('heroDisconnected').style.display = 'block';
-        document.getElementById('heroConnected').style.display = 'none';
-        document.getElementById('connectWalletBtn').style.display = 'block';
-        document.getElementById('traderInfo').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'none';
+        const heroDisconnected = document.getElementById('heroDisconnected');
+        const heroConnected = document.getElementById('heroConnected');
+        const connectWalletBtn = document.getElementById('connectWalletBtn');
+        const traderInfo = document.getElementById('traderInfo');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (heroDisconnected) heroDisconnected.style.display = 'block';
+        if (heroConnected) heroConnected.style.display = 'none';
+        if (connectWalletBtn) connectWalletBtn.style.display = 'block';
+        if (traderInfo) traderInfo.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'none';
         
         console.log('Wallet disconnected successfully');
         showNotification('Wallet disconnected', 'success');
         
         // Restart basic services for anonymous browsing
-        await initializeTokenSystem();
-        startBackgroundServices();
+        try {
+            await initializeTokenSystem();
+            startBackgroundServices();
+        } catch (error) {
+            console.warn('Failed to restart basic services:', error);
+        }
         
     } catch (error) {
         console.error('Error disconnecting wallet:', error);
@@ -1013,16 +1232,16 @@ function showNotification(message, type = 'info') {
 
 // Placeholder functions for portfolio and leaderboard display
 function displayUserPortfolio(bets, leaderboardPos) {
-    // TODO: Implement enhanced portfolio display
     console.log('Portfolio data:', { bets, leaderboardPos });
+    // TODO: Implement enhanced portfolio display
 }
 
 function displayLeaderboard(leaderboard) {
-    // TODO: Implement enhanced leaderboard display
     console.log('Leaderboard data:', leaderboard);
+    // TODO: Implement enhanced leaderboard display
 }
 
-// Make functions globally available
+// Make all functions available globally
 window.app = {
     initializeApp,
     openWalletModal,
@@ -1054,3 +1273,5 @@ window.app = {
     stopBackgroundServices,
     loadCompetitionsWithTokenData
 };
+
+console.log('App.js loaded and functions exposed globally');
