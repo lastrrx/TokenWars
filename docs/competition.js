@@ -1,865 +1,767 @@
-// Competition Display and Betting Logic with Real Token Data Integration
-// Enhanced with live price updates, token logos, and market data
+// Enhanced Competition.js - Real Token Data Integration
+// This replaces your existing competition.js to show live token data
 
 // Global state for competitions
-let activeCompetitions = [];
-let competitionSubscriptions = new Map();
-let priceUpdateSubscriptions = new Map();
+const CompetitionState = {
+    activeCompetitions: [],
+    tokenService: null,
+    priceService: null,
+    realTimeSubscriptions: [],
+    lastUpdate: null,
+    loading: false
+};
 
-// ==============================================
-// COMPETITION DISPLAY FUNCTIONS
-// ==============================================
-
-// Display competitions in the grid with real token data
-function displayCompetitions(competitions) {
-    const grid = document.getElementById('competitions-grid');
+/**
+ * Initialize Competition System with Real Token Data
+ */
+async function initializeCompetitionSystem() {
+    console.log('Initializing competition system with real token data...');
     
-    if (!competitions || competitions.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">🎯</div>
-                <div class="empty-title">No Active Competitions</div>
-                <div class="empty-message">New token prediction competitions will appear here soon!</div>
-                <div class="empty-submessage">Check back in a few minutes or refresh to see new opportunities.</div>
+    try {
+        // Initialize token and price services
+        if (window.TokenService) {
+            CompetitionState.tokenService = new window.TokenService();
+        }
+        
+        if (window.PriceService) {
+            CompetitionState.priceService = new window.PriceService();
+        }
+        
+        // Load real competitions from database
+        await loadRealCompetitions();
+        
+        // Set up real-time subscriptions
+        setupRealTimeCompetitionUpdates();
+        
+        // Start price update monitoring
+        startPriceUpdateMonitoring();
+        
+        console.log('Competition system initialized with real data');
+        
+    } catch (error) {
+        console.error('Failed to initialize competition system:', error);
+        // Fallback to demo data if services not available
+        await loadDemoCompetitions();
+    }
+}
+
+/**
+ * Load Real Competitions from Database with Token Data
+ */
+async function loadRealCompetitions() {
+    try {
+        CompetitionState.loading = true;
+        updateCompetitionsDisplay(); // Show loading state
+        
+        // Get active competitions from database
+        const competitions = await window.supabaseClient.getActiveCompetitions();
+        
+        if (competitions && competitions.length > 0) {
+            // Enhance with real-time token data
+            CompetitionState.activeCompetitions = await enhanceCompetitionsWithTokenData(competitions);
+        } else {
+            // No real competitions, create some demo ones with real tokens
+            await createDemoCompetitionsWithRealTokens();
+        }
+        
+        CompetitionState.lastUpdate = new Date();
+        updateCompetitionsDisplay();
+        
+    } catch (error) {
+        console.error('Failed to load real competitions:', error);
+        await loadDemoCompetitions();
+    } finally {
+        CompetitionState.loading = false;
+    }
+}
+
+/**
+ * Enhance Competitions with Real-Time Token Data
+ */
+async function enhanceCompetitionsWithTokenData(competitions) {
+    const enhanced = [];
+    
+    for (const competition of competitions) {
+        try {
+            // Get real token data for both tokens
+            const [tokenA, tokenB] = await Promise.all([
+                getTokenData(competition.token_a_address),
+                getTokenData(competition.token_b_address)
+            ]);
+            
+            // Get current prices if price service available
+            let currentPrices = {};
+            if (CompetitionState.priceService) {
+                currentPrices = await CompetitionState.priceService.getCurrentPrices([
+                    competition.token_a_address,
+                    competition.token_b_address
+                ]);
+            }
+            
+            // Create enhanced competition object
+            const enhancedCompetition = {
+                ...competition,
+                tokenA: {
+                    ...tokenA,
+                    currentPrice: currentPrices[competition.token_a_address]?.price || tokenA.current_price,
+                    priceChange24h: currentPrices[competition.token_a_address]?.change24h || tokenA.price_change_24h,
+                    address: competition.token_a_address
+                },
+                tokenB: {
+                    ...tokenB,
+                    currentPrice: currentPrices[competition.token_b_address]?.price || tokenB.current_price,
+                    priceChange24h: currentPrices[competition.token_b_address]?.change24h || tokenB.price_change_24h,
+                    address: competition.token_b_address
+                },
+                // Calculate real-time metrics
+                totalParticipants: competition.total_bets || 0,
+                totalPool: competition.total_pool || 0,
+                tokenABets: competition.token_a_bets || 0,
+                tokenBBets: competition.token_b_bets || 0,
+                // Competition timing
+                timeRemaining: calculateTimeRemaining(competition.end_time),
+                status: determineCompetitionStatus(competition),
+                // Real data flags
+                isRealData: true,
+                lastUpdated: new Date()
+            };
+            
+            enhanced.push(enhancedCompetition);
+            
+        } catch (error) {
+            console.error('Failed to enhance competition:', competition.competition_id, error);
+            // Add without enhancement if token data fails
+            enhanced.push({
+                ...competition,
+                isRealData: false,
+                error: 'Token data unavailable'
+            });
+        }
+    }
+    
+    return enhanced;
+}
+
+/**
+ * Get Token Data from Token Service or Database
+ */
+async function getTokenData(tokenAddress) {
+    try {
+        // Try token service first
+        if (CompetitionState.tokenService) {
+            const tokenData = await CompetitionState.tokenService.getTokenByAddress(tokenAddress);
+            if (tokenData) return tokenData;
+        }
+        
+        // Fallback to database
+        if (window.supabaseClient.getToken) {
+            const tokenData = await window.supabaseClient.getToken(tokenAddress);
+            if (tokenData) return tokenData;
+        }
+        
+        // Create minimal token data if not found
+        return {
+            address: tokenAddress,
+            symbol: `TOKEN${tokenAddress.slice(-4)}`,
+            name: `Unknown Token ${tokenAddress.slice(-4)}`,
+            logo_uri: '/placeholder-token.png',
+            current_price: 0,
+            market_cap: 0,
+            price_change_24h: 0
+        };
+        
+    } catch (error) {
+        console.error('Failed to get token data for:', tokenAddress, error);
+        return null;
+    }
+}
+
+/**
+ * Create Demo Competitions with Real Tokens (if no real competitions exist)
+ */
+async function createDemoCompetitionsWithRealTokens() {
+    try {
+        console.log('Creating demo competitions with real token data...');
+        
+        // Get available token pairs from token service
+        let tokenPairs = [];
+        if (CompetitionState.tokenService) {
+            tokenPairs = await CompetitionState.tokenService.getAvailableTokenPairs(5);
+        }
+        
+        if (tokenPairs.length === 0) {
+            // Fallback to hardcoded popular Solana tokens
+            tokenPairs = await createFallbackTokenPairs();
+        }
+        
+        // Create demo competitions with real token data
+        const demoCompetitions = [];
+        for (let i = 0; i < Math.min(tokenPairs.length, 6); i++) {
+            const pair = tokenPairs[i];
+            const competition = await createDemoCompetitionFromTokenPair(pair, i);
+            if (competition) {
+                demoCompetitions.push(competition);
+            }
+        }
+        
+        CompetitionState.activeCompetitions = demoCompetitions;
+        console.log('Created', demoCompetitions.length, 'demo competitions with real tokens');
+        
+    } catch (error) {
+        console.error('Failed to create demo competitions with real tokens:', error);
+        await loadDemoCompetitions(); // Final fallback
+    }
+}
+
+/**
+ * Create Fallback Token Pairs with Popular Solana Tokens
+ */
+async function createFallbackTokenPairs() {
+    const popularTokens = [
+        { address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', symbol: 'BONK', name: 'Bonk' },
+        { address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', symbol: 'WIF', name: 'dogwifhat' },
+        { address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', symbol: 'JUP', name: 'Jupiter' },
+        { address: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3', symbol: 'PYTH', name: 'Pyth Network' },
+        { address: 'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE', symbol: 'ORCA', name: 'Orca' },
+        { address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', symbol: 'RAY', name: 'Raydium' }
+    ];
+    
+    const pairs = [];
+    for (let i = 0; i < popularTokens.length - 1; i += 2) {
+        pairs.push({
+            tokenA: popularTokens[i],
+            tokenB: popularTokens[i + 1],
+            compatibility_score: 85
+        });
+    }
+    
+    return pairs;
+}
+
+/**
+ * Create Demo Competition from Token Pair
+ */
+async function createDemoCompetitionFromTokenPair(tokenPair, index) {
+    try {
+        const now = new Date();
+        const startTime = new Date(now.getTime() + (index * 2 * 60 * 60 * 1000)); // Stagger start times
+        const endTime = new Date(startTime.getTime() + (24 * 60 * 60 * 1000)); // 24 hour duration
+        
+        // Get real token data
+        const [tokenA, tokenB] = await Promise.all([
+            getTokenData(tokenPair.tokenA?.address || tokenPair.token_a_address),
+            getTokenData(tokenPair.tokenB?.address || tokenPair.token_b_address)
+        ]);
+        
+        if (!tokenA || !tokenB) return null;
+        
+        return {
+            competition_id: `DEMO-${Date.now()}-${index}`,
+            tokenA: {
+                ...tokenA,
+                address: tokenA.address,
+                symbol: tokenA.symbol,
+                name: tokenA.name,
+                logoURI: tokenA.logo_uri || '/placeholder-token.png',
+                currentPrice: tokenA.current_price || Math.random() * 10,
+                marketCap: tokenA.market_cap || Math.random() * 1000000000,
+                priceChange24h: tokenA.price_change_24h || (Math.random() - 0.5) * 20
+            },
+            tokenB: {
+                ...tokenB,
+                address: tokenB.address,
+                symbol: tokenB.symbol,
+                name: tokenB.name,
+                logoURI: tokenB.logo_uri || '/placeholder-token.png',
+                currentPrice: tokenB.current_price || Math.random() * 10,
+                marketCap: tokenB.market_cap || Math.random() * 1000000000,
+                priceChange24h: tokenB.price_change_24h || (Math.random() - 0.5) * 20
+            },
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            status: index === 0 ? 'ACTIVE' : 'SETUP',
+            totalPool: Math.random() * 10,
+            totalParticipants: Math.floor(Math.random() * 50),
+            tokenABets: Math.floor(Math.random() * 25),
+            tokenBBets: Math.floor(Math.random() * 25),
+            timeRemaining: calculateTimeRemaining(endTime.toISOString()),
+            isRealData: true,
+            isDemoCompetition: true,
+            lastUpdated: new Date()
+        };
+        
+    } catch (error) {
+        console.error('Failed to create demo competition from token pair:', error);
+        return null;
+    }
+}
+
+/**
+ * Update Competitions Display with Real Token Data
+ */
+function updateCompetitionsDisplay() {
+    const container = document.getElementById('competitions-grid');
+    if (!container) return;
+    
+    if (CompetitionState.loading) {
+        container.innerHTML = `
+            <div class="loading-competitions">
+                <div class="loading-spinner"></div>
+                <p>Loading real token competitions...</p>
             </div>
         `;
         return;
     }
     
-    activeCompetitions = competitions;
+    if (CompetitionState.activeCompetitions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-competitions">
+                <div class="empty-icon">🎯</div>
+                <h3>No Active Competitions</h3>
+                <p>New token competitions will appear here</p>
+            </div>
+        `;
+        return;
+    }
     
-    const competitionsHTML = competitions.map(competition => 
-        createCompetitionCard(competition)
-    ).join('');
+    // Generate competition cards with real token data
+    const competitionsHTML = CompetitionState.activeCompetitions
+        .slice(0, 12) // Limit to 12 cards
+        .map(competition => createRealTokenCompetitionCard(competition))
+        .join('');
     
-    grid.innerHTML = competitionsHTML;
+    container.innerHTML = competitionsHTML;
     
-    // Set up real-time updates for each competition
-    competitions.forEach(competition => {
-        subscribeToCompetitionUpdates(competition.competition_id);
-        
-        // Subscribe to price updates for both tokens
-        if (competition.token_a_address) {
-            subscribeToPriceUpdates(competition.token_a_address, competition.competition_id, 'token_a');
-        }
-        if (competition.token_b_address) {
-            subscribeToPriceUpdates(competition.token_b_address, competition.competition_id, 'token_b');
-        }
-    });
-
-    console.log(`Displayed ${competitions.length} competitions with real-time updates`);
+    // Set up card interactions
+    setupCompetitionCardInteractions();
+    
+    console.log('Updated competition display with', CompetitionState.activeCompetitions.length, 'real token competitions');
 }
 
-// Create HTML for a single competition card with enhanced token data
-function createCompetitionCard(competition) {
-    const timeRemaining = getTimeRemaining(competition);
-    const statusInfo = getCompetitionStatusInfo(competition);
-    const participantCount = (competition.total_bets || 0);
-    const poolSize = formatSOL(competition.total_pool || 0);
+/**
+ * Create Real Token Competition Card
+ */
+function createRealTokenCompetitionCard(competition) {
+    const { tokenA, tokenB } = competition;
     
-    // Use real token data if available, fallback to competition data
-    const tokenA = {
-        symbol: competition.token_a_symbol_full || competition.token_a_symbol,
-        name: competition.token_a_name_full || competition.token_a_name,
-        logo: competition.token_a_logo_uri || competition.token_a_logo || getDefaultTokenLogo(competition.token_a_symbol),
-        price: competition.token_a_current_price || competition.token_a_start_price,
-        marketCap: competition.token_a_market_cap,
-        performance: competition.token_a_current_performance,
-        bets: competition.token_a_bets || 0
-    };
+    // Calculate betting distribution
+    const totalBets = (competition.tokenABets || 0) + (competition.tokenBBets || 0);
+    const tokenAPercentage = totalBets > 0 ? ((competition.tokenABets || 0) / totalBets * 100) : 50;
+    const tokenBPercentage = 100 - tokenAPercentage;
     
-    const tokenB = {
-        symbol: competition.token_b_symbol_full || competition.token_b_symbol,
-        name: competition.token_b_name_full || competition.token_b_name,
-        logo: competition.token_b_logo_uri || competition.token_b_logo || getDefaultTokenLogo(competition.token_b_symbol),
-        price: competition.token_b_current_price || competition.token_b_start_price,
-        marketCap: competition.token_b_market_cap,
-        performance: competition.token_b_current_performance,
-        bets: competition.token_b_bets || 0
-    };
-
+    // Competition status styling
+    const statusClass = competition.status?.toLowerCase() || 'setup';
+    const statusDisplay = getStatusDisplay(competition.status);
+    
+    // Time remaining display
+    const timeDisplay = formatTimeRemaining(competition.timeRemaining);
+    
     return `
-        <div class="competition-card" data-competition-id="${competition.competition_id}">
+        <div class="competition-card real-token-card" 
+             data-competition-id="${competition.competition_id}"
+             data-status="${competition.status}">
+            
+            <!-- Competition Header -->
             <div class="competition-header">
-                <div class="competition-status ${statusInfo.class}">
-                    ${statusInfo.text}
+                <div class="competition-id">
+                    ${competition.isDemoCompetition ? '🎮 DEMO' : '⚡'} ${competition.competition_id.slice(-8)}
                 </div>
-                <div class="competition-time" data-end-time="${competition.end_time}">
-                    ${timeRemaining}
+                <div class="competition-status status-${statusClass}">
+                    ${statusDisplay}
                 </div>
             </div>
             
-            <div class="token-battle-display">
-                <div class="token-card" data-token="token_a" data-address="${competition.token_a_address}">
-                    <img class="token-logo" src="${tokenA.logo}" alt="${tokenA.symbol}" 
-                         onerror="this.src='${getDefaultTokenLogo(tokenA.symbol)}'">
+            <!-- Real Token Battle Display -->
+            <div class="token-battle-display real-tokens">
+                <!-- Token A -->
+                <div class="token-card token-a" data-token="${tokenA.address}">
+                    <div class="token-logo-container">
+                        <img src="${tokenA.logoURI || '/placeholder-token.png'}" 
+                             alt="${tokenA.symbol}" 
+                             class="token-logo"
+                             onerror="this.src='/placeholder-token.png'">
+                        <div class="real-data-indicator">🔴</div>
+                    </div>
                     <div class="token-info">
                         <div class="token-symbol">${tokenA.symbol}</div>
-                        <div class="token-name">${truncateString(tokenA.name, 20)}</div>
-                        <div class="token-price" data-price="${tokenA.price}">
-                            $${formatPrice(tokenA.price)}
+                        <div class="token-name">${tokenA.name}</div>
+                        <div class="token-price">
+                            $${formatTokenPrice(tokenA.currentPrice)}
+                            <span class="price-change ${tokenA.priceChange24h >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(tokenA.priceChange24h)}
+                            </span>
                         </div>
-                        ${tokenA.marketCap ? `
-                            <div class="token-market-cap">
-                                MC: $${formatMarketCap(tokenA.marketCap)}
-                            </div>
-                        ` : ''}
-                        ${tokenA.performance !== null && competition.status === 'ACTIVE' ? `
-                            <div class="token-performance ${tokenA.performance >= 0 ? 'positive' : 'negative'}">
-                                ${formatPercentage(tokenA.performance)}
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="bet-count">
-                        ${tokenA.bets} bet${tokenA.bets !== 1 ? 's' : ''}
+                        <div class="token-market-cap">
+                            ${formatMarketCap(tokenA.marketCap)}
+                        </div>
                     </div>
                 </div>
                 
+                <!-- VS Indicator -->
                 <div class="vs-separator">
                     <div class="vs-text">VS</div>
-                    <div class="vs-line"></div>
-                    ${competition.status === 'ACTIVE' ? `
-                        <div class="vs-time-remaining">
-                            ${timeRemaining}
-                        </div>
-                    ` : ''}
+                    <div class="compatibility-score">
+                        ${competition.compatibility_score || 85}% Match
+                    </div>
+                    <div class="time-remaining ${statusClass}">
+                        ${timeDisplay}
+                    </div>
                 </div>
                 
-                <div class="token-card" data-token="token_b" data-address="${competition.token_b_address}">
-                    <img class="token-logo" src="${tokenB.logo}" alt="${tokenB.symbol}" 
-                         onerror="this.src='${getDefaultTokenLogo(tokenB.symbol)}'">
+                <!-- Token B -->
+                <div class="token-card token-b" data-token="${tokenB.address}">
+                    <div class="token-logo-container">
+                        <img src="${tokenB.logoURI || '/placeholder-token.png'}" 
+                             alt="${tokenB.symbol}" 
+                             class="token-logo"
+                             onerror="this.src='/placeholder-token.png'">
+                        <div class="real-data-indicator">🔴</div>
+                    </div>
                     <div class="token-info">
                         <div class="token-symbol">${tokenB.symbol}</div>
-                        <div class="token-name">${truncateString(tokenB.name, 20)}</div>
-                        <div class="token-price" data-price="${tokenB.price}">
-                            $${formatPrice(tokenB.price)}
+                        <div class="token-name">${tokenB.name}</div>
+                        <div class="token-price">
+                            $${formatTokenPrice(tokenB.currentPrice)}
+                            <span class="price-change ${tokenB.priceChange24h >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(tokenB.priceChange24h)}
+                            </span>
                         </div>
-                        ${tokenB.marketCap ? `
-                            <div class="token-market-cap">
-                                MC: $${formatMarketCap(tokenB.marketCap)}
-                            </div>
-                        ` : ''}
-                        ${tokenB.performance !== null && competition.status === 'ACTIVE' ? `
-                            <div class="token-performance ${tokenB.performance >= 0 ? 'positive' : 'negative'}">
-                                ${formatPercentage(tokenB.performance)}
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="bet-count">
-                        ${tokenB.bets} bet${tokenB.bets !== 1 ? 's' : ''}
+                        <div class="token-market-cap">
+                            ${formatMarketCap(tokenB.marketCap)}
+                        </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Betting Progress -->
             <div class="betting-progress">
-                <div class="progress-side token-a" style="width: ${getBettingPercentage(tokenA.bets, tokenB.bets, 'a')}%">
-                    ${tokenA.bets > 0 ? `${tokenA.bets} bets` : ''}
+                <div class="progress-side token-a" style="flex: ${tokenAPercentage}">
+                    ${competition.tokenABets || 0} bets (${tokenAPercentage.toFixed(0)}%)
                 </div>
-                <div class="progress-side token-b" style="width: ${getBettingPercentage(tokenA.bets, tokenB.bets, 'b')}%">
-                    ${tokenB.bets > 0 ? `${tokenB.bets} bets` : ''}
+                <div class="progress-side token-b" style="flex: ${tokenBPercentage}">
+                    ${competition.tokenBBets || 0} bets (${tokenBPercentage.toFixed(0)}%)
                 </div>
             </div>
             
+            <!-- Competition Stats -->
             <div class="competition-stats">
-                <div class="stat">
-                    <div class="stat-label">Total Pool</div>
-                    <div class="stat-value">${poolSize} SOL</div>
-                </div>
-                <div class="stat">
+                <div class="stat-item">
+                    <div class="stat-value">${competition.totalParticipants || 0}</div>
                     <div class="stat-label">Participants</div>
-                    <div class="stat-value">${participantCount}</div>
                 </div>
-                <div class="stat">
+                <div class="stat-item">
+                    <div class="stat-value">${formatSOL(competition.totalPool || 0)}</div>
+                    <div class="stat-label">Prize Pool</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">0.1 SOL</div>
                     <div class="stat-label">Entry Fee</div>
-                    <div class="stat-value">${window.APP_CONFIG.BET_AMOUNT} SOL</div>
                 </div>
             </div>
             
-            ${createCompetitionActions(competition)}
-        </div>
-    `;
-}
-
-// Calculate betting distribution percentage
-function getBettingPercentage(tokenABets, tokenBBets, side) {
-    const total = tokenABets + tokenBBets;
-    if (total === 0) return side === 'a' ? 50 : 50;
-    
-    const percentage = side === 'a' 
-        ? (tokenABets / total) * 100 
-        : (tokenBBets / total) * 100;
-    
-    return Math.max(5, percentage); // Minimum 5% for visibility
-}
-
-// Create action buttons based on competition status
-function createCompetitionActions(competition) {
-    const currentUser = window.app?.getCurrentUser();
-    
-    if (!currentUser) {
-        return `
-            <div class="competition-actions">
-                <button class="btn-competition-primary" onclick="window.app.openWalletModal()">
-                    Connect Wallet to Predict
-                </button>
-            </div>
-        `;
-    }
-    
-    switch (competition.status) {
-        case 'SETUP':
-            return `
-                <div class="competition-actions">
-                    <button class="btn-competition-secondary" disabled>
-                        ⏱️ Starting Soon
-                    </button>
-                    <button class="btn-competition-tertiary" onclick="showCompetitionDetails('${competition.competition_id}')">
-                        View Details
-                    </button>
-                </div>
-            `;
+            <!-- Action Button -->
+            <button class="btn-place-bet" 
+                    onclick="openBettingModal('${competition.competition_id}')"
+                    ${competition.status !== 'ACTIVE' && competition.status !== 'VOTING' ? 'disabled' : ''}>
+                ${getBettingButtonText(competition.status)}
+            </button>
             
-        case 'VOTING':
-            return `
-                <div class="competition-actions">
-                    <button class="btn-competition-primary" 
-                            onclick="showBetModal('${competition.competition_id}', 'token_a')">
-                        🎯 Predict ${competition.token_a_symbol}
-                    </button>
-                    <button class="btn-competition-primary" 
-                            onclick="showBetModal('${competition.competition_id}', 'token_b')">
-                        🎯 Predict ${competition.token_b_symbol}
-                    </button>
-                </div>
-            `;
-            
-        case 'ACTIVE':
-            return `
-                <div class="competition-actions">
-                    <button class="btn-competition-secondary" disabled>
-                        🔴 Live Competition
-                    </button>
-                    <button class="btn-competition-tertiary" 
-                            onclick="showCompetitionDetails('${competition.competition_id}')">
-                        📊 Watch Live
-                    </button>
-                </div>
-            `;
-            
-        case 'CLOSED':
-            return `
-                <div class="competition-actions">
-                    <button class="btn-competition-secondary" disabled>
-                        ⚖️ Calculating Results...
-                    </button>
-                    <button class="btn-competition-tertiary" 
-                            onclick="showCompetitionDetails('${competition.competition_id}')">
-                        View Details
-                    </button>
-                </div>
-            `;
-            
-        case 'RESOLVED':
-            const winnerToken = competition.winner_token;
-            const winnerSymbol = winnerToken === 'token_a' 
-                ? competition.token_a_symbol 
-                : competition.token_b_symbol;
-            
-            return `
-                <div class="competition-actions">
-                    <div class="winner-announcement">
-                        🏆 Winner: ${winnerSymbol}
-                    </div>
-                    <button class="btn-competition-tertiary" 
-                            onclick="showCompetitionResults('${competition.competition_id}')">
-                        📈 View Results
-                    </button>
-                </div>
-            `;
-            
-        default:
-            return '<div class="competition-actions"></div>';
-    }
-}
-
-// ==============================================
-// REAL-TIME PRICE UPDATES
-// ==============================================
-
-// Subscribe to price updates for a token in a competition
-function subscribeToPriceUpdates(tokenAddress, competitionId, tokenType) {
-    const subscriptionKey = `${competitionId}-${tokenType}`;
-    
-    if (priceUpdateSubscriptions.has(subscriptionKey)) {
-        return; // Already subscribed
-    }
-
-    const unsubscribe = window.priceService.subscribeToPriceUpdates(tokenAddress, (priceData) => {
-        updateTokenPriceInCard(competitionId, tokenType, priceData);
-    });
-
-    priceUpdateSubscriptions.set(subscriptionKey, unsubscribe);
-}
-
-// Update token price in competition card
-function updateTokenPriceInCard(competitionId, tokenType, priceData) {
-    const card = document.querySelector(`[data-competition-id="${competitionId}"]`);
-    if (!card) return;
-
-    const tokenCard = card.querySelector(`[data-token="${tokenType}"]`);
-    if (!tokenCard) return;
-
-    const priceElement = tokenCard.querySelector('.token-price');
-    if (priceElement) {
-        priceElement.textContent = `$${formatPrice(priceData.price)}`;
-        priceElement.setAttribute('data-price', priceData.price);
-        
-        // Add flash animation for price updates
-        priceElement.classList.add('price-updated');
-        setTimeout(() => priceElement.classList.remove('price-updated'), 1000);
-    }
-
-    // Update performance if competition is active
-    const competition = activeCompetitions.find(c => c.competition_id === competitionId);
-    if (competition && competition.status === 'ACTIVE') {
-        updateTokenPerformance(tokenCard, priceData.price, competition, tokenType);
-    }
-}
-
-// Update token performance display
-function updateTokenPerformance(tokenCard, currentPrice, competition, tokenType) {
-    const startTwap = tokenType === 'token_a' 
-        ? competition.token_a_start_twap 
-        : competition.token_b_start_twap;
-    
-    if (!startTwap) return;
-
-    const performance = ((currentPrice - startTwap) / startTwap) * 100;
-    
-    let performanceElement = tokenCard.querySelector('.token-performance');
-    if (!performanceElement) {
-        performanceElement = document.createElement('div');
-        performanceElement.className = 'token-performance';
-        tokenCard.querySelector('.token-info').appendChild(performanceElement);
-    }
-
-    performanceElement.textContent = formatPercentage(performance);
-    performanceElement.className = `token-performance ${performance >= 0 ? 'positive' : 'negative'}`;
-}
-
-// ==============================================
-// BETTING MODAL AND FUNCTIONS (ENHANCED)
-// ==============================================
-
-// Show enhanced betting modal with real token data
-function showBetModal(competitionId, chosenToken) {
-    const competition = activeCompetitions.find(c => c.competition_id === competitionId);
-    if (!competition) {
-        showErrorNotification('Competition not found');
-        return;
-    }
-    
-    const isTokenA = chosenToken === 'token_a';
-    const tokenData = isTokenA ? {
-        symbol: competition.token_a_symbol_full || competition.token_a_symbol,
-        name: competition.token_a_name_full || competition.token_a_name,
-        logo: competition.token_a_logo_uri || getDefaultTokenLogo(competition.token_a_symbol),
-        price: competition.token_a_current_price,
-        marketCap: competition.token_a_market_cap,
-        address: competition.token_a_address
-    } : {
-        symbol: competition.token_b_symbol_full || competition.token_b_symbol,
-        name: competition.token_b_name_full || competition.token_b_name,
-        logo: competition.token_b_logo_uri || getDefaultTokenLogo(competition.token_b_symbol),
-        price: competition.token_b_current_price,
-        marketCap: competition.token_b_market_cap,
-        address: competition.token_b_address
-    };
-    
-    const modalHTML = `
-        <div class="bet-modal" id="betModal">
-            <div class="bet-modal-content">
-                <div class="modal-header">
-                    <button class="modal-close" onclick="closeBetModal()">×</button>
-                    <div class="modal-title">Make Your Prediction</div>
-                    <div class="modal-subtitle">Predict which token will perform better</div>
-                </div>
-                
-                <div class="chosen-token-display">
-                    <div class="token-showcase">
-                        <img class="token-logo-large" src="${tokenData.logo}" alt="${tokenData.symbol}" 
-                             onerror="this.src='${getDefaultTokenLogo(tokenData.symbol)}'">
-                        <div class="token-details">
-                            <div class="token-symbol-large">${tokenData.symbol}</div>
-                            <div class="token-name-large">${tokenData.name}</div>
-                            <div class="token-price-large" id="modalTokenPrice">$${formatPrice(tokenData.price)}</div>
-                            ${tokenData.marketCap ? `
-                                <div class="token-market-cap-large">
-                                    Market Cap: $${formatMarketCap(tokenData.marketCap)}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="prediction-confidence">
-                        <div class="confidence-label">Your Prediction</div>
-                        <div class="confidence-text">
-                            You believe <strong>${tokenData.symbol}</strong> will outperform its competitor over the next hour
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bet-details">
-                    <div class="bet-amount">
-                        <div class="amount-label">Entry Fee</div>
-                        <div class="amount-value">${window.APP_CONFIG.BET_AMOUNT} SOL</div>
-                        <div class="amount-note">Fixed entry fee for all predictions</div>
-                    </div>
-                    
-                    <div class="potential-return">
-                        <div class="return-label">Potential Return</div>
-                        <div class="return-value" id="potentialReturn">Calculating...</div>
-                        <div class="return-note">Depends on number of winners</div>
-                    </div>
-                </div>
-                
-                <div class="bet-confirmation">
-                    <div class="competition-timing">
-                        <div class="timing-item">
-                            <div class="timing-label">Voting Ends</div>
-                            <div class="timing-value">${formatDateTime(competition.voting_end_time)}</div>
-                        </div>
-                        <div class="timing-item">
-                            <div class="timing-label">Competition Ends</div>
-                            <div class="timing-value">${formatDateTime(competition.end_time)}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="risk-warning">
-                        ⚠️ This prediction is final once placed. Winners determined by TWAP pricing to prevent manipulation.
-                    </div>
-                </div>
-                
-                <div class="modal-actions">
-                    <button class="btn-modal-secondary" onclick="closeBetModal()">Cancel</button>
-                    <button class="btn-modal-primary" id="placeBetBtn" 
-                            onclick="placeBet('${competitionId}', '${chosenToken}')">
-                        🎯 Place Prediction (${window.APP_CONFIG.BET_AMOUNT} SOL)
-                    </button>
-                </div>
+            <!-- Real Data Footer -->
+            <div class="real-data-footer">
+                <span class="data-source">
+                    ${competition.isRealData ? '🟢 Live Data' : '🟡 Demo Data'}
+                </span>
+                <span class="last-updated">
+                    Updated ${formatRelativeTime(competition.lastUpdated)}
+                </span>
             </div>
         </div>
     `;
-    
-    // Add modal to DOM
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Calculate potential return
-    calculatePotentialReturn(competition, chosenToken);
-    
-    // Start real-time price updates in modal
-    startModalPriceUpdates(tokenData.address);
 }
 
-// Start price updates in the betting modal
-function startModalPriceUpdates(tokenAddress) {
-    const priceElement = document.getElementById('modalTokenPrice');
-    if (!priceElement) return;
-
-    const updatePrice = async () => {
-        try {
-            const marketData = await window.priceService.getMarketData(tokenAddress);
-            if (marketData && priceElement) {
-                priceElement.textContent = marketData.formatted_price;
-                priceElement.classList.add('price-updated');
-                setTimeout(() => priceElement.classList.remove('price-updated'), 500);
-            }
-        } catch (error) {
-            console.warn('Modal price update failed:', error);
-        }
-    };
-
-    // Update immediately and then every 30 seconds
-    updatePrice();
-    const interval = setInterval(updatePrice, 30000);
-    
-    // Store interval for cleanup
-    document.getElementById('betModal').priceUpdateInterval = interval;
+/**
+ * Utility Functions for Competition Display
+ */
+function formatTokenPrice(price) {
+    if (price >= 1) return price.toFixed(2);
+    if (price >= 0.01) return price.toFixed(4);
+    if (price >= 0.0001) return price.toFixed(6);
+    return price.toFixed(8);
 }
 
-// Close betting modal
-function closeBetModal() {
-    const modal = document.getElementById('betModal');
-    if (modal) {
-        // Clear price update interval
-        if (modal.priceUpdateInterval) {
-            clearInterval(modal.priceUpdateInterval);
-        }
-        modal.remove();
-    }
-}
-
-// ==============================================
-// UTILITY FUNCTIONS (ENHANCED)
-// ==============================================
-
-// Get default token logo for fallback
-function getDefaultTokenLogo(symbol) {
-    // Create a simple SVG logo with the token symbol
-    const svgLogo = `data:image/svg+xml,${encodeURIComponent(`
-        <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="28" cy="28" r="28" fill="linear-gradient(135deg, #8b5cf6, #ec4899)"/>
-            <text x="28" y="35" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
-                ${symbol ? symbol.substring(0, 3).toUpperCase() : '?'}
-            </text>
-        </svg>
-    `)}`;
-    
-    return svgLogo;
-}
-
-// Format market cap for display
 function formatMarketCap(marketCap) {
-    if (!marketCap) return 'N/A';
-    
-    if (marketCap >= 1e9) {
-        return `${(marketCap / 1e9).toFixed(2)}B`;
-    } else if (marketCap >= 1e6) {
-        return `${(marketCap / 1e6).toFixed(1)}M`;
-    } else if (marketCap >= 1e3) {
-        return `${(marketCap / 1e3).toFixed(0)}K`;
-    } else {
-        return marketCap.toLocaleString();
-    }
+    if (marketCap >= 1e9) return `$${(marketCap / 1e9).toFixed(2)}B`;
+    if (marketCap >= 1e6) return `$${(marketCap / 1e6).toFixed(2)}M`;
+    if (marketCap >= 1e3) return `$${(marketCap / 1e3).toFixed(2)}K`;
+    return `$${marketCap.toFixed(0)}`;
 }
 
-// Format percentage for display
-function formatPercentage(percentage) {
-    if (!percentage && percentage !== 0) return 'N/A';
-    
-    const sign = percentage >= 0 ? '+' : '';
-    return `${sign}${percentage.toFixed(2)}%`;
+function formatPercentage(percent) {
+    const formatted = parseFloat(percent).toFixed(2);
+    return percent >= 0 ? `+${formatted}%` : `${formatted}%`;
 }
 
-// Format date and time for display
-function formatDateTime(dateString) {
-    if (!dateString) return 'N/A';
-    
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMinutes = Math.round((date - now) / (1000 * 60));
-    
-    if (diffMinutes > 0) {
-        if (diffMinutes < 60) {
-            return `in ${diffMinutes}m`;
-        } else {
-            const hours = Math.floor(diffMinutes / 60);
-            const minutes = diffMinutes % 60;
-            return `in ${hours}h ${minutes}m`;
-        }
-    } else {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-}
-
-// ==============================================
-// REAL-TIME UPDATES AND SUBSCRIPTIONS
-// ==============================================
-
-// Subscribe to real-time updates for a competition
-function subscribeToCompetitionUpdates(competitionId) {
-    // Don't create duplicate subscriptions
-    if (competitionSubscriptions.has(competitionId)) {
-        return;
-    }
-    
-    const subscription = window.supabaseClient.subscribeToCompetitionBets(
-        competitionId,
-        (payload) => {
-            console.log('Competition bet update:', payload);
-            updateCompetitionDisplay(competitionId);
-        }
-    );
-    
-    competitionSubscriptions.set(competitionId, subscription);
-}
-
-// Update a specific competition's display
-async function updateCompetitionDisplay(competitionId) {
-    try {
-        const updatedCompetition = await window.supabaseClient.getCompetitionDetails(competitionId);
-        
-        // Find and update the competition card
-        const competitionCard = document.querySelector(`[data-competition-id="${competitionId}"]`);
-        if (competitionCard && updatedCompetition) {
-            // Update the competition in our local array
-            const index = activeCompetitions.findIndex(c => c.competition_id === competitionId);
-            if (index !== -1) {
-                activeCompetitions[index] = updatedCompetition;
-            }
-            
-            // Replace the card with updated version
-            competitionCard.outerHTML = createCompetitionCard(updatedCompetition);
-            
-            // Re-subscribe to price updates for the new card
-            if (updatedCompetition.token_a_address) {
-                subscribeToPriceUpdates(updatedCompetition.token_a_address, competitionId, 'token_a');
-            }
-            if (updatedCompetition.token_b_address) {
-                subscribeToPriceUpdates(updatedCompetition.token_b_address, competitionId, 'token_b');
-            }
-        }
-    } catch (error) {
-        console.error('Failed to update competition display:', error);
-    }
-}
-
-// Clean up all subscriptions
-function cleanupCompetitionSubscriptions() {
-    // Clean up competition subscriptions
-    competitionSubscriptions.forEach((subscription, competitionId) => {
-        if (subscription && typeof subscription.unsubscribe === 'function') {
-            subscription.unsubscribe();
-        }
-    });
-    competitionSubscriptions.clear();
-    
-    // Clean up price update subscriptions
-    priceUpdateSubscriptions.forEach((unsubscribe, key) => {
-        if (typeof unsubscribe === 'function') {
-            unsubscribe();
-        }
-    });
-    priceUpdateSubscriptions.clear();
-}
-
-// ==============================================
-// EXISTING FUNCTIONS (PRESERVED)
-// ==============================================
-
-// Get time remaining for a competition
-function getTimeRemaining(competition) {
-    const now = new Date();
-    let targetTime;
-    
-    switch (competition.status) {
-        case 'SETUP':
-            targetTime = new Date(competition.start_time);
-            return `Starts in ${formatTimeDifference(targetTime, now)}`;
-            
-        case 'VOTING':
-            targetTime = new Date(competition.voting_end_time);
-            return `Voting ends in ${formatTimeDifference(targetTime, now)}`;
-            
-        case 'ACTIVE':
-            targetTime = new Date(competition.end_time);
-            return `Ends in ${formatTimeDifference(targetTime, now)}`;
-            
-        default:
-            return 'Completed';
-    }
-}
-
-// Get competition status information
-function getCompetitionStatusInfo(competition) {
-    switch (competition.status) {
-        case 'SETUP':
-            return { text: 'Upcoming', class: 'status-upcoming' };
-        case 'VOTING':
-            return { text: 'Voting Open', class: 'status-voting' };
-        case 'ACTIVE':
-            return { text: 'Live', class: 'status-active' };
-        case 'CLOSED':
-            return { text: 'Calculating', class: 'status-closed' };
-        case 'RESOLVED':
-            return { text: 'Completed', class: 'status-completed' };
-        default:
-            return { text: 'Unknown', class: 'status-unknown' };
-    }
-}
-
-// Format time difference
-function formatTimeDifference(future, now) {
-    const diff = future - now;
-    
-    if (diff <= 0) return 'Expired';
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) {
-        return `${hours}h ${minutes}m`;
-    } else {
-        return `${minutes}m`;
-    }
-}
-
-// Format SOL amount
 function formatSOL(amount) {
-    return parseFloat(amount).toFixed(3);
+    return `${parseFloat(amount).toFixed(3)} SOL`;
 }
 
-// Format price
-function formatPrice(price) {
-    if (!price || isNaN(price)) return '0.00';
-    const num = parseFloat(price);
-    if (num < 0.000001) {
-        return num.toExponential(2);
-    } else if (num < 0.01) {
-        return num.toFixed(6);
-    } else if (num < 1) {
-        return num.toFixed(4);
-    } else {
-        return num.toFixed(2);
+function formatRelativeTime(date) {
+    const now = new Date();
+    const diff = now - new Date(date);
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+}
+
+function calculateTimeRemaining(endTime) {
+    const now = new Date();
+    const end = new Date(endTime);
+    return Math.max(0, end - now);
+}
+
+function formatTimeRemaining(milliseconds) {
+    if (milliseconds <= 0) return 'Ended';
+    
+    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m remaining`;
+}
+
+function getStatusDisplay(status) {
+    const statusMap = {
+        'SETUP': '🔧 Setting Up',
+        'VOTING': '🗳️ Voting Open',
+        'ACTIVE': '⚡ Live',
+        'CLOSED': '🏁 Resolving',
+        'RESOLVED': '✅ Complete',
+        'PAUSED': '⏸️ Paused',
+        'CANCELLED': '❌ Cancelled'
+    };
+    return statusMap[status] || '❓ Unknown';
+}
+
+function getBettingButtonText(status) {
+    const buttonMap = {
+        'SETUP': 'Coming Soon',
+        'VOTING': 'Place Prediction',
+        'ACTIVE': 'Place Prediction',
+        'CLOSED': 'Resolving...',
+        'RESOLVED': 'View Results',
+        'PAUSED': 'Temporarily Paused',
+        'CANCELLED': 'Cancelled'
+    };
+    return buttonMap[status] || 'Place Bet';
+}
+
+function determineCompetitionStatus(competition) {
+    const now = new Date();
+    const start = new Date(competition.start_time);
+    const end = new Date(competition.end_time);
+    
+    if (now < start) return 'SETUP';
+    if (now >= start && now < end) return 'ACTIVE';
+    if (now >= end && !competition.winner_token) return 'CLOSED';
+    if (competition.winner_token) return 'RESOLVED';
+    return competition.status || 'SETUP';
+}
+
+/**
+ * Set up Real-Time Updates
+ */
+function setupRealTimeCompetitionUpdates() {
+    // Subscribe to competition changes
+    if (window.supabaseClient && window.supabaseClient.subscribeToCompetitions) {
+        const subscription = window.supabaseClient.subscribeToCompetitions((payload) => {
+            console.log('Real-time competition update:', payload);
+            handleCompetitionUpdate(payload);
+        });
+        
+        CompetitionState.realTimeSubscriptions.push(subscription);
+    }
+    
+    // Subscribe to token price updates
+    if (window.supabaseClient && window.supabaseClient.subscribeToTokenUpdates) {
+        const subscription = window.supabaseClient.subscribeToTokenUpdates((payload) => {
+            console.log('Real-time token update:', payload);
+            handleTokenUpdate(payload);
+        });
+        
+        CompetitionState.realTimeSubscriptions.push(subscription);
     }
 }
 
-// Truncate string
-function truncateString(str, maxLength) {
-    if (!str) return '';
-    return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
-}
-
-// Calculate potential return for a bet
-function calculatePotentialReturn(competition, chosenToken) {
-    const totalPool = competition.total_pool || 0;
-    const opponentBets = chosenToken === 'token_a' ? 
-        (competition.token_b_bets || 0) : 
-        (competition.token_a_bets || 0);
-    const chosenBets = chosenToken === 'token_a' ? 
-        (competition.token_a_bets || 0) : 
-        (competition.token_b_bets || 0);
+/**
+ * Handle Real-Time Competition Updates
+ */
+function handleCompetitionUpdate(payload) {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
     
-    // Assume this user wins and calculate payout
-    const newTotalPool = totalPool + window.APP_CONFIG.BET_AMOUNT;
-    const platformFee = newTotalPool * (window.APP_CONFIG.PLATFORM_FEE / 100);
-    const winnerPool = newTotalPool - platformFee;
-    const totalWinners = chosenBets + 1; // Including this bet
-    
-    const potentialReturn = totalWinners > 0 ? winnerPool / totalWinners : 0;
-    const profitPercent = potentialReturn > 0 ? ((potentialReturn / window.APP_CONFIG.BET_AMOUNT - 1) * 100) : 0;
-    
-    const returnElement = document.getElementById('potentialReturn');
-    if (returnElement) {
-        returnElement.innerHTML = `
-            <span class="return-amount">${formatSOL(potentialReturn)} SOL</span>
-            <span class="return-profit ${profitPercent > 0 ? 'positive' : 'negative'}">
-                (${profitPercent > 0 ? '+' : ''}${profitPercent.toFixed(1)}% profit)
-            </span>
-        `;
+    if (eventType === 'INSERT') {
+        // New competition added
+        loadRealCompetitions();
+    } else if (eventType === 'UPDATE') {
+        // Competition updated
+        updateSingleCompetition(newRecord);
+    } else if (eventType === 'DELETE') {
+        // Competition removed
+        removeSingleCompetition(oldRecord.competition_id);
     }
 }
 
-// Place a bet
-async function placeBet(competitionId, chosenToken) {
-    const currentUser = window.app?.getCurrentUser();
-    const connectedWallet = window.app?.getConnectedWallet();
+/**
+ * Handle Real-Time Token Updates
+ */
+function handleTokenUpdate(payload) {
+    const { new: newToken } = payload;
     
-    if (!currentUser || !connectedWallet) {
-        showErrorNotification('Please connect your wallet first');
-        return;
+    // Update competitions that use this token
+    CompetitionState.activeCompetitions.forEach(competition => {
+        if (competition.tokenA.address === newToken.address) {
+            competition.tokenA = { ...competition.tokenA, ...newToken };
+        }
+        if (competition.tokenB.address === newToken.address) {
+            competition.tokenB = { ...competition.tokenB, ...newToken };
+        }
+    });
+    
+    updateCompetitionsDisplay();
+}
+
+/**
+ * Start Price Update Monitoring
+ */
+function startPriceUpdateMonitoring() {
+    if (CompetitionState.priceService) {
+        // Update prices every minute for active competitions
+        setInterval(async () => {
+            await updateCompetitionPrices();
+        }, 60000);
     }
+}
+
+/**
+ * Update Competition Prices
+ */
+async function updateCompetitionPrices() {
+    if (!CompetitionState.priceService || CompetitionState.activeCompetitions.length === 0) return;
     
     try {
-        const placeBetBtn = document.getElementById('placeBetBtn');
-        placeBetBtn.disabled = true;
-        placeBetBtn.innerHTML = '⏳ Placing Prediction...';
+        // Get all token addresses from active competitions
+        const tokenAddresses = new Set();
+        CompetitionState.activeCompetitions.forEach(comp => {
+            tokenAddresses.add(comp.tokenA.address);
+            tokenAddresses.add(comp.tokenB.address);
+        });
         
-        // In a real implementation, you would:
-        // 1. Create and sign a Solana transaction to transfer SOL to escrow
-        // 2. Submit the transaction to the blockchain
-        // 3. Wait for confirmation
-        // 4. Then record the bet in the database
+        // Get updated prices
+        const prices = await CompetitionState.priceService.getCurrentPrices([...tokenAddresses]);
         
-        // For now, we'll simulate this process
-        await simulateSolanaTransaction();
+        // Update competitions with new prices
+        let updated = false;
+        CompetitionState.activeCompetitions.forEach(competition => {
+            const tokenAPrice = prices[competition.tokenA.address];
+            const tokenBPrice = prices[competition.tokenB.address];
+            
+            if (tokenAPrice) {
+                competition.tokenA.currentPrice = tokenAPrice.price;
+                competition.tokenA.priceChange24h = tokenAPrice.change24h;
+                updated = true;
+            }
+            
+            if (tokenBPrice) {
+                competition.tokenB.currentPrice = tokenBPrice.price;
+                competition.tokenB.priceChange24h = tokenBPrice.change24h;
+                updated = true;
+            }
+        });
         
-        // Record bet in database
-        const bet = await window.supabaseClient.placeBet(
-            competitionId,
-            chosenToken,
-            window.APP_CONFIG.BET_AMOUNT,
-            currentUser.wallet_address
-        );
-        
-        console.log('Bet placed successfully:', bet);
-        
-        // Close modal and show success
-        closeBetModal();
-        showNotification('🎯 Prediction placed successfully! Good luck!', 'success');
-        
-        // Refresh competitions to show updated counts
-        if (window.app?.loadActiveCompetitions) {
-            await window.app.loadActiveCompetitions();
-        }
-        
-        // Refresh user portfolio
-        if (window.app?.loadUserPortfolio) {
-            await window.app.loadUserPortfolio();
+        if (updated) {
+            updateCompetitionsDisplay();
+            console.log('Updated competition prices');
         }
         
     } catch (error) {
-        console.error('Failed to place bet:', error);
-        showErrorNotification(`Failed to place prediction: ${error.message}`);
-        
-        const placeBetBtn = document.getElementById('placeBetBtn');
-        if (placeBetBtn) {
-            placeBetBtn.disabled = false;
-            placeBetBtn.innerHTML = `🎯 Place Prediction (${window.APP_CONFIG.BET_AMOUNT} SOL)`;
-        }
+        console.error('Failed to update competition prices:', error);
     }
 }
 
-// Simulate Solana transaction (replace with real implementation)
-async function simulateSolanaTransaction() {
-    // Simulate transaction delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+/**
+ * Set up Competition Card Interactions
+ */
+function setupCompetitionCardInteractions() {
+    // Add click handlers for token cards
+    document.querySelectorAll('.token-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tokenAddress = card.dataset.token;
+            showTokenDetails(tokenAddress);
+        });
+    });
     
-    // In production, this would handle real Solana transactions
-    // Example structure:
-    /*
-    const transaction = new solanaWeb3.Transaction();
-    transaction.add(
-        solanaWeb3.SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: escrowAccount,
-            lamports: solanaWeb3.LAMPORTS_PER_SOL * 0.1
-        })
+    // Add hover effects for real-time data indicators
+    document.querySelectorAll('.real-data-indicator').forEach(indicator => {
+        indicator.addEventListener('mouseenter', (e) => {
+            showRealtimeTooltip(e.target, 'Live price data updating every minute');
+        });
+    });
+}
+
+/**
+ * Show Token Details Modal
+ */
+function showTokenDetails(tokenAddress) {
+    const competition = CompetitionState.activeCompetitions.find(comp => 
+        comp.tokenA.address === tokenAddress || comp.tokenB.address === tokenAddress
     );
     
-    const signature = await wallet.signAndSendTransaction(transaction);
-    await connection.confirmTransaction(signature);
-    */
+    if (!competition) return;
+    
+    const token = competition.tokenA.address === tokenAddress ? competition.tokenA : competition.tokenB;
+    
+    console.log('Show token details for:', token.symbol, token);
+    // TODO: Implement token details modal
 }
 
-// Show error notification (if not already defined)
-function showErrorNotification(message) {
-    if (window.app?.showErrorNotification) {
-        window.app.showErrorNotification(message);
-    } else {
-        console.error(message);
-        alert(message); // Fallback
-    }
+/**
+ * Fallback Demo Competitions (if all else fails)
+ */
+async function loadDemoCompetitions() {
+    console.log('Loading fallback demo competitions...');
+    
+    const demoCompetitions = [
+        {
+            competition_id: 'DEMO-001',
+            tokenA: { symbol: 'BONK', name: 'Bonk', logoURI: '/placeholder-token.png', currentPrice: 0.000015, priceChange24h: 5.2, marketCap: 1200000000 },
+            tokenB: { symbol: 'WIF', name: 'dogwifhat', logoURI: '/placeholder-token.png', currentPrice: 2.45, priceChange24h: -2.8, marketCap: 2400000000 },
+            status: 'ACTIVE',
+            totalPool: 5.4,
+            totalParticipants: 23,
+            timeRemaining: 2 * 60 * 60 * 1000,
+            isRealData: false
+        }
+    ];
+    
+    CompetitionState.activeCompetitions = demoCompetitions;
+    updateCompetitionsDisplay();
 }
 
-// Show notification (if not already defined)
-function showNotification(message, type = 'info') {
-    if (window.app?.showNotification) {
-        window.app.showNotification(message, type);
-    } else {
-        console.log(message);
-    }
-}
+/**
+ * Global Functions for External Access
+ */
+window.initializeCompetitionSystem = initializeCompetitionSystem;
+window.loadRealCompetitions = loadRealCompetitions;
+window.updateCompetitionsDisplay = updateCompetitionsDisplay;
+window.CompetitionState = CompetitionState;
 
-// Export functions for global use
-window.competition = {
-    displayCompetitions,
-    showBetModal,
-    closeBetModal,
-    placeBet,
-    subscribeToCompetitionUpdates,
-    updateCompetitionDisplay,
-    cleanupCompetitionSubscriptions,
-    subscribeToPriceUpdates,
-    updateTokenPriceInCard
-};
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeCompetitionSystem);
+} else {
+    initializeCompetitionSystem();
+}
