@@ -209,10 +209,10 @@
             <a href="index.html" class="logo">TokenWars</a>
             
             <ul class="nav-links">
-                <li><a href="competition.html">Markets</a></li>
-                <li><a href="competition.html">Competitions</a></li>
-                <li><a href="user.html">Leaderboard</a></li>
-                <li><a href="user.html">Portfolio</a></li>
+                <li><a href="#markets" onclick="showSection('markets')">Markets</a></li>
+                <li><a href="#competitions" onclick="showSection('competitions')">Competitions</a></li>
+                <li><a href="#leaderboard" onclick="showSection('leaderboard')">Leaderboard</a></li>
+                <li><a href="#portfolio" onclick="showSection('portfolio')">Portfolio</a></li>
                 <li><a href="how-it-works.html">Guide</a></li>
                 
                 <!-- Disconnected State -->
@@ -260,7 +260,7 @@
                 </div>
                 
                 <div class="cta-buttons">
-                    <a href="competition.html" class="btn-hero-primary">View Markets</a>
+                    <a href="#markets" class="btn-hero-primary" onclick="showSection('markets')">View Markets</a>
                     <a href="#learn-more" class="btn-secondary">Learn More</a>
                 </div>
             </div>
@@ -307,8 +307,145 @@
         </div>
     </div>
 
-    <!-- Main Content Container (Hidden by default, shown after connection) -->
-    <!-- This section can be removed or simplified since you have separate pages -->
+    <!-- Main Content Container -->
+    <main class="main-content" id="mainContent">
+        <!-- Markets Section -->
+        <section id="markets" class="section" style="display: none;">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">ACTIVE MARKETS</h2>
+                    <div class="section-filters">
+                        <select id="filter-status" class="filter-select">
+                            <option value="all">All Markets</option>
+                            <option value="active">Active</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <select id="sort-by" class="filter-select">
+                            <option value="time">Time Remaining</option>
+                            <option value="pool">Pool Size</option>
+                            <option value="participants">Participants</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="competitions-grid" id="competitions-grid">
+                    <div class="loading">Loading markets...</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Competitions Section -->
+        <section id="competitions" class="section" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">COMPETITIONS</h2>
+                <p class="section-subtitle">View all token prediction competitions</p>
+                <div class="competitions-grid" id="all-competitions-grid">
+                    <div class="loading">Loading competitions...</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Leaderboard Section -->
+        <section id="leaderboard" class="section" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">LEADERBOARD</h2>
+                
+                <div class="leaderboard-filters">
+                    <button class="filter-btn active" data-period="daily">Today</button>
+                    <button class="filter-btn" data-period="weekly">This Week</button>
+                    <button class="filter-btn" data-period="monthly">This Month</button>
+                    <button class="filter-btn" data-period="all-time">All Time</button>
+                </div>
+                
+                <div class="leaderboard-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>User</th>
+                                <th>Win Rate</th>
+                                <th>Total Winnings</th>
+                                <th>Streak</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Leaderboard rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Portfolio Section -->
+        <section id="portfolio" class="section" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">MY PORTFOLIO</h2>
+                
+                <!-- Profile Stats -->
+                <div class="profile-stats">
+                    <div class="stat-card primary">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value" id="user-win-rate">0%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="net-profit">0 SOL</div>
+                        <div class="stat-label">Net Profit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value" id="current-streak">0</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value" id="total-wins">0/0</div>
+                        <div class="stat-label">Wins/Total</div>
+                    </div>
+                </div>
+                
+                <!-- Username Management -->
+                <div class="username-section">
+                    <h3>Username</h3>
+                    <div id="username-display" class="hidden">
+                        <span id="current-username"></span>
+                        <button class="btn btn-secondary" id="change-username">Change</button>
+                    </div>
+                    <div id="username-form">
+                        <input type="text" id="username-input" placeholder="Choose a username" maxlength="20">
+                        <button class="btn btn-primary" id="save-username">Save Username</button>
+                        <p class="input-hint">3-20 characters, letters, numbers, and underscores only</p>
+                    </div>
+                </div>
+                
+                <!-- Betting History -->
+                <div class="betting-history">
+                    <h3 class="section-subtitle">Recent Predictions</h3>
+                    <div id="betting-history-container">
+                        <!-- Betting history will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Competition Details Modal -->
+    <div id="competition-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close" id="close-modal">&times;</span>
+            <div id="modal-body">
+                <!-- Competition details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Notification Container -->
+    <div id="achievement-notifications"></div>
+    
+    <!-- General Notifications Container -->
+    <div id="notifications" class="notifications"></div>
 
     <!-- Wallet Connection Modal -->
     <div class="wallet-modal" id="walletModal">
@@ -536,6 +673,65 @@
     <script src="app.js"></script>
     <script src="competition.js"></script>
     <script src="user.js"></script>
+    
+    <!-- Section Navigation -->
+    <script>
+        // Show section function
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show the selected section
+            const section = document.getElementById(sectionName);
+            if (section) {
+                section.style.display = 'block';
+            }
+            
+            // Update active nav
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+            });
+            const activeLink = document.querySelector(`.nav-links a[href="#${sectionName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            // Section-specific initialization
+            switch(sectionName) {
+                case 'markets':
+                case 'competitions':
+                    if (typeof loadCompetitions === 'function') {
+                        loadCompetitions();
+                    }
+                    break;
+                case 'leaderboard':
+                    if (typeof loadLeaderboard === 'function') {
+                        loadLeaderboard();
+                    }
+                    break;
+                case 'portfolio':
+                    if (AppState && AppState.isConnected && typeof initializeUserProfile === 'function') {
+                        initializeUserProfile();
+                    }
+                    break;
+            }
+        }
+        
+        // Handle initial page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if there's a hash in the URL
+            const hash = window.location.hash.slice(1) || 'markets';
+            showSection(hash);
+            
+            // Handle browser back/forward
+            window.addEventListener('hashchange', function() {
+                const hash = window.location.hash.slice(1) || 'markets';
+                showSection(hash);
+            });
+        });
+    </script>
     
     <!-- Additional modal and navigation scripts -->
     <script>
