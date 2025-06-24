@@ -78,8 +78,9 @@
 
         /* Content Section Container */
         .content-section {
-            margin-bottom: 4rem;
+            margin-bottom: 6rem; /* Increased from 4rem */
             scroll-margin-top: 100px;
+            padding: 0 1rem; /* Added padding */
         }
 
         .section-header {
@@ -122,8 +123,9 @@
             display: flex;
             justify-content: center;
             gap: 2rem;
-            margin: 3rem 0;
+            margin: 3rem auto; /* Added auto for centering */
             flex-wrap: wrap;
+            max-width: 900px; /* Added max-width */
         }
 
         .timeframe-card {
@@ -474,59 +476,52 @@
         }
 
         /* Escrow System */
-        .escrow-section {
-            background: rgba(16, 185, 129, 0.05);
-            border: 2px solid rgba(16, 185, 129, 0.2);
-            border-radius: 1rem;
-            padding: 2.5rem;
-            margin: 2rem 0;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .escrow-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #10b981, #34d399);
-            animation: escrowPulse 3s ease-in-out infinite;
-        }
-
-        @keyframes escrowPulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-
-        .escrow-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #10b981;
-            margin-bottom: 1rem;
-        }
-
-        .escrow-features {
+        .escrow-flow {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 2rem;
             margin: 2rem 0;
+            align-items: center;
         }
 
-        .escrow-feature {
+        .escrow-step {
             text-align: center;
+            position: relative;
         }
 
         .escrow-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            animation: escrowFloat 3s ease-in-out infinite;
+            animation-delay: calc(var(--step) * 0.2s);
+        }
+
+        @keyframes escrowFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .escrow-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            top: 40px;
+            right: -1rem;
+            font-size: 2rem;
+            color: #8b5cf6;
+            animation: arrowPulse 2s ease-in-out infinite;
         }
 
         .escrow-label {
             font-weight: 700;
-            color: #ffffff;
+            color: #8b5cf6;
             margin-bottom: 0.5rem;
         }
 
@@ -1087,49 +1082,72 @@
             <div class="content-section" id="escrow-security">
                 <div class="section-header">
                     <div class="section-number">6</div>
-                    <h2 class="section-title">🔐 Escrow & Security</h2>
-                    <p class="section-description">Your funds are always safe</p>
+                    <h2 class="section-title">🔐 The Escrow System</h2>
+                    <p class="section-description">Trustless, transparent, automatic</p>
+                </div>
+
+                <div class="escrow-flow">
+                    <div class="escrow-step" style="--step: 0">
+                        <div class="escrow-icon">💳</div>
+                        <div class="escrow-label">Entry Fees</div>
+                        <div class="escrow-desc">Players pay to join</div>
+                    </div>
+
+                    <div class="escrow-step" style="--step: 1">
+                        <div class="escrow-icon">🔒</div>
+                        <div class="escrow-label">Smart Contract</div>
+                        <div class="escrow-desc">Funds locked securely</div>
+                    </div>
+
+                    <div class="escrow-step" style="--step: 2">
+                        <div class="escrow-icon">⚡</div>
+                        <div class="escrow-label">Competition Runs</div>
+                        <div class="escrow-desc">Prediction period active</div>
+                    </div>
+
+                    <div class="escrow-step" style="--step: 3">
+                        <div class="escrow-icon">🏆</div>
+                        <div class="escrow-label">Auto-Distribution</div>
+                        <div class="escrow-desc">Winners paid instantly</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <a href="https://explorer.solana.com/address/YOUR_CONTRACT_ADDRESS_HERE?cluster=devnet" target="_blank" class="contract-link">
+                        🔍 Verify Escrow Contract
+                    </a>
                 </div>
 
                 <div class="escrow-section">
-                    <h3 class="escrow-title">Smart Contract Escrow System</h3>
+                    <h3 class="escrow-title">Complete Transparency</h3>
                     <p style="color: #d1d5db; margin-bottom: 2rem;">
-                        All competition funds are locked in audited Solana smart contracts
+                        All competition funds are locked in audited Solana smart contracts. Anyone can verify on-chain!
                     </p>
 
                     <div class="escrow-features">
                         <div class="escrow-feature">
                             <div class="escrow-icon">🔒</div>
                             <div class="escrow-label">Funds Locked</div>
-                            <div class="escrow-desc">Entry fees secured in escrow</div>
+                            <div class="escrow-desc">0.1 SOL entry secured</div>
                         </div>
 
                         <div class="escrow-feature">
                             <div class="escrow-icon">⚡</div>
-                            <div class="escrow-label">Auto Distribution</div>
-                            <div class="escrow-desc">Winners paid instantly</div>
+                            <div class="escrow-label">Instant Payout</div>
+                            <div class="escrow-desc">Winners paid automatically</div>
                         </div>
 
                         <div class="escrow-feature">
                             <div class="escrow-icon">📊</div>
-                            <div class="escrow-label">Transparent</div>
-                            <div class="escrow-desc">85% to winners, 15% platform</div>
+                            <div class="escrow-label">85% to Winners</div>
+                            <div class="escrow-desc">15% platform fee</div>
                         </div>
 
                         <div class="escrow-feature">
                             <div class="escrow-icon">✅</div>
                             <div class="escrow-label">Verifiable</div>
-                            <div class="escrow-desc">Check on Solscan anytime</div>
+                            <div class="escrow-desc">Check anytime on Solscan</div>
                         </div>
-                    </div>
-
-                    <div class="contract-links">
-                        <a href="#" class="contract-link">
-                            🔍 View on Solscan
-                        </a>
-                        <a href="#" class="contract-link">
-                            📄 Audit Report
-                        </a>
                     </div>
                 </div>
             </div>
