@@ -1,563 +1,274 @@
-// Token Selection Service - Core token data fetching, filtering, and pair matching logic
-// This service handles all token-related operations including API calls and data validation
+// TokenService - Simplified Version That Works Without Edge Functions
+// This version provides basic functionality while Edge Functions are being set up
 
 class TokenService {
     constructor() {
-        this.tokenCache = new Map();
-        this.priceCache = new Map();
-        this.lastTokenUpdate = null;
-        this.isUpdating = false;
-        this.validTokens = [];
+        this.tokens = [];
         this.tokenPairs = [];
+        this.lastUpdate = null;
+        this.isInitialized = false;
+        
+        console.log('TokenService constructor called');
     }
 
-    // ==============================================
-    // TOKEN DATA FETCHING
-    // ==============================================
-
-    /**
-     * Fetch and update the complete token list
-     */
-    async updateTokenList() {
-        if (this.isUpdating) {
-            console.log('Token update already in progress...');
-            return this.validTokens;
-        }
-
-        this.isUpdating = true;
-        console.log('Starting token list update...');
-
+    async initialize() {
         try {
-            // Fetch from multiple sources
-            const [jupiterTokens, coingeckoTokens] = await Promise.all([
-                this.fetchJupiterTokens(),
-                this.fetchCoingeckoTokens()
-            ]);
-
-            // Merge and validate tokens
-            const mergedTokens = this.mergeTokenSources(jupiterTokens, coingeckoTokens);
+            console.log('Initializing TokenService...');
             
-            // Apply filters
-            const filteredTokens = await this.applyTokenFilters(mergedTokens);
+            // For now, create some demo tokens to prevent errors
+            this.tokens = this.createDemoTokens();
+            this.tokenPairs = this.generateDemoTokenPairs();
+            this.lastUpdate = new Date();
+            this.isInitialized = true;
             
-            // Store valid tokens
-            this.validTokens = filteredTokens;
-            this.lastTokenUpdate = new Date();
-            
-            // Store in database
-            await this.storeTokensInDatabase(filteredTokens);
-            
-            console.log(`Token list updated: ${filteredTokens.length} valid tokens`);
-            return filteredTokens;
-
+            console.log('TokenService initialized with demo data');
+            return true;
         } catch (error) {
-            console.error('Token list update failed:', error);
-            throw new Error(`Token update failed: ${error.message}`);
-        } finally {
-            this.isUpdating = false;
+            console.error('TokenService initialization failed:', error);
+            throw error;
         }
     }
 
-    /**
-     * Fetch tokens from Jupiter API
-     */
-    async fetchJupiterTokens() {
-        try {
-            console.log('Fetching tokens from Jupiter...');
-            
-            const response = await fetch(window.APP_CONFIG.API_ENDPOINTS.JUPITER_TOKENS);
-            if (!response.ok) {
-                throw new Error(`Jupiter API error: ${response.status}`);
+    // Create demo tokens for testing
+    createDemoTokens() {
+        return [
+            {
+                address: 'So11111111111111111111111111111111111111112',
+                symbol: 'SOL',
+                name: 'Wrapped SOL',
+                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+                market_cap: 45000000000,
+                price: 180.50,
+                age_days: 1500,
+                liquidity_score: 0.95,
+                is_active: true
+            },
+            {
+                address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                symbol: 'USDC',
+                name: 'USD Coin',
+                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+                market_cap: 42000000000,
+                price: 1.00,
+                age_days: 1200,
+                liquidity_score: 0.98,
+                is_active: true
+            },
+            {
+                address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+                symbol: 'MSOL',
+                name: 'Marinade Staked SOL',
+                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
+                market_cap: 1200000000,
+                price: 195.30,
+                age_days: 800,
+                liquidity_score: 0.85,
+                is_active: true
+            },
+            {
+                address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+                symbol: 'JUP',
+                name: 'Jupiter',
+                logoURI: 'https://static.jup.ag/jup/icon.png',
+                market_cap: 1500000000,
+                price: 1.15,
+                age_days: 120,
+                liquidity_score: 0.82,
+                is_active: true
+            },
+            {
+                address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+                symbol: 'BONK',
+                name: 'Bonk',
+                logoURI: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
+                market_cap: 900000000,
+                price: 0.000023,
+                age_days: 400,
+                liquidity_score: 0.75,
+                is_active: true
+            },
+            {
+                address: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
+                symbol: 'RENDER',
+                name: 'Render Token',
+                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png',
+                market_cap: 850000000,
+                price: 7.85,
+                age_days: 600,
+                liquidity_score: 0.78,
+                is_active: true
             }
-
-            const tokens = await response.json();
-            
-            return tokens.map(token => ({
-                address: token.address,
-                symbol: token.symbol,
-                name: token.name,
-                logoURI: token.logoURI,
-                decimals: token.decimals,
-                source: 'jupiter',
-                tags: token.tags || []
-            }));
-
-        } catch (error) {
-            console.error('Jupiter tokens fetch failed:', error);
-            return []; // Return empty array instead of failing completely
-        }
+        ];
     }
 
-    /**
-     * Fetch tokens from CoinGecko via Supabase Edge Function
-     */
-    async fetchCoingeckoTokens() {
-        try {
-            console.log('Fetching tokens from CoinGecko...');
-            
-            const { data, error } = await window.supabaseClient.getSupabaseClient()
-                .functions
-                .invoke('fetch-tokens', {
-                    body: {
-                        vs_currency: 'usd',
-                        order: 'market_cap_desc',
-                        per_page: 250,
-                        page: 1,
-                        sparkline: false,
-                        category: 'solana-ecosystem'
-                    }
-                });
-
-            if (error) {
-                console.error('CoinGecko edge function error:', error);
-                return [];
-            }
-
-            return data.map(token => ({
-                address: token.contract_address || token.id,
-                symbol: token.symbol?.toUpperCase(),
-                name: token.name,
-                logoURI: token.image,
-                market_cap: token.market_cap,
-                current_price: token.current_price,
-                price_change_24h: token.price_change_percentage_24h,
-                total_volume: token.total_volume,
-                market_cap_rank: token.market_cap_rank,
-                last_updated: token.last_updated,
-                source: 'coingecko',
-                age_days: this.calculateTokenAge(token.genesis_date || token.last_updated)
-            }));
-
-        } catch (error) {
-            console.error('CoinGecko tokens fetch failed:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Merge token data from multiple sources
-     */
-    mergeTokenSources(jupiterTokens, coingeckoTokens) {
-        const tokenMap = new Map();
-
-        // Add Jupiter tokens first (they have the most accurate Solana data)
-        jupiterTokens.forEach(token => {
-            if (token.address && token.symbol) {
-                tokenMap.set(token.address, token);
-            }
-        });
-
-        // Merge CoinGecko data (adds market cap and price info)
-        coingeckoTokens.forEach(cgToken => {
-            const existingToken = tokenMap.get(cgToken.address);
-            
-            if (existingToken) {
-                // Merge data, preferring Jupiter for basic info, CoinGecko for market data
-                tokenMap.set(cgToken.address, {
-                    ...existingToken,
-                    market_cap: cgToken.market_cap,
-                    current_price: cgToken.current_price,
-                    price_change_24h: cgToken.price_change_24h,
-                    total_volume: cgToken.total_volume,
-                    market_cap_rank: cgToken.market_cap_rank,
-                    age_days: cgToken.age_days,
-                    last_updated: cgToken.last_updated
-                });
-            } else if (cgToken.address && cgToken.symbol) {
-                // Add as new token if not in Jupiter list
-                tokenMap.set(cgToken.address, cgToken);
-            }
-        });
-
-        return Array.from(tokenMap.values());
-    }
-
-    /**
-     * Apply filters to token list based on requirements
-     */
-    async applyTokenFilters(tokens) {
-        const config = window.APP_CONFIG.TOKEN_SELECTION;
-        const filteredTokens = [];
-
-        for (const token of tokens) {
-            try {
-                // Validate required fields
-                if (!this.validateTokenFields(token)) {
-                    continue;
-                }
-
-                // Market cap filter (minimum $5M)
-                if (!token.market_cap || token.market_cap < config.MIN_MARKET_CAP) {
-                    continue;
-                }
-
-                // Age filter (minimum 30 days)
-                if (token.age_days && token.age_days < config.MIN_AGE_DAYS) {
-                    continue;
-                }
-
-                // Blacklist filter
-                if (config.BLACKLISTED_TOKENS.includes(token.address)) {
-                    continue;
-                }
-
-                // Liquidity check
-                if (!await this.checkTokenLiquidity(token)) {
-                    continue;
-                }
-
-                // Additional validation
-                if (this.isValidToken(token)) {
-                    filteredTokens.push({
-                        ...token,
-                        category: this.categorizeToken(token.market_cap),
-                        filtered_at: new Date().toISOString()
-                    });
-                }
-
-            } catch (error) {
-                console.warn(`Token validation failed for ${token.symbol}:`, error);
-                continue;
-            }
-        }
-
-        console.log(`Applied filters: ${tokens.length} -> ${filteredTokens.length} tokens`);
-        return filteredTokens;
-    }
-
-    // ==============================================
-    // TOKEN PAIRING LOGIC
-    // ==============================================
-
-    /**
-     * Generate token pairs for competitions
-     */
-    generateTokenPairs(tokens = null) {
-        const tokenList = tokens || this.validTokens;
-        const config = window.APP_CONFIG.TOKEN_SELECTION;
+    // Generate demo token pairs
+    generateDemoTokenPairs() {
         const pairs = [];
-
-        // Group tokens by market cap categories
-        const categories = this.groupTokensByCategory(tokenList);
-
-        Object.entries(categories).forEach(([category, categoryTokens]) => {
-            if (categoryTokens.length < 2) return;
-
-            // Generate pairs within each category
-            for (let i = 0; i < categoryTokens.length - 1; i++) {
-                for (let j = i + 1; j < categoryTokens.length; j++) {
-                    const token1 = categoryTokens[i];
-                    const token2 = categoryTokens[j];
-
-                    // Check market cap compatibility (within 10% tolerance)
-                    if (this.areTokensCompatible(token1, token2)) {
-                        pairs.push({
-                            id: `${token1.address}-${token2.address}`,
-                            token_a: token1,
-                            token_b: token2,
-                            category: category,
-                            market_cap_ratio: Math.max(token1.market_cap, token2.market_cap) / 
-                                            Math.min(token1.market_cap, token2.market_cap),
-                            compatibility_score: this.calculateCompatibilityScore(token1, token2),
-                            created_at: new Date().toISOString()
-                        });
-                    }
-                }
-            }
-        });
-
-        // Sort pairs by compatibility score
-        pairs.sort((a, b) => b.compatibility_score - a.compatibility_score);
-
-        this.tokenPairs = pairs;
-        console.log(`Generated ${pairs.length} token pairs`);
+        const tokens = this.tokens;
+        
+        // Create some compatible pairs
+        if (tokens.length >= 2) {
+            pairs.push({
+                id: 1,
+                token_a_address: tokens[2].address, // MSOL
+                token_b_address: tokens[3].address, // JUP
+                token_a: tokens[2],
+                token_b: tokens[3],
+                compatibility_score: 0.85,
+                market_cap_ratio: tokens[2].market_cap / tokens[3].market_cap,
+                is_active: true,
+                created_at: new Date().toISOString()
+            });
+            
+            pairs.push({
+                id: 2,
+                token_a_address: tokens[4].address, // BONK
+                token_b_address: tokens[5].address, // RENDER
+                token_a: tokens[4],
+                token_b: tokens[5],
+                compatibility_score: 0.78,
+                market_cap_ratio: tokens[4].market_cap / tokens[5].market_cap,
+                is_active: true,
+                created_at: new Date().toISOString()
+            });
+        }
+        
         return pairs;
     }
 
-    /**
-     * Select best token pair for a new competition
-     */
-    selectOptimalTokenPair(excludeUsedPairs = []) {
-        if (this.tokenPairs.length === 0) {
-            this.generateTokenPairs();
-        }
-
-        // Filter out recently used pairs
-        const availablePairs = this.tokenPairs.filter(pair => 
-            !excludeUsedPairs.includes(pair.id)
-        );
-
-        if (availablePairs.length === 0) {
-            throw new Error('No available token pairs for competition');
-        }
-
-        // Select pair with highest compatibility score
-        const selectedPair = availablePairs[0];
-        
-        console.log(`Selected token pair: ${selectedPair.token_a.symbol} vs ${selectedPair.token_b.symbol}`);
-        return selectedPair;
-    }
-
-    // ==============================================
-    // VALIDATION AND UTILITY FUNCTIONS
-    // ==============================================
-
-    /**
-     * Validate token has all required fields
-     */
-    validateTokenFields(token) {
-        const required = window.TOKEN_VALIDATION.REQUIRED_FIELDS;
-        return required.every(field => token[field] && token[field].toString().length > 0);
-    }
-
-    /**
-     * Check if token has sufficient liquidity
-     */
-    async checkTokenLiquidity(token) {
+    // Get valid tokens
+    async getValidTokens() {
         try {
-            // For now, use volume as liquidity proxy
-            // In production, you'd check DEX liquidity pools
-            return token.total_volume && token.total_volume > window.APP_CONFIG.PRICE_CONFIG.MIN_LIQUIDITY_USD;
-        } catch (error) {
-            console.warn(`Liquidity check failed for ${token.symbol}:`, error);
-            return false;
-        }
-    }
-
-    /**
-     * Check if two tokens are compatible for pairing
-     */
-    areTokensCompatible(token1, token2) {
-        const tolerance = window.APP_CONFIG.TOKEN_SELECTION.MARKET_CAP_TOLERANCE;
-        const ratio = Math.max(token1.market_cap, token2.market_cap) / 
-                     Math.min(token1.market_cap, token2.market_cap);
-        
-        return (ratio - 1) <= tolerance;
-    }
-
-    /**
-     * Calculate compatibility score for token pair
-     */
-    calculateCompatibilityScore(token1, token2) {
-        let score = 100;
-
-        // Market cap similarity (higher score for closer market caps)
-        const mcRatio = Math.max(token1.market_cap, token2.market_cap) / 
-                       Math.min(token1.market_cap, token2.market_cap);
-        score -= (mcRatio - 1) * 100;
-
-        // Volume similarity
-        if (token1.total_volume && token2.total_volume) {
-            const volumeRatio = Math.max(token1.total_volume, token2.total_volume) / 
-                               Math.min(token1.total_volume, token2.total_volume);
-            score -= (volumeRatio - 1) * 10;
-        }
-
-        // Age similarity (prefer similar age tokens)
-        if (token1.age_days && token2.age_days) {
-            const ageDiff = Math.abs(token1.age_days - token2.age_days);
-            score -= ageDiff * 0.1;
-        }
-
-        return Math.max(0, score);
-    }
-
-    /**
-     * Categorize token by market cap
-     */
-    categorizeToken(marketCap) {
-        const categories = window.TOKEN_CATEGORIES;
-        
-        for (const [key, category] of Object.entries(categories)) {
-            if (marketCap >= category.min && marketCap < category.max) {
-                return key;
+            if (!this.isInitialized) {
+                await this.initialize();
             }
-        }
-        
-        return 'MICRO_CAP'; // Default fallback
-    }
-
-    /**
-     * Group tokens by market cap category
-     */
-    groupTokensByCategory(tokens) {
-        const groups = {};
-        
-        tokens.forEach(token => {
-            const category = this.categorizeToken(token.market_cap);
-            if (!groups[category]) {
-                groups[category] = [];
-            }
-            groups[category].push(token);
-        });
-
-        return groups;
-    }
-
-    /**
-     * Calculate token age in days
-     */
-    calculateTokenAge(dateString) {
-        if (!dateString) return null;
-        
-        const tokenDate = new Date(dateString);
-        const now = new Date();
-        const diffTime = Math.abs(now - tokenDate);
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
-    /**
-     * Validate if token meets all criteria
-     */
-    isValidToken(token) {
-        const validation = window.TOKEN_VALIDATION;
-        
-        // Symbol length check
-        if (token.symbol.length < validation.MIN_SYMBOL_LENGTH || 
-            token.symbol.length > validation.MAX_SYMBOL_LENGTH) {
-            return false;
-        }
-
-        // Name length check
-        if (token.name.length < validation.MIN_NAME_LENGTH || 
-            token.name.length > validation.MAX_NAME_LENGTH) {
-            return false;
-        }
-
-        // Address format check (basic)
-        if (token.address.length !== validation.VALID_ADDRESS_LENGTH) {
-            return false;
-        }
-
-        return true;
-    }
-
-    // ==============================================
-    // DATABASE OPERATIONS
-    // ==============================================
-
-    /**
-     * Store validated tokens in database
-     */
-    async storeTokensInDatabase(tokens) {
-        try {
-            const supabase = window.supabaseClient.getSupabaseClient();
             
-            // Prepare data for database
-            const tokenData = tokens.map(token => ({
-                address: token.address,
-                symbol: token.symbol,
-                name: token.name,
-                logo_uri: token.logoURI,
-                decimals: token.decimals || 9,
-                market_cap: token.market_cap,
-                current_price: token.current_price,
-                total_volume: token.total_volume,
-                price_change_24h: token.price_change_24h,
-                market_cap_rank: token.market_cap_rank,
-                category: token.category,
-                age_days: token.age_days,
-                is_active: true,
-                last_updated: new Date().toISOString()
-            }));
-
-            // Clear old tokens and insert new ones
-            await supabase.from('tokens').delete().neq('address', '');
-            
-            const { error } = await supabase.from('tokens').insert(tokenData);
-            
-            if (error) {
-                console.error('Database storage error:', error);
-                throw error;
-            }
-
-            console.log(`Stored ${tokenData.length} tokens in database`);
-
+            return this.tokens.filter(token => token.is_active);
         } catch (error) {
-            console.error('Failed to store tokens in database:', error);
-            // Don't throw - this shouldn't break the token update process
-        }
-    }
-
-    /**
-     * Get tokens from database cache
-     */
-    async getTokensFromDatabase() {
-        try {
-            const supabase = window.supabaseClient.getSupabaseClient();
-            
-            const { data, error } = await supabase
-                .from('tokens')
-                .select('*')
-                .eq('is_active', true)
-                .order('market_cap', { ascending: false });
-
-            if (error) throw error;
-
-            return data || [];
-
-        } catch (error) {
-            console.error('Failed to get tokens from database:', error);
+            console.error('Error getting valid tokens:', error);
             return [];
         }
     }
 
-    // ==============================================
-    // PUBLIC API METHODS
-    // ==============================================
-
-    /**
-     * Get current valid tokens (with cache check)
-     */
-    async getValidTokens(forceRefresh = false) {
-        const now = new Date();
-        const updateInterval = window.APP_CONFIG.UPDATE_INTERVALS.TOKEN_LIST_REFRESH;
-        
-        // Check if refresh is needed
-        if (forceRefresh || 
-            !this.lastTokenUpdate || 
-            (now - this.lastTokenUpdate) > updateInterval ||
-            this.validTokens.length === 0) {
+    // Get token pairs
+    async getTokenPairs() {
+        try {
+            if (!this.isInitialized) {
+                await this.initialize();
+            }
             
-            await this.updateTokenList();
+            return this.tokenPairs;
+        } catch (error) {
+            console.error('Error getting token pairs:', error);
+            return [];
         }
-
-        return this.validTokens;
     }
 
-    /**
-     * Get available token pairs
-     */
-    async getTokenPairs(forceRefresh = false) {
-        if (forceRefresh || this.tokenPairs.length === 0) {
+    // Generate token pairs (simplified version)
+    async generateTokenPairs(tokens = null) {
+        try {
+            if (!tokens) {
+                tokens = await this.getValidTokens();
+            }
+            
+            // Return existing demo pairs for now
+            return this.tokenPairs;
+        } catch (error) {
+            console.error('Error generating token pairs:', error);
+            return [];
+        }
+    }
+
+    // Get a specific token by address
+    async getTokenByAddress(address) {
+        try {
             const tokens = await this.getValidTokens();
-            this.generateTokenPairs(tokens);
+            return tokens.find(token => token.address === address);
+        } catch (error) {
+            console.error('Error getting token by address:', error);
+            return null;
         }
-
-        return this.tokenPairs;
     }
 
-    /**
-     * Get token by address
-     */
-    getToken(address) {
-        return this.validTokens.find(token => token.address === address);
+    // Update token list (simplified - returns demo data)
+    async updateTokenList() {
+        try {
+            console.log('Updating token list (demo mode)...');
+            
+            // In demo mode, just return the existing tokens
+            this.lastUpdate = new Date();
+            
+            return this.tokens;
+        } catch (error) {
+            console.error('Error updating token list:', error);
+            throw error;
+        }
     }
 
-    /**
-     * Search tokens by symbol or name
-     */
-    searchTokens(query) {
-        const lowerQuery = query.toLowerCase();
-        return this.validTokens.filter(token => 
-            token.symbol.toLowerCase().includes(lowerQuery) ||
-            token.name.toLowerCase().includes(lowerQuery)
-        );
+    // Validate token for competitions
+    validateToken(token) {
+        if (!token) return false;
+        
+        // Basic validation
+        if (!token.address || !token.symbol || !token.name) return false;
+        if (!token.market_cap || token.market_cap < 5000000) return false; // Min $5M
+        if (!token.age_days || token.age_days < 30) return false; // Min 30 days
+        
+        return true;
+    }
+
+    // Check if token is blacklisted
+    isTokenBlacklisted(address) {
+        const blacklist = window.APP_CONFIG?.TOKEN_SELECTION?.BLACKLISTED_TOKENS || [];
+        return blacklist.includes(address);
+    }
+
+    // Get token categories
+    getTokensByCategory() {
+        const tokens = this.tokens;
+        const categories = {
+            LARGE_CAP: [],
+            MID_CAP: [],
+            SMALL_CAP: [],
+            MICRO_CAP: []
+        };
+        
+        tokens.forEach(token => {
+            const marketCap = token.market_cap;
+            if (marketCap >= 1000000000) {
+                categories.LARGE_CAP.push(token);
+            } else if (marketCap >= 250000000) {
+                categories.MID_CAP.push(token);
+            } else if (marketCap >= 50000000) {
+                categories.SMALL_CAP.push(token);
+            } else if (marketCap >= 5000000) {
+                categories.MICRO_CAP.push(token);
+            }
+        });
+        
+        return categories;
+    }
+
+    // Get last update time
+    getLastUpdateTime() {
+        return this.lastUpdate;
+    }
+
+    // Check if initialization is complete
+    isReady() {
+        return this.isInitialized;
     }
 }
 
-// Create global instance
-window.tokenService = new TokenService();
-
-// Export for module use
+// Immediately expose TokenService globally
 window.TokenService = TokenService;
+
+// Auto-initialize when script loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.tokenService) {
+        console.log('Auto-initializing TokenService...');
+        window.tokenService = new TokenService();
+    }
+});
+
+console.log('TokenService class loaded and exposed globally');
