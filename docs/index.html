@@ -245,12 +245,309 @@
             border: 1px solid rgba(239, 68, 68, 0.5);
             color: #ef4444;
         }
+
+        /* Enhanced Competition Cards with Real Token Data */
+        .token-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(31, 41, 55, 0.4);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .token-display:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .token-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .token-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .token-symbol {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f3f4f6;
+            margin-bottom: 0.25rem;
+        }
+
+        .token-name {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .token-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .token-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .token-market-cap {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .price-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+        }
+
+        .price-change.positive {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .price-change.negative {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .price-change.neutral {
+            color: #9ca3af;
+            background: rgba(156, 163, 175, 0.1);
+        }
+
+        /* Enhanced Battle Display */
+        .token-battle-enhanced {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1.5rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 1rem;
+            border: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .vs-divider-enhanced {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vs-text-enhanced {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+
+        .vs-line-enhanced {
+            width: 3px;
+            height: 60px;
+            background: linear-gradient(180deg, #8b5cf6, #ec4899);
+            border-radius: 2px;
+        }
+
+        /* Competition Stats Enhanced */
+        .competition-stats-enhanced {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(17, 24, 39, 0.4);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .stat-enhanced {
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+        }
+
+        .stat-label-enhanced {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .stat-value-enhanced {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f3f4f6;
+        }
+
+        /* Live Update Indicators */
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            color: #10b981;
+            margin-top: 0.25rem;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Time Remaining Display */
+        .time-remaining {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .time-label {
+            font-size: 0.75rem;
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .time-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+
+        /* Betting Progress Enhanced */
+        .betting-progress-enhanced {
+            background: rgba(31, 41, 55, 0.4);
+            border-radius: 0.75rem;
+            height: 40px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            position: relative;
+        }
+
+        .progress-track {
+            display: flex;
+            height: 100%;
+            position: relative;
+        }
+
+        .progress-side-enhanced {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .progress-side-enhanced.token-a {
+            background: linear-gradient(90deg, #8b5cf6, #6366f1);
+            color: white;
+        }
+
+        .progress-side-enhanced.token-b {
+            background: linear-gradient(90deg, #ec4899, #ef4444);
+            color: white;
+        }
+
+        /* Loading States for Token Data */
+        .token-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 80px;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .token-loading::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        /* Error States for Token Data */
+        .token-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 80px;
+            color: #ef4444;
+            font-size: 0.875rem;
+            background: rgba(239, 68, 68, 0.05);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <!-- Database Connection Status -->
     <div id="dbStatus" class="db-status disconnected">
         Database: Connecting...
+    </div>
+
+    <!-- Token Update Status -->
+    <div id="tokenStatus" class="db-status disconnected" style="top: 3rem;">
+        Tokens: Loading...
     </div>
 
     <!-- Animated Background -->
@@ -643,6 +940,9 @@
     <!-- Scripts - CRITICAL ORDER: Load in this exact sequence -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
+    <script src="token-service.js"></script>
+    <script src="price-service.js"></script>
+    <script src="competition-manager.js"></script>
     <script src="utils.js"></script>
     <script src="app.js"></script>
     <script src="competition.js"></script>
@@ -675,13 +975,42 @@
                     console.error('initializeSupabase function not available');
                 }
                 
-                console.log('Supabase initialized, starting app...');
+                console.log('Supabase initialized, starting token service...');
+                
+                // Initialize token service
+                if (typeof window.TokenService !== 'undefined') {
+                    window.tokenService = new window.TokenService();
+                    await window.tokenService.initialize();
+                    console.log('Token service initialized');
+                } else {
+                    console.error('TokenService not available');
+                }
+                
+                console.log('Starting price service...');
+                
+                // Initialize price service
+                if (typeof window.PriceService !== 'undefined') {
+                    window.priceService = new window.PriceService();
+                    await window.priceService.initialize();
+                    console.log('Price service initialized');
+                } else {
+                    console.error('PriceService not available');
+                }
+                
+                console.log('Initializing main app...');
                 
                 // Initialize the main app
                 if (typeof window.initializeApp === 'function') {
                     await window.initializeApp();
                 } else {
                     console.error('initializeApp function not available');
+                }
+                
+                // Update token status
+                const tokenStatus = document.getElementById('tokenStatus');
+                if (tokenStatus) {
+                    tokenStatus.className = 'db-status connected';
+                    tokenStatus.textContent = 'Tokens: Active';
                 }
                 
                 console.log('TokenWars initialization complete!');
@@ -692,6 +1021,12 @@
                 if (dbStatus) {
                     dbStatus.className = 'db-status disconnected';
                     dbStatus.textContent = 'Initialization Failed';
+                }
+                
+                const tokenStatus = document.getElementById('tokenStatus');
+                if (tokenStatus) {
+                    tokenStatus.className = 'db-status disconnected';
+                    tokenStatus.textContent = 'Token Service Failed';
                 }
             }
         });
