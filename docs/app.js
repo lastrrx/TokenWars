@@ -28,9 +28,9 @@ async function initializeApp() {
         // Set up periodic wallet status updates
         setInterval(updateWalletStatus, 5000);
         
-        console.log('App initialization complete');
+        console.log('TokenWars app initialization complete');
     } catch (error) {
-        console.error('App initialization failed:', error);
+        console.error('TokenWars app initialization failed:', error);
         showErrorNotification('Failed to initialize application');
     }
 }
