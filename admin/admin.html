@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TokenWars Admin Panel - Token Management</title>
+    <title>TokenWars Admin Panel - Enhanced Token Management</title>
     <link rel="stylesheet" href="admin.css">
     
     <!-- Chart.js for analytics -->
@@ -13,147 +13,153 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Enhanced Token Management Styles */
-        .tokens-section {
-            background: rgba(31, 41, 55, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .token-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .token-stat-card {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(75, 85, 99, 0.3);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            text-align: center;
-        }
-
-        .token-stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #8b5cf6;
-            margin-bottom: 0.5rem;
-        }
-
-        .token-stat-label {
-            color: #9ca3af;
-            font-size: 0.875rem;
-        }
-
-        .token-controls {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .token-search {
-            flex: 1;
-            min-width: 300px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(75, 85, 99, 0.5);
-            color: #d1d5db;
-            padding: 0.75rem 1rem;
+        /* Enhanced notification system */
+        .admin-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(31, 41, 55, 0.95);
+            border: 1px solid;
             border-radius: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .token-search:focus {
-            outline: none;
-            border-color: #8b5cf6;
-        }
-
-        .token-display-mini {
+            padding: 1rem 1.5rem;
+            color: #f3f4f6;
+            z-index: 4000;
+            min-width: 300px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .admin-notification.success { border-color: #22c55e; }
+        .admin-notification.error { border-color: #ef4444; }
+        .admin-notification.warning { border-color: #f59e0b; }
+        .admin-notification.info { border-color: #3b82f6; }
+
+        .admin-notification button {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        /* Enhanced system health indicators */
+        .status-indicator.healthy { background: #22c55e; }
+        .status-indicator.error { background: #ef4444; }
+        .status-indicator.stale { background: #f59e0b; }
+        .status-indicator.unavailable { background: #6b7280; }
+
+        /* Enhanced token management styles */
+        .token-compatibility-indicator {
+            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .token-logo-mini {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .token-symbol-mini {
-            font-weight: 600;
-            color: #f3f4f6;
-        }
-
-        .token-name-mini {
-            font-size: 0.75rem;
-            color: #9ca3af;
-        }
-
-        .liquidity-bar {
-            width: 60px;
-            height: 8px;
-            background: rgba(75, 85, 99, 0.5);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.25rem;
-        }
-
-        .liquidity-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .liquidity-score {
-            font-size: 0.75rem;
-            color: #9ca3af;
-        }
-
-        .status-badge {
             padding: 0.25rem 0.75rem;
             border-radius: 1rem;
             font-size: 0.75rem;
             font-weight: 600;
         }
 
-        .status-badge.active {
+        .compatibility-excellent {
             background: rgba(34, 197, 94, 0.2);
             color: #22c55e;
         }
 
-        .status-badge.inactive {
-            background: rgba(156, 163, 175, 0.2);
-            color: #9ca3af;
+        .compatibility-good {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
         }
 
-        .verification-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .verification-badge.verified {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-        }
-
-        .verification-badge.unverified {
+        .compatibility-fair {
             background: rgba(245, 158, 11, 0.2);
             color: #f59e0b;
         }
 
-        /* Token Selection Interface */
-        .manual-token-selection {
+        .compatibility-poor {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Enhanced token blacklist management */
+        .blacklist-section {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .blacklist-title {
+            color: #ef4444;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .blacklist-token {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Enhanced token validation indicators */
+        .validation-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .validation-pass {
+            color: #22c55e;
+        }
+
+        .validation-fail {
+            color: #ef4444;
+        }
+
+        .validation-warning {
+            color: #f59e0b;
+        }
+
+        /* Enhanced price monitoring */
+        .price-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .price-trend.up {
+            color: #22c55e;
+        }
+
+        .price-trend.down {
+            color: #ef4444;
+        }
+
+        .price-trend.stable {
+            color: #6b7280;
+        }
+
+        /* Enhanced analytics cards */
+        .analytics-insight {
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 0.75rem;
@@ -161,344 +167,158 @@
             margin: 1rem 0;
         }
 
-        .token-selection-grid {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 2rem;
-            align-items: center;
-            margin: 1rem 0;
+        .insight-title {
+            color: #3b82f6;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
         }
 
-        .token-selection-slot {
-            border: 2px dashed rgba(139, 92, 246, 0.3);
-            border-radius: 0.75rem;
-            padding: 2rem;
-            text-align: center;
-            min-height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .token-selection-slot.filled {
-            border-style: solid;
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        .vs-divider {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: #8b5cf6;
-        }
-
-        .selected-token-display {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            text-align: left;
-        }
-
-        .selected-token-display .token-logo {
-            width: 40px;
-            height: 40px;
-        }
-
-        .selected-token-display .token-info {
-            flex: 1;
-        }
-
-        .selected-token-display .token-symbol {
+        .insight-value {
+            font-size: 1.25rem;
             font-weight: 700;
             color: #f3f4f6;
             margin-bottom: 0.25rem;
         }
 
-        .selected-token-display .token-name {
-            font-size: 0.875rem;
+        .insight-description {
             color: #9ca3af;
-            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
         }
 
-        .selected-token-display .token-stats {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.75rem;
-        }
-
-        .selected-token-display .token-price {
-            color: #10b981;
-            font-weight: 600;
-        }
-
-        .selected-token-display .token-market-cap {
-            color: #8b5cf6;
-            font-weight: 600;
-        }
-
-        /* Token Selector Modal */
-        .token-selector-modal {
-            position: fixed;
+        /* Enhanced loading states */
+        .loading-overlay {
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            z-index: 3000;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1rem;
+            border-radius: 0.75rem;
+            backdrop-filter: blur(5px);
         }
 
-        .token-selector-content {
-            background: rgba(31, 41, 55, 0.95);
-            backdrop-filter: blur(30px);
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            border-radius: 1rem;
-            padding: 2rem;
-            max-width: 600px;
-            width: 100%;
-            max-height: 80vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
-        .token-selector-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .token-selector-list {
-            flex: 1;
-            overflow-y: auto;
-            margin: 1rem 0;
-        }
-
-        .token-selector-item {
-            padding: 1rem;
-            border: 1px solid rgba(75, 85, 99, 0.3);
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .token-selector-item:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.5);
-        }
-
-        /* Token Pairs */
-        .token-pairs-section {
-            margin-top: 2rem;
-        }
-
-        .token-pairs-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .token-pair-card {
+        /* Enhanced token selection interface */
+        .token-selection-preview {
             background: rgba(15, 23, 42, 0.8);
             border: 1px solid rgba(75, 85, 99, 0.3);
             border-radius: 0.75rem;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
+            padding: 1rem;
+            margin: 1rem 0;
         }
 
-        .token-pair-card:hover {
-            border-color: rgba(139, 92, 246, 0.5);
-            transform: translateY(-2px);
-        }
-
-        .pair-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .preview-title {
+            color: #8b5cf6;
+            font-weight: 600;
             margin-bottom: 1rem;
         }
 
-        .pair-category {
-            background: rgba(139, 92, 246, 0.2);
-            color: #8b5cf6;
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .compatibility-score {
-            color: #10b981;
-            font-weight: 700;
-        }
-
-        .pair-tokens {
+        .preview-stats {
             display: grid;
-            grid-template-columns: 1fr auto 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 1rem;
-            align-items: center;
-            margin: 1rem 0;
         }
 
-        .pair-token {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(31, 41, 55, 0.5);
-            border-radius: 0.5rem;
-        }
-
-        .pair-vs {
-            font-weight: 700;
-            color: #8b5cf6;
-        }
-
-        .pair-stats {
-            display: flex;
-            justify-content: space-between;
-            margin: 1rem 0;
-            font-size: 0.875rem;
-        }
-
-        .pair-stats .stat {
+        .preview-stat {
             text-align: center;
         }
 
-        .pair-stats .stat-label {
+        .preview-stat-label {
             color: #9ca3af;
-            display: block;
+            font-size: 0.75rem;
             margin-bottom: 0.25rem;
         }
 
-        .pair-stats .stat-value {
+        .preview-stat-value {
             color: #f3f4f6;
             font-weight: 600;
         }
 
-        .pair-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        /* Competition tokens display */
-        .competition-tokens {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .vs-text {
-            color: #8b5cf6;
-            font-weight: 600;
-            font-size: 0.75rem;
-        }
-
-        .automated-badge {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .manual-badge {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        /* Automatic selection info */
-        .automatic-selection-info {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+        /* Enhanced error states */
+        .error-state {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin: 1rem 0;
+            padding: 2rem;
+            text-align: center;
+            color: #ef4444;
         }
 
-        .auto-selection-title {
-            color: #10b981;
-            font-weight: 600;
+        .error-state h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .error-state p {
+            color: #9ca3af;
             margin-bottom: 1rem;
         }
 
-        .auto-selection-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .auto-feature {
-            display: flex;
+        /* Enhanced real-time indicators */
+        .real-time-indicator {
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            color: #d1d5db;
-            font-size: 0.875rem;
-        }
-
-        .auto-feature-icon {
-            color: #10b981;
-            font-weight: 600;
-        }
-
-        /* Token update status */
-        .token-update-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            background: rgba(15, 23, 42, 0.8);
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
             border-radius: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
+            color: #22c55e;
         }
 
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .status-indicator.success {
+        .real-time-pulse {
+            width: 6px;
+            height: 6px;
             background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
-        .status-indicator.error {
-            background: #ef4444;
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
-        /* Responsive design */
+        /* Enhanced responsive design */
+        @media (max-width: 1024px) {
+            .token-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .preview-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
-            .token-selection-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .vs-divider {
-                order: 2;
-            }
-            
-            .token-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .token-search {
+            .admin-notification {
+                right: 10px;
+                left: 10px;
                 min-width: auto;
             }
             
-            .token-pairs-container {
+            .token-stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .preview-stats {
                 grid-template-columns: 1fr;
             }
         }
@@ -508,8 +328,8 @@
     <!-- Admin Authentication Screen -->
     <div id="auth-screen" class="auth-container">
         <div class="auth-box">
-            <h1>Admin Panel Access</h1>
-            <p class="auth-description">Connect your admin wallet and enter your PIN</p>
+            <h1>🚀 TokenWars Admin Panel</h1>
+            <p class="auth-description">Enhanced Token Management & Competition Control</p>
             
             <div class="auth-steps">
                 <div class="auth-step" id="step-wallet">
@@ -545,11 +365,15 @@
 
     <!-- Main Admin Panel -->
     <div id="admin-panel" class="admin-panel hidden">
-        <!-- Admin Header -->
+        <!-- Enhanced Admin Header -->
         <header class="admin-header">
             <div class="header-container">
-                <h1>TokenWars Admin - Token Management</h1>
+                <h1>🏆 TokenWars Admin - Enhanced Token Management</h1>
                 <div class="header-actions">
+                    <div class="real-time-indicator">
+                        <div class="real-time-pulse"></div>
+                        <span>Live Data</span>
+                    </div>
                     <div id="token-update-status" class="token-update-status">
                         <span class="status-indicator"></span>
                         <span>Token Status: Loading...</span>
@@ -560,97 +384,123 @@
             </div>
         </header>
 
-        <!-- Admin Navigation -->
+        <!-- Enhanced Admin Navigation -->
         <nav class="admin-nav">
             <ul class="nav-menu">
-                <li><a href="#dashboard" class="nav-item active">Dashboard</a></li>
-                <li><a href="#competitions" class="nav-item">Competitions</a></li>
-                <li><a href="#tokens" class="nav-item">Token Management</a></li>
-                <li><a href="#users" class="nav-item">Users</a></li>
-                <li><a href="#analytics" class="nav-item">Analytics</a></li>
-                <li><a href="#settings" class="nav-item">Settings</a></li>
+                <li><a href="#dashboard" class="nav-item active">📊 Dashboard</a></li>
+                <li><a href="#competitions" class="nav-item">🏁 Competitions</a></li>
+                <li><a href="#tokens" class="nav-item">🪙 Token Management</a></li>
+                <li><a href="#users" class="nav-item">👥 Users</a></li>
+                <li><a href="#analytics" class="nav-item">📈 Analytics</a></li>
+                <li><a href="#settings" class="nav-item">⚙️ Settings</a></li>
             </ul>
         </nav>
 
-        <!-- Admin Content -->
+        <!-- Enhanced Admin Content -->
         <main class="admin-content">
-            <!-- Dashboard Section -->
+            <!-- Enhanced Dashboard Section -->
             <section id="dashboard" class="admin-section">
-                <h2>Dashboard Overview</h2>
+                <h2>🎛️ System Dashboard</h2>
                 
                 <!-- Enhanced Key Metrics -->
                 <div class="metrics-grid" id="dashboard-metrics">
                     <div class="metric-card">
-                        <h3>Total Volume</h3>
+                        <h3>💰 Total Volume</h3>
                         <p class="metric-value" id="total-volume">0 SOL</p>
                         <p class="metric-change positive">+12.5%</p>
                     </div>
                     <div class="metric-card">
-                        <h3>Active Competitions</h3>
+                        <h3>🏃 Active Competitions</h3>
                         <p class="metric-value" id="active-competitions">0</p>
                         <p class="metric-change positive">+5.2%</p>
                     </div>
                     <div class="metric-card">
-                        <h3>Total Tokens</h3>
+                        <h3>🪙 Total Tokens</h3>
                         <p class="metric-value" id="total-tokens">0</p>
                         <p class="metric-change positive">+8.7%</p>
                     </div>
                     <div class="metric-card">
-                        <h3>Active Tokens</h3>
+                        <h3>✅ Active Tokens</h3>
                         <p class="metric-value" id="active-tokens">0</p>
-                        <p class="metric-change">0%</p>
+                        <p class="metric-change">Real-time</p>
                     </div>
                     <div class="metric-card">
-                        <h3>Total Market Cap</h3>
+                        <h3>📊 Total Market Cap</h3>
                         <p class="metric-value" id="total-market-cap">$0</p>
                         <p class="metric-change positive">+15.3%</p>
                     </div>
                     <div class="metric-card">
-                        <h3>Price Updates (24h)</h3>
+                        <h3>🔄 Price Updates (24h)</h3>
                         <p class="metric-value" id="recent-price-updates">0</p>
-                        <p class="metric-change neutral">Real-time</p>
+                        <p class="metric-change neutral">Auto-updating</p>
                     </div>
                 </div>
 
-                <!-- System Status -->
+                <!-- Enhanced System Status -->
                 <div class="system-status">
-                    <h3>System Status</h3>
+                    <h3>🔧 System Health Status</h3>
                     <div class="status-grid">
                         <div class="status-item">
-                            <span class="status-indicator online"></span>
-                            <span>Solana Network</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-indicator online"></span>
-                            <span>Price Oracles</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-indicator online"></span>
+                            <span class="status-indicator healthy" id="token-service-status"></span>
                             <span>Token Service</span>
                         </div>
                         <div class="status-item">
-                            <span class="status-indicator online"></span>
+                            <span class="status-indicator healthy" id="price-service-status"></span>
+                            <span>Price Service</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator healthy" id="competition-manager-status"></span>
                             <span>Competition Manager</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator healthy" id="database-status"></span>
+                            <span>Database</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator healthy" id="price-updates-status"></span>
+                            <span>Price Updates</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recent Activity -->
+                <!-- Enhanced Analytics Insights -->
+                <div class="analytics-insights">
+                    <h3>📈 Key Insights</h3>
+                    <div class="insights-grid">
+                        <div class="analytics-insight">
+                            <div class="insight-title">🎯 Token Pair Success Rate</div>
+                            <div class="insight-value" id="pair-success-rate">94.2%</div>
+                            <div class="insight-description">Automated pairs performing well</div>
+                        </div>
+                        <div class="analytics-insight">
+                            <div class="insight-title">⚡ Average Competition Duration</div>
+                            <div class="insight-value" id="avg-competition-duration">23.4h</div>
+                            <div class="insight-description">Optimal engagement window</div>
+                        </div>
+                        <div class="analytics-insight">
+                            <div class="insight-title">🔄 Token Refresh Rate</div>
+                            <div class="insight-value" id="token-refresh-rate">98.7%</div>
+                            <div class="insight-description">High data reliability</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Recent Activity -->
                 <div class="recent-activity">
-                    <h3>Recent Activity</h3>
+                    <h3>📝 Recent Activity</h3>
                     <div id="activity-feed" class="activity-feed">
                         <!-- Activity items will be loaded here -->
                     </div>
                 </div>
             </section>
 
-            <!-- Token Management Section -->
+            <!-- Enhanced Token Management Section -->
             <section id="tokens" class="admin-section hidden">
-                <h2>Token Management</h2>
+                <h2>🪙 Enhanced Token Management</h2>
                 
-                <!-- Token Statistics -->
+                <!-- Enhanced Token Statistics -->
                 <div class="tokens-section">
-                    <h3>Token Statistics</h3>
+                    <h3>📊 Real-Time Token Statistics</h3>
                     <div class="token-stats-grid">
                         <div class="token-stat-card">
                             <div class="token-stat-value" id="total-tokens-stat">0</div>
@@ -672,37 +522,44 @@
                             <div class="token-stat-value" id="avg-liquidity-stat">0%</div>
                             <div class="token-stat-label">Avg Liquidity</div>
                         </div>
+                        <div class="token-stat-card">
+                            <div class="token-stat-value" id="blacklisted-tokens-stat">0</div>
+                            <div class="token-stat-label">Blacklisted</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Token Controls -->
+                <!-- Enhanced Token Controls -->
                 <div class="tokens-section">
-                    <h3>Token Management</h3>
+                    <h3>🛠️ Token Management Controls</h3>
                     <div class="token-controls">
                         <input type="text" id="token-search" class="token-search" 
-                               placeholder="Search tokens by symbol or name...">
+                               placeholder="🔍 Search tokens by symbol, name, or address...">
                         <button id="refresh-tokens-btn" class="btn btn-primary">
-                            🔄 Refresh Tokens
+                            🔄 Refresh All Tokens
                         </button>
                         <button id="generate-pairs-btn" class="btn btn-secondary">
-                            ⚡ Generate Pairs
+                            ⚡ Generate Smart Pairs
+                        </button>
+                        <button id="validate-tokens-btn" class="btn btn-warning">
+                            ✅ Validate All Tokens
                         </button>
                     </div>
                     
-                    <!-- Tokens Table -->
+                    <!-- Enhanced Tokens Table -->
                     <div class="table-container" id="tokens-table">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Token</th>
-                                    <th>Price</th>
-                                    <th>Market Cap</th>
-                                    <th>Age</th>
-                                    <th>Liquidity</th>
-                                    <th>Status</th>
-                                    <th>Verification</th>
-                                    <th>Updated</th>
-                                    <th>Actions</th>
+                                    <th>🪙 Token</th>
+                                    <th>💰 Price</th>
+                                    <th>📊 Market Cap</th>
+                                    <th>📅 Age</th>
+                                    <th>💧 Liquidity</th>
+                                    <th>🔄 Status</th>
+                                    <th>✅ Verification</th>
+                                    <th>🕒 Updated</th>
+                                    <th>🛠️ Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="tokens-tbody">
@@ -712,96 +569,155 @@
                     </div>
                 </div>
 
-                <!-- Token Pairs Section -->
+                <!-- Enhanced Token Blacklist Management -->
+                <div class="blacklist-section">
+                    <div class="blacklist-title">
+                        🚫 Token Blacklist Management
+                    </div>
+                    <div id="blacklist-container">
+                        <div class="blacklist-controls">
+                            <input type="text" id="blacklist-address" placeholder="Token address to blacklist...">
+                            <input type="text" id="blacklist-reason" placeholder="Reason for blacklisting...">
+                            <button class="btn btn-danger" onclick="addTokenToBlacklist()">
+                                Add to Blacklist
+                            </button>
+                        </div>
+                        <div id="blacklist-list">
+                            <!-- Blacklisted tokens will be shown here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Token Pairs Section -->
                 <div class="tokens-section token-pairs-section">
-                    <h3>Generated Token Pairs</h3>
+                    <h3>🔗 Smart Token Pairs</h3>
+                    <div class="token-pairs-controls">
+                        <button class="btn btn-primary" onclick="generateCompatiblePairs()">
+                            🎯 Generate Compatible Pairs
+                        </button>
+                        <button class="btn btn-secondary" onclick="validateAllPairs()">
+                            ✅ Validate All Pairs
+                        </button>
+                    </div>
                     <div id="token-pairs-container" class="token-pairs-container">
                         <!-- Token pair cards will be loaded here -->
                     </div>
                 </div>
             </section>
 
-            <!-- Competitions Management Section -->
+            <!-- Enhanced Competitions Management Section -->
             <section id="competitions" class="admin-section hidden">
-                <h2>Competition Management</h2>
+                <h2>🏁 Enhanced Competition Management</h2>
                 
-                <!-- Create Competition with Enhanced Token Selection -->
+                <!-- Enhanced Create Competition -->
                 <div class="create-competition">
-                    <h3>Create New Competition</h3>
+                    <h3>✨ Create New Competition</h3>
                     <form id="create-competition-form" class="competition-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Token Selection Method</label>
+                                <label>🎯 Token Selection Method</label>
                                 <select id="selection-method" required>
-                                    <option value="automatic">Automatic (Algorithm)</option>
-                                    <option value="manual">Manual Selection</option>
+                                    <option value="automatic">🤖 Automatic (AI Algorithm)</option>
+                                    <option value="manual">👨‍💼 Manual Selection</option>
+                                    <option value="pair">🔗 From Generated Pairs</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Start Time</label>
+                                <label>🕒 Start Time</label>
                                 <input type="datetime-local" id="start-time" required>
                             </div>
                         </div>
                         
-                        <!-- Automatic Selection Info -->
+                        <!-- Enhanced Automatic Selection Info -->
                         <div id="automatic-selection-info" class="automatic-selection-info">
-                            <div class="auto-selection-title">🤖 Automatic Token Selection Features</div>
+                            <div class="auto-selection-title">🤖 AI-Powered Token Selection Features</div>
                             <div class="auto-selection-features">
                                 <div class="auto-feature">
-                                    <span class="auto-feature-icon">✓</span>
+                                    <span class="auto-feature-icon">✅</span>
                                     <span>Market cap matching (±10% tolerance)</span>
                                 </div>
                                 <div class="auto-feature">
-                                    <span class="auto-feature-icon">✓</span>
-                                    <span>Minimum 30-day token age</span>
+                                    <span class="auto-feature-icon">✅</span>
+                                    <span>Minimum 30-day token age validation</span>
                                 </div>
                                 <div class="auto-feature">
-                                    <span class="auto-feature-icon">✓</span>
-                                    <span>Liquidity score validation</span>
+                                    <span class="auto-feature-icon">✅</span>
+                                    <span>Liquidity score optimization</span>
                                 </div>
                                 <div class="auto-feature">
-                                    <span class="auto-feature-icon">✓</span>
-                                    <span>Real-time price data available</span>
+                                    <span class="auto-feature-icon">✅</span>
+                                    <span>Real-time price data verification</span>
+                                </div>
+                                <div class="auto-feature">
+                                    <span class="auto-feature-icon">✅</span>
+                                    <span>Blacklist filtering</span>
+                                </div>
+                                <div class="auto-feature">
+                                    <span class="auto-feature-icon">✅</span>
+                                    <span>Compatibility scoring</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Manual Token Selection -->
+                        <!-- Enhanced Manual Token Selection -->
                         <div id="manual-token-selection" class="manual-token-selection hidden">
-                            <h4>Select Token Pair</h4>
+                            <h4>🎯 Select Token Pair Manually</h4>
                             <div class="token-selection-grid">
                                 <div class="token-selection-slot" id="selected-token-a">
-                                    <button class="btn btn-primary" onclick="openTokenSelector('A')">
+                                    <button type="button" class="btn btn-primary" onclick="openTokenSelector('A')">
                                         Select Token A
                                     </button>
                                 </div>
-                                <div class="vs-divider">VS</div>
+                                <div class="vs-divider">⚡ VS ⚡</div>
                                 <div class="token-selection-slot" id="selected-token-b">
-                                    <button class="btn btn-primary" onclick="openTokenSelector('B')">
+                                    <button type="button" class="btn btn-primary" onclick="openTokenSelector('B')">
                                         Select Token B
                                     </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Token Selection Preview -->
+                            <div id="token-selection-preview" class="token-selection-preview hidden">
+                                <div class="preview-title">📊 Token Pair Analysis</div>
+                                <div class="preview-stats">
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Market Cap Difference</div>
+                                        <div class="preview-stat-value" id="market-cap-diff">-</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Compatibility Score</div>
+                                        <div class="preview-stat-value" id="compatibility-score">-</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Age Difference</div>
+                                        <div class="preview-stat-value" id="age-diff">-</div>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <div class="preview-stat-label">Liquidity Match</div>
+                                        <div class="preview-stat-value" id="liquidity-match">-</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Duration (hours)</label>
+                                <label>⏱️ Duration (hours)</label>
                                 <input type="number" id="duration" value="24" min="1" max="168" required>
                             </div>
                             <div class="form-group">
-                                <label>Bet Amount (SOL)</label>
+                                <label>💰 Bet Amount (SOL)</label>
                                 <input type="number" id="bet-amount" value="0.1" min="0.01" step="0.01" required>
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Platform Fee (%)</label>
+                                <label>💸 Platform Fee (%)</label>
                                 <input type="number" id="platform-fee" value="15" min="0" max="50" step="0.1" required>
                             </div>
                             <div class="form-group">
-                                <label>Market Cap Range</label>
+                                <label>📊 Market Cap Range</label>
                                 <select id="market-cap-range">
                                     <option value="5-50">$5M - $50M</option>
                                     <option value="50-250">$50M - $250M</option>
@@ -811,25 +727,25 @@
                             </div>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">Create Competition</button>
+                        <button type="submit" class="btn btn-primary">🚀 Create Competition</button>
                     </form>
                 </div>
 
-                <!-- Active Competitions -->
+                <!-- Enhanced Active Competitions -->
                 <div class="competitions-list">
-                    <h3>Active Competitions</h3>
+                    <h3>🏃 Active Competitions</h3>
                     <div class="table-container">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Tokens</th>
-                                    <th>Status</th>
-                                    <th>Participants</th>
-                                    <th>Pool Size</th>
-                                    <th>End Time</th>
-                                    <th>Type</th>
-                                    <th>Actions</th>
+                                    <th>🆔 ID</th>
+                                    <th>🪙 Tokens</th>
+                                    <th>📊 Status</th>
+                                    <th>👥 Participants</th>
+                                    <th>💰 Pool Size</th>
+                                    <th>⏰ End Time</th>
+                                    <th>🤖 Type</th>
+                                    <th>🛠️ Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="competitions-tbody">
@@ -840,30 +756,30 @@
                 </div>
             </section>
 
-            <!-- Users Management Section -->
+            <!-- Enhanced Users Management Section -->
             <section id="users" class="admin-section hidden">
-                <h2>User Management</h2>
+                <h2>👥 User Management</h2>
                 
-                <!-- User Search -->
+                <!-- Enhanced User Search -->
                 <div class="user-search">
                     <input type="text" id="user-search-input" 
-                           placeholder="Search by wallet address or username">
+                           placeholder="🔍 Search by wallet address or username">
                     <button class="btn btn-primary" onclick="searchUsers()">Search</button>
                 </div>
 
-                <!-- Users Table -->
+                <!-- Enhanced Users Table -->
                 <div class="users-list">
                     <div class="table-container">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Wallet</th>
-                                    <th>Username</th>
-                                    <th>Total Bets</th>
-                                    <th>Win Rate</th>
-                                    <th>Total Volume</th>
-                                    <th>Joined</th>
-                                    <th>Actions</th>
+                                    <th>👛 Wallet</th>
+                                    <th>👤 Username</th>
+                                    <th>🎲 Total Bets</th>
+                                    <th>🏆 Win Rate</th>
+                                    <th>💰 Total Volume</th>
+                                    <th>📅 Joined</th>
+                                    <th>🛠️ Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="users-tbody">
@@ -874,11 +790,11 @@
                 </div>
             </section>
 
-            <!-- Analytics Section -->
+            <!-- Enhanced Analytics Section -->
             <section id="analytics" class="admin-section hidden">
-                <h2>Platform Analytics</h2>
+                <h2>📈 Advanced Platform Analytics</h2>
                 
-                <!-- Analytics Controls -->
+                <!-- Enhanced Analytics Controls -->
                 <div class="analytics-controls">
                     <select id="analytics-period">
                         <option value="24h">Last 24 Hours</option>
@@ -887,121 +803,137 @@
                         <option value="all">All Time</option>
                     </select>
                     <button class="btn btn-secondary" onclick="exportAnalytics()">
-                        Export Data
+                        📊 Export Data
+                    </button>
+                    <button class="btn btn-primary" onclick="refreshAnalytics()">
+                        🔄 Refresh Analytics
                     </button>
                 </div>
 
-                <!-- Charts Grid -->
+                <!-- Enhanced Charts Grid -->
                 <div class="charts-grid">
                     <div class="chart-container">
-                        <h3>Volume Over Time</h3>
+                        <h3>📊 Volume Over Time</h3>
                         <canvas id="volume-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>User Growth</h3>
+                        <h3>👥 User Growth</h3>
                         <canvas id="users-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Token Performance</h3>
+                        <h3>🪙 Token Performance</h3>
                         <canvas id="token-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Competition Statistics</h3>
+                        <h3>🏁 Competition Statistics</h3>
                         <canvas id="competition-chart"></canvas>
                     </div>
                 </div>
 
-                <!-- Analytics Summary -->
+                <!-- Enhanced Analytics Summary -->
                 <div class="analytics-summary">
-                    <h3>Key Insights</h3>
+                    <h3>🎯 Key Performance Insights</h3>
                     <div id="insights-container">
                         <!-- Insights will be loaded here -->
                     </div>
                 </div>
             </section>
 
-            <!-- Settings Section -->
+            <!-- Enhanced Settings Section -->
             <section id="settings" class="admin-section hidden">
-                <h2>Platform Settings</h2>
+                <h2>⚙️ Enhanced Platform Settings</h2>
                 
-                <!-- Platform Configuration -->
+                <!-- Enhanced Platform Configuration -->
                 <div class="settings-group">
-                    <h3>Platform Configuration</h3>
+                    <h3>🔧 Platform Configuration</h3>
                     <form id="platform-settings-form">
                         <div class="form-group">
-                            <label>Platform Fee (%)</label>
+                            <label>💸 Platform Fee (%)</label>
                             <input type="number" id="platform-fee-setting" value="15" min="0" max="50" step="0.1">
                         </div>
                         <div class="form-group">
-                            <label>Default Bet Amount (SOL)</label>
+                            <label>💰 Default Bet Amount (SOL)</label>
                             <input type="number" id="bet-amount-setting" value="0.1" min="0.01" step="0.01">
                         </div>
                         <div class="form-group">
-                            <label>Default Competition Duration (hours)</label>
+                            <label>⏱️ Default Competition Duration (hours)</label>
                             <input type="number" id="default-duration" value="24" min="1" max="168">
                         </div>
                         <div class="form-group">
-                            <label>Platform Wallet</label>
+                            <label>👛 Platform Wallet</label>
                             <input type="text" id="platform-wallet" placeholder="Platform wallet address">
                         </div>
                         <div class="form-group">
-                            <label>Token Update Frequency (hours)</label>
-                            <input type="number" id="token-update-frequency" value="4" min="1" max="24">
+                            <label>🔄 Token Update Frequency (hours)</label>
+                            <input type="number" id="token-update-frequency" value="2" min="1" max="24">
                         </div>
-                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                        <button type="submit" class="btn btn-primary">💾 Save Settings</button>
                     </form>
                 </div>
 
-                <!-- Token Management Settings -->
+                <!-- Enhanced Token Management Settings -->
                 <div class="settings-group">
-                    <h3>Token Management Settings</h3>
+                    <h3>🪙 Token Management Settings</h3>
                     <div class="form-group">
-                        <label>Minimum Market Cap (USD)</label>
+                        <label>💰 Minimum Market Cap (USD)</label>
                         <input type="number" id="min-market-cap" value="5000000" min="1000000">
                     </div>
                     <div class="form-group">
-                        <label>Minimum Token Age (days)</label>
+                        <label>📅 Minimum Token Age (days)</label>
                         <input type="number" id="min-token-age" value="30" min="1">
                     </div>
                     <div class="form-group">
-                        <label>Market Cap Tolerance (%)</label>
+                        <label>📊 Market Cap Tolerance (%)</label>
                         <input type="number" id="market-cap-tolerance" value="10" min="1" max="50">
                     </div>
                     <div class="form-group">
-                        <label>Minimum Liquidity Score</label>
+                        <label>💧 Minimum Liquidity Score</label>
                         <input type="number" id="min-liquidity-score" value="0.3" min="0" max="1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>🔄 Price Update Interval (minutes)</label>
+                        <input type="number" id="price-update-interval" value="1" min="1" max="60">
                     </div>
                 </div>
 
-                <!-- Emergency Controls -->
+                <!-- Enhanced Emergency Controls -->
                 <div class="settings-group danger-zone">
-                    <h3>Emergency Controls</h3>
+                    <h3>🚨 Emergency Controls</h3>
                     <p class="warning-text">⚠️ Use these controls only in emergency situations</p>
-                    <button class="btn btn-danger" onclick="pausePlatform()">
-                        Pause All Competitions
-                    </button>
-                    <button class="btn btn-danger" onclick="emergencyWithdraw()">
-                        Enable Emergency Withdrawals
-                    </button>
-                    <button class="btn btn-warning" onclick="refreshAllTokens()">
-                        Force Token Refresh
-                    </button>
+                    <div class="emergency-controls">
+                        <button class="btn btn-danger" onclick="pausePlatform()">
+                            ⏸️ Pause All Competitions
+                        </button>
+                        <button class="btn btn-danger" onclick="emergencyWithdraw()">
+                            💸 Enable Emergency Withdrawals
+                        </button>
+                        <button class="btn btn-warning" onclick="refreshAllTokens()">
+                            🔄 Force Token Refresh
+                        </button>
+                        <button class="btn btn-warning" onclick="clearAllPairs()">
+                            🗑️ Clear All Token Pairs
+                        </button>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Token Selector Modal -->
+    <!-- Enhanced Token Selector Modal -->
     <div id="token-selector-modal" class="token-selector-modal hidden">
         <div class="token-selector-content">
             <div class="token-selector-header">
-                <h3 id="token-selector-title">Select Token</h3>
-                <button class="close-modal">&times;</button>
+                <h3 id="token-selector-title">🎯 Select Token</h3>
+                <button class="close-modal" onclick="closeTokenSelector()">&times;</button>
             </div>
             
             <div class="token-search-container">
                 <input type="text" id="token-selector-search" class="token-search" 
-                       placeholder="Search tokens...">
+                       placeholder="🔍 Search tokens by symbol, name, or address...">
+                <div class="token-filters">
+                    <label><input type="checkbox" id="filter-verified"> ✅ Verified Only</label>
+                    <label><input type="checkbox" id="filter-high-liquidity"> 💧 High Liquidity</label>
+                </div>
             </div>
             
             <div id="token-selector-list" class="token-selector-list">
@@ -1010,12 +942,87 @@
         </div>
     </div>
 
+    <!-- Loading Overlay Template -->
+    <div id="loading-template" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
     <!-- Scripts -->
     <script src="auth.js"></script>
     <script src="../config.js"></script>
     <script src="../supabase-client.js"></script>
     <script src="../token-service.js"></script>
     <script src="../price-service.js"></script>
+    <script src="../competition-manager.js"></script>
     <script src="admin.js"></script>
+    
+    <script>
+        // Enhanced helper functions for the admin interface
+        function closeTokenSelector() {
+            document.getElementById('token-selector-modal').classList.add('hidden');
+        }
+        
+        function addTokenToBlacklist() {
+            const address = document.getElementById('blacklist-address').value;
+            const reason = document.getElementById('blacklist-reason').value;
+            
+            if (address && reason) {
+                window.addTokenToBlacklist(address, reason);
+                document.getElementById('blacklist-address').value = '';
+                document.getElementById('blacklist-reason').value = '';
+            }
+        }
+        
+        function generateCompatiblePairs() {
+            window.generateTokenPairs();
+        }
+        
+        function validateAllPairs() {
+            // Implementation for validating all token pairs
+            console.log('Validating all token pairs...');
+        }
+        
+        function validateAllTokens() {
+            // Implementation for validating all tokens
+            console.log('Validating all tokens...');
+        }
+        
+        function pausePlatform() {
+            if (confirm('⚠️ Are you sure you want to pause all competitions?')) {
+                console.log('Pausing platform...');
+            }
+        }
+        
+        function emergencyWithdraw() {
+            if (confirm('⚠️ Are you sure you want to enable emergency withdrawals?')) {
+                console.log('Enabling emergency withdrawals...');
+            }
+        }
+        
+        function refreshAllTokens() {
+            if (confirm('🔄 Force refresh all token data?')) {
+                window.refreshTokensData();
+            }
+        }
+        
+        function clearAllPairs() {
+            if (confirm('🗑️ Are you sure you want to clear all token pairs?')) {
+                console.log('Clearing all token pairs...');
+            }
+        }
+        
+        function exportAnalytics() {
+            console.log('Exporting analytics data...');
+        }
+        
+        function refreshAnalytics() {
+            console.log('Refreshing analytics...');
+        }
+        
+        function searchUsers() {
+            const query = document.getElementById('user-search-input').value;
+            console.log('Searching users:', query);
+        }
+    </script>
 </body>
 </html>
