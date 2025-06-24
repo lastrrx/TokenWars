@@ -4,7 +4,7 @@
 // Global state
 let walletProvider = null;
 let connectedWallet = null;
-let currentUser = null;
+let connectedUser = null;
 let currentStep = 1;
 let selectedAvatar = '🎯';
 let agreementAccepted = false;
