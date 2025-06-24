@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How It Works - TokenWars</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Solana Web3.js -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        /* How It Works Specific Styles */
+        .how-it-works-title {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 3rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+            animation: heroGlow 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes heroGlow {
+            0% { transform: rotate(0deg) scale(1); }
+            100% { transform: rotate(180deg) scale(1.1); }
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: #d1d5db;
+            margin-bottom: 2rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .trust-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            color: #10b981;
+            font-weight: 600;
+            margin-top: 1rem;
+            animation: trustPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes trustPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        /* Content Section Container */
+        .content-section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .section-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.2rem;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-description {
+            color: #9ca3af;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Timeframe Cards */
+        .timeframe-grid {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+        }
+
+        .timeframe-card {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            flex: 1;
+            min-width: 200px;
+            max-width: 250px;
+        }
+
+        .timeframe-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #ec4899);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .timeframe-card:hover {
+            transform: translateY(-8px);
+            border-color: #8b5cf6;
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+        }
+
+        .timeframe-card:hover::before {
+            opacity: 1;
+        }
+
+        .timeframe-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .timeframe-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeframe-duration {
+            font-size: 1.1rem;
+            color: #10b981;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeframe-description {
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+
+        /* How Predictions Work Steps */
+        .prediction-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+            align-items: flex-start;
+        }
+
+        .step-card {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            animation: stepFloat 3s ease-in-out infinite;
+            animation-delay: calc(var(--step) * 0.2s);
+        }
+
+        @keyframes stepFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .step-card:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            top: 40px;
+            right: -1rem;
+            font-size: 2rem;
+            color: #8b5cf6;
+            animation: arrowPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes arrowPulse {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-description {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        /* Token Matching Visual */
+        .matching-demo {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .matching-examples {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .match-example {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .match-example.valid {
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .match-example.invalid {
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            opacity: 0.7;
+        }
+
+        .token-info {
+            text-align: center;
+        }
+
+        .token-symbol {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+
+        .token-mcap {
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+
+        .match-status {
+            font-size: 2rem;
+        }
+
+        /* Prize Distribution Calculator */
+        .prize-calculator {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .calculator-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .calculator-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-container {
+            margin: 2rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            color: #d1d5db;
+        }
+
+        .prize-slider {
+            width: 100%;
+            height: 8px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .prize-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .prize-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            border: none;
+        }
+
+        .distribution-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .team-box {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .team-box.winning {
+            border: 2px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .team-label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .team-players {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .team-result {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 0.5rem;
+            display: none;
+        }
+
+        .team-box.winning .team-result {
+            display: block;
+        }
+
+        .payout-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .return-multiplier {
+            font-size: 0.9rem;
+            color: #10b981;
+            margin-top: 0.25rem;
+        }
+
+        /* TWAP Explanation */
+        .twap-visual {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .twap-benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .benefit-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-2px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .benefit-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .benefit-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .benefit-text {
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+
+        /* Escrow System */
+        .escrow-section {
+            background: rgba(16, 185, 129, 0.05);
+            border: 2px solid rgba(16, 185, 129, 0.2);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            margin: 2rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .escrow-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            animation: escrowPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes escrowPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .escrow-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .escrow-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .escrow-feature {
+            text-align: center;
+        }
+
+        .escrow-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .escrow-label {
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .escrow-desc {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .contract-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .contract-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            color: #10b981;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contract-link:hover {
+            background: rgba(16, 185, 129, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Platform Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: #8b5cf6;
+            box-shadow: 0 15px 30px rgba(139, 92, 246, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-desc {
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+
+        .feature-card.coming-soon {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .feature-card.coming-soon .feature-title {
+            color: #6b7280;
+        }
+
+        .coming-soon-badge {
+            display: inline-block;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        /* Getting Started CTA */
+        .getting-started {
+            background: rgba(139, 92, 246, 0.05);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1.5rem;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-top: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .getting-started::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+            animation: ctaGlow 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes ctaGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(90deg); }
+        }
+
+        .getting-started-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .getting-started-steps {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .gs-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .gs-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .gs-text {
+            color: #d1d5db;
+            font-weight: 600;
+        }
+
+        .cta-button-large {
+            display: inline-block;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: white;
+            padding: 1.2rem 3rem;
+            border-radius: 0.75rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-button-large:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4);
+        }
+
+        /* FAQ Section */
+        .faq-container {
+            margin-top: 2rem;
+        }
+
+        .faq-item {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question {
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .faq-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            color: #d1d5db;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 0 1.5rem 1.25rem;
+            max-height: 500px;
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(45deg);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .timeframe-grid {
+                gap: 1rem;
+            }
+
+            .timeframe-card {
+                min-width: 140px;
+                padding: 1.5rem 1rem;
+            }
+
+            .step-card::after {
+                display: none;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .distribution-visual {
+                grid-template-columns: 1fr;
+            }
+
+            .getting-started-steps {
+                flex-direction: column;
+                gap: 1.5rem;
+                align-items: flex-start;
+                max-width: 300px;
+                margin: 2rem auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-background"></div>
+    <div class="geometric-patterns"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">TokenWars</a>
+            
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#markets">Markets</a></li>
+                <li><a href="#competitions">Competitions</a></li>
+                <li><a href="#leaderboard">Leaderboard</a></li>
+                <li><a href="#portfolio">Portfolio</a></li>
+                <li><a href="how-it-works.html" class="active">How It Works</a></li>
+                
+                <!-- Wallet Connection States -->
+                <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal()">Connect Wallet</a></li>
+                <li id="traderInfo" style="display: none;">
+                    <div id="navTraderAvatar">🎯</div>
+                    <span id="navTraderName">Trader</span>
+                    <button class="nav-disconnect" onclick="disconnectWallet()">Disconnect</button>
+                </li>
+            </ul>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Container -->
+    <div class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title how-it-works-title">How TokenWars Works</h1>
+            <p class="page-subtitle">Smart predictions. Multiple timeframes. Real rewards.</p>
+        </div>
+
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h2 class="hero-subtitle">Your Path to Token Trading Success</h2>
+            <div class="trust-badge">
+                🔐 Secured by Solana Smart Contracts & TWAP Pricing
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- Competition Timeframes Section -->
+            <div class="content-section" id="competition-timeframes">
+                <div class="section-header">
+                    <div class="section-number">1</div>
+                    <h2 class="section-title">⏱️ Competition Timeframes</h2>
+                    <p class="section-description">Choose the prediction window that matches your trading style</p>
+                </div>
+
+                <div class="timeframe-grid">
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">⚡</div>
+                        <div class="timeframe-name">QUICK</div>
+                        <div class="timeframe-duration">1 Hour</div>
+                        <div class="timeframe-description">For active traders who love fast action</div>
+                    </div>
+
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">📅</div>
+                        <div class="timeframe-name">DAILY</div>
+                        <div class="timeframe-duration">24 Hours</div>
+                        <div class="timeframe-description">Most popular - perfect for daily predictions</div>
+                    </div>
+
+                    <div class="timeframe-card">
+                        <div class="timeframe-icon">📊</div>
+                        <div class="timeframe-name">WEEKLY</div>
+                        <div class="timeframe-duration">7 Days</div>
+                        <div class="timeframe-description">For swing traders with longer-term views</div>
+                    </div>
+                </div>
+
+                <p style="text-align: center; color: #8b5cf6; font-weight: 600; margin-top: 2rem;">
+                    Same 0.1 SOL entry fee • Same prize distribution • Different strategies!
+                </p>
+            </div>
+
+            <!-- How Predictions Work Section -->
+            <div class="content-section" id="how-predictions-work">
+                <div class="section-header">
+                    <div class="section-number">2</div>
+                    <h2 class="section-title">🎯 How Predictions Work</h2>
+                    <p class="section-description">Simple process, transparent results</p>
+                </div>
+
+                <div class="prediction-steps">
+                    <div class="step-card" style="--step: 0">
+                        <div class="step-icon">🎲</div>
+                        <div class="step-title">Token Pairs Generated</div>
+                        <div class="step-description">Algorithm matches similar market cap tokens</div>
+                    </div>
+
+                    <div class="step-card" style="--step: 1">
+                        <div class="step-icon">💡</div>
+                        <div class="step-title">Place Your Prediction</div>
+                        <div class="step-description">Choose which token will perform better</div>
+                    </div>
+
+                    <div class="step-card" style="--step: 2">
+                        <div class="step-icon">📈</div>
+                        <div class="step-title">Competition Period</div>
+                        <div class="step-description">Track performance in real-time</div>
+                    </div>
+
+                    <div class="step-card" style="--step: 3">
+                        <div class="step-icon">⚖️</div>
+                        <div class="step-title">TWAP Settlement</div>
+                        <div class="step-description">Fair pricing prevents manipulation</div>
+                    </div>
+
+                    <div class="step-card" style="--step: 4">
+                        <div class="step-icon">💰</div>
+                        <div class="step-title">Automatic Payout</div>
+                        <div class="step-description">Winners paid instantly via smart contract</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Token Matching Section -->
+            <div class="content-section" id="token-matching">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <h2 class="section-title">🤖 Smart Token Matching</h2>
+                    <p class="section-description">Fair competition through algorithmic pairing</p>
+                </div>
+
+                <div class="matching-demo">
+                    <h3 style="text-align: center; color: #8b5cf6; margin-bottom: 1rem;">Market Cap Matching (±10% Range)</h3>
+                    
+                    <div class="matching-examples">
+                        <div class="match-example valid">
+                            <div class="token-info">
+                                <div class="token-symbol">BONK</div>
+                                <div class="token-mcap">$500M</div>
+                            </div>
+                            <div class="match-status">✅</div>
+                            <div class="token-info">
+                                <div class="token-symbol">WIF</div>
+                                <div class="token-mcap">$480M</div>
+                            </div>
+                        </div>
+
+                        <div class="match-example valid">
+                            <div class="token-info">
+                                <div class="token-symbol">JUP</div>
+                                <div class="token-mcap">$1.2B</div>
+                            </div>
+                            <div class="match-status">✅</div>
+                            <div class="token-info">
+                                <div class="token-symbol">ORCA</div>
+                                <div class="token-mcap">$1.15B</div>
+                            </div>
+                        </div>
+
+                        <div class="match-example invalid">
+                            <div class="token-info">
+                                <div class="token-symbol">SOL</div>
+                                <div class="token-mcap">$50B</div>
+                            </div>
+                            <div class="match-status">❌</div>
+                            <div class="token-info">
+                                <div class="token-symbol">BONK</div>
+                                <div class="token-mcap">$500M</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="text-align: center; color: #10b981; margin-top: 1.5rem; font-weight: 600;">
+                        New pairs generated for every competition cycle!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Prize Distribution Section -->
+            <div class="content-section" id="prize-distribution">
+                <div class="section-header">
+                    <div class="section-number">4</div>
+                    <h2 class="section-title">💰 Prize Distribution System</h2>
+                    <p class="section-description">See your potential winnings in real-time</p>
+                </div>
+
+                <div class="prize-calculator">
+                    <div class="calculator-header">
+                        <h3 class="calculator-title">Interactive Prize Calculator</h3>
+                        <p style="color: #9ca3af;">Drag the slider to see how predictions affect payouts</p>
+                    </div>
+
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Total Players: 100</span>
+                            <span>Entry: 0.1 SOL each</span>
+                        </div>
+                        <input type="range" class="prize-slider" id="prizeSlider" min="10" max="90" value="60" oninput="updatePrizeCalculator(this.value)">
+                        <div class="slider-label">
+                            <span id="tokenAPlayers">60 pick Token A</span>
+                            <span id="tokenBPlayers">40 pick Token B</span>
+                        </div>
+                    </div>
+
+                    <div class="distribution-visual">
+                        <div class="team-box" id="teamA">
+                            <div class="team-label">Token A Predictors</div>
+                            <div class="team-players" id="teamACount">60</div>
+                            <div class="team-result">
+                                <div>Each winner gets:</div>
+                                <div class="payout-amount" id="payoutA">1.42 SOL</div>
+                                <div class="return-multiplier" id="returnA">14.2x return!</div>
+                            </div>
+                        </div>
+
+                        <div class="team-box" id="teamB">
+                            <div class="team-label">Token B Predictors</div>
+                            <div class="team-players" id="teamBCount">40</div>
+                            <div class="team-result">
+                                <div>Each winner gets:</div>
+                                <div class="payout-amount" id="payoutB">2.13 SOL</div>
+                                <div class="return-multiplier" id="returnB">21.3x return!</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="text-align: center; color: #fbbf24; font-weight: 600; margin-top: 2rem;">
+                        🎉 Winners split 85% of the pool • Platform takes 15% fee
+                    </p>
+                </div>
+            </div>
+
+            <!-- TWAP Pricing Section -->
+            <div class="content-section" id="twap-pricing">
+                <div class="section-header">
+                    <div class="section-number">5</div>
+                    <h2 class="section-title">📊 Why TWAP Pricing?</h2>
+                    <p class="section-description">Fair, transparent, manipulation-resistant</p>
+                </div>
+
+                <div class="twap-visual">
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <h3 style="color: #8b5cf6; margin-bottom: 0.5rem;">Time-Weighted Average Price (TWAP)</h3>
+                        <p style="color: #d1d5db;">Calculates average price over 30-minute windows</p>
+                    </div>
+
+                    <div class="twap-benefits">
+                        <div class="benefit-card">
+                            <div class="benefit-icon">🚫</div>
+                            <div class="benefit-title">No Pump & Dump</div>
+                            <div class="benefit-text">Single large trades can't affect the outcome</div>
+                        </div>
+
+                        <div class="benefit-card">
+                            <div class="benefit-icon">⚡</div>
+                            <div class="benefit-title">No Flash Loans</div>
+                            <div class="benefit-text">Time-based averaging prevents instant manipulation</div>
+                        </div>
+
+                        <div class="benefit-card">
+                            <div class="benefit-icon">🔍</div>
+                            <div class="benefit-title">Multi-DEX Data</div>
+                            <div class="benefit-text">Aggregates prices from Jupiter, Orca, Raydium</div>
+                        </div>
+                    </div>
+
+                    <p style="text-align: center; color: #10b981; margin-top: 2rem; font-weight: 600;">
+                        Start: 30-min TWAP after predictions close • End: 30-min TWAP at competition end
+                    </p>
+                </div>
+            </div>
+
+            <!-- Escrow & Security Section -->
+            <div class="content-section" id="escrow-security">
+                <div class="section-header">
+                    <div class="section-number">6</div>
+                    <h2 class="section-title">🔐 Escrow & Security</h2>
+                    <p class="section-description">Your funds are always safe</p>
+                </div>
+
+                <div class="escrow-section">
+                    <h3 class="escrow-title">Smart Contract Escrow System</h3>
+                    <p style="color: #d1d5db; margin-bottom: 2rem;">
+                        All competition funds are locked in audited Solana smart contracts
+                    </p>
+
+                    <div class="escrow-features">
+                        <div class="escrow-feature">
+                            <div class="escrow-icon">🔒</div>
+                            <div class="escrow-label">Funds Locked</div>
+                            <div class="escrow-desc">Entry fees secured in escrow</div>
+                        </div>
+
+                        <div class="escrow-feature">
+                            <div class="escrow-icon">⚡</div>
+                            <div class="escrow-label">Auto Distribution</div>
+                            <div class="escrow-desc">Winners paid instantly</div>
+                        </div>
+
+                        <div class="escrow-feature">
+                            <div class="escrow-icon">📊</div>
+                            <div class="escrow-label">Transparent</div>
+                            <div class="escrow-desc">85% to winners, 15% platform</div>
+                        </div>
+
+                        <div class="escrow-feature">
+                            <div class="escrow-icon">✅</div>
+                            <div class="escrow-label">Verifiable</div>
+                            <div class="escrow-desc">Check on Solscan anytime</div>
+                        </div>
+                    </div>
+
+                    <div class="contract-links">
+                        <a href="#" class="contract-link">
+                            🔍 View on Solscan
+                        </a>
+                        <a href="#" class="contract-link">
+                            📄 Audit Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Features Section -->
+            <div class="content-section" id="platform-features">
+                <div class="section-header">
+                    <div class="section-number">7</div>
+                    <h2 class="section-title">✨ Platform Features</h2>
+                    <p class="section-description">Everything you need to succeed</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-title">Live Tracking</div>
+                        <div class="feature-desc">Real-time price updates</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🏆</div>
+                        <div class="feature-title">Leaderboards</div>
+                        <div class="feature-desc">Compete for top trader status</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📈</div>
+                        <div class="feature-title">Performance Stats</div>
+                        <div class="feature-desc">Track your prediction accuracy</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-title">Achievements</div>
+                        <div class="feature-desc">Unlock badges and rewards</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📱</div>
+                        <div class="feature-title">Mobile Ready</div>
+                        <div class="feature-desc">Trade on any device</div>
+                    </div>
+
+                    <div class="feature-card coming-soon">
+                        <div class="feature-icon">💬</div>
+                        <div class="feature-title">Community</div>
+                        <div class="feature-desc">Share strategies</div>
+                        <div class="coming-soon-badge">Coming Soon</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competition Types Section -->
+            <div class="content-section" id="competition-types">
+                <div class="section-header">
+                    <div class="section-number">8</div>
+                    <h2 class="section-title">🎮 Competition Types</h2>
+                    <p class="section-description">Current offerings and future expansions</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 800px; margin: 2rem auto;">
+                    <div style="background: rgba(16, 185, 129, 0.05); border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 1rem; padding: 2rem;">
+                        <h3 style="color: #10b981; margin-bottom: 1rem;">Available Now</h3>
+                        <div style="background: rgba(31, 41, 55, 0.5); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem;">
+                            <h4 style="color: #8b5cf6; margin-bottom: 0.5rem;">Classic 1v1</h4>
+                            <p style="color: #d1d5db; font-size: 0.9rem;">Pick the better performer between two tokens</p>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 1rem; padding: 2rem; opacity: 0.7;">
+                        <h3 style="color: #fbbf24; margin-bottom: 1rem;">Coming Soon</h3>
+                        <div style="display: grid; gap: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #9ca3af;">
+                                <span>🎲</span> Multi-Token Predictions
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #9ca3af;">
+                                <span>📊</span> Threshold Bets
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #9ca3af;">
+                                <span>🎯</span> Parlays
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #9ca3af;">
+                                <span>🌟</span> Custom Markets
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="content-section" id="faq">
+                <div class="section-header">
+                    <div class="section-number">9</div>
+                    <h2 class="section-title">❓ Frequently Asked Questions</h2>
+                    <p class="section-description">Everything you need to know</p>
+                </div>
+
+                <div class="faq-container">
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>How are tokens selected for competitions?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            Our automated algorithm pairs tokens with similar market caps (within ±10%) to ensure fair competition. Tokens must have minimum liquidity, be at least 30 days old, and pass our eligibility criteria.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>What happens if I pick the wrong token?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            If your chosen token underperforms, you lose your 0.1 SOL entry fee. This goes into the prize pool for the winners. Remember, only predict what you can afford to lose!
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>Can I cancel a prediction?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            No, all predictions are final once placed. This ensures fairness for all participants and prevents manipulation of the prize pool.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>How fast are payouts?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            Payouts are instant! As soon as the competition ends and winners are determined by TWAP, the smart contract automatically distributes winnings to all successful predictors.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>What happens in case of a tie?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            Ties are extremely rare with TWAP pricing calculated to multiple decimal places. In the unlikely event of an exact tie, all participants receive their entry fees back.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <span>Are there any restrictions?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            You must be 18 years or older to participate. TokenWars is not available in jurisdictions where prediction markets are prohibited. Always check your local regulations.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Getting Started Section -->
+            <div class="content-section" id="getting-started">
+                <div class="getting-started">
+                    <h3 class="getting-started-title">Ready to Start Predicting?</h3>
+                    
+                    <div class="getting-started-steps">
+                        <div class="gs-step">
+                            <div class="gs-number">1</div>
+                            <div class="gs-text">Connect your wallet</div>
+                        </div>
+                        <div class="gs-step">
+                            <div class="gs-number">2</div>
+                            <div class="gs-text">Browse markets</div>
+                        </div>
+                        <div class="gs-step">
+                            <div class="gs-number">3</div>
+                            <div class="gs-text">Make prediction</div>
+                        </div>
+                        <div class="gs-step">
+                            <div class="gs-number">4</div>
+                            <div class="gs-text">Claim winnings</div>
+                        </div>
+                    </div>
+
+                    <a href="index.html" class="cta-button-large">
+                        Start Your First Prediction
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mobile Navigation
+        function initializeMobileNavigation() {
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            
+            if (!mobileToggle || !navLinks || !hamburger) return;
+            
+            mobileToggle.addEventListener('click', function() {
+                const isOpen = navLinks.classList.contains('active');
+                if (isOpen) {
+                    closeMobileMenu();
+                } else {
+                    openMobileMenu();
+                }
+            });
+            
+            const navLinksItems = navLinks.querySelectorAll('a');
+            navLinksItems.forEach(link => {
+                link.addEventListener('click', function() {
+                    closeMobileMenu();
+                });
+            });
+        }
+
+        function openMobileMenu() {
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            navLinks.classList.add('active');
+            hamburger.classList.add('active');
+            mobileToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            const navLinks = document.querySelector('.nav-links');
+            const hamburger = document.querySelector('.hamburger');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            navLinks.classList.remove('active');
+            hamburger.classList.remove('active');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+
+        // Prize Calculator
+        function updatePrizeCalculator(value) {
+            const teamACount = parseInt(value);
+            const teamBCount = 100 - teamACount;
+            
+            // Update player counts
+            document.getElementById('tokenAPlayers').textContent = `${teamACount} pick Token A`;
+            document.getElementById('tokenBPlayers').textContent = `${teamBCount} pick Token B`;
+            document.getElementById('teamACount').textContent = teamACount;
+            document.getElementById('teamBCount').textContent = teamBCount;
+            
+            // Calculate payouts (85% of 10 SOL pool = 8.5 SOL to winners)
+            const prizePool = 8.5;
+            
+            // Team A wins scenario
+            const payoutIfAWins = teamACount > 0 ? (prizePool / teamACount).toFixed(2) : 0;
+            const returnIfAWins = teamACount > 0 ? (payoutIfAWins / 0.1).toFixed(1) : 0;
+            
+            // Team B wins scenario
+            const payoutIfBWins = teamBCount > 0 ? (prizePool / teamBCount).toFixed(2) : 0;
+            const returnIfBWins = teamBCount > 0 ? (payoutIfBWins / 0.1).toFixed(1) : 0;
+            
+            // Update displays
+            document.getElementById('payoutA').textContent = `${payoutIfAWins} SOL`;
+            document.getElementById('returnA').textContent = `${returnIfAWins}x return!`;
+            document.getElementById('payoutB').textContent = `${payoutIfBWins} SOL`;
+            document.getElementById('returnB').textContent = `${returnIfBWins}x return!`;
+            
+            // Highlight better odds
+            const teamA = document.getElementById('teamA');
+            const teamB = document.getElementById('teamB');
+            
+            if (teamACount < teamBCount) {
+                teamA.classList.add('winning');
+                teamB.classList.remove('winning');
+            } else if (teamBCount < teamACount) {
+                teamB.classList.add('winning');
+                teamA.classList.remove('winning');
+            } else {
+                teamA.classList.remove('winning');
+                teamB.classList.remove('winning');
+            }
+        }
+
+        // FAQ Toggle
+        function toggleFAQ(element) {
+            const faqItem = element.parentElement;
+            faqItem.classList.toggle('active');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMobileNavigation();
+            updatePrizeCalculator(60); // Initialize with default value
+        });
+
+        // Placeholder wallet functions
+        function openWalletModal() {
+            window.location.href = 'index.html';
+        }
+
+        function disconnectWallet() {
+            // This would be handled by the global wallet manager
+            console.log('Disconnecting wallet...');
+        }
+    </script>
+</body>
+</html>
