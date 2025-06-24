@@ -390,53 +390,6 @@ function showConnectionError(message) {
 }
 
 // ========================================
-// SECTION NAVIGATION
-// ========================================
-
-function showMarkets() {
-    hideAllSections();
-    document.getElementById('markets').style.display = 'block';
-    updateActiveNav('markets');
-    loadMarkets();
-}
-
-function showCompetitions() {
-    hideAllSections();
-    document.getElementById('competitions').style.display = 'block';
-    updateActiveNav('competitions');
-}
-
-function showLeaderboard() {
-    hideAllSections();
-    document.getElementById('leaderboard').style.display = 'block';
-    updateActiveNav('leaderboard');
-    loadLeaderboard();
-}
-
-function showPortfolio() {
-    hideAllSections();
-    document.getElementById('portfolio').style.display = 'block';
-    updateActiveNav('portfolio');
-    initializeUserProfile();
-}
-
-function hideAllSections() {
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => section.style.display = 'none');
-}
-
-function updateActiveNav(section) {
-    // Remove active class from all nav links
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.classList.remove('active');
-    });
-    
-    // Add active class to current section
-    const activeLink = document.querySelector(`.nav-links a[href="#${section}"]`);
-    if (activeLink) activeLink.classList.add('active');
-}
-
-// ========================================
 // MOBILE NAVIGATION
 // ========================================
 
