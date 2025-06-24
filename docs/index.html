@@ -8,7 +8,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Supabase Client -->
+    <!-- Supabase Client - PRESERVING EXISTING CONNECTION -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <!-- Solana Web3.js -->
@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="styles.css">
     
     <style>
-        /* Hero Section */
+        /* Enhanced Hero Section for TokenWars */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -57,9 +57,19 @@
         .hero-motto {
             font-size: clamp(1.2rem, 3vw, 1.8rem);
             color: #d1d5db;
-            margin-bottom: 3rem;
+            margin-bottom: 1rem;
             font-weight: 300;
             letter-spacing: 2px;
+        }
+
+        .hero-description {
+            color: #9ca3af;
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
         }
 
         .cta-buttons {
@@ -110,14 +120,14 @@
         }
 
         /* Connected State Hero Styling */
-        .trader-welcome-simple {
+        .trader-welcome {
             margin-bottom: 3rem;
         }
 
         .welcome-trader {
             font-size: clamp(1.4rem, 4vw, 2rem);
             color: #d1d5db;
-            margin: 0;
+            margin: 0 0 1.5rem 0;
             font-weight: 400;
         }
 
@@ -130,93 +140,128 @@
             font-family: 'Orbitron', monospace;
         }
 
-        /* Learn More Section */
-        .learn-more-section {
-            padding: 6rem 2rem;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(10px);
+        .trader-quick-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
         }
 
-        .learn-more-container {
-            max-width: 1000px;
-            margin: 0 auto;
+        .quick-stat {
             text-align: center;
         }
 
-        .learn-more-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 2.5rem;
+        .quick-stat .stat-value {
+            display: block;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 2rem;
-            background: linear-gradient(135deg, #e879f9, #a855f7, #3b82f6);
+            color: #f3f4f6;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .quick-stat .stat-label {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Enhanced Navigation */
+        .trader-info-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 1rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .nav-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .trader-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .trader-name {
+            color: #8b5cf6;
+            font-weight: 600;
+            font-size: 0.875rem;
+            line-height: 1;
+        }
+
+        .trader-stats {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            line-height: 1;
+        }
+
+        .nav-disconnect {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-disconnect:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Platform Stats */
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            line-height: 1;
+            margin-bottom: 0.5rem;
         }
 
-        .learn-more-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 3rem;
-            margin-top: 3rem;
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .concept-card {
-            background: rgba(31, 41, 55, 0.3);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            border-color: #8b5cf6;
-            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
-        }
-
-        .concept-icon {
-            width: 4rem;
-            height: 4rem;
-            margin: 0 auto 1.5rem;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-        }
-
-        .concept-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #8b5cf6;
-        }
-
-        .concept-description {
-            color: #d1d5db;
-            line-height: 1.6;
-        }
-
-        /* Loading and Error States */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: #8b5cf6;
-        }
-
-        .error-message {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            text-align: center;
+        /* Profile Section Placeholder */
+        .profile-overview {
+            margin-bottom: 2rem;
         }
 
         /* Database connection status */
@@ -241,10 +286,34 @@
             border: 1px solid rgba(239, 68, 68, 0.5);
             color: #ef4444;
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .trader-info-display {
+                padding: 0.4rem 0.8rem;
+                gap: 0.5rem;
+            }
+            
+            .trader-details {
+                display: none; /* Hide details on mobile, show only avatar */
+            }
+            
+            .hero-stats {
+                gap: 1.5rem;
+            }
+            
+            .stat-number {
+                font-size: 1.5rem;
+            }
+            
+            .trader-quick-stats {
+                gap: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Database Connection Status -->
+    <!-- Database Connection Status - PRESERVING EXISTING FUNCTIONALITY -->
     <div id="dbStatus" class="db-status disconnected">
         Database: Connecting...
     </div>
@@ -253,27 +322,33 @@
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
 
-    <!-- Navigation -->
+    <!-- Navigation - UPDATED BRANDING, PRESERVED FUNCTIONALITY -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="index.html" class="logo">TokenWars</a>
+            <a href="index.html" class="logo">⚡ TokenWars</a>
             
             <ul class="nav-links">
                 <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="#markets" onclick="showMarkets()">Markets</a></li>
-                <li><a href="#competitions" onclick="showCompetitions()">Competitions</a></li>
+                <li><a href="#markets" onclick="showMarkets()">Live Battles</a></li>
                 <li><a href="#leaderboard" onclick="showLeaderboard()">Leaderboard</a></li>
-                <li><a href="#portfolio" onclick="showPortfolio()">Portfolio</a></li>
-                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#profile" onclick="showProfile()" id="profileNavLink" style="display: none;">Profile</a></li>
+                <li><a href="how-it-works.html">Battle Guide</a></li>
                 
                 <!-- Disconnected State -->
                 <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal()">Connect Wallet</a></li>
                 
                 <!-- Connected State (Hidden by default) -->
                 <li id="traderInfo" style="display: none;">
-                    <div id="navTraderAvatar">🎯</div>
-                    <span id="navTraderName">Trader</span>
-                    <button class="nav-disconnect" onclick="disconnectWallet()">Disconnect</button>
+                    <div class="trader-info-display">
+                        <div id="navTraderAvatar" class="nav-avatar">🎯</div>
+                        <div class="trader-details">
+                            <span id="navTraderName" class="trader-name">Warrior</span>
+                            <span id="navTraderStats" class="trader-stats">0 victories</span>
+                        </div>
+                        <button class="nav-disconnect" onclick="disconnectWallet()" title="Disconnect Wallet">
+                            ⚡
+                        </button>
+                    </div>
                 </li>
             </ul>
 
@@ -288,102 +363,105 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section - UPDATED BRANDING -->
     <div class="hero">
         <div class="hero-content">
             <!-- Disconnected State Hero -->
             <div id="heroDisconnected">
-                <h1 class="hero-title">TokenWars</h1>
+                <h1 class="hero-title">⚡ TokenWars</h1>
                 <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
+                <p class="hero-description">
+                    Battle other traders in epic 1v1 token prediction wars. 
+                    Choose your champion, place your wager, claim your victory.
+                </p>
                 <div class="cta-buttons">
-                    <a href="#" class="btn-hero-primary" onclick="openWalletModal()">Connect Wallet</a>
-                    <a href="#learn-more" class="btn-secondary">Learn More</a>
+                    <a href="#" class="btn-hero-primary" onclick="openWalletModal()">
+                        ⚔️ Enter Battle
+                    </a>
+                    <a href="how-it-works.html" class="btn-secondary">
+                        📖 Battle Guide
+                    </a>
+                </div>
+                
+                <!-- Platform Stats Preview -->
+                <div class="hero-stats" id="heroStats">
+                    <div class="hero-stat">
+                        <div class="stat-number" id="totalBattles">-</div>
+                        <div class="stat-label">Total Battles</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="stat-number" id="totalVolume">-</div>
+                        <div class="stat-label">SOL Wagered</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="stat-number" id="activePlayers">-</div>
+                        <div class="stat-label">Active Warriors</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Connected State Hero -->
             <div id="heroConnected" style="display: none;">
-                <h1 class="hero-title">TokenWars</h1>
+                <h1 class="hero-title">⚡ TokenWars</h1>
                 <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                 
-                <div class="trader-welcome-simple">
-                    <p class="welcome-trader">Welcome, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span></p>
+                <div class="trader-welcome">
+                    <p class="welcome-trader">
+                        Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Warrior</span>
+                    </p>
+                    <div class="trader-quick-stats" id="heroTraderStats">
+                        <div class="quick-stat">
+                            <span class="stat-value" id="heroWinCount">0</span>
+                            <span class="stat-label">Victories</span>
+                        </div>
+                        <div class="quick-stat">
+                            <span class="stat-value" id="heroWinRate">0%</span>
+                            <span class="stat-label">Win Rate</span>
+                        </div>
+                        <div class="quick-stat">
+                            <span class="stat-value" id="heroEarnings">0</span>
+                            <span class="stat-label">SOL Earned</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="cta-buttons">
-                    <a href="#markets" class="btn-hero-primary" onclick="showMarkets()">View Markets</a>
-                    <a href="#learn-more" class="btn-secondary">Learn More</a>
+                    <a href="#markets" class="btn-hero-primary" onclick="showMarkets()">
+                        ⚔️ Join Battle
+                    </a>
+                    <a href="#profile" class="btn-secondary" onclick="showProfile()">
+                        📊 View Arsenal
+                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Learn More Section -->
-    <div id="learn-more" class="learn-more-section">
-        <div class="learn-more-container">
-            <h2 class="learn-more-title">How TokenWars Works</h2>
-            
-            <div class="learn-more-content">
-                <div class="concept-card">
-                    <div class="concept-icon">📊</div>
-                    <h3 class="concept-title">Smart Token Matching</h3>
-                    <p class="concept-description">
-                        Our algorithm pairs tokens with similar market caps (±10%) for fair competition. Predict which token will perform better over 1 hour.
-                    </p>
-                </div>
-                
-                <div class="concept-card">
-                    <div class="concept-icon">💰</div>
-                    <h3 class="concept-title">Fixed Entry Stakes</h3>
-                    <p class="concept-description">
-                        Simple 0.1 SOL entry fee per prediction. Winners split the pool (minus 15% platform fee). Transparent and straightforward.
-                    </p>
-                </div>
-                
-                <div class="concept-card">
-                    <div class="concept-icon">🔐</div>
-                    <h3 class="concept-title">Trustless Settlement</h3>
-                    <p class="concept-description">
-                        All funds locked in Solana smart contracts. Winners determined by TWAP (Time-Weighted Average Price) for manipulation resistance.
-                    </p>
-                </div>
-            </div>
-            
-            <!-- New CTA Button -->
-            <div style="text-align: center; margin-top: 3rem;">
-                <a href="how-it-works.html" class="btn-hero-primary" style="background: linear-gradient(135deg, #8b5cf6, #ec4899); display: inline-flex; align-items: center; gap: 0.5rem;">
-                    📖 Full Platform Guide →
-                </a>
             </div>
         </div>
     </div>
 
     <!-- Main Content Container (Hidden by default, shown after connection) -->
     <main class="main-content" id="mainContent" style="display: none;">
-        <!-- Content sections will be dynamically shown/hidden -->
         
-        <!-- Markets Section -->
+        <!-- Live Battles Section (Markets) -->
         <section id="markets" class="section" style="display: none;">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">ACTIVE MARKETS</h2>
+                    <h2 class="section-title">⚔️ LIVE BATTLES</h2>
                     <div class="section-filters">
                         <select id="filter-status" class="filter-select">
-                            <option value="all">All Markets</option>
-                            <option value="active">Active</option>
+                            <option value="all">All Battles</option>
+                            <option value="active">Active Wars</option>
                             <option value="upcoming">Upcoming</option>
                             <option value="completed">Completed</option>
                         </select>
                         <select id="sort-by" class="filter-select">
                             <option value="time">Time Remaining</option>
-                            <option value="pool">Pool Size</option>
-                            <option value="participants">Participants</option>
+                            <option value="pool">Prize Pool</option>
+                            <option value="participants">Warriors</option>
                         </select>
                     </div>
                 </div>
                 
                 <div class="competitions-grid" id="competitions-grid">
-                    <div class="loading">Loading markets...</div>
+                    <div class="loading">Loading battles...</div>
                 </div>
             </div>
         </section>
@@ -392,7 +470,7 @@
         <section id="leaderboard" class="section" style="display: none;">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">LEADERBOARD</h2>
+                    <h2 class="section-title">🏆 HALL OF WARRIORS</h2>
                 </div>
                 <div id="leaderboard-content">
                     <div class="loading">Loading leaderboard...</div>
@@ -400,28 +478,27 @@
             </div>
         </section>
 
-        <!-- Portfolio Section -->
-        <section id="portfolio" class="section" style="display: none;">
+        <!-- Profile Section - NEW ADDITION -->
+        <section id="profile" class="section" style="display: none;">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">MY PORTFOLIO</h2>
+                    <h2 class="section-title">⚡ WARRIOR PROFILE</h2>
                 </div>
-                <div id="portfolio-content">
-                    <div class="loading">Loading portfolio...</div>
+                <div id="profile-content">
+                    <div class="loading">Loading warrior profile...</div>
                 </div>
             </div>
         </section>
         
-        <!-- Other sections... -->
     </main>
 
-    <!-- Wallet Connection Modal -->
+    <!-- Wallet Connection Modal - PRESERVING EXISTING FUNCTIONALITY -->
     <div class="wallet-modal" id="walletModal">
         <div class="wallet-modal-content">
             <div class="modal-header">
                 <button class="modal-close" onclick="closeWalletModal()">×</button>
-                <div class="modal-title" id="modalTitle">Connect Wallet</div>
-                <div class="modal-subtitle" id="modalSubtitle">Choose your preferred Solana wallet to get started</div>
+                <div class="modal-title" id="modalTitle">Join the Battle</div>
+                <div class="modal-subtitle" id="modalSubtitle">Connect your Solana wallet to enter TokenWars</div>
             </div>
 
             <!-- Step Indicators -->
@@ -435,9 +512,9 @@
             <!-- Step 1: Wallet Selection -->
             <div class="step-content active" id="step1Content">
                 <div class="security-info">
-                    <div class="security-title">🔒 Security First</div>
+                    <div class="security-title">⚡ Secure Battle Entry</div>
                     <div class="security-text">
-                        TokenWars connects to your wallet securely to track your predictions. We never access your private keys or make unauthorized transactions.
+                        TokenWars connects securely to track your battles. Your private keys remain safe - we only monitor your victories.
                     </div>
                 </div>
 
@@ -473,7 +550,7 @@
                         <div class="wallet-icon">🎮</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Demo Mode</div>
-                            <div class="wallet-description">Try without wallet</div>
+                            <div class="wallet-description">Practice without wallet</div>
                             <div class="wallet-status" id="demoStatus">✓ Available</div>
                         </div>
                     </div>
@@ -496,19 +573,19 @@
             <!-- Step 2.5: Wallet Confirmation -->
             <div class="step-content" id="step2_5Content">
                 <div class="wallet-confirmation">
-                    <div class="confirmation-icon">✅</div>
-                    <div class="confirmation-title">Wallet Connected Successfully!</div>
-                    <div class="confirmation-subtitle">Your <span id="connectedWalletType">Phantom</span> wallet has been detected</div>
+                    <div class="confirmation-icon">⚡</div>
+                    <div class="confirmation-title">Warrior Connected!</div>
+                    <div class="confirmation-subtitle">Your <span id="connectedWalletType">Phantom</span> wallet is ready for battle</div>
                     
                     <div class="wallet-address-display">
-                        <div class="address-label">Connected Wallet Address:</div>
+                        <div class="address-label">Battle Address:</div>
                         <div class="address-value" id="connectedWalletAddress">Loading...</div>
                         <div class="address-note">This address will be used for your predictions</div>
                     </div>
                     
                     <div class="trader-status-check">
                         <div class="status-icon" id="traderStatusIcon">🔍</div>
-                        <div class="status-text" id="traderStatusText">Checking for existing profile...</div>
+                        <div class="status-text" id="traderStatusText">Checking warrior status...</div>
                     </div>
 
                     <div class="confirmation-actions" id="confirmationActions" style="display: none;">
@@ -518,84 +595,84 @@
                 </div>
             </div>
 
-            <!-- Step 3: Trader Profile Creation -->
+            <!-- Step 3: Warrior Profile Creation -->
             <div class="step-content" id="step3Content">
                 <div class="education-section">
-                    <div class="education-title">🎯 Create Your Trader Profile</div>
+                    <div class="education-title">⚡ Create Your Warrior Profile</div>
                     <div class="education-content">
-                        Your username will be displayed on leaderboards and in competitions. Choose wisely!
+                        Your warrior name will be displayed on leaderboards and in battles. Choose your legend!
                     </div>
                 </div>
 
                 <div class="trader-creator">
                     <div class="form-group">
-                        <label class="form-label">Trader Username</label>
+                        <label class="form-label">Warrior Name</label>
                         <input 
                             type="text" 
                             class="form-input" 
                             id="traderUsername" 
-                            placeholder="Enter your username..."
+                            placeholder="Enter your warrior name..."
                             maxlength="20"
                             oninput="updateTraderPreview()"
                         >
                         <div style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">
-                            3-20 characters, alphanumeric and underscores only
+                            3-20 characters, letters, numbers and underscores only
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Choose Your Avatar</label>
+                        <label class="form-label">Choose Your Battle Avatar</label>
                         <div class="avatar-grid" id="avatarGrid">
-                            <div class="avatar-option selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
-                            <div class="avatar-option" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
+                            <div class="avatar-option selected" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
+                            <div class="avatar-option" onclick="selectAvatar('⚔️')" data-avatar="⚔️">⚔️</div>
+                            <div class="avatar-option" onclick="selectAvatar('🏆')" data-avatar="🏆">🏆</div>
+                            <div class="avatar-option" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
                             <div class="avatar-option" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
                             <div class="avatar-option" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
-                            <div class="avatar-option" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
-                            <div class="avatar-option" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
-                            <div class="avatar-option" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
                             <div class="avatar-option" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
+                            <div class="avatar-option" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
                         </div>
                     </div>
 
                     <div class="trader-preview">
-                        <div class="preview-avatar" id="previewAvatar">🎯</div>
-                        <div class="preview-name" id="previewName">Trader Username</div>
-                        <div class="preview-subtitle">Ready to predict token movements</div>
+                        <div class="preview-avatar" id="previewAvatar">⚡</div>
+                        <div class="preview-name" id="previewName">Warrior Name</div>
+                        <div class="preview-subtitle">Ready for battle</div>
                     </div>
                 </div>
 
                 <div class="modal-actions">
                     <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
-                    <button class="btn-modal-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Create Profile</button>
+                    <button class="btn-modal-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Create Warrior</button>
                 </div>
             </div>
 
-            <!-- Step 4: Platform Rules & Agreement -->
+            <!-- Step 4: Battle Rules & Agreement -->
             <div class="step-content" id="step4Content">
                 <div class="education-section">
-                    <div class="education-title">📊 How Predictions Work</div>
+                    <div class="education-title">⚔️ How Token Battles Work</div>
                     <div class="education-content">
-                        Tokens are paired based on similar market caps. You predict which will perform better over 1 hour. 
-                        Winners are determined by TWAP (Time-Weighted Average Price) to prevent manipulation.
+                        Tokens are matched by similar market caps. You predict which will perform better over 1 hour. 
+                        Winners determined by TWAP (Time-Weighted Average Price) to prevent manipulation.
                     </div>
                 </div>
 
                 <div class="education-section">
-                    <div class="education-title">💰 Prize Distribution</div>
+                    <div class="education-title">💰 Battle Rewards</div>
                     <div class="education-content">
                         <ul class="education-list">
-                            <li><strong>Entry Fee:</strong> 0.1 SOL per prediction</li>
-                            <li><strong>Winner's Share:</strong> Split the pool with other winners</li>
+                            <li><strong>Entry Fee:</strong> 0.1 SOL per battle</li>
+                            <li><strong>Victory Share:</strong> Split the prize pool with fellow winners</li>
                             <li><strong>Platform Fee:</strong> 15% for operations and development</li>
-                            <li><strong>Settlement:</strong> Automatic via smart contracts</li>
+                            <li><strong>Payout:</strong> Automatic via smart contracts</li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="education-section">
-                    <div class="education-title">🔒 Fair Play & Security</div>
+                    <div class="education-title">⚡ Fair Battle & Security</div>
                     <div class="education-content">
-                        All predictions are final once placed. Smart contracts ensure transparent and tamper-proof results. 
+                        All predictions are final once placed. Smart contracts ensure transparent results. 
                         Your wallet remains under your control at all times.
                     </div>
                 </div>
@@ -604,39 +681,39 @@
                     <div class="checkbox-wrapper">
                         <div class="checkbox-custom" id="agreementCheckbox" onclick="toggleAgreement()"></div>
                         <label class="checkbox-label" onclick="toggleAgreement()">
-                            I understand the platform rules and agree to participate fairly. I acknowledge that predictions involve risk 
-                            and that I should only use funds I can afford to lose. I understand that all predictions are final.
+                            I understand the battle rules and agree to compete fairly. I acknowledge that token battles involve risk 
+                            and that I should only wager funds I can afford to lose. I understand that all predictions are final.
                         </label>
                     </div>
                 </div>
 
                 <div class="modal-actions">
                     <button class="btn-modal-secondary" onclick="goToStep(3)">Back</button>
-                    <button class="btn-modal-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Join TokenWars</button>
+                    <button class="btn-modal-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Enter TokenWars</button>
                 </div>
             </div>
 
             <!-- Step 5: Success -->
             <div class="step-content" id="step5Content">
                 <div class="success-celebration">
-                    <div class="success-icon">🏆</div>
+                    <div class="success-icon">⚡</div>
                     <div class="success-title">Welcome to TokenWars!</div>
-                    <div class="success-message">Your trader profile has been created successfully</div>
+                    <div class="success-message">Your warrior profile has been forged successfully</div>
                     
                     <div class="achievement-unlock">
-                        <div class="achievement-icon">🎯</div>
-                        <div class="achievement-text">Achievement Unlocked: First Prediction Ready!</div>
+                        <div class="achievement-icon">⚔️</div>
+                        <div class="achievement-text">Achievement Unlocked: Battle-Ready Warrior!</div>
                     </div>
 
                     <div class="modal-actions">
-                        <button class="btn-modal-primary" onclick="completedOnboarding()">Start Predicting!</button>
+                        <button class="btn-modal-primary" onclick="completedOnboarding()">Begin Battle!</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts - CRITICAL ORDER: Load in this exact sequence -->
+    <!-- Scripts - PRESERVING EXACT ORDER AND SUPABASE CONNECTION -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
@@ -644,7 +721,7 @@
     <script src="competition.js"></script>
     <script src="user.js"></script>
     
-    <!-- Initialize the app after all scripts are loaded -->
+    <!-- Initialize the app after all scripts are loaded - PRESERVING EXISTING INITIALIZATION -->
     <script>
         // Initialize the application when DOM is loaded
         document.addEventListener('DOMContentLoaded', async function() {
