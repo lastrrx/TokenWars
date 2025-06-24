@@ -1,71 +1,61 @@
--- Token Management Database Schema
--- This file contains all table definitions for token selection, price tracking, and TWAP calculations
+-- =====================================================
+-- Token Selection System - Additional Tables and Fields
+-- Adds token management to existing TokenWars database
+-- =====================================================
 
--- ==============================================
--- TOKENS TABLE
--- Stores validated token data from Jupiter and CoinGecko
--- ==============================================
+-- =====================================================
+-- TOKENS TABLE - Store validated token data
+-- =====================================================
 
 CREATE TABLE IF NOT EXISTS tokens (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    address VARCHAR(50) UNIQUE NOT NULL, -- Solana token address
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    address VARCHAR(50) UNIQUE NOT NULL,
     symbol VARCHAR(20) NOT NULL,
     name VARCHAR(100) NOT NULL,
     logo_uri TEXT,
     decimals INTEGER DEFAULT 9,
     
-    -- Market data
-    market_cap BIGINT, -- Market cap in USD
-    current_price DECIMAL(20, 10), -- Current price in USD
-    total_volume BIGINT, -- 24h volume in USD
-    price_change_24h DECIMAL(10, 4), -- 24h price change percentage
+    -- Market data from CoinGecko
+    market_cap BIGINT,
+    current_price DECIMAL(20, 10),
+    total_volume BIGINT,
+    price_change_24h DECIMAL(10, 4),
     market_cap_rank INTEGER,
     
     -- Token metadata
     category VARCHAR(20), -- LARGE_CAP, MID_CAP, SMALL_CAP, MICRO_CAP
-    age_days INTEGER, -- Age of token in days
-    tags TEXT[], -- Array of tags from Jupiter
+    age_days INTEGER,
+    tags TEXT[],
     
     -- Status and tracking
     is_active BOOLEAN DEFAULT true,
     is_blacklisted BOOLEAN DEFAULT false,
-    last_liquidity_check TIMESTAMP WITH TIME ZONE,
-    liquidity_usd BIGINT, -- Current liquidity in USD
+    liquidity_usd BIGINT,
     
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    -- Indexes for performance
+    -- Constraints
     CONSTRAINT valid_address_length CHECK (LENGTH(address) = 44),
     CONSTRAINT valid_symbol_length CHECK (LENGTH(symbol) BETWEEN 2 AND 20),
-    CONSTRAINT valid_name_length CHECK (LENGTH(name) BETWEEN 3 AND 100),
-    CONSTRAINT positive_market_cap CHECK (market_cap > 0),
-    CONSTRAINT positive_price CHECK (current_price > 0)
+    CONSTRAINT positive_market_cap CHECK (market_cap IS NULL OR market_cap > 0),
+    CONSTRAINT positive_price CHECK (current_price IS NULL OR current_price > 0)
 );
 
--- Indexes for tokens table
-CREATE INDEX IF NOT EXISTS idx_tokens_address ON tokens(address);
-CREATE INDEX IF NOT EXISTS idx_tokens_symbol ON tokens(symbol);
-CREATE INDEX IF NOT EXISTS idx_tokens_market_cap ON tokens(market_cap DESC);
-CREATE INDEX IF NOT EXISTS idx_tokens_category ON tokens(category);
-CREATE INDEX IF NOT EXISTS idx_tokens_active ON tokens(is_active);
-CREATE INDEX IF NOT EXISTS idx_tokens_last_updated ON tokens(last_updated);
-
--- ==============================================
--- TOKEN_PAIRS TABLE
--- Stores generated token pairs for competitions
--- ==============================================
+-- =====================================================
+-- TOKEN_PAIRS TABLE - Store generated token pairs
+-- =====================================================
 
 CREATE TABLE IF NOT EXISTS token_pairs (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     token_a_address VARCHAR(50) NOT NULL,
     token_b_address VARCHAR(50) NOT NULL,
     
     -- Pairing metadata
-    category VARCHAR(20) NOT NULL, -- Market cap category
-    market_cap_ratio DECIMAL(10, 4), -- Ratio of larger to smaller market cap
-    compatibility_score DECIMAL(8, 2), -- 0-100 score for pair quality
+    category VARCHAR(20) NOT NULL,
+    market_cap_ratio DECIMAL(10, 4),
+    compatibility_score DECIMAL(8, 2),
     
     -- Usage tracking
     usage_count INTEGER DEFAULT 0,
@@ -79,151 +69,182 @@ CREATE TABLE IF NOT EXISTS token_pairs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    -- Foreign key constraints
-    FOREIGN KEY (token_a_address) REFERENCES tokens(address) ON DELETE CASCADE,
-    FOREIGN KEY (token_b_address) REFERENCES tokens(address) ON DELETE CASCADE,
-    
-    -- Ensure no duplicate pairs (A,B) = (B,A)
-    CONSTRAINT unique_token_pair UNIQUE (LEAST(token_a_address, token_b_address), GREATEST(token_a_address, token_b_address)),
+    -- Constraints
     CONSTRAINT different_tokens CHECK (token_a_address != token_b_address),
     CONSTRAINT valid_compatibility_score CHECK (compatibility_score BETWEEN 0 AND 100)
 );
 
--- Indexes for token_pairs table
-CREATE INDEX IF NOT EXISTS idx_token_pairs_category ON token_pairs(category);
-CREATE INDEX IF NOT EXISTS idx_token_pairs_compatibility ON token_pairs(compatibility_score DESC);
-CREATE INDEX IF NOT EXISTS idx_token_pairs_active ON token_pairs(is_active);
-CREATE INDEX IF NOT EXISTS idx_token_pairs_usage ON token_pairs(usage_count);
-CREATE INDEX IF NOT EXISTS idx_token_pairs_last_used ON token_pairs(last_used);
-
--- ==============================================
--- PRICE_HISTORY TABLE
--- Stores historical price data for TWAP calculations
--- ==============================================
-
-CREATE TABLE IF NOT EXISTS price_history (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    token_address VARCHAR(50) NOT NULL,
-    price DECIMAL(20, 10) NOT NULL,
-    volume BIGINT DEFAULT 0, -- Volume at time of price
-    market_cap BIGINT DEFAULT 0, -- Market cap at time of price
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    
-    -- Price source metadata
-    source VARCHAR(20) DEFAULT 'aggregated', -- jupiter, coingecko, dexscreener, etc.
-    confidence_score DECIMAL(5, 2) DEFAULT 100.0, -- Confidence in price accuracy (0-100)
-    
-    -- Foreign key constraint
-    FOREIGN KEY (token_address) REFERENCES tokens(address) ON DELETE CASCADE,
-    
-    -- Constraints
-    CONSTRAINT positive_price CHECK (price > 0),
-    CONSTRAINT valid_confidence CHECK (confidence_score BETWEEN 0 AND 100)
-);
-
--- Indexes for price_history table
-CREATE INDEX IF NOT EXISTS idx_price_history_token_timestamp ON price_history(token_address, timestamp);
-CREATE INDEX IF NOT EXISTS idx_price_history_timestamp ON price_history(timestamp);
-CREATE INDEX IF NOT EXISTS idx_price_history_token ON price_history(token_address);
-
--- Partition by timestamp for better performance (optional, for large datasets)
--- CREATE TABLE price_history_y2024m01 PARTITION OF price_history 
--- FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-
--- ==============================================
--- TOKEN_UPDATES TABLE
--- Tracks when token list was last updated
--- ==============================================
+-- =====================================================
+-- TOKEN_UPDATES TABLE - Track token refresh cycles
+-- =====================================================
 
 CREATE TABLE IF NOT EXISTS token_updates (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    update_type VARCHAR(20) NOT NULL, -- 'full_refresh', 'price_update', 'metadata_update'
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    update_type VARCHAR(20) NOT NULL,
     tokens_processed INTEGER DEFAULT 0,
     tokens_added INTEGER DEFAULT 0,
     tokens_updated INTEGER DEFAULT 0,
     tokens_removed INTEGER DEFAULT 0,
     
     -- Update metadata
-    source VARCHAR(20), -- 'jupiter', 'coingecko', 'manual'
+    source VARCHAR(20),
     success BOOLEAN DEFAULT true,
     error_message TEXT,
-    
-    -- Performance metrics
-    duration_seconds INTEGER, -- How long the update took
+    duration_seconds INTEGER,
     
     -- Timestamps
     started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
--- Index for token_updates table
+-- =====================================================
+-- ADD NEW FIELDS TO EXISTING COMPETITIONS TABLE
+-- =====================================================
+
+-- Add only the new token-related fields (token_a_address and token_b_address already exist)
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_a_logo TEXT;
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_b_logo TEXT;
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_a_start_twap DECIMAL(20, 10);
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_a_end_twap DECIMAL(20, 10);
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_b_start_twap DECIMAL(20, 10);
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS token_b_end_twap DECIMAL(20, 10);
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS twap_calculated_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS pair_id UUID;
+
+-- =====================================================
+-- INDEXES FOR PERFORMANCE
+-- =====================================================
+
+-- Tokens table indexes
+CREATE INDEX IF NOT EXISTS idx_tokens_address ON tokens(address);
+CREATE INDEX IF NOT EXISTS idx_tokens_symbol ON tokens(symbol);
+CREATE INDEX IF NOT EXISTS idx_tokens_market_cap ON tokens(market_cap DESC);
+CREATE INDEX IF NOT EXISTS idx_tokens_category ON tokens(category);
+CREATE INDEX IF NOT EXISTS idx_tokens_active ON tokens(is_active);
+CREATE INDEX IF NOT EXISTS idx_tokens_last_updated ON tokens(last_updated);
+
+-- Token pairs table indexes
+CREATE INDEX IF NOT EXISTS idx_token_pairs_category ON token_pairs(category);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_compatibility ON token_pairs(compatibility_score DESC);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_active ON token_pairs(is_active);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_usage ON token_pairs(usage_count);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_last_used ON token_pairs(last_used);
+
+-- Unique index to prevent duplicate pairs (A,B) = (B,A)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_token_pairs_unique 
+ON token_pairs (LEAST(token_a_address, token_b_address), GREATEST(token_a_address, token_b_address));
+
+-- Token updates table indexes
 CREATE INDEX IF NOT EXISTS idx_token_updates_type_time ON token_updates(update_type, started_at);
 
--- ==============================================
--- COMPETITIONS TABLE UPDATES
--- Add token-related fields to existing competitions table
--- ==============================================
-
--- Add new columns to competitions table for token integration
-ALTER TABLE competitions 
-ADD COLUMN IF NOT EXISTS token_a_address VARCHAR(50),
-ADD COLUMN IF NOT EXISTS token_b_address VARCHAR(50),
-ADD COLUMN IF NOT EXISTS token_a_logo TEXT,
-ADD COLUMN IF NOT EXISTS token_b_logo TEXT,
-ADD COLUMN IF NOT EXISTS token_a_start_twap DECIMAL(20, 10),
-ADD COLUMN IF NOT EXISTS token_a_end_twap DECIMAL(20, 10),
-ADD COLUMN IF NOT EXISTS token_b_start_twap DECIMAL(20, 10),
-ADD COLUMN IF NOT EXISTS token_b_end_twap DECIMAL(20, 10),
-ADD COLUMN IF NOT EXISTS twap_calculated_at TIMESTAMP WITH TIME ZONE,
-ADD COLUMN IF NOT EXISTS pair_id UUID;
-
--- Add foreign key constraints for competitions table
-ALTER TABLE competitions 
-ADD CONSTRAINT fk_competitions_token_a FOREIGN KEY (token_a_address) REFERENCES tokens(address),
-ADD CONSTRAINT fk_competitions_token_b FOREIGN KEY (token_b_address) REFERENCES tokens(address),
-ADD CONSTRAINT fk_competitions_pair FOREIGN KEY (pair_id) REFERENCES token_pairs(id);
-
--- Add indexes for competitions table
-CREATE INDEX IF NOT EXISTS idx_competitions_token_a ON competitions(token_a_address);
-CREATE INDEX IF NOT EXISTS idx_competitions_token_b ON competitions(token_b_address);
+-- Additional competitions table indexes for new token fields
 CREATE INDEX IF NOT EXISTS idx_competitions_pair ON competitions(pair_id);
 
--- ==============================================
--- VIEWS FOR EASIER QUERYING
--- ==============================================
+-- =====================================================
+-- FOREIGN KEY CONSTRAINTS (with error handling)
+-- =====================================================
 
--- Active competitions with token data
-CREATE OR REPLACE VIEW active_competitions AS
+-- Add foreign key constraints for token pairs (drop and recreate to avoid conflicts)
+ALTER TABLE token_pairs DROP CONSTRAINT IF EXISTS fk_token_pairs_token_a;
+ALTER TABLE token_pairs DROP CONSTRAINT IF EXISTS fk_token_pairs_token_b;
+ALTER TABLE competitions DROP CONSTRAINT IF EXISTS fk_competitions_pair;
+
+-- Note: Only create FK constraints after we have actual tokens in the tokens table
+-- These will be enabled once tokens are populated
+
+-- ALTER TABLE token_pairs ADD CONSTRAINT fk_token_pairs_token_a 
+--     FOREIGN KEY (token_a_address) REFERENCES tokens(address) ON DELETE CASCADE;
+
+-- ALTER TABLE token_pairs ADD CONSTRAINT fk_token_pairs_token_b 
+--     FOREIGN KEY (token_b_address) REFERENCES tokens(address) ON DELETE CASCADE;
+
+-- ALTER TABLE competitions ADD CONSTRAINT fk_competitions_pair 
+--     FOREIGN KEY (pair_id) REFERENCES token_pairs(id);
+
+-- =====================================================
+-- ROW LEVEL SECURITY POLICIES
+-- =====================================================
+
+-- Enable RLS on new tables
+ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE token_pairs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE token_updates ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Tokens are publicly readable" ON tokens;
+DROP POLICY IF EXISTS "Service role can manage tokens" ON tokens;
+DROP POLICY IF EXISTS "Token pairs readable by authenticated users" ON token_pairs;
+DROP POLICY IF EXISTS "Service role can manage token pairs" ON token_pairs;
+DROP POLICY IF EXISTS "Admins can view token updates" ON token_updates;
+DROP POLICY IF EXISTS "Service role can manage token updates" ON token_updates;
+
+-- Tokens policies (public read access)
+CREATE POLICY "Tokens are publicly readable" ON tokens
+    FOR SELECT USING (true);
+
+CREATE POLICY "Service role can manage tokens" ON tokens
+    FOR ALL USING (current_setting('app.current_user_role', true) = 'system');
+
+-- Token pairs policies
+CREATE POLICY "Token pairs readable by authenticated users" ON token_pairs
+    FOR SELECT USING (true);
+
+CREATE POLICY "Service role can manage token pairs" ON token_pairs
+    FOR ALL USING (current_setting('app.current_user_role', true) = 'system');
+
+-- Token updates policies
+CREATE POLICY "Admins can view token updates" ON token_updates
+    FOR SELECT USING (current_setting('app.current_user_role', true) = 'admin');
+
+CREATE POLICY "Service role can manage token updates" ON token_updates
+    FOR ALL USING (current_setting('app.current_user_role', true) = 'system');
+
+-- =====================================================
+-- VIEWS FOR TOKEN SYSTEM
+-- =====================================================
+
+-- Drop existing active_competitions view and recreate with token data
+DROP VIEW IF EXISTS active_competitions;
+
+CREATE VIEW active_competitions AS
 SELECT 
     c.*,
-    ta.symbol as token_a_symbol,
-    ta.name as token_a_name,
+    COALESCE(ta.symbol, c.token_a_symbol) as token_a_symbol_full,
+    COALESCE(ta.name, c.token_a_name) as token_a_name_full,
     ta.logo_uri as token_a_logo_uri,
     ta.current_price as token_a_current_price,
     ta.market_cap as token_a_market_cap,
-    tb.symbol as token_b_symbol,
-    tb.name as token_b_name,
+    COALESCE(tb.symbol, c.token_b_symbol) as token_b_symbol_full,
+    COALESCE(tb.name, c.token_b_name) as token_b_name_full,
     tb.logo_uri as token_b_logo_uri,
     tb.current_price as token_b_current_price,
     tb.market_cap as token_b_market_cap,
+    COUNT(b.bet_id) as total_bets,
+    COUNT(CASE WHEN b.chosen_token = 'token_a' THEN 1 END) as token_a_bets,
+    COUNT(CASE WHEN b.chosen_token = 'token_b' THEN 1 END) as token_b_bets,
+    SUM(b.amount) as total_betting_volume,
     -- Calculate current performance if competition is active
     CASE 
         WHEN c.status = 'ACTIVE' AND ta.current_price IS NOT NULL AND c.token_a_start_twap IS NOT NULL
         THEN ((ta.current_price - c.token_a_start_twap) / c.token_a_start_twap) * 100
         ELSE NULL 
-    END as token_a_performance,
+    END as token_a_current_performance,
     CASE 
         WHEN c.status = 'ACTIVE' AND tb.current_price IS NOT NULL AND c.token_b_start_twap IS NOT NULL
         THEN ((tb.current_price - c.token_b_start_twap) / c.token_b_start_twap) * 100
         ELSE NULL 
-    END as token_b_performance
+    END as token_b_current_performance
 FROM competitions c
 LEFT JOIN tokens ta ON c.token_a_address = ta.address
 LEFT JOIN tokens tb ON c.token_b_address = tb.address
-WHERE c.status IN ('SETUP', 'VOTING', 'ACTIVE', 'CLOSED');
+LEFT JOIN bets b ON c.competition_id = b.competition_id
+WHERE c.status IN ('SETUP', 'VOTING', 'ACTIVE')
+GROUP BY c.competition_id, c.token_a_symbol, c.token_a_name, c.token_b_symbol, c.token_b_name,
+         ta.symbol, ta.name, ta.logo_uri, ta.current_price, ta.market_cap,
+         tb.symbol, tb.name, tb.logo_uri, tb.current_price, tb.market_cap;
 
 -- Token statistics view
-CREATE OR REPLACE VIEW token_stats AS
+CREATE VIEW token_stats AS
 SELECT 
     t.*,
     COUNT(c.competition_id) as competition_count,
@@ -242,18 +263,23 @@ WHERE t.is_active = true
 GROUP BY t.id, t.address, t.symbol, t.name, t.logo_uri, t.decimals, t.market_cap, 
          t.current_price, t.total_volume, t.price_change_24h, t.market_cap_rank, 
          t.category, t.age_days, t.tags, t.is_active, t.is_blacklisted, 
-         t.last_liquidity_check, t.liquidity_usd, t.created_at, t.last_updated;
+         t.liquidity_usd, t.created_at, t.last_updated;
 
--- ==============================================
--- FUNCTIONS FOR TWAP CALCULATIONS
--- ==============================================
+-- =====================================================
+-- TWAP CALCULATION FUNCTIONS
+-- =====================================================
+
+-- Drop functions if they exist first
+DROP FUNCTION IF EXISTS calculate_twap(VARCHAR(50), TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE);
+DROP FUNCTION IF EXISTS get_competition_twap(UUID);
+DROP FUNCTION IF EXISTS update_token_modified_column();
 
 -- Function to calculate TWAP for a token over a time period
 CREATE OR REPLACE FUNCTION calculate_twap(
     p_token_address VARCHAR(50),
     p_start_time TIMESTAMP WITH TIME ZONE,
     p_end_time TIMESTAMP WITH TIME ZONE
-) RETURNS DECIMAL(20, 10) AS $$
+) RETURNS DECIMAL(20, 10) AS $BODY$
 DECLARE
     twap_result DECIMAL(20, 10);
 BEGIN
@@ -281,7 +307,7 @@ BEGIN
     
     RETURN twap_result;
 END;
-$$ LANGUAGE plpgsql;
+$BODY$ LANGUAGE plpgsql;
 
 -- Function to get competition TWAP data
 CREATE OR REPLACE FUNCTION get_competition_twap(
@@ -292,10 +318,9 @@ CREATE OR REPLACE FUNCTION get_competition_twap(
     token_b_start_twap DECIMAL(20, 10),
     token_b_end_twap DECIMAL(20, 10),
     winner VARCHAR(10)
-) AS $$
+) AS $BODY$
 DECLARE
     comp_record RECORD;
-    twap_window_minutes INTEGER := 10;
 BEGIN
     -- Get competition details
     SELECT * INTO comp_record FROM competitions WHERE competition_id = p_competition_id;
@@ -338,103 +363,58 @@ BEGIN
     
     RETURN NEXT;
 END;
-$$ LANGUAGE plpgsql;
+$BODY$ LANGUAGE plpgsql;
 
--- ==============================================
+-- =====================================================
 -- TRIGGERS FOR AUTOMATIC UPDATES
--- ==============================================
+-- =====================================================
 
 -- Update timestamp trigger for tokens
-CREATE OR REPLACE FUNCTION update_modified_column()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION update_token_modified_column()
+RETURNS TRIGGER AS $BODY$
 BEGIN
     NEW.last_updated = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$BODY$ LANGUAGE plpgsql;
+
+-- Drop triggers if they exist, then create them
+DROP TRIGGER IF EXISTS update_tokens_modified ON tokens;
+DROP TRIGGER IF EXISTS update_token_pairs_modified ON token_pairs;
 
 CREATE TRIGGER update_tokens_modified 
     BEFORE UPDATE ON tokens 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_modified_column();
+    EXECUTE FUNCTION update_token_modified_column();
 
 CREATE TRIGGER update_token_pairs_modified 
     BEFORE UPDATE ON token_pairs 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_modified_column();
+    EXECUTE FUNCTION update_token_modified_column();
 
--- ==============================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ==============================================
+-- =====================================================
+-- GRANT PERMISSIONS
+-- =====================================================
 
--- Enable RLS on all tables
-ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
-ALTER TABLE token_pairs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE token_updates ENABLE ROW LEVEL SECURITY;
-
--- Public read access for tokens (they're public data)
-CREATE POLICY "Tokens are publicly readable" ON tokens
-    FOR SELECT USING (true);
-
--- Only authenticated users can read token pairs
-CREATE POLICY "Token pairs readable by authenticated users" ON token_pairs
-    FOR SELECT USING (auth.role() = 'authenticated');
-
--- Price history readable by authenticated users
-CREATE POLICY "Price history readable by authenticated users" ON price_history
-    FOR SELECT USING (auth.role() = 'authenticated');
-
--- Only service role can insert/update tokens and price data
-CREATE POLICY "Service role can manage tokens" ON tokens
-    FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage token pairs" ON token_pairs
-    FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage price history" ON price_history
-    FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage token updates" ON token_updates
-    FOR ALL USING (auth.role() = 'service_role');
-
--- ==============================================
--- DATA CLEANUP AND MAINTENANCE
--- ==============================================
-
--- Function to cleanup old price history (keep last 30 days)
-CREATE OR REPLACE FUNCTION cleanup_old_price_history()
-RETURNS INTEGER AS $$
-DECLARE
-    deleted_count INTEGER;
-BEGIN
-    DELETE FROM price_history 
-    WHERE timestamp < NOW() - INTERVAL '30 days';
-    
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    
-    INSERT INTO token_updates (update_type, tokens_processed, success, duration_seconds)
-    VALUES ('cleanup', deleted_count, true, 0);
-    
-    RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql;
-
--- Schedule cleanup to run daily (would be set up in Supabase cron or external scheduler)
--- SELECT cron.schedule('cleanup-price-history', '0 2 * * *', 'SELECT cleanup_old_price_history();');
-
--- ==============================================
--- INITIAL DATA AND CONFIGURATIONS
--- ==============================================
-
--- Insert default token categories configuration
-INSERT INTO token_updates (update_type, success, error_message) 
-VALUES ('schema_setup', true, 'Token management schema created successfully')
-ON CONFLICT DO NOTHING;
-
--- Grant necessary permissions
+-- Grant read permissions to authenticated users
 GRANT SELECT ON tokens TO authenticated;
 GRANT SELECT ON token_pairs TO authenticated;
-GRANT SELECT ON price_history TO authenticated;
+GRANT SELECT ON token_updates TO authenticated;
 GRANT SELECT ON active_competitions TO authenticated;
 GRANT SELECT ON token_stats TO authenticated;
+
+-- Grant read permissions to anonymous for public data  
+GRANT SELECT ON tokens TO anon;
+GRANT SELECT ON active_competitions TO anon;
+GRANT SELECT ON token_stats TO anon;
+
+-- =====================================================
+-- COMPLETION MESSAGE
+-- =====================================================
+
+-- Insert completion record
+INSERT INTO token_updates (update_type, success, error_message, tokens_processed) 
+VALUES ('schema_setup', true, 'Token management system added successfully', 0);
+
+-- Final validation
+SELECT 'Token management system setup completed successfully!' as result;
