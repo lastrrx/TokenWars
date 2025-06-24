@@ -1,850 +1,440 @@
-// Supabase Client Initialization and Database Interface
-// This file handles all direct communication with Supabase including new token and price management
-
-// Global variables
-let supabase = null;
-let currentUser = null;
-
-// Initialize Supabase connection
-async function initializeSupabase() {
-    try {
-        // Get configuration
-        const config = window.SUPABASE_CONFIG;
-        
-        if (!config.url || !config.anonKey) {
-            throw new Error('Supabase configuration missing. Please check config.js');
-        }
-
-        // Initialize Supabase client
-        supabase = window.supabase.createClient(config.url, config.anonKey);
-        
-        console.log('Supabase client initialized');
-        updateDbStatus('connected', 'Database: Connected');
-        
-        // Test connection
-        await testConnection();
-        
-        return supabase;
-    } catch (error) {
-        console.error('Failed to initialize Supabase:', error);
-        updateDbStatus('disconnected', 'Database: Connection Failed');
-        throw error;
-    }
-}
-
-// Test database connection
-async function testConnection() {
-    try {
-        const { data, error } = await supabase
-            .from('competitions')
-            .select('count', { count: 'exact', head: true });
-        
-        if (error) throw error;
-        
-        console.log('Database connection test successful');
-        return true;
-    } catch (error) {
-        console.error('Database connection test failed:', error);
-        throw error;
-    }
-}
-
-// Update database status indicator
-function updateDbStatus(status, message) {
-    const statusElement = document.getElementById('dbStatus');
-    if (statusElement) {
-        statusElement.className = `db-status ${status}`;
-        statusElement.textContent = message;
-    }
-}
-
-// ==============================================
-// USER MANAGEMENT FUNCTIONS
-// ==============================================
-
-// Set user context for RLS policies
-async function setUserContext(walletAddress, role = 'user') {
-    try {
-        await supabase.rpc('set_user_context', {
-            wallet_addr: walletAddress,
-            user_role: role
-        });
-        console.log('User context set for:', walletAddress);
-    } catch (error) {
-        console.error('Failed to set user context:', error);
-        throw error;
-    }
-}
-
-// Get or create user by wallet address
-async function getOrCreateUser(walletAddress) {
-    try {
-        // Set user context for RLS
-        await setUserContext(walletAddress);
-        
-        // First, try to get existing user
-        const { data: existingUser, error: selectError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('wallet_address', walletAddress)
-            .single();
-
-        if (selectError && selectError.code !== 'PGRST116') {
-            // PGRST116 = no rows returned, which is expected for new users
-            throw selectError;
-        }
-
-        if (existingUser) {
-            // Update last active time
-            await supabase
-                .from('users')
-                .update({ last_active: new Date().toISOString() })
-                .eq('wallet_address', walletAddress);
-            
-            currentUser = existingUser;
-            return existingUser;
-        }
-
-        // User doesn't exist, return null to prompt profile creation
-        return null;
-    } catch (error) {
-        console.error('Error getting user:', error);
-        throw error;
-    }
-}
-
-// Create new user profile
-async function createUserProfile(walletAddress, username, avatar = '🎯') {
-    try {
-        await setUserContext(walletAddress);
-        
-        // Generate unique referral code
-        const referralCode = generateReferralCode();
-        
-        const userData = {
-            wallet_address: walletAddress,
-            username: username,
-            total_winnings: 0,
-            total_bets: 0,
-            win_rate: 0,
-            current_streak: 0,
-            is_banned: false,
-            referral_code: referralCode,
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString()
-        };
-
-        const { data, error } = await supabase
-            .from('users')
-            .insert([userData])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Create initial leaderboard entry
-        await supabase
-            .from('leaderboards')
-            .insert([{
-                user_wallet: walletAddress,
-                username: username,
-                ranking: 0,
-                total_score: 0,
-                competitions_won: 0,
-                competitions_participated: 0,
-                total_winnings: 0,
-                win_percentage: 0,
-                current_streak: 0,
-                best_streak: 0
-            }]);
-
-        currentUser = data;
-        console.log('User profile created:', data);
-        return data;
-    } catch (error) {
-        console.error('Error creating user profile:', error);
-        throw error;
-    }
-}
-
-// Generate unique referral code
-function generateReferralCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-// Check username availability
-async function checkUsernameAvailability(username) {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('username')
-            .eq('username', username)
-            .single();
-
-        if (error && error.code === 'PGRST116') {
-            // No rows returned = username available
-            return true;
-        }
-
-        return false; // Username exists
-    } catch (error) {
-        console.error('Error checking username:', error);
-        return false;
-    }
-}
-
-// ==============================================
-// TOKEN MANAGEMENT FUNCTIONS
-// ==============================================
-
-// Store tokens in database
-async function storeTokens(tokens) {
-    try {
-        // Clear existing tokens
-        await supabase.from('tokens').delete().neq('address', '');
-        
-        // Insert new tokens in batches
-        const batchSize = 100;
-        for (let i = 0; i < tokens.length; i += batchSize) {
-            const batch = tokens.slice(i, i + batchSize);
-            
-            const { error } = await supabase
-                .from('tokens')
-                .insert(batch);
-            
-            if (error) throw error;
-        }
-        
-        console.log(`Stored ${tokens.length} tokens in database`);
-        return true;
-    } catch (error) {
-        console.error('Error storing tokens:', error);
-        throw error;
-    }
-}
-
-// Get active tokens from database
-async function getActiveTokens() {
-    try {
-        const { data, error } = await supabase
-            .from('tokens')
-            .select('*')
-            .eq('is_active', true)
-            .order('market_cap', { ascending: false });
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching active tokens:', error);
-        throw error;
-    }
-}
-
-// Get token by address
-async function getToken(address) {
-    try {
-        const { data, error } = await supabase
-            .from('tokens')
-            .select('*')
-            .eq('address', address)
-            .eq('is_active', true)
-            .single();
-
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-    } catch (error) {
-        console.error('Error fetching token:', error);
-        throw error;
-    }
-}
-
-// Update token data
-async function updateToken(address, updates) {
-    try {
-        const { data, error } = await supabase
-            .from('tokens')
-            .update({
-                ...updates,
-                last_updated: new Date().toISOString()
-            })
-            .eq('address', address)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error updating token:', error);
-        throw error;
-    }
-}
-
-// Search tokens
-async function searchTokens(query, limit = 20) {
-    try {
-        const { data, error } = await supabase
-            .from('tokens')
-            .select('*')
-            .eq('is_active', true)
-            .or(`symbol.ilike.%${query}%,name.ilike.%${query}%`)
-            .order('market_cap', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error searching tokens:', error);
-        throw error;
-    }
-}
-
-// ==============================================
-// TOKEN PAIRS MANAGEMENT
-// ==============================================
-
-// Store token pairs
-async function storeTokenPairs(pairs) {
-    try {
-        // Clear existing pairs
-        await supabase.from('token_pairs').delete().neq('id', '');
-        
-        // Insert new pairs
-        const { error } = await supabase
-            .from('token_pairs')
-            .insert(pairs);
-        
-        if (error) throw error;
-        
-        console.log(`Stored ${pairs.length} token pairs`);
-        return true;
-    } catch (error) {
-        console.error('Error storing token pairs:', error);
-        throw error;
-    }
-}
-
-// Get available token pairs
-async function getAvailableTokenPairs(excludeUsed = [], limit = 50) {
-    try {
-        let query = supabase
-            .from('token_pairs')
-            .select(`
-                *,
-                token_a:tokens!token_pairs_token_a_address_fkey(*),
-                token_b:tokens!token_pairs_token_b_address_fkey(*)
-            `)
-            .eq('is_active', true)
-            .order('compatibility_score', { ascending: false })
-            .limit(limit);
-
-        if (excludeUsed.length > 0) {
-            query = query.not('id', 'in', `(${excludeUsed.join(',')})`);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-        
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching token pairs:', error);
-        throw error;
-    }
-}
-
-// Mark token pair as used
-async function markTokenPairAsUsed(pairId, competitionId) {
-    try {
-        const { error } = await supabase
-            .from('token_pairs')
-            .update({
-                last_used: new Date().toISOString(),
-                last_competition_id: competitionId,
-                usage_count: supabase.sql`usage_count + 1`
-            })
-            .eq('id', pairId);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error marking token pair as used:', error);
-        throw error;
-    }
-}
-
-// ==============================================
-// PRICE HISTORY FUNCTIONS
-// ==============================================
-
-// Store price history record
-async function storePriceHistory(tokenAddress, price, timestamp = null, volume = null, marketCap = null) {
-    try {
-        const record = {
-            token_address: tokenAddress,
-            price: price,
-            timestamp: timestamp || new Date().toISOString(),
-            volume: volume || 0,
-            market_cap: marketCap || 0
-        };
-
-        const { error } = await supabase
-            .from('price_history')
-            .insert([record]);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error storing price history:', error);
-        throw error;
-    }
-}
-
-// Get price history for token
-async function getPriceHistory(tokenAddress, startTime, endTime, limit = 1000) {
-    try {
-        const { data, error } = await supabase
-            .from('price_history')
-            .select('*')
-            .eq('token_address', tokenAddress)
-            .gte('timestamp', startTime)
-            .lte('timestamp', endTime)
-            .order('timestamp', { ascending: true })
-            .limit(limit);
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching price history:', error);
-        throw error;
-    }
-}
-
-// Get latest price for token
-async function getLatestPrice(tokenAddress) {
-    try {
-        const { data, error } = await supabase
-            .from('price_history')
-            .select('*')
-            .eq('token_address', tokenAddress)
-            .order('timestamp', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-    } catch (error) {
-        console.error('Error fetching latest price:', error);
-        throw error;
-    }
-}
-
-// Cleanup old price history (keep last 30 days)
-async function cleanupPriceHistory() {
-    try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const { error } = await supabase
-            .from('price_history')
-            .delete()
-            .lt('timestamp', thirtyDaysAgo.toISOString());
-
-        if (error) throw error;
-        console.log('Price history cleanup completed');
-        return true;
-    } catch (error) {
-        console.error('Error cleaning up price history:', error);
-        throw error;
-    }
-}
-
-// ==============================================
-// COMPETITION FUNCTIONS (UPDATED)
-// ==============================================
-
-// Get active competitions with token data
-async function getActiveCompetitions() {
-    try {
-        const { data, error } = await supabase
-            .from('active_competitions')
-            .select(`
-                *,
-                token_a_data:tokens!competitions_token_a_address_fkey(*),
-                token_b_data:tokens!competitions_token_b_address_fkey(*)
-            `)
-            .in('status', ['SETUP', 'VOTING', 'ACTIVE'])
-            .order('start_time', { ascending: true });
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching competitions:', error);
-        throw error;
-    }
-}
-
-// Create competition with token pair
-async function createCompetition(tokenPair, startTime, duration) {
-    try {
-        const competitionData = {
-            token_a_address: tokenPair.token_a.address,
-            token_a_symbol: tokenPair.token_a.symbol,
-            token_a_name: tokenPair.token_a.name,
-            token_a_logo: tokenPair.token_a.logoURI,
-            token_b_address: tokenPair.token_b.address,
-            token_b_symbol: tokenPair.token_b.symbol,
-            token_b_name: tokenPair.token_b.name,
-            token_b_logo: tokenPair.token_b.logoURI,
-            start_time: startTime,
-            end_time: new Date(new Date(startTime).getTime() + duration * 60 * 60 * 1000).toISOString(),
-            voting_end_time: new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString(), // 1 hour voting
-            status: 'SETUP',
-            total_pool: 0,
-            token_a_bets: 0,
-            token_b_bets: 0,
-            pair_id: tokenPair.id
-        };
-
-        const { data, error } = await supabase
-            .from('competitions')
-            .insert([competitionData])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Mark token pair as used
-        await markTokenPairAsUsed(tokenPair.id, data.competition_id);
-
-        console.log('Competition created:', data);
-        return data;
-    } catch (error) {
-        console.error('Error creating competition:', error);
-        throw error;
-    }
-}
-
-// Update competition with TWAP data
-async function updateCompetitionTWAP(competitionId, twapData) {
-    try {
-        const { data, error } = await supabase
-            .from('competitions')
-            .update({
-                token_a_start_twap: twapData.token_a.start_twap,
-                token_a_end_twap: twapData.token_a.end_twap,
-                token_b_start_twap: twapData.token_b.start_twap,
-                token_b_end_twap: twapData.token_b.end_twap,
-                winner_token: twapData.winner,
-                twap_calculated_at: new Date().toISOString()
-            })
-            .eq('competition_id', competitionId)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error updating competition TWAP:', error);
-        throw error;
-    }
-}
-
-// Get competition by ID with bet counts
-async function getCompetitionDetails(competitionId) {
-    try {
-        const { data, error } = await supabase
-            .from('active_competitions')
-            .select(`
-                *,
-                token_a_data:tokens!competitions_token_a_address_fkey(*),
-                token_b_data:tokens!competitions_token_b_address_fkey(*)
-            `)
-            .eq('competition_id', competitionId)
-            .single();
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error fetching competition details:', error);
-        throw error;
-    }
-}
-
-// Place a bet
-async function placeBet(competitionId, chosenToken, amount, walletAddress) {
-    try {
-        await setUserContext(walletAddress);
-        
-        const betData = {
-            user_wallet: walletAddress,
-            competition_id: competitionId,
-            chosen_token: chosenToken,
-            amount: amount,
-            status: 'PLACED',
-            timestamp: new Date().toISOString()
-        };
-
-        const { data, error } = await supabase
-            .from('bets')
-            .insert([betData])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Update competition total pool and bet counts
-        const updateField = chosenToken === 'token_a' ? 'token_a_bets' : 'token_b_bets';
-        await supabase
-            .from('competitions')
-            .update({ 
-                total_pool: supabase.sql`total_pool + ${amount}`,
-                [updateField]: supabase.sql`${updateField} + 1`
-            })
-            .eq('competition_id', competitionId);
-
-        console.log('Bet placed successfully:', data);
-        return data;
-    } catch (error) {
-        console.error('Error placing bet:', error);
-        throw error;
-    }
-}
-
-// Get user's betting history
-async function getUserBets(walletAddress, limit = 50) {
-    try {
-        await setUserContext(walletAddress);
-        
-        const { data, error } = await supabase
-            .from('bets')
-            .select(`
-                *,
-                competitions (
-                    token_a_symbol,
-                    token_b_symbol,
-                    token_a_logo,
-                    token_b_logo,
-                    start_time,
-                    end_time,
-                    status,
-                    winner_token,
-                    token_a_start_twap,
-                    token_a_end_twap,
-                    token_b_start_twap,
-                    token_b_end_twap
-                )
-            `)
-            .eq('user_wallet', walletAddress)
-            .order('timestamp', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching user bets:', error);
-        throw error;
-    }
-}
-
-// ==============================================
-// LEADERBOARD FUNCTIONS
-// ==============================================
-
-// Get leaderboard data
-async function getLeaderboard(limit = 100) {
-    try {
-        const { data, error } = await supabase
-            .from('leaderboards')
-            .select('*')
-            .order('total_score', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching leaderboard:', error);
-        throw error;
-    }
-}
-
-// Get user's leaderboard position
-async function getUserLeaderboardPosition(walletAddress) {
-    try {
-        const { data, error } = await supabase
-            .from('leaderboards')
-            .select('ranking, total_score, competitions_won')
-            .eq('user_wallet', walletAddress)
-            .single();
-
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
-    } catch (error) {
-        console.error('Error fetching user leaderboard position:', error);
-        return null;
-    }
-}
-
-// ==============================================
-// REAL-TIME SUBSCRIPTIONS
-// ==============================================
-
-// Subscribe to competition updates
-function subscribeToCompetitions(callback) {
-    return supabase
-        .channel('competitions')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'competitions'
-        }, callback)
-        .subscribe();
-}
-
-// Subscribe to bet updates for a specific competition
-function subscribeToCompetitionBets(competitionId, callback) {
-    return supabase
-        .channel(`competition-${competitionId}`)
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'bets',
-            filter: `competition_id=eq.${competitionId}`
-        }, callback)
-        .subscribe();
-}
-
-// Subscribe to leaderboard updates
-function subscribeToLeaderboard(callback) {
-    return supabase
-        .channel('leaderboard')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'leaderboards'
-        }, callback)
-        .subscribe();
-}
-
-// Subscribe to token updates
-function subscribeToTokenUpdates(callback) {
-    return supabase
-        .channel('tokens')
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'tokens'
-        }, callback)
-        .subscribe();
-}
-
-// Subscribe to price updates for specific tokens
-function subscribeToPriceUpdates(tokenAddresses, callback) {
-    const channels = tokenAddresses.map(address => 
-        supabase
-            .channel(`price-${address}`)
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'price_history',
-                filter: `token_address=eq.${address}`
-            }, callback)
-            .subscribe()
-    );
+-- Token Management Database Schema
+-- This file contains all table definitions for token selection, price tracking, and TWAP calculations
+
+-- ==============================================
+-- TOKENS TABLE
+-- Stores validated token data from Jupiter and CoinGecko
+-- ==============================================
+
+CREATE TABLE IF NOT EXISTS tokens (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    address VARCHAR(50) UNIQUE NOT NULL, -- Solana token address
+    symbol VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    logo_uri TEXT,
+    decimals INTEGER DEFAULT 9,
     
-    return channels;
-}
+    -- Market data
+    market_cap BIGINT, -- Market cap in USD
+    current_price DECIMAL(20, 10), -- Current price in USD
+    total_volume BIGINT, -- 24h volume in USD
+    price_change_24h DECIMAL(10, 4), -- 24h price change percentage
+    market_cap_rank INTEGER,
+    
+    -- Token metadata
+    category VARCHAR(20), -- LARGE_CAP, MID_CAP, SMALL_CAP, MICRO_CAP
+    age_days INTEGER, -- Age of token in days
+    tags TEXT[], -- Array of tags from Jupiter
+    
+    -- Status and tracking
+    is_active BOOLEAN DEFAULT true,
+    is_blacklisted BOOLEAN DEFAULT false,
+    last_liquidity_check TIMESTAMP WITH TIME ZONE,
+    liquidity_usd BIGINT, -- Current liquidity in USD
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Indexes for performance
+    CONSTRAINT valid_address_length CHECK (LENGTH(address) = 44),
+    CONSTRAINT valid_symbol_length CHECK (LENGTH(symbol) BETWEEN 2 AND 20),
+    CONSTRAINT valid_name_length CHECK (LENGTH(name) BETWEEN 3 AND 100),
+    CONSTRAINT positive_market_cap CHECK (market_cap > 0),
+    CONSTRAINT positive_price CHECK (current_price > 0)
+);
 
-// ==============================================
-// ERROR HANDLING AND UTILITIES
-// ==============================================
+-- Indexes for tokens table
+CREATE INDEX IF NOT EXISTS idx_tokens_address ON tokens(address);
+CREATE INDEX IF NOT EXISTS idx_tokens_symbol ON tokens(symbol);
+CREATE INDEX IF NOT EXISTS idx_tokens_market_cap ON tokens(market_cap DESC);
+CREATE INDEX IF NOT EXISTS idx_tokens_category ON tokens(category);
+CREATE INDEX IF NOT EXISTS idx_tokens_active ON tokens(is_active);
+CREATE INDEX IF NOT EXISTS idx_tokens_last_updated ON tokens(last_updated);
 
-// Handle Supabase errors
-function handleSupabaseError(error) {
-    console.error('Supabase error:', error);
-    
-    // Map common error codes to user-friendly messages
-    const errorMessages = {
-        'PGRST116': 'No data found',
-        '23505': 'This username is already taken',
-        '23503': 'Invalid reference - please try again',
-        'row_security_violation': 'Access denied - please check your permissions'
-    };
-    
-    const userMessage = errorMessages[error.code] || error.message || 'An unexpected error occurred';
-    
-    // Show error to user
-    showErrorNotification(userMessage);
-    
-    return userMessage;
-}
+-- ==============================================
+-- TOKEN_PAIRS TABLE
+-- Stores generated token pairs for competitions
+-- ==============================================
 
-// Clear user context (for logout)
-async function clearUserContext() {
-    try {
-        await supabase.rpc('clear_user_context');
-        currentUser = null;
-        console.log('User context cleared');
-    } catch (error) {
-        console.error('Failed to clear user context:', error);
-    }
-}
+CREATE TABLE IF NOT EXISTS token_pairs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    token_a_address VARCHAR(50) NOT NULL,
+    token_b_address VARCHAR(50) NOT NULL,
+    
+    -- Pairing metadata
+    category VARCHAR(20) NOT NULL, -- Market cap category
+    market_cap_ratio DECIMAL(10, 4), -- Ratio of larger to smaller market cap
+    compatibility_score DECIMAL(8, 2), -- 0-100 score for pair quality
+    
+    -- Usage tracking
+    usage_count INTEGER DEFAULT 0,
+    last_used TIMESTAMP WITH TIME ZONE,
+    last_competition_id UUID,
+    
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Foreign key constraints
+    FOREIGN KEY (token_a_address) REFERENCES tokens(address) ON DELETE CASCADE,
+    FOREIGN KEY (token_b_address) REFERENCES tokens(address) ON DELETE CASCADE,
+    
+    -- Ensure no duplicate pairs (A,B) = (B,A)
+    CONSTRAINT unique_token_pair UNIQUE (LEAST(token_a_address, token_b_address), GREATEST(token_a_address, token_b_address)),
+    CONSTRAINT different_tokens CHECK (token_a_address != token_b_address),
+    CONSTRAINT valid_compatibility_score CHECK (compatibility_score BETWEEN 0 AND 100)
+);
 
-// Export functions for global use
-window.supabaseClient = {
-    // Initialization
-    initializeSupabase,
-    testConnection,
+-- Indexes for token_pairs table
+CREATE INDEX IF NOT EXISTS idx_token_pairs_category ON token_pairs(category);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_compatibility ON token_pairs(compatibility_score DESC);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_active ON token_pairs(is_active);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_usage ON token_pairs(usage_count);
+CREATE INDEX IF NOT EXISTS idx_token_pairs_last_used ON token_pairs(last_used);
+
+-- ==============================================
+-- PRICE_HISTORY TABLE
+-- Stores historical price data for TWAP calculations
+-- ==============================================
+
+CREATE TABLE IF NOT EXISTS price_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    token_address VARCHAR(50) NOT NULL,
+    price DECIMAL(20, 10) NOT NULL,
+    volume BIGINT DEFAULT 0, -- Volume at time of price
+    market_cap BIGINT DEFAULT 0, -- Market cap at time of price
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
     
-    // User management
-    getOrCreateUser,
-    createUserProfile,
-    checkUsernameAvailability,
-    setUserContext,
-    clearUserContext,
+    -- Price source metadata
+    source VARCHAR(20) DEFAULT 'aggregated', -- jupiter, coingecko, dexscreener, etc.
+    confidence_score DECIMAL(5, 2) DEFAULT 100.0, -- Confidence in price accuracy (0-100)
     
-    // Token management
-    storeTokens,
-    getActiveTokens,
-    getToken,
-    updateToken,
-    searchTokens,
+    -- Foreign key constraint
+    FOREIGN KEY (token_address) REFERENCES tokens(address) ON DELETE CASCADE,
     
-    // Token pairs
-    storeTokenPairs,
-    getAvailableTokenPairs,
-    markTokenPairAsUsed,
+    -- Constraints
+    CONSTRAINT positive_price CHECK (price > 0),
+    CONSTRAINT valid_confidence CHECK (confidence_score BETWEEN 0 AND 100)
+);
+
+-- Indexes for price_history table
+CREATE INDEX IF NOT EXISTS idx_price_history_token_timestamp ON price_history(token_address, timestamp);
+CREATE INDEX IF NOT EXISTS idx_price_history_timestamp ON price_history(timestamp);
+CREATE INDEX IF NOT EXISTS idx_price_history_token ON price_history(token_address);
+
+-- Partition by timestamp for better performance (optional, for large datasets)
+-- CREATE TABLE price_history_y2024m01 PARTITION OF price_history 
+-- FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+
+-- ==============================================
+-- TOKEN_UPDATES TABLE
+-- Tracks when token list was last updated
+-- ==============================================
+
+CREATE TABLE IF NOT EXISTS token_updates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    update_type VARCHAR(20) NOT NULL, -- 'full_refresh', 'price_update', 'metadata_update'
+    tokens_processed INTEGER DEFAULT 0,
+    tokens_added INTEGER DEFAULT 0,
+    tokens_updated INTEGER DEFAULT 0,
+    tokens_removed INTEGER DEFAULT 0,
     
-    // Price history
-    storePriceHistory,
-    getPriceHistory,
-    getLatestPrice,
-    cleanupPriceHistory,
+    -- Update metadata
+    source VARCHAR(20), -- 'jupiter', 'coingecko', 'manual'
+    success BOOLEAN DEFAULT true,
+    error_message TEXT,
     
-    // Competition functions
-    getActiveCompetitions,
-    createCompetition,
-    updateCompetitionTWAP,
-    getCompetitionDetails,
-    placeBet,
-    getUserBets,
+    -- Performance metrics
+    duration_seconds INTEGER, -- How long the update took
     
-    // Leaderboard
-    getLeaderboard,
-    getUserLeaderboardPosition,
+    -- Timestamps
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Index for token_updates table
+CREATE INDEX IF NOT EXISTS idx_token_updates_type_time ON token_updates(update_type, started_at);
+
+-- ==============================================
+-- COMPETITIONS TABLE UPDATES
+-- Add token-related fields to existing competitions table
+-- ==============================================
+
+-- Add new columns to competitions table for token integration
+ALTER TABLE competitions 
+ADD COLUMN IF NOT EXISTS token_a_address VARCHAR(50),
+ADD COLUMN IF NOT EXISTS token_b_address VARCHAR(50),
+ADD COLUMN IF NOT EXISTS token_a_logo TEXT,
+ADD COLUMN IF NOT EXISTS token_b_logo TEXT,
+ADD COLUMN IF NOT EXISTS token_a_start_twap DECIMAL(20, 10),
+ADD COLUMN IF NOT EXISTS token_a_end_twap DECIMAL(20, 10),
+ADD COLUMN IF NOT EXISTS token_b_start_twap DECIMAL(20, 10),
+ADD COLUMN IF NOT EXISTS token_b_end_twap DECIMAL(20, 10),
+ADD COLUMN IF NOT EXISTS twap_calculated_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS pair_id UUID;
+
+-- Add foreign key constraints for competitions table
+ALTER TABLE competitions 
+ADD CONSTRAINT fk_competitions_token_a FOREIGN KEY (token_a_address) REFERENCES tokens(address),
+ADD CONSTRAINT fk_competitions_token_b FOREIGN KEY (token_b_address) REFERENCES tokens(address),
+ADD CONSTRAINT fk_competitions_pair FOREIGN KEY (pair_id) REFERENCES token_pairs(id);
+
+-- Add indexes for competitions table
+CREATE INDEX IF NOT EXISTS idx_competitions_token_a ON competitions(token_a_address);
+CREATE INDEX IF NOT EXISTS idx_competitions_token_b ON competitions(token_b_address);
+CREATE INDEX IF NOT EXISTS idx_competitions_pair ON competitions(pair_id);
+
+-- ==============================================
+-- VIEWS FOR EASIER QUERYING
+-- ==============================================
+
+-- Active competitions with token data
+CREATE OR REPLACE VIEW active_competitions AS
+SELECT 
+    c.*,
+    ta.symbol as token_a_symbol,
+    ta.name as token_a_name,
+    ta.logo_uri as token_a_logo_uri,
+    ta.current_price as token_a_current_price,
+    ta.market_cap as token_a_market_cap,
+    tb.symbol as token_b_symbol,
+    tb.name as token_b_name,
+    tb.logo_uri as token_b_logo_uri,
+    tb.current_price as token_b_current_price,
+    tb.market_cap as token_b_market_cap,
+    -- Calculate current performance if competition is active
+    CASE 
+        WHEN c.status = 'ACTIVE' AND ta.current_price IS NOT NULL AND c.token_a_start_twap IS NOT NULL
+        THEN ((ta.current_price - c.token_a_start_twap) / c.token_a_start_twap) * 100
+        ELSE NULL 
+    END as token_a_performance,
+    CASE 
+        WHEN c.status = 'ACTIVE' AND tb.current_price IS NOT NULL AND c.token_b_start_twap IS NOT NULL
+        THEN ((tb.current_price - c.token_b_start_twap) / c.token_b_start_twap) * 100
+        ELSE NULL 
+    END as token_b_performance
+FROM competitions c
+LEFT JOIN tokens ta ON c.token_a_address = ta.address
+LEFT JOIN tokens tb ON c.token_b_address = tb.address
+WHERE c.status IN ('SETUP', 'VOTING', 'ACTIVE', 'CLOSED');
+
+-- Token statistics view
+CREATE OR REPLACE VIEW token_stats AS
+SELECT 
+    t.*,
+    COUNT(c.competition_id) as competition_count,
+    COUNT(CASE WHEN c.winner_token = 'token_a' AND c.token_a_address = t.address THEN 1
+              WHEN c.winner_token = 'token_b' AND c.token_b_address = t.address THEN 1
+              ELSE NULL END) as wins,
+    AVG(CASE WHEN c.token_a_address = t.address THEN 
+            ((c.token_a_end_twap - c.token_a_start_twap) / c.token_a_start_twap) * 100
+         WHEN c.token_b_address = t.address THEN 
+            ((c.token_b_end_twap - c.token_b_start_twap) / c.token_b_start_twap) * 100
+         ELSE NULL END) as avg_performance
+FROM tokens t
+LEFT JOIN competitions c ON (c.token_a_address = t.address OR c.token_b_address = t.address)
+    AND c.status = 'RESOLVED'
+WHERE t.is_active = true
+GROUP BY t.id, t.address, t.symbol, t.name, t.logo_uri, t.decimals, t.market_cap, 
+         t.current_price, t.total_volume, t.price_change_24h, t.market_cap_rank, 
+         t.category, t.age_days, t.tags, t.is_active, t.is_blacklisted, 
+         t.last_liquidity_check, t.liquidity_usd, t.created_at, t.last_updated;
+
+-- ==============================================
+-- FUNCTIONS FOR TWAP CALCULATIONS
+-- ==============================================
+
+-- Function to calculate TWAP for a token over a time period
+CREATE OR REPLACE FUNCTION calculate_twap(
+    p_token_address VARCHAR(50),
+    p_start_time TIMESTAMP WITH TIME ZONE,
+    p_end_time TIMESTAMP WITH TIME ZONE
+) RETURNS DECIMAL(20, 10) AS $$
+DECLARE
+    twap_result DECIMAL(20, 10);
+BEGIN
+    WITH price_intervals AS (
+        SELECT 
+            price,
+            timestamp,
+            LEAD(timestamp) OVER (ORDER BY timestamp) as next_timestamp,
+            EXTRACT(EPOCH FROM (LEAD(timestamp) OVER (ORDER BY timestamp) - timestamp)) as time_weight
+        FROM price_history
+        WHERE token_address = p_token_address
+        AND timestamp BETWEEN p_start_time AND p_end_time
+        ORDER BY timestamp
+    )
+    SELECT 
+        COALESCE(
+            SUM(price * time_weight) / NULLIF(SUM(time_weight), 0),
+            (SELECT price FROM price_history 
+             WHERE token_address = p_token_address 
+             AND timestamp <= p_end_time 
+             ORDER BY timestamp DESC LIMIT 1)
+        ) INTO twap_result
+    FROM price_intervals
+    WHERE next_timestamp IS NOT NULL;
     
-    // Real-time subscriptions
-    subscribeToCompetitions,
-    subscribeToCompetitionBets,
-    subscribeToLeaderboard,
-    subscribeToTokenUpdates,
-    subscribeToPriceUpdates,
+    RETURN twap_result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get competition TWAP data
+CREATE OR REPLACE FUNCTION get_competition_twap(
+    p_competition_id UUID
+) RETURNS TABLE(
+    token_a_start_twap DECIMAL(20, 10),
+    token_a_end_twap DECIMAL(20, 10),
+    token_b_start_twap DECIMAL(20, 10),
+    token_b_end_twap DECIMAL(20, 10),
+    winner VARCHAR(10)
+) AS $$
+DECLARE
+    comp_record RECORD;
+    twap_window_minutes INTEGER := 10;
+BEGIN
+    -- Get competition details
+    SELECT * INTO comp_record FROM competitions WHERE competition_id = p_competition_id;
     
-    // Utilities
-    handleSupabaseError,
-    getCurrentUser: () => currentUser,
-    getSupabaseClient: () => supabase
-};
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Competition not found';
+    END IF;
+    
+    -- Calculate TWAPs for both tokens
+    SELECT 
+        calculate_twap(
+            comp_record.token_a_address,
+            comp_record.voting_end_time - INTERVAL '10 minutes',
+            comp_record.voting_end_time + INTERVAL '10 minutes'
+        ),
+        calculate_twap(
+            comp_record.token_a_address,
+            comp_record.end_time - INTERVAL '10 minutes',
+            comp_record.end_time + INTERVAL '10 minutes'
+        ),
+        calculate_twap(
+            comp_record.token_b_address,
+            comp_record.voting_end_time - INTERVAL '10 minutes',
+            comp_record.voting_end_time + INTERVAL '10 minutes'
+        ),
+        calculate_twap(
+            comp_record.token_b_address,
+            comp_record.end_time - INTERVAL '10 minutes',
+            comp_record.end_time + INTERVAL '10 minutes'
+        )
+    INTO token_a_start_twap, token_a_end_twap, token_b_start_twap, token_b_end_twap;
+    
+    -- Determine winner based on price performance
+    IF ((token_a_end_twap - token_a_start_twap) / token_a_start_twap) > 
+       ((token_b_end_twap - token_b_start_twap) / token_b_start_twap) THEN
+        winner := 'token_a';
+    ELSE
+        winner := 'token_b';
+    END IF;
+    
+    RETURN NEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==============================================
+-- TRIGGERS FOR AUTOMATIC UPDATES
+-- ==============================================
+
+-- Update timestamp trigger for tokens
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_tokens_modified 
+    BEFORE UPDATE ON tokens 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_modified_column();
+
+CREATE TRIGGER update_token_pairs_modified 
+    BEFORE UPDATE ON token_pairs 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_modified_column();
+
+-- ==============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ==============================================
+
+-- Enable RLS on all tables
+ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE token_pairs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE token_updates ENABLE ROW LEVEL SECURITY;
+
+-- Public read access for tokens (they're public data)
+CREATE POLICY "Tokens are publicly readable" ON tokens
+    FOR SELECT USING (true);
+
+-- Only authenticated users can read token pairs
+CREATE POLICY "Token pairs readable by authenticated users" ON token_pairs
+    FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Price history readable by authenticated users
+CREATE POLICY "Price history readable by authenticated users" ON price_history
+    FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Only service role can insert/update tokens and price data
+CREATE POLICY "Service role can manage tokens" ON tokens
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can manage token pairs" ON token_pairs
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can manage price history" ON price_history
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can manage token updates" ON token_updates
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- ==============================================
+-- DATA CLEANUP AND MAINTENANCE
+-- ==============================================
+
+-- Function to cleanup old price history (keep last 30 days)
+CREATE OR REPLACE FUNCTION cleanup_old_price_history()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM price_history 
+    WHERE timestamp < NOW() - INTERVAL '30 days';
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    
+    INSERT INTO token_updates (update_type, tokens_processed, success, duration_seconds)
+    VALUES ('cleanup', deleted_count, true, 0);
+    
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Schedule cleanup to run daily (would be set up in Supabase cron or external scheduler)
+-- SELECT cron.schedule('cleanup-price-history', '0 2 * * *', 'SELECT cleanup_old_price_history();');
+
+-- ==============================================
+-- INITIAL DATA AND CONFIGURATIONS
+-- ==============================================
+
+-- Insert default token categories configuration
+INSERT INTO token_updates (update_type, success, error_message) 
+VALUES ('schema_setup', true, 'Token management schema created successfully')
+ON CONFLICT DO NOTHING;
+
+-- Grant necessary permissions
+GRANT SELECT ON tokens TO authenticated;
+GRANT SELECT ON token_pairs TO authenticated;
+GRANT SELECT ON price_history TO authenticated;
+GRANT SELECT ON active_competitions TO authenticated;
+GRANT SELECT ON token_stats TO authenticated;
