@@ -1,10 +1,10 @@
-// Supabase Configuration
-// For production, these will be set via GitHub Pages environment variables
-// or you can embed them directly (URL and anon key are safe to expose)
+// Supabase Configuration for GitHub Pages
+// Since GitHub Pages is static hosting, we use direct values instead of environment variables
+// These values are safe to expose publicly (URL and anon key are meant to be public)
 
 const SUPABASE_CONFIG = {
-    url: process.env.SUPABASE_URL || 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
-    anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
+    url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
 };
 
 // App Configuration
