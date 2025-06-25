@@ -951,86 +951,79 @@
     
     <!-- Initialize the app after all scripts are loaded -->
     <script>
-        // Initialize the application when DOM is loaded
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('TokenWars initializing...');
-            
-            try {
-                // Wait for config to be available
-                let configRetries = 0;
-                while (!window.SUPABASE_CONFIG && configRetries < 50) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    configRetries++;
-                }
-                
-                if (!window.SUPABASE_CONFIG) {
-                    throw new Error('Configuration failed to load');
-                }
-                
-                console.log('Config loaded, initializing Supabase...');
-                
-                // Initialize Supabase connection
-                if (typeof window.initializeSupabase === 'function') {
-                    await window.initializeSupabase();
-                } else {
-                    console.error('initializeSupabase function not available');
-                }
-                
-                console.log('Supabase initialized, starting token service...');
-                
-                // Initialize token service
-                if (typeof window.TokenService !== 'undefined') {
-                    window.tokenService = new window.TokenService();
-                    await window.tokenService.initialize();
-                    console.log('Token service initialized');
-                } else {
-                    console.error('TokenService not available');
-                }
-                
-                console.log('Starting price service...');
-                
-                // Initialize price service
-                if (typeof window.PriceService !== 'undefined') {
-                    window.priceService = new window.PriceService();
-                    await window.priceService.initialize();
-                    console.log('Price service initialized');
-                } else {
-                    console.error('PriceService not available');
-                }
-                
-                console.log('Initializing main app...');
-                
-                // Initialize the main app
-                if (typeof window.initializeApp === 'function') {
-                    await window.initializeApp();
-                } else {
-                    console.error('initializeApp function not available');
-                }
-                
-                // Update token status
-                const tokenStatus = document.getElementById('tokenStatus');
-                if (tokenStatus) {
-                    tokenStatus.className = 'db-status connected';
-                    tokenStatus.textContent = 'Tokens: Active';
-                }
-                
-                console.log('TokenWars initialization complete!');
-                
-            } catch (error) {
-                console.error('Failed to initialize TokenWars:', error);
-                const dbStatus = document.getElementById('dbStatus');
-                if (dbStatus) {
-                    dbStatus.className = 'db-status disconnected';
-                    dbStatus.textContent = 'Initialization Failed';
-                }
-                
-                const tokenStatus = document.getElementById('tokenStatus');
-                if (tokenStatus) {
-                    tokenStatus.className = 'db-status disconnected';
-                    tokenStatus.textContent = 'Token Service Failed';
-                }
-            }
-        });
+    // Initialize the application when DOM is loaded
+    document.addEventListener('DOMContentLoaded', async function() {
+    console.log('TokenWars initializing...');
+    
+    try {
+        // Wait for config to be available
+        let configRetries = 0;
+        while (!window.SUPABASE_CONFIG && configRetries < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            configRetries++;
+        }
+        
+        if (!window.SUPABASE_CONFIG) {
+            throw new Error('Configuration failed to load');
+        }
+        
+        console.log('Config loaded, initializing Supabase...');
+        
+        // Initialize Supabase connection
+        if (typeof window.initializeSupabase === 'function') {
+            await window.initializeSupabase();
+        } else {
+            console.error('initializeSupabase function not available');
+        }
+        
+        console.log('Supabase initialized, starting services...');
+        
+        // Use singleton instances - only create if they don't exist
+        if (!window.tokenService) {
+            window.tokenService = new window.TokenService();
+        }
+        await window.tokenService.initialize();
+        console.log('Token service ready');
+        
+        if (!window.priceService) {
+            window.priceService = new window.PriceService();
+        }
+        await window.priceService.initialize();
+        console.log('Price service ready');
+        
+        console.log('Initializing main app...');
+        
+        // Initialize the main app
+        if (typeof window.initializeApp === 'function') {
+            await window.initializeApp();
+        } else {
+            console.error('initializeApp function not available');
+        }
+        
+        // Update token status
+        const tokenStatus = document.getElementById('tokenStatus');
+        if (tokenStatus) {
+            tokenStatus.className = 'db-status connected';
+            tokenStatus.textContent = 'Tokens: Active';
+        }
+        
+        console.log('TokenWars initialization complete!');
+        
+    } catch (error) {
+        console.error('Failed to initialize TokenWars:', error);
+        const dbStatus = document.getElementById('dbStatus');
+        if (dbStatus) {
+            dbStatus.className = 'db-status disconnected';
+            dbStatus.textContent = 'Initialization Failed';
+        }
+        
+        const tokenStatus = document.getElementById('tokenStatus');
+        if (tokenStatus) {
+            tokenStatus.className = 'db-status disconnected';
+            tokenStatus.textContent = 'Token Service Failed';
+        }
+    }
+});
     </script>
 </body>
 </html>
