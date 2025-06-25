@@ -378,7 +378,7 @@ function updateUIForConnectedUser() {
 
 // Initialize the application with better error handling
 async function initializeApp() {
-    console.log('🚀 Initializing TokenWars app...');
+    console.log('🚀 Initializing TokenWars app (Phase 1 mode)...');
     
     try {
         // Set up basic UI event listeners
@@ -395,19 +395,14 @@ async function initializeApp() {
         updateWalletStatus();
         setInterval(updateWalletStatus, 5000);
         
-        // Initialize token management system (with fallback)
-        try {
-            await initializeTokenSystem();
-        } catch (tokenError) {
-            console.warn('⚠️ Token system initialization failed, continuing with basic functionality:', tokenError);
-            showNotification('Token system starting in demo mode', 'warning');
-        }
+        // Initialize token management system (Phase 1: basic mode)
+        await initializeTokenSystem();
         
         // Start background services
         startBackgroundServices();
         
         console.log('✅ App initialization complete');
-        showNotification('TokenWars initialized successfully!', 'success');
+        showNotification('TokenWars Phase 1 loaded successfully! Navigation ready.', 'success');
         
     } catch (error) {
         console.error('❌ App initialization failed:', error);
@@ -462,21 +457,58 @@ function setupUIEventListeners() {
 }
 
 // ==============================================
-// PLACEHOLDER FUNCTIONS (TO BE IMPLEMENTED IN LATER PHASES)
+// PHASE 1 SERVICE INITIALIZATION
 // ==============================================
 
-// Initialize token management system
+// PHASE 1: Basic token system initialization (placeholder)
 async function initializeTokenSystem() {
-    console.log('🪙 Token system initialization placeholder');
-    // Will be implemented in Phase 2
-    return true;
+    console.log('🪙 Token system initialization (Phase 1 mode)...');
+    
+    try {
+        // For Phase 1, just check if classes are loaded
+        if (window.TokenService) {
+            console.log('✅ TokenService class available');
+        } else {
+            console.log('⚠️ TokenService class not loaded - will be implemented in Phase 2');
+        }
+        
+        if (window.PriceService) {
+            console.log('✅ PriceService class available');
+        } else {
+            console.log('⚠️ PriceService class not loaded - will be implemented in Phase 2');
+        }
+        
+        // Phase 1: Just log that initialization is complete
+        console.log('✅ Token system ready for Phase 1 (basic mode)');
+        return true;
+        
+    } catch (error) {
+        console.log('⚠️ Token system initialization skipped for Phase 1:', error.message);
+        return true; // Don't fail Phase 1 for token issues
+    }
 }
 
-// Start background services
+// PHASE 1: Basic background services (placeholder)
 function startBackgroundServices() {
-    console.log('⚙️ Background services placeholder');
-    // Will be implemented in Phase 2
+    console.log('⚙️ Starting background services (Phase 1 mode)...');
+    
+    try {
+        // For Phase 1, just log that services would start here
+        console.log('✅ Background services ready for Phase 1');
+        console.log('   • Token updates: Will be implemented in Phase 2');
+        console.log('   • Price monitoring: Will be implemented in Phase 2');
+        console.log('   • Competition management: Will be implemented in Phase 2');
+        
+        return true;
+    } catch (error) {
+        console.error('Background services error (Phase 1):', error);
+        return false;
+    }
 }
+
+// ==============================================
+// PLACEHOLDER FUNCTIONS (TO BE IMPLEMENTED IN LATER PHASES)
+// ==============================================
 
 // Update wallet status
 function updateWalletStatus() {
@@ -604,3 +636,10 @@ window.app = {
 };
 
 console.log('📱 App.js Phase 1 fixes loaded - Navigation & UI Framework ready');
+console.log('🎯 Phase 1 Features Available:');
+console.log('   ✅ Complete navigation system (Markets, Leaderboard, Portfolio)');
+console.log('   ✅ Wallet modal UI (Phase 3 will add functionality)');
+console.log('   ✅ Section switching and display');
+console.log('   ✅ Responsive design');
+console.log('   ✅ Basic services framework');
+console.log('   📋 Next: Phase 2 will add database & backend services');
