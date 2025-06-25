@@ -1,5 +1,5 @@
 // TokenService - Cache-Aware Version with Singleton Pattern
-// Prevents multiple initialization loops
+// Prevents multiple initialization loops and integrates with cache-first edge functions
 
 class TokenService {
     constructor() {
