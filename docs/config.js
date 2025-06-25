@@ -1,4 +1,4 @@
-// Basic Configuration for TokenWars - Phase 1
+// TokenWars Configuration - Phase 1 Basic Setup
 // Essential configuration for navigation and basic functionality
 
 // Supabase Configuration
@@ -18,7 +18,7 @@ const APP_CONFIG = {
     // Solana configuration
     SOLANA_NETWORK: 'devnet',
     
-    // Update intervals
+    // Update intervals (Phase 1: Basic settings)
     UPDATE_INTERVALS: {
         TOKEN_LIST_REFRESH: 3600000, // 1 hour
         PRICE_UPDATES: 60000, // 1 minute
@@ -26,7 +26,7 @@ const APP_CONFIG = {
         LEADERBOARD_REFRESH: 300000 // 5 minutes
     },
     
-    // Basic token selection (for Phase 1)
+    // Basic token selection (Phase 1: Placeholder values)
     TOKEN_SELECTION: {
         MIN_MARKET_CAP: 5000000, // $5M minimum
         MIN_AGE_DAYS: 30, // 1 month minimum
@@ -34,7 +34,7 @@ const APP_CONFIG = {
         BLACKLISTED_TOKENS: []
     },
     
-    // Basic cache configuration (for Phase 1)
+    // Basic cache configuration (Phase 1: Basic settings)
     CACHE_CONFIG: {
         TOKEN_CACHE_DURATION: 300000, // 5 minutes
         PRICE_CACHE_DURATION: 120000, // 2 minutes
@@ -112,6 +112,38 @@ const UI_CONFIG = {
     TABLET_BREAKPOINT: 1024 // px
 };
 
+// Phase tracking configuration
+const PHASE_CONFIG = {
+    CURRENT_PHASE: 1,
+    PHASES: {
+        1: {
+            name: 'Navigation & UI Framework',
+            features: ['navigation', 'ui_framework', 'wallet_modal_ui', 'responsive_design'],
+            description: 'Basic navigation and user interface components'
+        },
+        2: {
+            name: 'Database & Backend Services',
+            features: ['database_schema', 'real_token_data', 'price_tracking', 'backend_services'],
+            description: 'Database integration and backend service implementation'
+        },
+        3: {
+            name: 'Wallet Connection System',
+            features: ['wallet_connection', 'user_profiles', 'authentication', 'session_management'],
+            description: 'Complete wallet integration and user management'
+        },
+        4: {
+            name: 'Admin Panel & Deployment',
+            features: ['admin_panel', 'token_management', 'system_monitoring', 'admin_controls'],
+            description: 'Administrative interface and system management'
+        },
+        5: {
+            name: 'System Integration & Testing',
+            features: ['end_to_end_testing', 'performance_optimization', 'production_deployment'],
+            description: 'Final integration, testing, and production readiness'
+        }
+    }
+};
+
 // Export for use in other files
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.APP_CONFIG = APP_CONFIG;
@@ -121,26 +153,39 @@ window.TOKEN_ERROR_CODES = TOKEN_ERROR_CODES;
 window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
 window.WALLET_CONFIG = WALLET_CONFIG;
 window.UI_CONFIG = UI_CONFIG;
+window.PHASE_CONFIG = PHASE_CONFIG;
 
-// Utility function to check if feature is enabled
+// Phase 1: Feature availability checker
 window.isFeatureEnabled = function(feature) {
-    const features = {
-        'wallet_connection': false, // Phase 3
-        'token_system': false, // Phase 2
-        'real_competitions': false, // Phase 2
-        'admin_panel': false, // Phase 4
-        'smart_contracts': false, // Phase 5
-        'navigation': true, // Phase 1 ✅
-        'ui_framework': true, // Phase 1 ✅
-        'demo_mode': true // Phase 1 ✅
+    const phase1Features = {
+        // Phase 1 ✅ Available
+        'navigation': true,
+        'ui_framework': true,
+        'wallet_modal_ui': true,
+        'responsive_design': true,
+        'demo_mode': true,
+        'basic_sections': true,
+        
+        // Phase 2+ 🚧 Coming Soon
+        'wallet_connection': false,
+        'token_system': false,
+        'real_competitions': false,
+        'database_integration': false,
+        'price_tracking': false,
+        'backend_services': false,
+        
+        // Phase 3+ 🚧 Future
+        'admin_panel': false,
+        'smart_contracts': false,
+        'production_features': false
     };
     
-    return features[feature] || false;
+    return phase1Features[feature] || false;
 };
 
 // Configuration validation
 window.validateConfig = function() {
-    const required = ['SUPABASE_CONFIG', 'APP_CONFIG', 'NAVIGATION_CONFIG'];
+    const required = ['SUPABASE_CONFIG', 'APP_CONFIG', 'NAVIGATION_CONFIG', 'PHASE_CONFIG'];
     const missing = required.filter(config => !window[config]);
     
     if (missing.length > 0) {
@@ -152,9 +197,30 @@ window.validateConfig = function() {
     return true;
 };
 
+// Phase status checker
+window.getPhaseStatus = function() {
+    const currentPhase = PHASE_CONFIG.CURRENT_PHASE;
+    const phaseInfo = PHASE_CONFIG.PHASES[currentPhase];
+    
+    return {
+        current: currentPhase,
+        name: phaseInfo.name,
+        description: phaseInfo.description,
+        features: phaseInfo.features,
+        nextPhase: currentPhase < 5 ? currentPhase + 1 : null
+    };
+};
+
 // Debug helper
 window.getConfigSummary = function() {
+    const phaseStatus = window.getPhaseStatus();
+    
     return {
+        phase: {
+            current: phaseStatus.current,
+            name: phaseStatus.name,
+            features: phaseStatus.features.length
+        },
         supabase: {
             url: SUPABASE_CONFIG.url,
             hasKey: !!SUPABASE_CONFIG.anonKey
@@ -162,7 +228,8 @@ window.getConfigSummary = function() {
         features: {
             navigation: window.isFeatureEnabled('navigation'),
             ui_framework: window.isFeatureEnabled('ui_framework'),
-            demo_mode: window.isFeatureEnabled('demo_mode')
+            demo_mode: window.isFeatureEnabled('demo_mode'),
+            wallet_connection: window.isFeatureEnabled('wallet_connection')
         },
         wallet: {
             supported: WALLET_CONFIG.SUPPORTED_WALLETS.length,
@@ -175,5 +242,7 @@ window.getConfigSummary = function() {
     };
 };
 
-console.log('⚙️ Basic config.js loaded - Phase 1 configuration ready');
+console.log('⚙️ TokenWars configuration loaded - Phase 1 setup complete');
+console.log('📊 Current Phase:', window.getPhaseStatus().current, '-', window.getPhaseStatus().name);
+console.log('🎯 Available Features:', Object.keys(window.getConfigSummary().features).filter(f => window.isFeatureEnabled(f)));
 console.log('📋 Config summary:', window.getConfigSummary());
