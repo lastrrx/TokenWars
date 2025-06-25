@@ -1,5 +1,5 @@
-// Enhanced Competition.js - Real Token Data Integration
-// This replaces your existing competition.js to show live token data
+// Enhanced Competition.js - LOGO FIX VERSION
+// Fixed logo display with robust error handling and fallback system
 
 // Global state for competitions
 const CompetitionState = {
@@ -15,7 +15,7 @@ const CompetitionState = {
  * Initialize Competition System with Real Token Data
  */
 async function initializeCompetitionSystem() {
-    console.log('Initializing competition system with real token data...');
+    console.log('Initializing competition system with real token data and logo fixes...');
     
     try {
         // Initialize token and price services
@@ -36,7 +36,7 @@ async function initializeCompetitionSystem() {
         // Start price update monitoring
         startPriceUpdateMonitoring();
         
-        console.log('Competition system initialized with real data');
+        console.log('Competition system initialized with real data and logo fixes');
         
     } catch (error) {
         console.error('Failed to initialize competition system:', error);
@@ -85,8 +85,8 @@ async function enhanceCompetitionsWithTokenData(competitions) {
         try {
             // Get real token data for both tokens
             const [tokenA, tokenB] = await Promise.all([
-                getTokenData(competition.token_a_address),
-                getTokenData(competition.token_b_address)
+                getTokenDataWithLogo(competition.token_a_address),
+                getTokenDataWithLogo(competition.token_b_address)
             ]);
             
             // Get current prices if price service available
@@ -105,13 +105,17 @@ async function enhanceCompetitionsWithTokenData(competitions) {
                     ...tokenA,
                     currentPrice: currentPrices[competition.token_a_address]?.price || tokenA.current_price,
                     priceChange24h: currentPrices[competition.token_a_address]?.change24h || tokenA.price_change_24h,
-                    address: competition.token_a_address
+                    address: competition.token_a_address,
+                    // LOGO FIX: Ensure logo is always available
+                    logoURI: validateAndFixTokenLogo(tokenA.logoURI || tokenA.logo_uri, tokenA.symbol)
                 },
                 tokenB: {
                     ...tokenB,
                     currentPrice: currentPrices[competition.token_b_address]?.price || tokenB.current_price,
                     priceChange24h: currentPrices[competition.token_b_address]?.change24h || tokenB.price_change_24h,
-                    address: competition.token_b_address
+                    address: competition.token_b_address,
+                    // LOGO FIX: Ensure logo is always available
+                    logoURI: validateAndFixTokenLogo(tokenB.logoURI || tokenB.logo_uri, tokenB.symbol)
                 },
                 // Calculate real-time metrics
                 totalParticipants: competition.total_bets || 0,
@@ -143,28 +147,37 @@ async function enhanceCompetitionsWithTokenData(competitions) {
 }
 
 /**
- * Get Token Data from Token Service or Database
+ * LOGO FIX: Get Token Data with enhanced logo handling
  */
-async function getTokenData(tokenAddress) {
+async function getTokenDataWithLogo(tokenAddress) {
     try {
         // Try token service first
         if (CompetitionState.tokenService) {
             const tokenData = await CompetitionState.tokenService.getTokenByAddress(tokenAddress);
-            if (tokenData) return tokenData;
+            if (tokenData) {
+                // Ensure logo is valid
+                tokenData.logoURI = validateAndFixTokenLogo(tokenData.logoURI, tokenData.symbol);
+                return tokenData;
+            }
         }
         
         // Fallback to database
         if (window.supabaseClient.getToken) {
             const tokenData = await window.supabaseClient.getToken(tokenAddress);
-            if (tokenData) return tokenData;
+            if (tokenData) {
+                // Ensure logo is valid
+                tokenData.logoURI = validateAndFixTokenLogo(tokenData.logo_uri || tokenData.logoURI, tokenData.symbol);
+                return tokenData;
+            }
         }
         
         // Create minimal token data if not found
+        const symbol = `TOKEN${tokenAddress.slice(-4)}`;
         return {
             address: tokenAddress,
-            symbol: `TOKEN${tokenAddress.slice(-4)}`,
+            symbol: symbol,
             name: `Unknown Token ${tokenAddress.slice(-4)}`,
-            logo_uri: '/placeholder-token.png',
+            logoURI: generateTokenLogoFallback(symbol), // Always generate valid logo
             current_price: 0,
             market_cap: 0,
             price_change_24h: 0
@@ -172,8 +185,62 @@ async function getTokenData(tokenAddress) {
         
     } catch (error) {
         console.error('Failed to get token data for:', tokenAddress, error);
-        return null;
+        
+        // Emergency fallback with generated logo
+        const symbol = `TOKEN${tokenAddress.slice(-4)}`;
+        return {
+            address: tokenAddress,
+            symbol: symbol,
+            name: `Token ${tokenAddress.slice(-4)}`,
+            logoURI: generateTokenLogoFallback(symbol),
+            current_price: 0,
+            market_cap: 0,
+            price_change_24h: 0
+        };
     }
+}
+
+/**
+ * LOGO FIX: Validate and fix token logo URLs
+ */
+function validateAndFixTokenLogo(logoURI, symbol) {
+    // If no logo or broken placeholder, generate fallback
+    if (!logoURI || 
+        logoURI.includes('placeholder-token.png') || 
+        logoURI === '/placeholder-token.png' ||
+        logoURI.includes('lastrrx.github.io') ||
+        logoURI === 'null' ||
+        logoURI === 'undefined') {
+        
+        console.log(`🖼️ Generating logo fallback for ${symbol}`);
+        return generateTokenLogoFallback(symbol);
+    }
+    
+    // Return existing logo if it looks valid
+    return logoURI;
+}
+
+/**
+ * LOGO FIX: Generate reliable logo fallback using UI Avatars
+ */
+function generateTokenLogoFallback(symbol) {
+    try {
+        const cleanSymbol = String(symbol).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        const firstChar = cleanSymbol.charAt(0) || 'T';
+        
+        // Use UI Avatars with TokenWars branding
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(firstChar)}&background=8b5cf6&color=fff&size=64&bold=true&format=png`;
+    } catch (error) {
+        console.error('Error generating logo fallback:', error);
+        return 'https://ui-avatars.com/api/?name=T&background=8b5cf6&color=fff&size=64&bold=true&format=png';
+    }
+}
+
+/**
+ * Get Token Data from Token Service or Database (LEGACY - kept for compatibility)
+ */
+async function getTokenData(tokenAddress) {
+    return await getTokenDataWithLogo(tokenAddress);
 }
 
 /**
@@ -181,7 +248,7 @@ async function getTokenData(tokenAddress) {
  */
 async function createDemoCompetitionsWithRealTokens() {
     try {
-        console.log('Creating demo competitions with real token data...');
+        console.log('Creating demo competitions with real token data and logo fixes...');
         
         // Get available token pairs from token service
         let tokenPairs = [];
@@ -205,7 +272,7 @@ async function createDemoCompetitionsWithRealTokens() {
         }
         
         CompetitionState.activeCompetitions = demoCompetitions;
-        console.log('Created', demoCompetitions.length, 'demo competitions with real tokens');
+        console.log('Created', demoCompetitions.length, 'demo competitions with real tokens and valid logos');
         
     } catch (error) {
         console.error('Failed to create demo competitions with real tokens:', error);
@@ -247,10 +314,10 @@ async function createDemoCompetitionFromTokenPair(tokenPair, index) {
         const startTime = new Date(now.getTime() + (index * 2 * 60 * 60 * 1000)); // Stagger start times
         const endTime = new Date(startTime.getTime() + (24 * 60 * 60 * 1000)); // 24 hour duration
         
-        // Get real token data
+        // Get real token data with logo fixes
         const [tokenA, tokenB] = await Promise.all([
-            getTokenData(tokenPair.tokenA?.address || tokenPair.token_a_address),
-            getTokenData(tokenPair.tokenB?.address || tokenPair.token_b_address)
+            getTokenDataWithLogo(tokenPair.tokenA?.address || tokenPair.token_a_address),
+            getTokenDataWithLogo(tokenPair.tokenB?.address || tokenPair.token_b_address)
         ]);
         
         if (!tokenA || !tokenB) return null;
@@ -262,7 +329,7 @@ async function createDemoCompetitionFromTokenPair(tokenPair, index) {
                 address: tokenA.address,
                 symbol: tokenA.symbol,
                 name: tokenA.name,
-                logoURI: tokenA.logo_uri || '/placeholder-token.png',
+                logoURI: validateAndFixTokenLogo(tokenA.logoURI, tokenA.symbol),
                 currentPrice: tokenA.current_price || Math.random() * 10,
                 marketCap: tokenA.market_cap || Math.random() * 1000000000,
                 priceChange24h: tokenA.price_change_24h || (Math.random() - 0.5) * 20
@@ -272,7 +339,7 @@ async function createDemoCompetitionFromTokenPair(tokenPair, index) {
                 address: tokenB.address,
                 symbol: tokenB.symbol,
                 name: tokenB.name,
-                logoURI: tokenB.logo_uri || '/placeholder-token.png',
+                logoURI: validateAndFixTokenLogo(tokenB.logoURI, tokenB.symbol),
                 currentPrice: tokenB.current_price || Math.random() * 10,
                 marketCap: tokenB.market_cap || Math.random() * 1000000000,
                 priceChange24h: tokenB.price_change_24h || (Math.random() - 0.5) * 20
@@ -335,11 +402,11 @@ function updateCompetitionsDisplay() {
     // Set up card interactions
     setupCompetitionCardInteractions();
     
-    console.log('Updated competition display with', CompetitionState.activeCompetitions.length, 'real token competitions');
+    console.log('Updated competition display with', CompetitionState.activeCompetitions.length, 'real token competitions and fixed logos');
 }
 
 /**
- * Create Real Token Competition Card
+ * Create Real Token Competition Card - WITH LOGO FIX
  */
 function createRealTokenCompetitionCard(competition) {
     const { tokenA, tokenB } = competition;
@@ -355,6 +422,10 @@ function createRealTokenCompetitionCard(competition) {
     
     // Time remaining display
     const timeDisplay = formatTimeRemaining(competition.timeRemaining);
+    
+    // LOGO FIX: Ensure logos are always valid
+    const tokenALogo = validateAndFixTokenLogo(tokenA.logoURI, tokenA.symbol);
+    const tokenBLogo = validateAndFixTokenLogo(tokenB.logoURI, tokenB.symbol);
     
     return `
         <div class="competition-card real-token-card" 
@@ -376,15 +447,16 @@ function createRealTokenCompetitionCard(competition) {
                 <!-- Token A -->
                 <div class="token-card token-a" data-token="${tokenA.address}">
                     <div class="token-logo-container">
-                        <img src="${tokenA.logoURI || '/placeholder-token.png'}" 
+                        <img src="${tokenALogo}" 
                              alt="${tokenA.symbol}" 
                              class="token-logo"
-                             onerror="this.src='/placeholder-token.png'">
-                        <div class="real-data-indicator">🔴</div>
+                             onerror="handleTokenLogoError(this, '${tokenA.symbol}')"
+                             onload="console.log('✅ Logo loaded for ${tokenA.symbol}')">
+                        <div class="real-data-indicator" title="Live token data">🟢</div>
                     </div>
                     <div class="token-info">
                         <div class="token-symbol">${tokenA.symbol}</div>
-                        <div class="token-name">${tokenA.name}</div>
+                        <div class="token-name">${truncateTokenName(tokenA.name)}</div>
                         <div class="token-price">
                             $${formatTokenPrice(tokenA.currentPrice)}
                             <span class="price-change ${tokenA.priceChange24h >= 0 ? 'positive' : 'negative'}">
@@ -411,15 +483,16 @@ function createRealTokenCompetitionCard(competition) {
                 <!-- Token B -->
                 <div class="token-card token-b" data-token="${tokenB.address}">
                     <div class="token-logo-container">
-                        <img src="${tokenB.logoURI || '/placeholder-token.png'}" 
+                        <img src="${tokenBLogo}" 
                              alt="${tokenB.symbol}" 
                              class="token-logo"
-                             onerror="this.src='/placeholder-token.png'">
-                        <div class="real-data-indicator">🔴</div>
+                             onerror="handleTokenLogoError(this, '${tokenB.symbol}')"
+                             onload="console.log('✅ Logo loaded for ${tokenB.symbol}')">
+                        <div class="real-data-indicator" title="Live token data">🟢</div>
                     </div>
                     <div class="token-info">
                         <div class="token-symbol">${tokenB.symbol}</div>
-                        <div class="token-name">${tokenB.name}</div>
+                        <div class="token-name">${truncateTokenName(tokenB.name)}</div>
                         <div class="token-price">
                             $${formatTokenPrice(tokenB.currentPrice)}
                             <span class="price-change ${tokenB.priceChange24h >= 0 ? 'positive' : 'negative'}">
@@ -480,9 +553,37 @@ function createRealTokenCompetitionCard(competition) {
 }
 
 /**
+ * LOGO FIX: Handle token logo loading errors
+ */
+function handleTokenLogoError(imgElement, symbol) {
+    console.warn(`❌ Logo failed to load for ${symbol}, using fallback`);
+    
+    // Generate fallback logo
+    const fallbackLogo = generateTokenLogoFallback(symbol);
+    
+    // Update the image source
+    imgElement.src = fallbackLogo;
+    
+    // Add error class for styling
+    imgElement.classList.add('logo-fallback');
+    
+    // Remove onerror to prevent infinite loops
+    imgElement.onerror = null;
+}
+
+/**
+ * Truncate token name for display
+ */
+function truncateTokenName(name) {
+    if (!name) return 'Unknown Token';
+    return name.length > 15 ? name.substring(0, 15) + '...' : name;
+}
+
+/**
  * Utility Functions for Competition Display
  */
 function formatTokenPrice(price) {
+    if (!price || price === 0) return '0.00';
     if (price >= 1) return price.toFixed(2);
     if (price >= 0.01) return price.toFixed(4);
     if (price >= 0.0001) return price.toFixed(6);
@@ -490,6 +591,7 @@ function formatTokenPrice(price) {
 }
 
 function formatMarketCap(marketCap) {
+    if (!marketCap || marketCap === 0) return '$0';
     if (marketCap >= 1e9) return `$${(marketCap / 1e9).toFixed(2)}B`;
     if (marketCap >= 1e6) return `$${(marketCap / 1e6).toFixed(2)}M`;
     if (marketCap >= 1e3) return `$${(marketCap / 1e3).toFixed(2)}K`;
@@ -497,11 +599,13 @@ function formatMarketCap(marketCap) {
 }
 
 function formatPercentage(percent) {
+    if (!percent || percent === 0) return '0.00%';
     const formatted = parseFloat(percent).toFixed(2);
     return percent >= 0 ? `+${formatted}%` : `${formatted}%`;
 }
 
 function formatSOL(amount) {
+    if (!amount || amount === 0) return '0.000 SOL';
     return `${parseFloat(amount).toFixed(3)} SOL`;
 }
 
@@ -623,10 +727,18 @@ function handleTokenUpdate(payload) {
     // Update competitions that use this token
     CompetitionState.activeCompetitions.forEach(competition => {
         if (competition.tokenA.address === newToken.address) {
-            competition.tokenA = { ...competition.tokenA, ...newToken };
+            competition.tokenA = { 
+                ...competition.tokenA, 
+                ...newToken,
+                logoURI: validateAndFixTokenLogo(newToken.logoURI || newToken.logo_uri, newToken.symbol)
+            };
         }
         if (competition.tokenB.address === newToken.address) {
-            competition.tokenB = { ...competition.tokenB, ...newToken };
+            competition.tokenB = { 
+                ...competition.tokenB, 
+                ...newToken,
+                logoURI: validateAndFixTokenLogo(newToken.logoURI || newToken.logo_uri, newToken.symbol)
+            };
         }
     });
     
@@ -732,18 +844,33 @@ function showTokenDetails(tokenAddress) {
  * Fallback Demo Competitions (if all else fails)
  */
 async function loadDemoCompetitions() {
-    console.log('Loading fallback demo competitions...');
+    console.log('Loading fallback demo competitions with logo fixes...');
     
     const demoCompetitions = [
         {
             competition_id: 'DEMO-001',
-            tokenA: { symbol: 'BONK', name: 'Bonk', logoURI: '/placeholder-token.png', currentPrice: 0.000015, priceChange24h: 5.2, marketCap: 1200000000 },
-            tokenB: { symbol: 'WIF', name: 'dogwifhat', logoURI: '/placeholder-token.png', currentPrice: 2.45, priceChange24h: -2.8, marketCap: 2400000000 },
+            tokenA: { 
+                symbol: 'BONK', 
+                name: 'Bonk', 
+                logoURI: generateTokenLogoFallback('BONK'), 
+                currentPrice: 0.000015, 
+                priceChange24h: 5.2, 
+                marketCap: 1200000000 
+            },
+            tokenB: { 
+                symbol: 'WIF', 
+                name: 'dogwifhat', 
+                logoURI: generateTokenLogoFallback('WIF'), 
+                currentPrice: 2.45, 
+                priceChange24h: -2.8, 
+                marketCap: 2400000000 
+            },
             status: 'ACTIVE',
             totalPool: 5.4,
             totalParticipants: 23,
             timeRemaining: 2 * 60 * 60 * 1000,
-            isRealData: false
+            isRealData: false,
+            lastUpdated: new Date()
         }
     ];
     
@@ -758,6 +885,8 @@ window.initializeCompetitionSystem = initializeCompetitionSystem;
 window.loadRealCompetitions = loadRealCompetitions;
 window.updateCompetitionsDisplay = updateCompetitionsDisplay;
 window.CompetitionState = CompetitionState;
+window.handleTokenLogoError = handleTokenLogoError; // Expose for HTML onerror
+window.generateTokenLogoFallback = generateTokenLogoFallback; // Expose for utils
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
@@ -765,3 +894,11 @@ if (document.readyState === 'loading') {
 } else {
     initializeCompetitionSystem();
 }
+
+console.log('✅ Competition.js (LOGO FIX) loaded and initialized');
+console.log('🖼️ Logo Fix Features:');
+console.log('   ✅ Robust logo error handling with onerror fallbacks');
+console.log('   ✅ UI Avatars fallback system for missing/broken logos');
+console.log('   ✅ Logo validation before display');
+console.log('   ✅ Enhanced token data processing with logo fixes');
+console.log('   ✅ No more 404 logo errors - all tokens show visual representation');
