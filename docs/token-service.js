@@ -1,5 +1,5 @@
-// TokenService - FIXED VERSION - Safe Token Processing Without Spread Operator
-// Resolves initialization hang issue in Phase 3
+// TokenService - ENHANCED WITH LOGO FIX - Safe Token Processing Without Spread Operator
+// Resolves initialization hang issue + Logo processing fix
 
 class TokenService {
     constructor() {
@@ -20,7 +20,7 @@ class TokenService {
         // Store as singleton instance
         TokenService.instance = this;
         
-        console.log('TokenService constructor called - NEW INSTANCE');
+        console.log('TokenService constructor called - NEW INSTANCE WITH LOGO FIX');
     }
 
     async initialize() {
@@ -48,7 +48,7 @@ class TokenService {
             }
             
             this.isInitializing = true;
-            console.log('TokenService: Starting initialization...');
+            console.log('TokenService: Starting initialization with logo enhancement...');
             
             // Step 1: Try to load from cache-first edge function
             console.log('🔄 Step 1: Loading tokens from cache...');
@@ -125,11 +125,12 @@ class TokenService {
             const data = await response.json();
             console.log('📦 Edge function response received:', typeof data);
             console.log('📊 Response keys:', Object.keys(data));
+            console.log('🖼️ Logo enhancement applied:', data.logo_enhancement || 'unknown');
             
             if (data.success && data.tokens && Array.isArray(data.tokens) && data.tokens.length > 0) {
-                console.log(`🔄 Processing ${data.tokens.length} tokens...`);
+                console.log(`🔄 Processing ${data.tokens.length} tokens with logo data...`);
                 
-                // SAFE TOKEN PROCESSING - No spread operator
+                // SAFE TOKEN PROCESSING - No spread operator + Logo validation
                 this.tokens = this.processTokensSafely(data.tokens);
                 
                 this.cacheStatus = data.source || 'cache';
@@ -137,6 +138,7 @@ class TokenService {
                 
                 if (this.tokens.length > 0) {
                     console.log('🔍 First token sample:', this.tokens[0]);
+                    console.log('🖼️ Logo sample:', this.tokens[0].logoURI);
                     return true;
                 } else {
                     console.log('⚠️ No tokens processed successfully');
@@ -154,12 +156,12 @@ class TokenService {
         }
     }
 
-    // NEW: Safe token processing without spread operator
+    // ENHANCED: Safe token processing without spread operator + Logo validation
     processTokensSafely(rawTokens) {
         const processedTokens = [];
         const now = new Date().toISOString();
         
-        console.log(`🔄 Processing ${rawTokens.length} raw tokens safely...`);
+        console.log(`🔄 Processing ${rawTokens.length} raw tokens safely with logo validation...`);
         
         for (let i = 0; i < rawTokens.length; i++) {
             try {
@@ -173,8 +175,8 @@ class TokenService {
                     symbol: this.extractProperty(rawToken, ['symbol']),
                     name: this.extractProperty(rawToken, ['name']),
                     
-                    // Logo and display
-                    logoURI: this.extractProperty(rawToken, ['logoURI', 'logo_uri', 'image']),
+                    // LOGO FIX: Enhanced logo processing with validation
+                    logoURI: this.processTokenLogo(rawToken),
                     
                     // Financial data
                     market_cap: this.parseNumericValue(this.extractProperty(rawToken, ['market_cap', 'market_cap_usd'])),
@@ -190,13 +192,16 @@ class TokenService {
                     // Status and metadata
                     is_active: true,
                     last_updated: this.extractProperty(rawToken, ['cache_timestamp', 'last_updated']) || now,
-                    data_source: this.extractProperty(rawToken, ['data_source']) || 'cache'
+                    data_source: this.extractProperty(rawToken, ['data_source']) || 'cache',
+                    
+                    // LOGO DEBUG INFO
+                    logo_source: this.extractProperty(rawToken, ['logo_source']) || 'unknown'
                 };
                 
                 // Validate processed token
                 if (this.validateProcessedToken(processedToken)) {
                     processedTokens.push(processedToken);
-                    console.log(`✅ Token ${i + 1} processed successfully:`, processedToken.symbol);
+                    console.log(`✅ Token ${i + 1} processed successfully:`, processedToken.symbol, 'Logo:', processedToken.logoURI ? '✅' : '❌');
                 } else {
                     console.warn(`⚠️ Token ${i + 1} failed validation:`, processedToken.symbol);
                 }
@@ -207,8 +212,78 @@ class TokenService {
             }
         }
         
-        console.log(`✅ Successfully processed ${processedTokens.length}/${rawTokens.length} tokens`);
+        console.log(`✅ Successfully processed ${processedTokens.length}/${rawTokens.length} tokens with logos`);
         return processedTokens;
+    }
+
+    // NEW: Enhanced logo processing with fallback system
+    processTokenLogo(rawToken) {
+        try {
+            // Try multiple logo property names
+            let logoURI = this.extractProperty(rawToken, ['logoURI', 'logo_uri', 'image', 'logo_url']);
+            
+            // Get symbol for fallback generation
+            const symbol = this.extractProperty(rawToken, ['symbol']) || 'TOKEN';
+            
+            // If no logo or broken placeholder, generate fallback
+            if (!logoURI || 
+                logoURI.includes('placeholder-token.png') || 
+                logoURI === '/placeholder-token.png' ||
+                logoURI.includes('lastrrx.github.io')) {
+                
+                console.log(`🖼️ Generating logo fallback for ${symbol}`);
+                logoURI = this.generateTokenLogoFallback(symbol);
+            }
+            
+            // Validate logo URL format
+            if (!this.isValidLogoURL(logoURI)) {
+                console.warn(`🖼️ Invalid logo URL for ${symbol}, using fallback`);
+                logoURI = this.generateTokenLogoFallback(symbol);
+            }
+            
+            return logoURI;
+            
+        } catch (error) {
+            console.error('Error processing token logo:', error);
+            const symbol = this.extractProperty(rawToken, ['symbol']) || 'TOKEN';
+            return this.generateTokenLogoFallback(symbol);
+        }
+    }
+
+    // NEW: Generate reliable logo fallback using UI Avatars
+    generateTokenLogoFallback(symbol) {
+        try {
+            const cleanSymbol = String(symbol).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            const firstChar = cleanSymbol.charAt(0) || 'T';
+            
+            // Use UI Avatars with TokenWars branding
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(firstChar)}&background=8b5cf6&color=fff&size=64&bold=true&format=png`;
+        } catch (error) {
+            console.error('Error generating logo fallback:', error);
+            return 'https://ui-avatars.com/api/?name=T&background=8b5cf6&color=fff&size=64&bold=true&format=png';
+        }
+    }
+
+    // NEW: Validate logo URL format
+    isValidLogoURL(url) {
+        try {
+            if (!url || typeof url !== 'string') return false;
+            
+            // Check if it's a valid URL
+            new URL(url);
+            
+            // Check if it's likely an image
+            const imageExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+            const hasImageExtension = imageExtensions.some(ext => url.toLowerCase().includes(ext));
+            
+            // Allow known image services
+            const imageServices = ['ui-avatars.com', 'coingecko.com', 'arweave.net', 'githubusercontent.com', 'jup.ag'];
+            const isImageService = imageServices.some(service => url.includes(service));
+            
+            return hasImageExtension || isImageService;
+        } catch (error) {
+            return false;
+        }
     }
 
     // NEW: Safe property extraction helper
@@ -259,6 +334,13 @@ class TokenService {
                 return false;
             }
             
+            // Logo should always be present now
+            if (!token.logoURI) {
+                console.warn('Token missing logo URI:', token.symbol);
+                // Don't fail validation, just fix it
+                token.logoURI = this.generateTokenLogoFallback(token.symbol);
+            }
+            
             return true;
         } catch (error) {
             console.error('Error validating token:', error);
@@ -266,7 +348,7 @@ class TokenService {
         }
     }
 
-    // Create demo tokens for testing and fallback
+    // ENHANCED: Create demo tokens with proper logos
     createDemoTokens() {
         const now = new Date().toISOString();
         return [
@@ -284,7 +366,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 9,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'solana'
             },
             {
                 address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -300,7 +383,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 6,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'solana'
             },
             {
                 address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
@@ -316,7 +400,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 9,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'solana'
             },
             {
                 address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
@@ -332,7 +417,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 6,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'jup'
             },
             {
                 address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
@@ -348,7 +434,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 5,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'arweave'
             },
             {
                 address: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
@@ -364,7 +451,8 @@ class TokenService {
                 is_active: true,
                 last_updated: now,
                 decimals: 8,
-                data_source: 'demo'
+                data_source: 'demo',
+                logo_source: 'solana'
             }
         ];
     }
@@ -756,10 +844,10 @@ function getTokenService() {
 window.TokenService = TokenService;
 window.getTokenService = getTokenService;
 
-console.log('✅ TokenService (FIXED) class loaded and exposed globally');
-console.log('🔧 Fixed Issues:');
-console.log('   ✅ Removed problematic spread operator');
-console.log('   ✅ Added safe property extraction');
-console.log('   ✅ Enhanced error handling for token processing');
-console.log('   ✅ Explicit property copying prevents circular references');
-console.log('   ✅ Individual token validation with detailed logging');
+console.log('✅ TokenService (LOGO FIX) class loaded and exposed globally');
+console.log('🔧 Enhanced Features:');
+console.log('   ✅ Fixed logo data pipeline from Edge Function');
+console.log('   ✅ Added UI Avatars fallback system');
+console.log('   ✅ Enhanced logo validation and processing');
+console.log('   ✅ Safe property extraction for logo URLs');
+console.log('   ✅ Fallback logo generation for all tokens');
