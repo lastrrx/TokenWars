@@ -1,13 +1,13 @@
-// Main Application Logic - Phase 2: Real Services Integration
-// Updated initialization for TokenService and PriceService integration
+// Main Application Logic - Phase 3: Real Wallet Integration
+// Complete multi-wallet implementation with user profiles and session management
 
 // Global state
-let walletProvider = null;
-let connectedWallet = null;
+let walletService = null;
 let connectedUser = null;
 let currentStep = 1;
 let selectedAvatar = '🎯';
 let agreementAccepted = false;
+let usernameValidation = { valid: false, message: '' };
 
 // Service instances
 let tokenService = null;
@@ -30,7 +30,7 @@ let systemHealthInterval = null;
     window.hideAllSections = hideAllSections;
     window.updateActiveNavLink = updateActiveNavLink;
     
-    // Wallet functions
+    // Wallet functions - NOW REAL IMPLEMENTATIONS
     window.openWalletModal = openWalletModal;
     window.closeWalletModal = closeWalletModal;
     window.selectWallet = selectWallet;
@@ -42,11 +42,12 @@ let systemHealthInterval = null;
     window.finalizeProfile = finalizeProfile;
     window.completedOnboarding = completedOnboarding;
     window.disconnectWallet = disconnectWallet;
+    window.validateUsernameInput = validateUsernameInput;
     
     // Core app function
     window.initializeApp = initializeApp;
     
-    console.log('✅ All navigation functions exposed globally');
+    console.log('✅ All functions exposed globally - Phase 3 ready');
 })();
 
 // ==============================================
@@ -182,7 +183,197 @@ function updateActiveNavLink(activeSection) {
 }
 
 // ==============================================
-// WALLET MODAL FUNCTIONS (UNCHANGED)
+// PHASE 3 APP INITIALIZATION
+// ==============================================
+
+async function initializeApp() {
+    console.log('🚀 Initializing TokenWars app (Phase 3 mode)...');
+    
+    try {
+        // Set up basic UI event listeners
+        setupUIEventListeners();
+        
+        // Initialize core services
+        await initializeSupabaseConnection();
+        await initializeTokenService();
+        await initializePriceService();
+        await initializeCompetitionSystem();
+        
+        // Initialize wallet service (NEW IN PHASE 3)
+        await initializeWalletService();
+        
+        // Start system monitoring
+        startSystemHealthMonitoring();
+        
+        // Start background services
+        startBackgroundServices();
+        
+        console.log('✅ App initialization complete - Phase 3 ready');
+        showNotification('TokenWars Phase 3 loaded successfully! Real wallet integration active.', 'success');
+        
+        // Update status indicators
+        updateTokenStatus('✅ Tokens: Ready');
+        updateDbStatus('connected', '✅ Database: Connected');
+        
+        // Update wallet status display
+        updateWalletStatusDisplay();
+        
+    } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        showErrorNotification('Failed to initialize application - some features may not work');
+        
+        // Update status indicators
+        updateTokenStatus('❌ Tokens: Error');
+        updateDbStatus('disconnected', '❌ Database: Error');
+    }
+}
+
+// Initialize wallet service (NEW IN PHASE 3)
+async function initializeWalletService() {
+    try {
+        console.log('🔗 Initializing WalletService (Phase 3)...');
+        
+        if (window.getWalletService) {
+            walletService = window.getWalletService();
+            const success = await walletService.initialize();
+            
+            if (success) {
+                console.log('✅ WalletService initialized successfully');
+                
+                // Set up wallet event listeners
+                walletService.addConnectionListener(handleWalletEvents);
+                
+                // Check if wallet was already connected
+                const status = walletService.getConnectionStatus();
+                if (status.isConnected) {
+                    console.log('🔄 Wallet already connected, restoring session...');
+                    await handleWalletConnectionSuccess(status);
+                }
+                
+                return true;
+            } else {
+                throw new Error('WalletService initialization failed');
+            }
+        } else {
+            throw new Error('WalletService class not available');
+        }
+    } catch (error) {
+        console.error('❌ WalletService initialization failed:', error);
+        return false;
+    }
+}
+
+// Handle wallet events
+function handleWalletEvents(event, data) {
+    console.log(`🔔 Wallet event: ${event}`, data);
+    
+    switch (event) {
+        case 'connected':
+            handleWalletConnectionSuccess(data);
+            break;
+        case 'disconnected':
+            handleWalletDisconnection();
+            break;
+        case 'balanceUpdated':
+            updateBalanceDisplay(data.formatted);
+            break;
+        case 'profileCreated':
+            handleProfileCreated(data);
+            break;
+        case 'accountChanged':
+            showNotification('Wallet account changed', 'info');
+            updateWalletStatusDisplay();
+            break;
+    }
+}
+
+// Initialize Supabase connection
+async function initializeSupabaseConnection() {
+    try {
+        console.log('🔗 Initializing Supabase connection...');
+        
+        if (window.supabaseClient && typeof window.supabaseClient.initializeSupabase === 'function') {
+            supabaseClient = await window.supabaseClient.initializeSupabase();
+            console.log('✅ Supabase connection initialized');
+            return true;
+        } else {
+            throw new Error('Supabase client not available');
+        }
+    } catch (error) {
+        console.error('❌ Supabase initialization failed:', error);
+        return false;
+    }
+}
+
+// Initialize TokenService (unchanged)
+async function initializeTokenService() {
+    try {
+        console.log('🪙 Initializing TokenService...');
+        
+        if (window.TokenService) {
+            tokenService = window.getTokenService();
+            const success = await tokenService.initialize();
+            
+            if (success) {
+                console.log('✅ TokenService initialized successfully');
+                return true;
+            } else {
+                throw new Error('TokenService initialization failed');
+            }
+        } else {
+            throw new Error('TokenService class not available');
+        }
+    } catch (error) {
+        console.error('❌ TokenService initialization failed:', error);
+        return false;
+    }
+}
+
+// Initialize PriceService (unchanged)
+async function initializePriceService() {
+    try {
+        console.log('💰 Initializing PriceService...');
+        
+        if (window.PriceService) {
+            priceService = window.getPriceService();
+            const success = await priceService.initialize();
+            
+            if (success) {
+                console.log('✅ PriceService initialized successfully');
+                return true;
+            } else {
+                throw new Error('PriceService initialization failed');
+            }
+        } else {
+            throw new Error('PriceService class not available');
+        }
+    } catch (error) {
+        console.error('❌ PriceService initialization failed:', error);
+        return false;
+    }
+}
+
+// Initialize Competition System (unchanged)
+async function initializeCompetitionSystem() {
+    try {
+        console.log('🏁 Initializing Competition System...');
+        
+        if (window.initializeCompetitionSystem && typeof window.initializeCompetitionSystem === 'function') {
+            await window.initializeCompetitionSystem();
+            console.log('✅ Competition system initialized successfully');
+            return true;
+        } else {
+            console.warn('⚠️ Competition system not available');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Competition system initialization failed:', error);
+        return false;
+    }
+}
+
+// ==============================================
+// WALLET MODAL FUNCTIONS (ENHANCED)
 // ==============================================
 
 function openWalletModal() {
@@ -258,289 +449,637 @@ function goToStep(step) {
 }
 
 // ==============================================
-// PHASE 2 SERVICE INITIALIZATION
+// REAL WALLET FUNCTIONS (PHASE 3)
 // ==============================================
 
-async function initializeApp() {
-    console.log('🚀 Initializing TokenWars app (Phase 2 mode)...');
+// Real wallet status update
+function updateWalletStatus() {
+    if (!walletService) {
+        console.warn('WalletService not initialized yet');
+        return;
+    }
     
-    try {
-        // Set up basic UI event listeners
-        setupUIEventListeners();
-        
-        // Initialize core services in Phase 2 mode
-        await initializeSupabaseConnection();
-        await initializeTokenService();
-        await initializePriceService();
-        await initializeCompetitionSystem();
-        
-        // Start system monitoring
-        startSystemHealthMonitoring();
-        
-        // Start background services
-        startBackgroundServices();
-        
-        // Check for previous wallet connection
-        const lastWallet = localStorage.getItem('tokenWars_lastWallet');
-        if (lastWallet) {
-            console.log('🔄 Attempting to reconnect to last wallet:', lastWallet);
-            setTimeout(() => selectWallet(lastWallet), 2000);
-        }
-        
-        // Initialize wallet status checking
-        updateWalletStatus();
-        setInterval(updateWalletStatus, 5000);
-        
-        console.log('✅ App initialization complete - Phase 2 ready');
-        showNotification('TokenWars Phase 2 loaded successfully! Real token services active.', 'success');
-        
-        // Update status indicators
-        updateTokenStatus('✅ Tokens: Ready');
-        updateDbStatus('connected', '✅ Database: Connected');
-        
-    } catch (error) {
-        console.error('❌ App initialization failed:', error);
-        showErrorNotification('Failed to initialize application - some features may not work');
-        
-        // Update status indicators
-        updateTokenStatus('❌ Tokens: Error');
-        updateDbStatus('disconnected', '❌ Database: Error');
-    }
-}
-
-// Initialize Supabase connection
-async function initializeSupabaseConnection() {
-    try {
-        console.log('🔗 Initializing Supabase connection...');
-        
-        if (window.supabaseClient && typeof window.supabaseClient.initializeSupabase === 'function') {
-            supabaseClient = await window.supabaseClient.initializeSupabase();
-            console.log('✅ Supabase connection initialized');
-            return true;
-        } else {
-            throw new Error('Supabase client not available');
-        }
-    } catch (error) {
-        console.error('❌ Supabase initialization failed:', error);
-        return false;
-    }
-}
-
-// Initialize TokenService (Phase 2)
-async function initializeTokenService() {
-    try {
-        console.log('🪙 Initializing TokenService (Phase 2)...');
-        
-        if (window.TokenService) {
-            tokenService = window.getTokenService();
-            const success = await tokenService.initialize();
-            
-            if (success) {
-                console.log('✅ TokenService initialized successfully');
-                
-                // Log service status
-                const status = tokenService.getCacheStatus();
-                console.log(`   📊 Token count: ${status.tokenCount}`);
-                console.log(`   🔗 Token pairs: ${status.pairCount}`);
-                console.log(`   📅 Last update: ${status.lastUpdate}`);
-                
-                return true;
+    const walletInfo = walletService.getWalletInfo();
+    
+    // Update wallet status in modal
+    Object.entries(walletInfo.available).forEach(([walletType, wallet]) => {
+        const statusElement = document.getElementById(`${walletType}Status`);
+        if (statusElement) {
+            if (walletType === 'demo') {
+                statusElement.textContent = '✓ Available';
+                statusElement.style.color = '#22c55e';
             } else {
-                throw new Error('TokenService initialization failed');
+                statusElement.textContent = wallet.isInstalled ? '✓ Installed' : '⚠ Not Installed';
+                statusElement.style.color = wallet.isInstalled ? '#22c55e' : '#f59e0b';
             }
-        } else {
-            throw new Error('TokenService class not available');
         }
-    } catch (error) {
-        console.error('❌ TokenService initialization failed:', error);
-        return false;
-    }
+    });
 }
 
-// Initialize PriceService (Phase 2)
-async function initializePriceService() {
+// Real wallet selection
+async function selectWallet(walletType) {
+    console.log(`🔗 Selecting wallet: ${walletType}`);
+    
+    if (!walletService) {
+        showNotification('Wallet service not initialized', 'error');
+        return;
+    }
+    
     try {
-        console.log('💰 Initializing PriceService (Phase 2)...');
+        // Update UI to show connecting state
+        goToStep(2);
+        updateModalTitle('Connecting...', `Connecting to ${walletType}...`);
+        document.getElementById('selectedWalletName').textContent = walletType;
         
-        if (window.PriceService) {
-            priceService = window.getPriceService();
-            const success = await priceService.initialize();
+        // Attempt connection
+        const result = await walletService.connectWallet(walletType);
+        
+        if (result.success) {
+            console.log('✅ Wallet connected successfully');
             
-            if (success) {
-                console.log('✅ PriceService initialized successfully');
-                
-                // Log service status
-                const status = priceService.getCacheStatus();
-                console.log(`   📊 Cached prices: ${status.totalPrices}`);
-                console.log(`   🔥 Fresh prices: ${status.freshPrices}`);
-                console.log(`   🎯 Competition tokens: ${status.competitionTokens}`);
-                
-                return true;
-            } else {
-                throw new Error('PriceService initialization failed');
-            }
+            // Move to confirmation step
+            goToStep(2.5);
+            updateModalTitle('Wallet Connected!', `Your ${walletType} wallet has been connected`);
+            
+            // Update confirmation UI
+            document.getElementById('connectedWalletType').textContent = walletType;
+            document.getElementById('connectedWalletAddress').textContent = 
+                walletService.formatAddress(result.publicKey);
+            
+            // Check for existing trader
+            await checkExistingTrader();
+            
         } else {
-            throw new Error('PriceService class not available');
+            console.error('❌ Wallet connection failed:', result.error);
+            showNotification(result.error, 'error');
+            
+            // Return to step 1
+            goToStep(1);
+            updateModalTitle('Connect Wallet', 'Choose your preferred Solana wallet to get started');
         }
+        
     } catch (error) {
-        console.error('❌ PriceService initialization failed:', error);
-        return false;
+        console.error('Wallet connection error:', error);
+        showNotification(`Failed to connect to ${walletType}: ${error.message}`, 'error');
+        goToStep(1);
     }
 }
 
-// Initialize Competition System (Phase 2)
-async function initializeCompetitionSystem() {
+// Check for existing trader profile
+async function checkExistingTrader() {
     try {
-        console.log('🏁 Initializing Competition System (Phase 2)...');
+        document.getElementById('traderStatusIcon').textContent = '🔍';
+        document.getElementById('traderStatusText').textContent = 'Checking for existing profile...';
         
-        if (window.initializeCompetitionSystem && typeof window.initializeCompetitionSystem === 'function') {
-            await window.initializeCompetitionSystem();
-            console.log('✅ Competition system initialized successfully');
-            return true;
+        // Check if user already has a profile
+        const existingProfile = walletService.getUserProfile();
+        
+        // Also check database if not demo mode
+        let dbProfile = null;
+        if (!walletService.isDemo && window.supabaseClient) {
+            dbProfile = await window.supabaseClient.getOrCreateUser(walletService.publicKey);
+        }
+        
+        const hasProfile = existingProfile || dbProfile;
+        
+        if (hasProfile) {
+            // User already has a profile
+            document.getElementById('traderStatusIcon').textContent = '✅';
+            document.getElementById('traderStatusText').textContent = 'Existing profile found!';
+            
+            // Show continue button
+            const continueBtn = document.getElementById('continueBtn');
+            continueBtn.textContent = 'Continue to App';
+            continueBtn.onclick = () => completeLoginFlow(hasProfile);
+            
         } else {
-            console.warn('⚠️ Competition system not available');
-            return false;
+            // New user - needs to create profile
+            document.getElementById('traderStatusIcon').textContent = '👤';
+            document.getElementById('traderStatusText').textContent = 'New user - create your profile';
+            
+            // Show create profile button
+            const continueBtn = document.getElementById('continueBtn');
+            continueBtn.textContent = 'Create Profile';
+            continueBtn.onclick = () => goToStep(3);
         }
+        
+        // Show action buttons
+        document.getElementById('confirmationActions').style.display = 'flex';
+        
     } catch (error) {
-        console.error('❌ Competition system initialization failed:', error);
-        return false;
+        console.error('Error checking existing trader:', error);
+        document.getElementById('traderStatusIcon').textContent = '⚠️';
+        document.getElementById('traderStatusText').textContent = 'Error checking profile';
+        
+        // Default to profile creation
+        const continueBtn = document.getElementById('continueBtn');
+        continueBtn.textContent = 'Create Profile';
+        continueBtn.onclick = () => goToStep(3);
+        document.getElementById('confirmationActions').style.display = 'flex';
     }
 }
 
-// Start system health monitoring
-function startSystemHealthMonitoring() {
-    if (systemHealthInterval) {
-        clearInterval(systemHealthInterval);
-    }
-    
-    systemHealthInterval = setInterval(async () => {
-        try {
-            await checkSystemHealth();
-        } catch (error) {
-            console.error('System health check failed:', error);
-        }
-    }, 60000); // Check every minute
-    
-    console.log('✅ System health monitoring started');
+// Continue from confirmation step
+function continueFromConfirmation() {
+    // This function is now handled by the dynamic button onclick
+    console.log('Continue from confirmation called - handled by dynamic button');
 }
 
-// Check system health
-async function checkSystemHealth() {
+// Complete login flow for existing users
+async function completeLoginFlow(profile) {
     try {
-        let healthStatus = {
-            database: 'unknown',
-            tokenService: 'unknown',
-            priceService: 'unknown',
-            timestamp: new Date().toISOString()
-        };
+        console.log('👤 Completing login flow for existing user');
         
-        // Check database health
-        if (supabaseClient) {
-            try {
-                const testResult = await window.supabaseClient.testConnection();
-                healthStatus.database = testResult ? 'healthy' : 'degraded';
-            } catch (error) {
-                healthStatus.database = 'error';
-            }
-        }
+        // Set connected user
+        connectedUser = profile;
         
-        // Check TokenService health
-        if (tokenService && tokenService.isReady()) {
-            healthStatus.tokenService = 'healthy';
-        } else {
-            healthStatus.tokenService = 'error';
-        }
+        // Update UI for connected state
+        updateUIForConnectedUser();
         
-        // Check PriceService health
-        if (priceService && priceService.isReady()) {
-            healthStatus.priceService = 'healthy';
-        } else {
-            healthStatus.priceService = 'error';
-        }
+        // Close modal
+        closeWalletModal();
         
-        // Update status indicators
-        if (healthStatus.database === 'healthy') {
-            updateDbStatus('connected', '✅ Database: Connected');
-        } else {
-            updateDbStatus('disconnected', '❌ Database: ' + healthStatus.database);
-        }
+        showNotification(`Welcome back, ${profile.username || 'Trader'}!`, 'success');
         
-        if (healthStatus.tokenService === 'healthy' && healthStatus.priceService === 'healthy') {
-            updateTokenStatus('✅ Services: Active');
-        } else {
-            updateTokenStatus('⚠️ Services: ' + (healthStatus.tokenService === 'error' || healthStatus.priceService === 'error' ? 'Error' : 'Degraded'));
-        }
-        
-        return healthStatus;
     } catch (error) {
-        console.error('Health check error:', error);
-        updateDbStatus('disconnected', '❌ Database: Error');
-        updateTokenStatus('❌ Services: Error');
-        return { error: error.message };
-    }
-}
-
-// Start background services (Phase 2)
-function startBackgroundServices() {
-    console.log('⚙️ Starting background services (Phase 2)...');
-    
-    try {
-        // Token data refresh every 2 hours
-        if (tokenService) {
-            tokenUpdateInterval = setInterval(async () => {
-                try {
-                    console.log('🔄 Background token refresh...');
-                    await tokenService.refreshTokenData();
-                } catch (error) {
-                    console.error('Background token refresh failed:', error);
-                }
-            }, 2 * 60 * 60 * 1000); // 2 hours
-        }
-        
-        // Price updates every 5 minutes for active tokens
-        if (priceService) {
-            priceUpdateInterval = setInterval(async () => {
-                try {
-                    if (priceService.shouldRefreshPrices()) {
-                        console.log('💰 Background price refresh...');
-                        await priceService.updatePrices();
-                    }
-                } catch (error) {
-                    console.error('Background price refresh failed:', error);
-                }
-            }, 5 * 60 * 1000); // 5 minutes
-        }
-        
-        // Competition status updates every 30 seconds
-        competitionStatusInterval = setInterval(async () => {
-            try {
-                if (window.updateCompetitionsDisplay && typeof window.updateCompetitionsDisplay === 'function') {
-                    // Only update if markets section is visible
-                    const marketsSection = document.getElementById('markets');
-                    if (marketsSection && marketsSection.style.display !== 'none') {
-                        await window.updateCompetitionsDisplay();
-                    }
-                }
-            } catch (error) {
-                console.error('Competition status update failed:', error);
-            }
-        }, 30 * 1000); // 30 seconds
-        
-        console.log('✅ Background services started:');
-        console.log('   🪙 Token refresh: Every 2 hours');
-        console.log('   💰 Price updates: Every 5 minutes');
-        console.log('   🏁 Competition status: Every 30 seconds');
-        console.log('   🔍 Health monitoring: Every 1 minute');
-        
-        return true;
-    } catch (error) {
-        console.error('Background services error:', error);
-        return false;
+        console.error('Error completing login flow:', error);
+        showNotification('Error loading profile', 'error');
     }
 }
 
 // ==============================================
-// UI HELPER FUNCTIONS
+// USER PROFILE CREATION (REAL IMPLEMENTATION)
+// ==============================================
+
+// Validate username input (real-time)
+async function validateUsernameInput() {
+    const usernameInput = document.getElementById('traderUsername');
+    const createProfileBtn = document.getElementById('createProfileBtn');
+    
+    if (!usernameInput || !walletService) return;
+    
+    const username = usernameInput.value.trim();
+    
+    // Clear previous validation styling
+    usernameInput.classList.remove('valid', 'invalid');
+    
+    if (username.length === 0) {
+        usernameValidation = { valid: false, message: '' };
+        createProfileBtn.disabled = true;
+        return;
+    }
+    
+    try {
+        // Validate format
+        const formatValidation = walletService.validateUsername(username);
+        
+        if (!formatValidation.valid) {
+            usernameValidation = { valid: false, message: formatValidation.errors[0] };
+            usernameInput.classList.add('invalid');
+            createProfileBtn.disabled = true;
+            
+            // Show error below input
+            showUsernameError(formatValidation.errors[0]);
+            return;
+        }
+        
+        // Check availability
+        const availability = await walletService.checkUsernameAvailability(username);
+        
+        if (!availability.available) {
+            usernameValidation = { valid: false, message: availability.error };
+            usernameInput.classList.add('invalid');
+            createProfileBtn.disabled = true;
+            showUsernameError(availability.error);
+            return;
+        }
+        
+        // Valid username
+        usernameValidation = { valid: true, message: 'Username available!' };
+        usernameInput.classList.add('valid');
+        createProfileBtn.disabled = false;
+        clearUsernameError();
+        
+        // Update preview
+        updateTraderPreview();
+        
+    } catch (error) {
+        console.error('Username validation error:', error);
+        usernameValidation = { valid: false, message: 'Could not validate username' };
+        usernameInput.classList.add('invalid');
+        createProfileBtn.disabled = true;
+        showUsernameError('Could not validate username');
+    }
+}
+
+// Show username error
+function showUsernameError(message) {
+    let errorDiv = document.querySelector('.username-error');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'username-error';
+        errorDiv.style.color = '#ef4444';
+        errorDiv.style.fontSize = '0.75rem';
+        errorDiv.style.marginTop = '0.25rem';
+        
+        const usernameInput = document.getElementById('traderUsername');
+        usernameInput.parentNode.appendChild(errorDiv);
+    }
+    errorDiv.textContent = message;
+}
+
+// Clear username error
+function clearUsernameError() {
+    const errorDiv = document.querySelector('.username-error');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+// Update trader preview
+function updateTraderPreview() {
+    const usernameInput = document.getElementById('traderUsername');
+    const previewName = document.getElementById('previewName');
+    const previewAvatar = document.getElementById('previewAvatar');
+    const createProfileBtn = document.getElementById('createProfileBtn');
+    
+    if (usernameInput && previewName) {
+        const username = usernameInput.value.trim();
+        previewName.textContent = username || 'Trader Username';
+    }
+    
+    if (previewAvatar) {
+        previewAvatar.textContent = selectedAvatar;
+    }
+    
+    // Enable/disable create profile button
+    if (createProfileBtn) {
+        createProfileBtn.disabled = !usernameValidation.valid || !agreementAccepted;
+    }
+}
+
+// Select avatar
+function selectAvatar(emoji) {
+    console.log('🎭 Avatar selected:', emoji);
+    
+    selectedAvatar = emoji;
+    
+    // Update avatar grid selection
+    const avatarOptions = document.querySelectorAll('.avatar-option');
+    avatarOptions.forEach(option => {
+        option.classList.remove('selected');
+        if (option.textContent === emoji) {
+            option.classList.add('selected');
+        }
+    });
+    
+    updateTraderPreview();
+}
+
+// Toggle agreement
+function toggleAgreement() {
+    agreementAccepted = !agreementAccepted;
+    
+    const checkbox = document.getElementById('agreementCheckbox');
+    const finalizeBtn = document.getElementById('finalizeBtn');
+    
+    if (checkbox) {
+        checkbox.classList.toggle('checked', agreementAccepted);
+        checkbox.innerHTML = agreementAccepted ? '✓' : '';
+    }
+    
+    if (finalizeBtn) {
+        finalizeBtn.disabled = !agreementAccepted;
+    }
+    
+    console.log('📋 Agreement toggled:', agreementAccepted);
+}
+
+// Finalize profile creation
+async function finalizeProfile() {
+    if (!agreementAccepted) {
+        showNotification('Please accept the terms to continue', 'warning');
+        return;
+    }
+    
+    if (!usernameValidation.valid) {
+        showNotification('Please enter a valid username', 'warning');
+        return;
+    }
+    
+    try {
+        console.log('✅ Finalizing profile creation...');
+        
+        const usernameInput = document.getElementById('traderUsername');
+        const username = usernameInput.value.trim();
+        
+        // Create profile using wallet service
+        const profile = await walletService.createUserProfile(username, selectedAvatar);
+        
+        console.log('✅ Profile created successfully:', profile);
+        
+        // Move to success step
+        goToStep(5);
+        
+        // Update success display
+        const successTitle = document.querySelector('.success-title');
+        if (successTitle) {
+            successTitle.textContent = `Welcome to TokenWars, ${username}!`;
+        }
+        
+    } catch (error) {
+        console.error('Profile creation error:', error);
+        showNotification(`Failed to create profile: ${error.message}`, 'error');
+    }
+}
+
+// Complete onboarding
+async function completedOnboarding() {
+    try {
+        console.log('🎉 Completing onboarding...');
+        
+        // Get the created profile
+        const profile = walletService.getUserProfile();
+        
+        if (profile) {
+            connectedUser = profile;
+            
+            // Update UI for connected state
+            updateUIForConnectedUser();
+            
+            // Close modal
+            closeWalletModal();
+            
+            showNotification(`Welcome to TokenWars, ${profile.username}!`, 'success');
+            
+            // Navigate to markets
+            setTimeout(() => {
+                showMarkets();
+            }, 1000);
+        } else {
+            throw new Error('Profile not found after creation');
+        }
+        
+    } catch (error) {
+        console.error('Onboarding completion error:', error);
+        showNotification('Error completing setup', 'error');
+    }
+}
+
+// ==============================================
+// WALLET CONNECTION HANDLERS
+// ==============================================
+
+// Handle successful wallet connection
+async function handleWalletConnectionSuccess(connectionData) {
+    try {
+        console.log('🎉 Handling successful wallet connection');
+        
+        // Update wallet status display
+        updateWalletStatusDisplay();
+        
+        // Get or create user profile
+        const profile = walletService.getUserProfile();
+        
+        if (profile) {
+            connectedUser = profile;
+            updateUIForConnectedUser();
+        }
+        
+    } catch (error) {
+        console.error('Error handling wallet connection success:', error);
+    }
+}
+
+// Handle wallet disconnection
+function handleWalletDisconnection() {
+    console.log('👋 Handling wallet disconnection');
+    
+    connectedUser = null;
+    updateUIForDisconnectedUser();
+    updateWalletStatusDisplay();
+    
+    showNotification('Wallet disconnected', 'info');
+}
+
+// Handle profile creation
+function handleProfileCreated(profile) {
+    console.log('👤 Profile created:', profile);
+    connectedUser = profile;
+}
+
+// Real disconnect wallet function
+async function disconnectWallet() {
+    console.log('🔌 Disconnecting wallet...');
+    
+    if (!walletService) {
+        console.warn('WalletService not available');
+        return;
+    }
+    
+    try {
+        const result = await walletService.disconnectWallet();
+        
+        if (result.success) {
+            console.log('✅ Wallet disconnected successfully');
+            // Event handler will update UI
+        } else {
+            throw new Error(result.error);
+        }
+        
+    } catch (error) {
+        console.error('Disconnect error:', error);
+        showNotification('Error disconnecting wallet', 'error');
+    }
+}
+
+// ==============================================
+// UI UPDATE FUNCTIONS
+// ==============================================
+
+// Update wallet status display
+function updateWalletStatusDisplay() {
+    if (!walletService) return;
+    
+    const status = walletService.getConnectionStatus();
+    
+    // Update header elements
+    const connectBtn = document.getElementById('connectWalletBtn');
+    const traderInfo = document.getElementById('traderInfo');
+    const navTraderName = document.getElementById('navTraderName');
+    const navTraderAvatar = document.getElementById('navTraderAvatar');
+    
+    if (status.isConnected) {
+        // Hide connect button, show trader info
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (traderInfo) traderInfo.style.display = 'flex';
+        
+        // Update trader display
+        const profile = walletService.getUserProfile();
+        if (profile && navTraderName) {
+            navTraderName.textContent = profile.username;
+        }
+        if (profile && navTraderAvatar) {
+            navTraderAvatar.textContent = profile.avatar;
+        }
+        
+        // Update balance if element exists
+        updateBalanceDisplay(status.formattedBalance);
+        
+    } else {
+        // Show connect button, hide trader info
+        if (connectBtn) connectBtn.style.display = 'block';
+        if (traderInfo) traderInfo.style.display = 'none';
+    }
+}
+
+// Update balance display
+function updateBalanceDisplay(formattedBalance) {
+    const balanceElements = document.querySelectorAll('.wallet-balance, .trader-balance');
+    balanceElements.forEach(element => {
+        if (element) {
+            element.textContent = formattedBalance + ' SOL';
+        }
+    });
+}
+
+function updateUIForConnectedUser() {
+    console.log('👤 Updating UI for connected user');
+    
+    try {
+        const elementsToHide = [
+            'heroDisconnected',
+            'connectWalletBtn'
+        ];
+        
+        elementsToHide.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = 'none';
+            }
+        });
+        
+        const elementsToShow = [
+            { id: 'heroConnected', display: 'block' },
+            { id: 'traderInfo', display: 'flex' },
+            { id: 'mainContent', display: 'block' }
+        ];
+        
+        elementsToShow.forEach(({ id, display }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = display;
+            }
+        });
+        
+        const navTraderName = document.getElementById('navTraderName');
+        const navTraderAvatar = document.getElementById('navTraderAvatar');
+        const heroTraderNameText = document.getElementById('heroTraderNameText');
+        
+        if (connectedUser) {
+            if (navTraderName) navTraderName.textContent = connectedUser.username;
+            if (heroTraderNameText) heroTraderNameText.textContent = connectedUser.username;
+            if (navTraderAvatar) navTraderAvatar.textContent = connectedUser.avatar || '🎯';
+        }
+        
+        console.log('✅ UI updated for connected user:', connectedUser?.username || 'Unknown');
+        
+        setTimeout(() => {
+            showMarkets();
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Error updating UI for connected user:', error);
+    }
+}
+
+function updateUIForDisconnectedUser() {
+    console.log('👤 Updating UI for disconnected user');
+    
+    try {
+        const elementsToShow = [
+            { id: 'heroDisconnected', display: 'block' },
+            { id: 'connectWalletBtn', display: 'block' }
+        ];
+        
+        elementsToShow.forEach(({ id, display }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = display;
+            }
+        });
+        
+        const elementsToHide = [
+            'heroConnected',
+            'traderInfo',
+            'mainContent'
+        ];
+        
+        elementsToHide.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = 'none';
+            }
+        });
+        
+        console.log('✅ UI updated for disconnected user');
+        
+    } catch (error) {
+        console.error('❌ Error updating UI for disconnected user:', error);
+    }
+}
+
+// ==============================================
+// MODAL HELPER FUNCTIONS
+// ==============================================
+
+function resetModal() {
+    console.log('🔄 Resetting modal');
+    currentStep = 1;
+    selectedAvatar = '🎯';
+    agreementAccepted = false;
+    usernameValidation = { valid: false, message: '' };
+    
+    // Reset form inputs
+    const usernameInput = document.getElementById('traderUsername');
+    if (usernameInput) {
+        usernameInput.value = '';
+        usernameInput.classList.remove('valid', 'invalid');
+    }
+    
+    // Reset avatar selection
+    const avatarOptions = document.querySelectorAll('.avatar-option');
+    avatarOptions.forEach(option => {
+        option.classList.remove('selected');
+        if (option.textContent === '🎯') {
+            option.classList.add('selected');
+        }
+    });
+    
+    // Reset agreement
+    const checkbox = document.getElementById('agreementCheckbox');
+    if (checkbox) {
+        checkbox.classList.remove('checked');
+        checkbox.innerHTML = '';
+    }
+    
+    // Clear errors
+    clearUsernameError();
+    
+    // Reset modal title
+    updateModalTitle('Connect Wallet', 'Choose your preferred Solana wallet to get started');
+}
+
+function updateModalTitle(title, subtitle) {
+    const titleElement = document.getElementById('modalTitle');
+    const subtitleElement = document.getElementById('modalSubtitle');
+    
+    if (titleElement) titleElement.textContent = title;
+    if (subtitleElement) subtitleElement.textContent = subtitle;
+}
+
+// ==============================================
+// HELPER FUNCTIONS (UNCHANGED)
 // ==============================================
 
 function setupUIEventListeners() {
@@ -585,7 +1124,26 @@ function setupUIEventListeners() {
         });
     });
     
+    // Add real-time username validation
+    const usernameInput = document.getElementById('traderUsername');
+    if (usernameInput) {
+        usernameInput.addEventListener('input', debounce(validateUsernameInput, 500));
+    }
+    
     console.log('✅ UI event listeners set up');
+}
+
+// Debounce function for input validation
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 function showConnectWalletPrompt(containerId, title, description) {
@@ -602,59 +1160,8 @@ function showConnectWalletPrompt(containerId, title, description) {
     }
 }
 
-function updateUIForConnectedUser() {
-    console.log('👤 Updating UI for connected user');
-    
-    try {
-        const elementsToHide = [
-            'heroDisconnected',
-            'connectWalletBtn'
-        ];
-        
-        elementsToHide.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.style.display = 'none';
-            }
-        });
-        
-        const elementsToShow = [
-            { id: 'heroConnected', display: 'block' },
-            { id: 'traderInfo', display: 'flex' },
-            { id: 'mainContent', display: 'block' }
-        ];
-        
-        elementsToShow.forEach(({ id, display }) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.style.display = display;
-            }
-        });
-        
-        const navTraderName = document.getElementById('navTraderName');
-        const navTraderAvatar = document.getElementById('navTraderAvatar');
-        const heroTraderNameText = document.getElementById('heroTraderNameText');
-        
-        if (connectedUser) {
-            if (navTraderName) navTraderName.textContent = connectedUser.username;
-            if (heroTraderNameText) heroTraderNameText.textContent = connectedUser.username;
-        }
-        
-        if (navTraderAvatar) navTraderAvatar.textContent = selectedAvatar;
-        
-        console.log('✅ UI updated for connected user:', connectedUser?.username || 'Unknown');
-        
-        setTimeout(() => {
-            showMarkets();
-        }, 500);
-        
-    } catch (error) {
-        console.error('❌ Error updating UI for connected user:', error);
-    }
-}
-
 // ==============================================
-// STATUS UPDATE FUNCTIONS
+// STATUS UPDATE FUNCTIONS (UNCHANGED)
 // ==============================================
 
 function updateDbStatus(status, message) {
@@ -670,7 +1177,6 @@ function updateTokenStatus(message) {
     if (statusElement) {
         statusElement.textContent = message;
         
-        // Update class based on message
         if (message.includes('✅')) {
             statusElement.className = 'db-status connected';
         } else if (message.includes('⚠️')) {
@@ -682,71 +1188,140 @@ function updateTokenStatus(message) {
 }
 
 // ==============================================
-// PLACEHOLDER FUNCTIONS (TO BE IMPLEMENTED)
+// BACKGROUND SERVICES (UNCHANGED)
 // ==============================================
 
-function updateWalletStatus() {
-    const wallets = {
-        phantom: window.phantom?.solana,
-        solflare: window.solflare,
-        backpack: window.backpack
-    };
+function startSystemHealthMonitoring() {
+    if (systemHealthInterval) {
+        clearInterval(systemHealthInterval);
+    }
     
-    Object.entries(wallets).forEach(([name, provider]) => {
-        const statusElement = document.getElementById(`${name}Status`);
-        if (statusElement) {
-            statusElement.textContent = provider ? '✓ Installed' : '⚠ Not Installed';
-            statusElement.style.color = provider ? '#22c55e' : '#f59e0b';
+    systemHealthInterval = setInterval(async () => {
+        try {
+            await checkSystemHealth();
+        } catch (error) {
+            console.error('System health check failed:', error);
         }
-    });
+    }, 60000);
+    
+    console.log('✅ System health monitoring started');
 }
 
-async function selectWallet(walletType) {
-    console.log('🔗 Wallet selection placeholder:', walletType);
-    showNotification('Wallet connection will be implemented in Phase 3', 'info');
+async function checkSystemHealth() {
+    try {
+        let healthStatus = {
+            database: 'unknown',
+            tokenService: 'unknown',
+            priceService: 'unknown',
+            walletService: 'unknown',
+            timestamp: new Date().toISOString()
+        };
+        
+        if (supabaseClient) {
+            try {
+                const testResult = await window.supabaseClient.testConnection();
+                healthStatus.database = testResult ? 'healthy' : 'degraded';
+            } catch (error) {
+                healthStatus.database = 'error';
+            }
+        }
+        
+        if (tokenService && tokenService.isReady()) {
+            healthStatus.tokenService = 'healthy';
+        } else {
+            healthStatus.tokenService = 'error';
+        }
+        
+        if (priceService && priceService.isReady()) {
+            healthStatus.priceService = 'healthy';
+        } else {
+            healthStatus.priceService = 'error';
+        }
+        
+        if (walletService && walletService.isReady()) {
+            healthStatus.walletService = 'healthy';
+        } else {
+            healthStatus.walletService = 'error';
+        }
+        
+        // Update status indicators
+        if (healthStatus.database === 'healthy') {
+            updateDbStatus('connected', '✅ Database: Connected');
+        } else {
+            updateDbStatus('disconnected', '❌ Database: ' + healthStatus.database);
+        }
+        
+        if (healthStatus.tokenService === 'healthy' && healthStatus.priceService === 'healthy') {
+            updateTokenStatus('✅ Services: Active');
+        } else {
+            updateTokenStatus('⚠️ Services: Degraded');
+        }
+        
+        return healthStatus;
+    } catch (error) {
+        console.error('Health check error:', error);
+        updateDbStatus('disconnected', '❌ Database: Error');
+        updateTokenStatus('❌ Services: Error');
+        return { error: error.message };
+    }
 }
 
-function resetModal() {
-    console.log('🔄 Modal reset placeholder');
-    currentStep = 1;
-    selectedAvatar = '🎯';
-    agreementAccepted = false;
+function startBackgroundServices() {
+    console.log('⚙️ Starting background services...');
+    
+    try {
+        if (tokenService) {
+            tokenUpdateInterval = setInterval(async () => {
+                try {
+                    console.log('🔄 Background token refresh...');
+                    await tokenService.refreshTokenData();
+                } catch (error) {
+                    console.error('Background token refresh failed:', error);
+                }
+            }, 2 * 60 * 60 * 1000);
+        }
+        
+        if (priceService) {
+            priceUpdateInterval = setInterval(async () => {
+                try {
+                    if (priceService.shouldRefreshPrices()) {
+                        console.log('💰 Background price refresh...');
+                        await priceService.updatePrices();
+                    }
+                } catch (error) {
+                    console.error('Background price refresh failed:', error);
+                }
+            }, 5 * 60 * 1000);
+        }
+        
+        competitionStatusInterval = setInterval(async () => {
+            try {
+                if (window.updateCompetitionsDisplay && typeof window.updateCompetitionsDisplay === 'function') {
+                    const marketsSection = document.getElementById('markets');
+                    if (marketsSection && marketsSection.style.display !== 'none') {
+                        await window.updateCompetitionsDisplay();
+                    }
+                }
+            } catch (error) {
+                console.error('Competition status update failed:', error);
+            }
+        }, 30 * 1000);
+        
+        console.log('✅ Background services started');
+        return true;
+    } catch (error) {
+        console.error('Background services error:', error);
+        return false;
+    }
 }
 
-function continueFromConfirmation() {
-    console.log('➡️ Continue from confirmation placeholder');
-}
-
-function updateTraderPreview() {
-    console.log('👤 Update trader preview placeholder');
-}
-
-function selectAvatar(emoji) {
-    console.log('🎭 Select avatar placeholder:', emoji);
-    selectedAvatar = emoji;
-}
-
-function toggleAgreement() {
-    console.log('📋 Toggle agreement placeholder');
-    agreementAccepted = !agreementAccepted;
-}
-
-function finalizeProfile() {
-    console.log('✅ Finalize profile placeholder');
-}
-
-function completedOnboarding() {
-    console.log('🎉 Completed onboarding placeholder');
-}
-
-function disconnectWallet() {
-    console.log('🔌 Disconnect wallet placeholder');
-}
+// ==============================================
+// PLACEHOLDER CONTENT LOADERS
+// ==============================================
 
 function loadActiveCompetitions() {
     console.log('📊 Loading active competitions with real services...');
     
-    // The competition system will handle this automatically
     if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
         window.loadRealCompetitions();
     } else {
@@ -758,7 +1333,7 @@ function loadActiveCompetitions() {
 }
 
 function loadUserPortfolio() {
-    console.log('💼 Loading portfolio placeholder');
+    console.log('💼 Loading portfolio...');
     const portfolioContent = document.getElementById('portfolio-content');
     if (portfolioContent) {
         portfolioContent.innerHTML = '<div class="loading">Loading portfolio...</div>';
@@ -766,7 +1341,7 @@ function loadUserPortfolio() {
 }
 
 function loadLeaderboard() {
-    console.log('🏆 Loading leaderboard placeholder');
+    console.log('🏆 Loading leaderboard...');
     const leaderboardContent = document.getElementById('leaderboard-content');
     if (leaderboardContent) {
         leaderboardContent.innerHTML = '<div class="loading">Loading leaderboard...</div>';
@@ -780,8 +1355,32 @@ function loadLeaderboard() {
 function showNotification(message, type = 'info') {
     console.log(`📢 [${type.toUpperCase()}] ${message}`);
     
-    // TODO: Implement visual notifications
-    // For now, just log to console
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        z-index: 9999;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
 function showErrorNotification(message) {
@@ -795,7 +1394,6 @@ function showErrorNotification(message) {
 function cleanup() {
     console.log('🧹 Cleaning up application...');
     
-    // Clear intervals
     if (tokenUpdateInterval) {
         clearInterval(tokenUpdateInterval);
         tokenUpdateInterval = null;
@@ -816,7 +1414,6 @@ function cleanup() {
         systemHealthInterval = null;
     }
     
-    // Cleanup services
     if (tokenService && typeof tokenService.cleanup === 'function') {
         tokenService.cleanup();
     }
@@ -825,10 +1422,13 @@ function cleanup() {
         priceService.cleanup();
     }
     
+    if (walletService && typeof walletService.cleanup === 'function') {
+        walletService.cleanup();
+    }
+    
     console.log('✅ Application cleanup complete');
 }
 
-// Handle page unload
 window.addEventListener('beforeunload', cleanup);
 
 // ==============================================
@@ -844,7 +1444,7 @@ window.app = {
     hideAllSections,
     updateActiveNavLink,
     
-    // Wallet functions
+    // Wallet functions (now real)
     openWalletModal,
     closeWalletModal,
     selectWallet,
@@ -857,6 +1457,7 @@ window.app = {
     // Service access
     getTokenService: () => tokenService,
     getPriceService: () => priceService,
+    getWalletService: () => walletService,
     getSupabaseClient: () => supabaseClient,
     
     // Utility functions
@@ -866,15 +1467,15 @@ window.app = {
     
     // State getters
     getCurrentUser: () => connectedUser,
-    getConnectedWallet: () => connectedWallet
+    getWalletStatus: () => walletService?.getConnectionStatus() || { isConnected: false }
 };
 
-console.log('📱 App.js Phase 2 integration loaded - Real Services Framework ready');
-console.log('🎯 Phase 2 Features Available:');
-console.log('   ✅ Complete navigation system (Markets, Leaderboard, Portfolio)');
-console.log('   ✅ Real TokenService with Jupiter API integration');
-console.log('   ✅ Real PriceService with CoinGecko API integration');
-console.log('   ✅ Real-time competition system with live token data');
-console.log('   ✅ Background services and health monitoring');
-console.log('   ✅ Database integration and caching');
-console.log('   📋 Next: Phase 3 will add wallet connection functionality');
+console.log('📱 App.js Phase 3 integration complete - Real Wallet System ready');
+console.log('🎯 Phase 3 Features Available:');
+console.log('   ✅ Complete multi-wallet support (Phantom, Solflare, Backpack, Demo)');
+console.log('   ✅ Real wallet connection and session persistence');
+console.log('   ✅ User profile creation with validation and database storage');
+console.log('   ✅ SOL balance tracking and display');
+console.log('   ✅ Real-time username validation with profanity filtering');
+console.log('   ✅ Seamless integration with existing token services');
+console.log('   ✅ Complete onboarding flow from wallet connection to app usage');
