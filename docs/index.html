@@ -447,7 +447,9 @@
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
-    <script src="app.js"></script>
+    <script src="token-service.js"></script>    <!-- ✅ Load TokenService first -->
+    <script src="price-service.js"></script>    <!-- ✅ Load PriceService first -->
+    <script src="app.js"></script>              <!-- ✅ Now can use services -->
     <script src="user.js"></script>
     <script src="competition.js"></script>
     
