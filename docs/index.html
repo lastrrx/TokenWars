@@ -443,13 +443,13 @@
         console.log('✅ Configuration loaded');
     </script>
     
-    <!-- Load core application files -->
+    <!-- Load core application files in FIXED order -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
-    <script src="token-service.js"></script>    <!-- ✅ Load TokenService first -->
-    <script src="price-service.js"></script>    <!-- ✅ Load PriceService first -->
-    <script src="app.js"></script>              <!-- ✅ Now can use services -->
+    <script src="token-service.js"></script>  <!-- ✅ ADDED: Load TokenService before app.js -->
+    <script src="price-service.js"></script>  <!-- ✅ ADDED: Load PriceService before app.js -->
+    <script src="app.js"></script>
     <script src="user.js"></script>
     <script src="competition.js"></script>
     
@@ -470,11 +470,12 @@
         
         // Test navigation functions immediately
         setTimeout(() => {
-            console.log('🧪 Testing navigation functions...');
+            console.log('🧪 Testing Phase 1 navigation functions...');
             console.log('showMarkets available:', typeof window.showMarkets);
             console.log('showLeaderboard available:', typeof window.showLeaderboard);
             console.log('showPortfolio available:', typeof window.showPortfolio);
             console.log('openWalletModal available:', typeof window.openWalletModal);
+            console.log('✅ Phase 1 navigation test complete - Ready for user interaction!');
         }, 1000);
     </script>
 </body>
