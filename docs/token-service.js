@@ -1,5 +1,5 @@
-// TokenService - Cache-Aware Version with Singleton Pattern
-// Fixed circular dependency in initialization
+// TokenService - Cache-Aware Version with Singleton Pattern and Enhanced Debugging
+// Fixed circular dependency in initialization + Enhanced debugging for Phase 3
 
 class TokenService {
     constructor() {
@@ -51,33 +51,38 @@ class TokenService {
             console.log('TokenService: Starting initialization...');
             
             // Step 1: Try to load from cache-first edge function
+            console.log('🔄 Step 1: Loading tokens from cache...');
             await this.loadTokensFromCache();
             
             // Step 2: If cache is empty, create demo tokens as fallback
             if (this.tokens.length === 0) {
-                console.log('Cache empty, loading demo tokens as fallback...');
+                console.log('🔄 Step 2: Cache empty, loading demo tokens as fallback...');
                 this.tokens = this.createDemoTokens();
                 this.cacheStatus = 'demo_fallback';
             }
             
             // Step 3: Generate token pairs - NO RECURSIVE CALLS
+            console.log('🔄 Step 3: Generating token pairs...');
             this.tokenPairs = this.generateDemoTokenPairs(); // Use demo pairs during initialization
             
             // Step 4: Mark as initialized BEFORE starting background tasks
+            console.log('🔄 Step 4: Finalizing initialization...');
             this.lastUpdate = new Date();
             this.isInitialized = true;
             this.isInitializing = false;
             
-            console.log(`TokenService initialized: ${this.tokens.length} tokens, ${this.tokenPairs.length} pairs, status: ${this.cacheStatus}`);
+            console.log(`✅ TokenService initialized: ${this.tokens.length} tokens, ${this.tokenPairs.length} pairs, status: ${this.cacheStatus}`);
             
             // Step 5: Start background refresh cycle (only once) - AFTER initialization
             if (!this.updateInterval) {
+                console.log('🔄 Step 5: Starting background refresh...');
                 this.startBackgroundRefresh();
             }
             
             return true;
         } catch (error) {
-            console.error('TokenService initialization failed:', error);
+            console.error('❌ TokenService initialization failed:', error);
+            console.error('Error stack:', error.stack);
             
             // Emergency fallback to demo data
             this.tokens = this.createDemoTokens();
@@ -118,6 +123,8 @@ class TokenService {
             }
 
             const data = await response.json();
+            console.log('📦 Edge function response:', data);
+            console.log('📊 Response structure:', Object.keys(data));
             
             if (data.success && data.tokens && data.tokens.length > 0) {
                 this.tokens = data.tokens.map(token => ({
@@ -128,9 +135,11 @@ class TokenService {
                 
                 this.cacheStatus = data.source || 'cache';
                 console.log(`✅ Loaded ${this.tokens.length} tokens from ${this.cacheStatus}`);
+                console.log('🔍 First token sample:', this.tokens[0]);
                 return true;
             } else {
-                console.log('⚠️ Edge function returned no tokens');
+                console.log('⚠️ Edge function returned no tokens or invalid structure');
+                console.log('Full response:', data);
                 return false;
             }
             
