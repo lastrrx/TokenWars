@@ -1,5 +1,5 @@
-// TokenService - Cache-Aware Version with Singleton Pattern and Enhanced Debugging
-// Fixed circular dependency in initialization + Enhanced debugging for Phase 3
+// TokenService - FIXED VERSION - Safe Token Processing Without Spread Operator
+// Resolves initialization hang issue in Phase 3
 
 class TokenService {
     constructor() {
@@ -52,10 +52,10 @@ class TokenService {
             
             // Step 1: Try to load from cache-first edge function
             console.log('🔄 Step 1: Loading tokens from cache...');
-            await this.loadTokensFromCache();
+            const cacheLoaded = await this.loadTokensFromCache();
             
             // Step 2: If cache is empty, create demo tokens as fallback
-            if (this.tokens.length === 0) {
+            if (!cacheLoaded || this.tokens.length === 0) {
                 console.log('🔄 Step 2: Cache empty, loading demo tokens as fallback...');
                 this.tokens = this.createDemoTokens();
                 this.cacheStatus = 'demo_fallback';
@@ -96,7 +96,7 @@ class TokenService {
         }
     }
 
-    // Load tokens from cache-first edge function
+    // FIXED: Load tokens from cache-first edge function with safe processing
     async loadTokensFromCache() {
         try {
             const supabaseUrl = window.SUPABASE_CONFIG?.url;
@@ -123,28 +123,145 @@ class TokenService {
             }
 
             const data = await response.json();
-            console.log('📦 Edge function response:', data);
-            console.log('📊 Response structure:', Object.keys(data));
+            console.log('📦 Edge function response received:', typeof data);
+            console.log('📊 Response keys:', Object.keys(data));
             
-            if (data.success && data.tokens && data.tokens.length > 0) {
-                this.tokens = data.tokens.map(token => ({
-                    ...token,
-                    is_active: true,
-                    last_updated: token.cache_timestamp || new Date().toISOString()
-                }));
+            if (data.success && data.tokens && Array.isArray(data.tokens) && data.tokens.length > 0) {
+                console.log(`🔄 Processing ${data.tokens.length} tokens...`);
+                
+                // SAFE TOKEN PROCESSING - No spread operator
+                this.tokens = this.processTokensSafely(data.tokens);
                 
                 this.cacheStatus = data.source || 'cache';
                 console.log(`✅ Loaded ${this.tokens.length} tokens from ${this.cacheStatus}`);
-                console.log('🔍 First token sample:', this.tokens[0]);
-                return true;
+                
+                if (this.tokens.length > 0) {
+                    console.log('🔍 First token sample:', this.tokens[0]);
+                    return true;
+                } else {
+                    console.log('⚠️ No tokens processed successfully');
+                    return false;
+                }
             } else {
-                console.log('⚠️ Edge function returned no tokens or invalid structure');
-                console.log('Full response:', data);
+                console.log('⚠️ Edge function returned invalid structure or no tokens');
+                console.log('Response structure:', data);
                 return false;
             }
             
         } catch (error) {
             console.error('Error loading tokens from cache:', error);
+            return false;
+        }
+    }
+
+    // NEW: Safe token processing without spread operator
+    processTokensSafely(rawTokens) {
+        const processedTokens = [];
+        const now = new Date().toISOString();
+        
+        console.log(`🔄 Processing ${rawTokens.length} raw tokens safely...`);
+        
+        for (let i = 0; i < rawTokens.length; i++) {
+            try {
+                const rawToken = rawTokens[i];
+                console.log(`Processing token ${i + 1}/${rawTokens.length}:`, rawToken?.symbol || 'Unknown');
+                
+                // EXPLICIT PROPERTY COPYING - NO SPREAD OPERATOR
+                const processedToken = {
+                    // Core identifiers
+                    address: this.extractProperty(rawToken, ['address', 'token_address']),
+                    symbol: this.extractProperty(rawToken, ['symbol']),
+                    name: this.extractProperty(rawToken, ['name']),
+                    
+                    // Logo and display
+                    logoURI: this.extractProperty(rawToken, ['logoURI', 'logo_uri', 'image']),
+                    
+                    // Financial data
+                    market_cap: this.parseNumericValue(this.extractProperty(rawToken, ['market_cap', 'market_cap_usd'])),
+                    price: this.parseNumericValue(this.extractProperty(rawToken, ['price', 'current_price'])),
+                    volume_24h: this.parseNumericValue(this.extractProperty(rawToken, ['volume_24h', 'total_volume'])),
+                    price_change_24h: this.parseNumericValue(this.extractProperty(rawToken, ['price_change_24h'])),
+                    
+                    // Technical data
+                    decimals: parseInt(this.extractProperty(rawToken, ['decimals'])) || 9,
+                    age_days: parseInt(this.extractProperty(rawToken, ['age_days'])) || 0,
+                    liquidity_score: this.parseNumericValue(this.extractProperty(rawToken, ['liquidity_score'])) || 0.5,
+                    
+                    // Status and metadata
+                    is_active: true,
+                    last_updated: this.extractProperty(rawToken, ['cache_timestamp', 'last_updated']) || now,
+                    data_source: this.extractProperty(rawToken, ['data_source']) || 'cache'
+                };
+                
+                // Validate processed token
+                if (this.validateProcessedToken(processedToken)) {
+                    processedTokens.push(processedToken);
+                    console.log(`✅ Token ${i + 1} processed successfully:`, processedToken.symbol);
+                } else {
+                    console.warn(`⚠️ Token ${i + 1} failed validation:`, processedToken.symbol);
+                }
+                
+            } catch (tokenError) {
+                console.error(`❌ Error processing token ${i + 1}:`, tokenError);
+                // Continue with next token
+            }
+        }
+        
+        console.log(`✅ Successfully processed ${processedTokens.length}/${rawTokens.length} tokens`);
+        return processedTokens;
+    }
+
+    // NEW: Safe property extraction helper
+    extractProperty(obj, propertyNames) {
+        if (!obj || typeof obj !== 'object') return null;
+        
+        for (const propName of propertyNames) {
+            try {
+                if (obj.hasOwnProperty(propName) && obj[propName] !== undefined && obj[propName] !== null) {
+                    return obj[propName];
+                }
+            } catch (error) {
+                console.warn(`Error accessing property ${propName}:`, error);
+                continue;
+            }
+        }
+        return null;
+    }
+
+    // NEW: Safe numeric value parsing
+    parseNumericValue(value) {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number' && !isNaN(value)) return value;
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+    }
+
+    // NEW: Validate processed token
+    validateProcessedToken(token) {
+        try {
+            // Check required fields
+            if (!token.address || !token.symbol || !token.name) {
+                console.warn('Token missing required fields:', { address: token.address, symbol: token.symbol, name: token.name });
+                return false;
+            }
+            
+            // Check numeric values
+            if (typeof token.market_cap !== 'number' || token.market_cap < 0) {
+                console.warn('Token has invalid market cap:', token.market_cap);
+                return false;
+            }
+            
+            if (typeof token.price !== 'number' || token.price <= 0) {
+                console.warn('Token has invalid price:', token.price);
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error validating token:', error);
             return false;
         }
     }
@@ -160,11 +277,14 @@ class TokenService {
                 logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
                 market_cap: 45000000000,
                 price: 180.50 + (Math.random() - 0.5) * 10,
+                volume_24h: 2500000000,
+                price_change_24h: (Math.random() - 0.5) * 10,
                 age_days: 1500,
                 liquidity_score: 0.95,
                 is_active: true,
                 last_updated: now,
-                decimals: 9
+                decimals: 9,
+                data_source: 'demo'
             },
             {
                 address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -173,11 +293,14 @@ class TokenService {
                 logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
                 market_cap: 42000000000,
                 price: 1.00 + (Math.random() - 0.5) * 0.02,
+                volume_24h: 3000000000,
+                price_change_24h: (Math.random() - 0.5) * 0.5,
                 age_days: 1200,
                 liquidity_score: 0.98,
                 is_active: true,
                 last_updated: now,
-                decimals: 6
+                decimals: 6,
+                data_source: 'demo'
             },
             {
                 address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
@@ -186,11 +309,14 @@ class TokenService {
                 logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
                 market_cap: 1200000000,
                 price: 195.30 + (Math.random() - 0.5) * 15,
+                volume_24h: 150000000,
+                price_change_24h: (Math.random() - 0.5) * 8,
                 age_days: 800,
                 liquidity_score: 0.85,
                 is_active: true,
                 last_updated: now,
-                decimals: 9
+                decimals: 9,
+                data_source: 'demo'
             },
             {
                 address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
@@ -199,11 +325,14 @@ class TokenService {
                 logoURI: 'https://static.jup.ag/jup/icon.png',
                 market_cap: 1500000000,
                 price: 1.15 + (Math.random() - 0.5) * 0.3,
+                volume_24h: 280000000,
+                price_change_24h: (Math.random() - 0.5) * 12,
                 age_days: 120,
                 liquidity_score: 0.82,
                 is_active: true,
                 last_updated: now,
-                decimals: 6
+                decimals: 6,
+                data_source: 'demo'
             },
             {
                 address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
@@ -212,11 +341,14 @@ class TokenService {
                 logoURI: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
                 market_cap: 900000000,
                 price: 0.000023 + (Math.random() - 0.5) * 0.000005,
+                volume_24h: 120000000,
+                price_change_24h: (Math.random() - 0.5) * 15,
                 age_days: 400,
                 liquidity_score: 0.75,
                 is_active: true,
                 last_updated: now,
-                decimals: 5
+                decimals: 5,
+                data_source: 'demo'
             },
             {
                 address: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
@@ -225,11 +357,14 @@ class TokenService {
                 logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png',
                 market_cap: 850000000,
                 price: 7.85 + (Math.random() - 0.5) * 1.2,
+                volume_24h: 95000000,
+                price_change_24h: (Math.random() - 0.5) * 10,
                 age_days: 600,
                 liquidity_score: 0.78,
                 is_active: true,
                 last_updated: now,
-                decimals: 8
+                decimals: 8,
+                data_source: 'demo'
             }
         ];
     }
@@ -621,4 +756,10 @@ function getTokenService() {
 window.TokenService = TokenService;
 window.getTokenService = getTokenService;
 
-console.log('TokenService class loaded and exposed globally');
+console.log('✅ TokenService (FIXED) class loaded and exposed globally');
+console.log('🔧 Fixed Issues:');
+console.log('   ✅ Removed problematic spread operator');
+console.log('   ✅ Added safe property extraction');
+console.log('   ✅ Enhanced error handling for token processing');
+console.log('   ✅ Explicit property copying prevents circular references');
+console.log('   ✅ Individual token validation with detailed logging');
