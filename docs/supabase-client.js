@@ -1,5 +1,5 @@
 // Supabase Client Initialization and Database Interface
-// FIXED VERSION: Immediate global exposure and better error handling
+// Enhanced with cache management and improved error handling
 
 // Global variables
 let supabase = null;
@@ -39,7 +39,7 @@ async function initializeSupabase() {
         console.log('Supabase client initialized successfully');
         updateDbStatus('connected', 'Database: Connected');
         
-        // Test connection
+        // Test connection with improved error handling
         await testConnection();
         
         return supabase;
@@ -50,28 +50,33 @@ async function initializeSupabase() {
     }
 }
 
-// Test database connection
+// Test database connection with graceful degradation
 async function testConnection() {
     try {
         if (!supabase) {
             throw new Error('Supabase client not initialized');
         }
         
-        // Simple test query - just check if we can connect
+        // Test with a simple query that doesn't depend on specific tables
         const { data, error } = await supabase
             .from('competitions')
             .select('count', { count: 'exact', head: true });
         
         if (error) {
-            console.warn('Database test query failed, but connection might still work:', error);
-            // Don't throw here, as table might not exist yet
+            // Check if it's a table not found error
+            if (error.code === 'PGRST106' || error.message.includes('relation') || error.message.includes('does not exist')) {
+                console.warn('Some database tables may not exist yet, but connection is working:', error.message);
+                return true; // Connection works, just missing tables
+            } else {
+                console.warn('Database test query failed, but connection might still work:', error);
+                return false;
+            }
         }
         
         console.log('Database connection test successful');
         return true;
     } catch (error) {
         console.error('Database connection test failed:', error);
-        // Don't throw here to allow app to continue with basic functionality
         return false;
     }
 }
@@ -86,7 +91,220 @@ function updateDbStatus(status, message) {
 }
 
 // ==============================================
-// USER MANAGEMENT FUNCTIONS
+// CACHE MANAGEMENT FUNCTIONS
+// ==============================================
+
+// Get cached token data with fallback
+async function getCachedTokenData(limit = 50, category = null) {
+    try {
+        if (!supabase) {
+            throw new Error('Database not available');
+        }
+        
+        // Try to get from token_cache first
+        let query = supabase
+            .from('token_cache')
+            .select('*')
+            .gte('cache_expires_at', new Date().toISOString()) // Only fresh cache
+            .eq('cache_status', 'FRESH')
+            .order('market_cap_usd', { ascending: false })
+            .limit(limit);
+
+        const { data: cachedTokens, error: cacheError } = await query;
+
+        if (!cacheError && cachedTokens && cachedTokens.length > 0) {
+            console.log(`✅ Found ${cachedTokens.length} fresh tokens in cache`);
+            return {
+                success: true,
+                tokens: cachedTokens.map(token => ({
+                    address: token.token_address,
+                    symbol: token.symbol,
+                    name: token.name,
+                    logoURI: token.logo_uri,
+                    decimals: 9,
+                    market_cap: token.market_cap_usd,
+                    price: token.current_price,
+                    volume_24h: token.volume_24h,
+                    price_change_24h: token.price_change_24h,
+                    cache_timestamp: token.cache_created_at,
+                    data_source: token.data_source
+                })),
+                source: 'cache'
+            };
+        }
+
+        // Fallback to main tokens table
+        console.log('Cache miss, falling back to main tokens table...');
+        const { data: dbTokens, error: dbError } = await supabase
+            .from('tokens')
+            .select('*')
+            .eq('is_active', true)
+            .order('market_cap', { ascending: false })
+            .limit(limit);
+
+        if (!dbError && dbTokens && dbTokens.length > 0) {
+            console.log(`✅ Found ${dbTokens.length} tokens in main table`);
+            return {
+                success: true,
+                tokens: dbTokens.map(token => ({
+                    address: token.address,
+                    symbol: token.symbol,
+                    name: token.name,
+                    logoURI: token.logo_uri,
+                    decimals: token.decimals || 9,
+                    market_cap: token.market_cap,
+                    price: token.current_price,
+                    volume_24h: token.total_volume,
+                    price_change_24h: token.price_change_24h,
+                    age_days: token.age_days,
+                    last_updated: token.last_updated
+                })),
+                source: 'database'
+            };
+        }
+
+        // No data found anywhere
+        return { success: false, tokens: [], source: 'none' };
+
+    } catch (error) {
+        console.error('Error getting cached token data:', error);
+        return { success: false, tokens: [], source: 'error' };
+    }
+}
+
+// Get cached price data
+async function getCachedPriceData(tokenAddresses) {
+    try {
+        if (!supabase || !tokenAddresses || tokenAddresses.length === 0) {
+            return { success: false, prices: [] };
+        }
+        
+        // Try price_cache first
+        const { data: cachedPrices, error: cacheError } = await supabase
+            .from('price_cache')
+            .select('*')
+            .in('token_address', tokenAddresses)
+            .gte('cache_expires_at', new Date().toISOString())
+            .order('timestamp', { ascending: false });
+
+        if (!cacheError && cachedPrices && cachedPrices.length > 0) {
+            // Get most recent price for each token
+            const latestPrices = new Map();
+            cachedPrices.forEach(price => {
+                const existing = latestPrices.get(price.token_address);
+                if (!existing || new Date(price.timestamp) > new Date(existing.timestamp)) {
+                    latestPrices.set(price.token_address, price);
+                }
+            });
+
+            const prices = Array.from(latestPrices.values()).map(price => ({
+                address: price.token_address,
+                price: parseFloat(price.price),
+                volume: price.volume || 0,
+                market_cap: price.market_cap || 0,
+                timestamp: price.timestamp,
+                source: price.source,
+                confidence: price.confidence_score || 1.0
+            }));
+
+            console.log(`✅ Found ${prices.length} fresh prices in cache`);
+            return { success: true, prices, source: 'cache' };
+        }
+
+        // Fallback to price_history
+        const { data: historyPrices, error: historyError } = await supabase
+            .from('price_history')
+            .select('*')
+            .in('token_address', tokenAddresses)
+            .gte('timestamp', new Date(Date.now() - 3600000).toISOString()) // Last hour
+            .order('timestamp', { ascending: false });
+
+        if (!historyError && historyPrices && historyPrices.length > 0) {
+            const latestPrices = new Map();
+            historyPrices.forEach(price => {
+                const existing = latestPrices.get(price.token_address);
+                if (!existing || new Date(price.timestamp) > new Date(existing.timestamp)) {
+                    latestPrices.set(price.token_address, price);
+                }
+            });
+
+            const prices = Array.from(latestPrices.values()).map(price => ({
+                address: price.token_address,
+                price: parseFloat(price.price),
+                volume: price.volume || 0,
+                market_cap: price.market_cap || 0,
+                timestamp: price.timestamp,
+                source: price.source || 'history',
+                confidence: 0.8
+            }));
+
+            console.log(`✅ Found ${prices.length} prices in history`);
+            return { success: true, prices, source: 'history' };
+        }
+
+        return { success: false, prices: [], source: 'none' };
+
+    } catch (error) {
+        console.error('Error getting cached price data:', error);
+        return { success: false, prices: [], source: 'error' };
+    }
+}
+
+// Get cache health status
+async function getCacheHealthStatus() {
+    try {
+        if (!supabase) {
+            return { available: false, error: 'Database not available' };
+        }
+
+        // Check token cache health
+        const { data: tokenCacheHealth, error: tokenError } = await supabase
+            .from('token_cache')
+            .select('cache_status, cache_created_at, cache_expires_at')
+            .order('cache_created_at', { ascending: false })
+            .limit(100);
+
+        // Check price cache health
+        const { data: priceCacheHealth, error: priceError } = await supabase
+            .from('price_cache')
+            .select('timestamp, cache_expires_at')
+            .order('timestamp', { ascending: false })
+            .limit(100);
+
+        const now = new Date();
+        const health = {
+            available: true,
+            tokenCache: {
+                total: tokenCacheHealth?.length || 0,
+                fresh: tokenCacheHealth?.filter(t => 
+                    t.cache_status === 'FRESH' && new Date(t.cache_expires_at) > now
+                ).length || 0,
+                stale: 0,
+                lastUpdate: tokenCacheHealth?.[0]?.cache_created_at || null
+            },
+            priceCache: {
+                total: priceCacheHealth?.length || 0,
+                fresh: priceCacheHealth?.filter(p => 
+                    new Date(p.cache_expires_at) > now
+                ).length || 0,
+                stale: 0,
+                lastUpdate: priceCacheHealth?.[0]?.timestamp || null
+            }
+        };
+
+        health.tokenCache.stale = health.tokenCache.total - health.tokenCache.fresh;
+        health.priceCache.stale = health.priceCache.total - health.priceCache.fresh;
+
+        return health;
+
+    } catch (error) {
+        console.error('Error getting cache health:', error);
+        return { available: false, error: error.message };
+    }
+}
+
+// ==============================================
+// USER MANAGEMENT FUNCTIONS (IMPROVED)
 // ==============================================
 
 // Set user context for RLS policies
@@ -97,18 +315,27 @@ async function setUserContext(walletAddress, role = 'user') {
             return;
         }
         
-        await supabase.rpc('set_user_context', {
-            wallet_addr: walletAddress,
-            user_role: role
-        });
-        console.log('User context set for:', walletAddress);
+        // Try to set user context, but don't fail if function doesn't exist
+        try {
+            await supabase.rpc('set_user_context', {
+                wallet_addr: walletAddress,
+                user_role: role
+            });
+            console.log('User context set for:', walletAddress);
+        } catch (rpcError) {
+            if (rpcError.code === 'PGRST202') {
+                console.warn('set_user_context function not available, continuing without RLS context');
+            } else {
+                throw rpcError;
+            }
+        }
     } catch (error) {
         console.error('Failed to set user context:', error);
-        // Don't throw - let app continue
+        // Don't throw - let app continue without RLS context
     }
 }
 
-// Get or create user by wallet address
+// Get or create user by wallet address (with graceful degradation)
 async function getOrCreateUser(walletAddress) {
     try {
         if (!supabase) {
@@ -127,15 +354,24 @@ async function getOrCreateUser(walletAddress) {
 
         if (selectError && selectError.code !== 'PGRST116') {
             // PGRST116 = no rows returned, which is expected for new users
+            if (selectError.code === 'PGRST106') {
+                // Table doesn't exist
+                console.warn('Users table does not exist, continuing with wallet-only authentication');
+                return null;
+            }
             throw selectError;
         }
 
         if (existingUser) {
-            // Update last active time
-            await supabase
-                .from('users')
-                .update({ last_active: new Date().toISOString() })
-                .eq('wallet_address', walletAddress);
+            // Update last active time if possible
+            try {
+                await supabase
+                    .from('users')
+                    .update({ last_active: new Date().toISOString() })
+                    .eq('wallet_address', walletAddress);
+            } catch (updateError) {
+                console.warn('Could not update last active time:', updateError);
+            }
             
             currentUser = existingUser;
             return existingUser;
@@ -145,11 +381,18 @@ async function getOrCreateUser(walletAddress) {
         return null;
     } catch (error) {
         console.error('Error getting user:', error);
+        
+        // If it's a table not found error, continue with basic wallet auth
+        if (error.code === 'PGRST106' || error.message.includes('relation') || error.message.includes('does not exist')) {
+            console.warn('User management tables not available, using wallet-only mode');
+            return null;
+        }
+        
         throw error;
     }
 }
 
-// Create new user profile
+// Create new user profile (with graceful degradation)
 async function createUserProfile(walletAddress, username, avatar = '🎯') {
     try {
         if (!supabase) {
@@ -180,7 +423,13 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === 'PGRST106') {
+                console.warn('Users table does not exist, skipping profile creation');
+                return { wallet_address: walletAddress, username };
+            }
+            throw error;
+        }
 
         // Try to create initial leaderboard entry (don't fail if table doesn't exist)
         try {
@@ -207,6 +456,13 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
         return data;
     } catch (error) {
         console.error('Error creating user profile:', error);
+        
+        // Return basic user object even if database creation fails
+        if (error.code === 'PGRST106' || error.message.includes('relation') || error.message.includes('does not exist')) {
+            console.warn('User tables not available, using basic wallet auth');
+            return { wallet_address: walletAddress, username };
+        }
+        
         throw error;
     }
 }
@@ -221,11 +477,12 @@ function generateReferralCode() {
     return result;
 }
 
-// Check username availability
+// Check username availability (with graceful degradation)
 async function checkUsernameAvailability(username) {
     try {
         if (!supabase) {
-            throw new Error('Database not available');
+            console.warn('Database not available for username check');
+            return true; // Allow any username if DB not available
         }
         
         const { data, error } = await supabase
@@ -239,18 +496,23 @@ async function checkUsernameAvailability(username) {
             return true;
         }
 
+        if (error && error.code === 'PGRST106') {
+            // Table doesn't exist = allow any username
+            return true;
+        }
+
         return false; // Username exists
     } catch (error) {
         console.error('Error checking username:', error);
-        return false;
+        return true; // Default to allowing username if check fails
     }
 }
 
 // ==============================================
-// TOKEN MANAGEMENT FUNCTIONS - SIMPLIFIED FOR NOW
+// COMPETITION FUNCTIONS (IMPROVED)
 // ==============================================
 
-// Basic token functions that work without Edge Functions
+// Get active competitions with graceful degradation
 async function getActiveCompetitions() {
     try {
         if (!supabase) {
@@ -258,6 +520,21 @@ async function getActiveCompetitions() {
             return [];
         }
         
+        // Try the enhanced view first
+        try {
+            const { data, error } = await supabase
+                .from('active_competitions')
+                .select('*')
+                .order('start_time', { ascending: true });
+
+            if (!error && data) {
+                return data;
+            }
+        } catch (viewError) {
+            console.warn('Active competitions view not available, trying basic query...');
+        }
+
+        // Fallback to basic competitions table
         const { data, error } = await supabase
             .from('competitions')
             .select('*')
@@ -265,8 +542,11 @@ async function getActiveCompetitions() {
             .order('start_time', { ascending: true });
 
         if (error) {
-            console.warn('Error fetching competitions:', error);
-            return [];
+            if (error.code === 'PGRST106') {
+                console.warn('Competitions table does not exist');
+                return [];
+            }
+            throw error;
         }
         
         return data || [];
@@ -280,13 +560,15 @@ async function getActiveCompetitions() {
 // ERROR HANDLING AND UTILITIES
 // ==============================================
 
-// Handle Supabase errors
+// Handle Supabase errors with improved messaging
 function handleSupabaseError(error) {
     console.error('Supabase error:', error);
     
     // Map common error codes to user-friendly messages
     const errorMessages = {
         'PGRST116': 'No data found',
+        'PGRST106': 'Database table not found - some features may be limited',
+        'PGRST200': 'Database relationship error - using fallback data',
         '23505': 'This username is already taken',
         '23503': 'Invalid reference - please try again',
         'row_security_violation': 'Access denied - please check your permissions'
@@ -301,7 +583,11 @@ function handleSupabaseError(error) {
 async function clearUserContext() {
     try {
         if (supabase) {
-            await supabase.rpc('clear_user_context');
+            try {
+                await supabase.rpc('clear_user_context');
+            } catch (rpcError) {
+                console.warn('clear_user_context function not available');
+            }
         }
         currentUser = null;
         console.log('User context cleared');
@@ -310,11 +596,20 @@ async function clearUserContext() {
     }
 }
 
+// ==============================================
+// GLOBAL EXPORTS
+// ==============================================
+
 // Export essential functions for global use immediately
 window.supabaseClient = {
     // Initialization
     initializeSupabase,
     testConnection,
+    
+    // Cache management
+    getCachedTokenData,
+    getCachedPriceData,
+    getCacheHealthStatus,
     
     // User management
     getOrCreateUser,
@@ -323,7 +618,7 @@ window.supabaseClient = {
     setUserContext,
     clearUserContext,
     
-    // Basic functions
+    // Competition functions
     getActiveCompetitions,
     
     // Utilities
