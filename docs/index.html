@@ -23,522 +23,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="styles.css">
-    
-    <style>
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 8rem 2rem 4rem;
-        }
-
-        .hero-content {
-            max-width: 1000px;
-            width: 100%;
-        }
-
-        .hero-title {
-            font-family: 'Orbitron', monospace;
-            font-size: clamp(3rem, 8vw, 8rem);
-            font-weight: 900;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #c084fc 0%, #a855f7 25%, #7c3aed 50%, #6366f1 75%, #3b82f6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            line-height: 1.2;
-            text-shadow: 0 0 40px rgba(168, 85, 247, 0.3);
-            animation: titleGlow 3s ease-in-out infinite alternate;
-        }
-
-        @keyframes titleGlow {
-            0% { text-shadow: 0 0 40px rgba(168, 85, 247, 0.3); }
-            100% { text-shadow: 0 0 60px rgba(168, 85, 247, 0.5), 0 0 80px rgba(59, 130, 246, 0.3); }
-        }
-
-        .hero-motto {
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
-            color: #d1d5db;
-            margin-bottom: 3rem;
-            font-weight: 300;
-            letter-spacing: 2px;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 4rem;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid #8b5cf6;
-            color: #8b5cf6;
-            padding: 1.2rem 3rem;
-            border-radius: 0.75rem;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(139, 92, 246, 0.1);
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
-        }
-
-        .btn-hero-primary {
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border: none;
-            color: white;
-            padding: 1.2rem 3rem;
-            border-radius: 0.75rem;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-hero-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
-        }
-
-        /* Connected State Hero Styling */
-        .trader-welcome-simple {
-            margin-bottom: 3rem;
-        }
-
-        .welcome-trader {
-            font-size: clamp(1.4rem, 4vw, 2rem);
-            color: #d1d5db;
-            margin: 0;
-            font-weight: 400;
-        }
-
-        .trader-name-highlight {
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-            font-family: 'Orbitron', monospace;
-        }
-
-        /* Learn More Section */
-        .learn-more-section {
-            padding: 6rem 2rem;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(10px);
-        }
-
-        .learn-more-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .learn-more-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 2rem;
-            background: linear-gradient(135deg, #e879f9, #a855f7, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .learn-more-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 3rem;
-            margin-top: 3rem;
-        }
-
-        .concept-card {
-            background: rgba(31, 41, 55, 0.3);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            border-color: #8b5cf6;
-            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
-        }
-
-        .concept-icon {
-            width: 4rem;
-            height: 4rem;
-            margin: 0 auto 1.5rem;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-        }
-
-        .concept-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #8b5cf6;
-        }
-
-        .concept-description {
-            color: #d1d5db;
-            line-height: 1.6;
-        }
-
-        /* Loading and Error States */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: #8b5cf6;
-        }
-
-        .error-message {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            text-align: center;
-        }
-
-        /* Database connection status */
-        .db-status {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            font-size: 0.875rem;
-            z-index: 1000;
-        }
-
-        .db-status.connected {
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid rgba(34, 197, 94, 0.5);
-            color: #22c55e;
-        }
-
-        .db-status.disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            color: #ef4444;
-        }
-
-        /* Enhanced Competition Cards with Real Token Data */
-        .token-display {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: rgba(31, 41, 55, 0.4);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .token-display:hover {
-            border-color: rgba(139, 92, 246, 0.5);
-            background: rgba(139, 92, 246, 0.05);
-        }
-
-        .token-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 0.75rem;
-        }
-
-        .token-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .token-symbol {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #f3f4f6;
-            margin-bottom: 0.25rem;
-        }
-
-        .token-name {
-            font-size: 0.8rem;
-            color: #9ca3af;
-            margin-bottom: 0.5rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .token-metrics {
-            display: flex;
-            flex-direction: column;
-            gap: 0.125rem;
-        }
-
-        .token-price {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #e5e7eb;
-        }
-
-        .token-market-cap {
-            font-size: 0.75rem;
-            color: #6b7280;
-            font-weight: 500;
-        }
-
-        .price-change {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-        }
-
-        .price-change.positive {
-            color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .price-change.negative {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .price-change.neutral {
-            color: #9ca3af;
-            background: rgba(156, 163, 175, 0.1);
-        }
-
-        /* Enhanced Battle Display */
-        .token-battle-enhanced {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 1.5rem;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: rgba(15, 23, 42, 0.3);
-            border-radius: 1rem;
-            border: 1px solid rgba(139, 92, 246, 0.1);
-        }
-
-        .vs-divider-enhanced {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .vs-text-enhanced {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.5rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: 2px;
-        }
-
-        .vs-line-enhanced {
-            width: 3px;
-            height: 60px;
-            background: linear-gradient(180deg, #8b5cf6, #ec4899);
-            border-radius: 2px;
-        }
-
-        /* Competition Stats Enhanced */
-        .competition-stats-enhanced {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-            padding: 1rem;
-            background: rgba(17, 24, 39, 0.4);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(75, 85, 99, 0.3);
-        }
-
-        .stat-enhanced {
-            text-align: center;
-            padding: 0.75rem 0.5rem;
-        }
-
-        .stat-label-enhanced {
-            font-size: 0.7rem;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .stat-value-enhanced {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            font-weight: 700;
-            color: #f3f4f6;
-        }
-
-        /* Live Update Indicators */
-        .live-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: 0.7rem;
-            color: #10b981;
-            margin-top: 0.25rem;
-        }
-
-        .live-dot {
-            width: 6px;
-            height: 6px;
-            background: #10b981;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Time Remaining Display */
-        .time-remaining {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            margin: 1rem 0;
-            text-align: center;
-        }
-
-        .time-label {
-            font-size: 0.75rem;
-            color: #60a5fa;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
-        }
-
-        .time-value {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #3b82f6;
-        }
-
-        /* Betting Progress Enhanced */
-        .betting-progress-enhanced {
-            background: rgba(31, 41, 55, 0.4);
-            border-radius: 0.75rem;
-            height: 40px;
-            overflow: hidden;
-            margin: 1.5rem 0;
-            border: 1px solid rgba(75, 85, 99, 0.3);
-            position: relative;
-        }
-
-        .progress-track {
-            display: flex;
-            height: 100%;
-            position: relative;
-        }
-
-        .progress-side-enhanced {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 700;
-            transition: all 0.5s ease;
-            position: relative;
-        }
-
-        .progress-side-enhanced.token-a {
-            background: linear-gradient(90deg, #8b5cf6, #6366f1);
-            color: white;
-        }
-
-        .progress-side-enhanced.token-b {
-            background: linear-gradient(90deg, #ec4899, #ef4444);
-            color: white;
-        }
-
-        /* Loading States for Token Data */
-        .token-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 80px;
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-
-        .token-loading::before {
-            content: '';
-            width: 16px;
-            height: 16px;
-            border: 2px solid transparent;
-            border-top: 2px solid #8b5cf6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 0.5rem;
-        }
-
-        /* Error States for Token Data */
-        .token-error {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 80px;
-            color: #ef4444;
-            font-size: 0.875rem;
-            background: rgba(239, 68, 68, 0.05);
-            border-radius: 0.5rem;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 </head>
 <body>
     <!-- Database Connection Status -->
@@ -555,21 +39,21 @@
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
 
-    <!-- Navigation -->
+    <!-- FIXED Navigation with proper onclick handlers -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="index.html" class="logo">TokenWars</a>
             
             <ul class="nav-links">
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="#markets" onclick="showMarkets()">Markets</a></li>
-                <li><a href="#competitions" onclick="showCompetitions()">Competitions</a></li>
-                <li><a href="#leaderboard" onclick="showLeaderboard()">Leaderboard</a></li>
-                <li><a href="#portfolio" onclick="showPortfolio()">Portfolio</a></li>
-                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="#markets" class="nav-link" onclick="showMarkets(); return false;">Markets</a></li>
+                <li><a href="#competitions" class="nav-link" onclick="showCompetitions(); return false;">Competitions</a></li>
+                <li><a href="#leaderboard" class="nav-link" onclick="showLeaderboard(); return false;">Leaderboard</a></li>
+                <li><a href="#portfolio" class="nav-link" onclick="showPortfolio(); return false;">Portfolio</a></li>
+                <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
                 
                 <!-- Disconnected State -->
-                <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal()">Connect Wallet</a></li>
+                <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal(); return false;">Connect Wallet</a></li>
                 
                 <!-- Connected State (Hidden by default) -->
                 <li id="traderInfo" style="display: none;">
@@ -598,7 +82,7 @@
                 <h1 class="hero-title">TokenWars</h1>
                 <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                 <div class="cta-buttons">
-                    <a href="#" class="btn-hero-primary" onclick="openWalletModal()">Connect Wallet</a>
+                    <a href="#" class="btn-hero-primary" onclick="openWalletModal(); return false;">Connect Wallet</a>
                     <a href="#learn-more" class="btn-secondary">Learn More</a>
                 </div>
             </div>
@@ -613,7 +97,7 @@
                 </div>
                 
                 <div class="cta-buttons">
-                    <a href="#markets" class="btn-hero-primary" onclick="showMarkets()">View Markets</a>
+                    <a href="#markets" class="btn-hero-primary" onclick="showMarkets(); return false;">View Markets</a>
                     <a href="#learn-more" class="btn-secondary">Learn More</a>
                 </div>
             </div>
@@ -660,10 +144,8 @@
         </div>
     </div>
 
-    <!-- Main Content Container (Hidden by default, shown after connection) -->
+    <!-- FIXED Main Content Container with proper section structure -->
     <main class="main-content" id="mainContent" style="display: none;">
-        <!-- Content sections will be dynamically shown/hidden -->
-        
         <!-- Markets Section -->
         <section id="markets" class="section" style="display: none;">
             <div class="container">
@@ -695,6 +177,13 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">LEADERBOARD</h2>
+                    <div class="section-filters">
+                        <select id="leaderboard-period" class="filter-select">
+                            <option value="all-time">All Time</option>
+                            <option value="monthly">This Month</option>
+                            <option value="weekly">This Week</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="leaderboard-content">
                     <div class="loading">Loading leaderboard...</div>
@@ -707,18 +196,23 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">MY PORTFOLIO</h2>
+                    <div class="section-filters">
+                        <select id="portfolio-view" class="filter-select">
+                            <option value="overview">Overview</option>
+                            <option value="history">Betting History</option>
+                            <option value="statistics">Statistics</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="portfolio-content">
                     <div class="loading">Loading portfolio...</div>
                 </div>
             </div>
         </section>
-        
-        <!-- Other sections... -->
     </main>
 
-    <!-- Wallet Connection Modal -->
-    <div class="wallet-modal" id="walletModal">
+    <!-- FIXED Wallet Connection Modal with proper structure -->
+    <div class="wallet-modal" id="walletModal" style="display: none;">
         <div class="wallet-modal-content">
             <div class="modal-header">
                 <button class="modal-close" onclick="closeWalletModal()">×</button>
@@ -938,92 +432,48 @@
         </div>
     </div>
 
-    <!-- Scripts - CRITICAL ORDER: Load in this exact sequence -->
+    <!-- FIXED Scripts loading order -->
+    <script>
+        // Ensure configuration is available immediately
+        window.SUPABASE_CONFIG = {
+            url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
+        };
+        
+        console.log('✅ Configuration loaded');
+    </script>
+    
+    <!-- Load core application files -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
-    <script src="token-service.js"></script>
-    <script src="price-service.js"></script>
-    <script src="competition-manager.js"></script>
     <script src="utils.js"></script>
     <script src="app.js"></script>
-    <script src="competition.js"></script>
     <script src="user.js"></script>
+    <script src="competition.js"></script>
     
-    <!-- Initialize the app after all scripts are loaded -->
+    <!-- Initialize after DOM loads -->
     <script>
-    // Initialize the application when DOM is loaded
-    document.addEventListener('DOMContentLoaded', async function() {
-    console.log('TokenWars initializing...');
-    
-    try {
-        // Wait for config to be available
-        let configRetries = 0;
-        while (!window.SUPABASE_CONFIG && configRetries < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            configRetries++;
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM loaded, initializing TokenWars...');
+            
+            // Initialize app with error handling
+            if (typeof window.initializeApp === 'function') {
+                window.initializeApp().catch(error => {
+                    console.error('❌ Failed to initialize app:', error);
+                });
+            } else {
+                console.error('❌ initializeApp function not found');
+            }
+        });
         
-        if (!window.SUPABASE_CONFIG) {
-            throw new Error('Configuration failed to load');
-        }
-        
-        console.log('Config loaded, initializing Supabase...');
-        
-        // Initialize Supabase connection
-        if (typeof window.initializeSupabase === 'function') {
-            await window.initializeSupabase();
-        } else {
-            console.error('initializeSupabase function not available');
-        }
-        
-        console.log('Supabase initialized, starting services...');
-        
-        // Use singleton instances - only create if they don't exist
-        if (!window.tokenService) {
-            window.tokenService = new window.TokenService();
-        }
-        await window.tokenService.initialize();
-        console.log('Token service ready');
-        
-        if (!window.priceService) {
-            window.priceService = new window.PriceService();
-        }
-        await window.priceService.initialize();
-        console.log('Price service ready');
-        
-        console.log('Initializing main app...');
-        
-        // Initialize the main app
-        if (typeof window.initializeApp === 'function') {
-            await window.initializeApp();
-        } else {
-            console.error('initializeApp function not available');
-        }
-        
-        // Update token status
-        const tokenStatus = document.getElementById('tokenStatus');
-        if (tokenStatus) {
-            tokenStatus.className = 'db-status connected';
-            tokenStatus.textContent = 'Tokens: Active';
-        }
-        
-        console.log('TokenWars initialization complete!');
-        
-    } catch (error) {
-        console.error('Failed to initialize TokenWars:', error);
-        const dbStatus = document.getElementById('dbStatus');
-        if (dbStatus) {
-            dbStatus.className = 'db-status disconnected';
-            dbStatus.textContent = 'Initialization Failed';
-        }
-        
-        const tokenStatus = document.getElementById('tokenStatus');
-        if (tokenStatus) {
-            tokenStatus.className = 'db-status disconnected';
-            tokenStatus.textContent = 'Token Service Failed';
-        }
-    }
-});
+        // Test navigation functions immediately
+        setTimeout(() => {
+            console.log('🧪 Testing navigation functions...');
+            console.log('showMarkets available:', typeof window.showMarkets);
+            console.log('showLeaderboard available:', typeof window.showLeaderboard);
+            console.log('showPortfolio available:', typeof window.showPortfolio);
+            console.log('openWalletModal available:', typeof window.openWalletModal);
+        }, 1000);
     </script>
 </body>
 </html>
