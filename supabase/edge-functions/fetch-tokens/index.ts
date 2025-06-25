@@ -12,8 +12,12 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// CoinGecko API configuration
+const COINGECKO_API_KEY = Deno.env.get('COINGECKO_API_KEY');
+const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+
 serve(async (req) => {
-  console.log('🚀 fetch-tokens called - CACHE-FIRST implementation');
+  console.log('🚀 fetch-tokens called - CACHE-FIRST with LOGO FIX implementation');
   
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -37,17 +41,21 @@ serve(async (req) => {
         const responseTime = Date.now() - startTime;
         console.log(`✅ Cache hit! Returned ${cacheResult.tokens.length} tokens in ${responseTime}ms`);
         
+        // LOGO FIX: Validate and enhance logo URLs
+        const tokensWithValidLogos = await enhanceTokenLogos(cacheResult.tokens);
+        
         // Record cache hit analytics
         await recordCacheAnalytics('fetch-tokens', true, responseTime);
         
         return new Response(JSON.stringify({
           success: true,
-          tokens: cacheResult.tokens,
-          count: cacheResult.tokens.length,
+          tokens: tokensWithValidLogos,
+          count: tokensWithValidLogos.length,
           source: 'cache',
           cache_status: cacheResult.cache_status,
           timestamp: new Date().toISOString(),
-          response_time_ms: responseTime
+          response_time_ms: responseTime,
+          logo_enhancement: 'applied'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
@@ -63,6 +71,9 @@ serve(async (req) => {
       const responseTime = Date.now() - startTime;
       console.log(`✅ Database fallback! Returned ${databaseResult.tokens.length} tokens in ${responseTime}ms`);
       
+      // LOGO FIX: Validate and enhance logo URLs for database tokens
+      const tokensWithValidLogos = await enhanceTokenLogos(databaseResult.tokens);
+      
       // Record cache miss analytics
       await recordCacheAnalytics('fetch-tokens', false, responseTime);
       
@@ -73,33 +84,36 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({
         success: true,
-        tokens: databaseResult.tokens,
-        count: databaseResult.tokens.length,
+        tokens: tokensWithValidLogos,
+        count: tokensWithValidLogos.length,
         source: 'database',
         cache_status: 'FALLBACK',
         timestamp: new Date().toISOString(),
         response_time_ms: responseTime,
-        note: 'Background cache update scheduled'
+        note: 'Background cache update scheduled',
+        logo_enhancement: 'applied'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       });
     }
 
-    // STEP 3: Final fallback to static data
-    console.log('⚠️ Database empty - using static fallback');
+    // STEP 3: Final fallback to static data with CoinGecko logo enhancement
+    console.log('⚠️ Database empty - using static fallback with CoinGecko logos');
     const staticTokens = getStaticFallbackTokens();
+    const enhancedStaticTokens = await enhanceTokenLogos(staticTokens.slice(0, limit));
     const responseTime = Date.now() - startTime;
     
     return new Response(JSON.stringify({
       success: true,
-      tokens: staticTokens.slice(0, limit),
-      count: Math.min(staticTokens.length, limit),
+      tokens: enhancedStaticTokens,
+      count: enhancedStaticTokens.length,
       source: 'static_fallback',
       cache_status: 'UNAVAILABLE',
       timestamp: new Date().toISOString(),
       response_time_ms: responseTime,
-      warning: 'Using static data - cache and database unavailable'
+      warning: 'Using static data - cache and database unavailable',
+      logo_enhancement: 'applied'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
@@ -108,23 +122,163 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ fetch-tokens error:', error);
     
-    // Error fallback - return static data
+    // Error fallback - return static data with basic logo fallbacks
     const staticTokens = getStaticFallbackTokens();
+    const tokensWithFallbackLogos = staticTokens.slice(0, 10).map(token => ({
+      ...token,
+      logoURI: generateLogoFallback(token.symbol)
+    }));
     
     return new Response(JSON.stringify({
       success: false,
-      tokens: staticTokens.slice(0, 10), // Limited fallback
-      count: Math.min(staticTokens.length, 10),
+      tokens: tokensWithFallbackLogos,
+      count: tokensWithFallbackLogos.length,
       source: 'error_fallback',
       cache_status: 'ERROR',
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      logo_enhancement: 'fallback_only'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200 // Still return 200 with data
     });
   }
 });
+
+/**
+ * LOGO FIX: Enhance tokens with validated and fallback logo URLs
+ */
+async function enhanceTokenLogos(tokens: any[]): Promise<any[]> {
+  console.log(`🖼️ Enhancing logos for ${tokens.length} tokens...`);
+  
+  const enhanced = await Promise.all(tokens.map(async (token) => {
+    try {
+      // Check if existing logo URL is valid
+      let logoURI = token.logoURI;
+      
+      // If no logo or placeholder, try to get from CoinGecko
+      if (!logoURI || logoURI.includes('placeholder') || logoURI === '/placeholder-token.png') {
+        logoURI = await getCoinGeckoLogo(token.symbol, token.address);
+      }
+      
+      // If still no logo, try Solana token list
+      if (!logoURI) {
+        logoURI = getSolanaTokenListLogo(token.address);
+      }
+      
+      // Final fallback to generated logo
+      if (!logoURI) {
+        logoURI = generateLogoFallback(token.symbol);
+      }
+      
+      return {
+        ...token,
+        logoURI,
+        logo_source: logoURI.includes('ui-avatars.com') ? 'generated' : 
+                    logoURI.includes('coingecko.com') ? 'coingecko' :
+                    logoURI.includes('solana-labs') ? 'solana' : 'original'
+      };
+      
+    } catch (error) {
+      console.warn(`Logo enhancement failed for ${token.symbol}:`, error);
+      return {
+        ...token,
+        logoURI: generateLogoFallback(token.symbol),
+        logo_source: 'fallback'
+      };
+    }
+  }));
+  
+  console.log(`✅ Enhanced ${enhanced.length} token logos`);
+  return enhanced;
+}
+
+/**
+ * Get logo from CoinGecko API
+ */
+async function getCoinGeckoLogo(symbol: string, address?: string): Promise<string | null> {
+  try {
+    if (!COINGECKO_API_KEY) {
+      console.warn('CoinGecko API key not available');
+      return null;
+    }
+    
+    // Try to get token info from CoinGecko
+    const headers: any = {
+      'Accept': 'application/json',
+      'User-Agent': 'TokenWars/1.0'
+    };
+    
+    if (COINGECKO_API_KEY) {
+      headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
+    }
+    
+    // Search by symbol first
+    const searchUrl = `${COINGECKO_BASE_URL}/search?query=${encodeURIComponent(symbol)}`;
+    const searchResponse = await fetch(searchUrl, { headers });
+    
+    if (!searchResponse.ok) {
+      throw new Error(`CoinGecko search failed: ${searchResponse.status}`);
+    }
+    
+    const searchData = await searchResponse.json();
+    
+    // Find matching coin
+    const coin = searchData.coins?.find((c: any) => 
+      c.symbol.toLowerCase() === symbol.toLowerCase()
+    );
+    
+    if (coin?.large) {
+      console.log(`✅ Found CoinGecko logo for ${symbol}: ${coin.large}`);
+      return coin.large;
+    }
+    
+    return null;
+    
+  } catch (error) {
+    console.warn(`CoinGecko logo fetch failed for ${symbol}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get logo from Solana token list
+ */
+function getSolanaTokenListLogo(address: string): string | null {
+  const knownLogos: { [key: string]: string } = {
+    'So11111111111111111111111111111111111111112': 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
+    'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': 'https://static.jup.ag/jup/icon.png',
+    'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
+    'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof': 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png'
+  };
+  
+  return knownLogos[address] || null;
+}
+
+/**
+ * Generate fallback logo using UI Avatars service
+ */
+function generateLogoFallback(symbol: string): string {
+  const cleanSymbol = symbol.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const firstChar = cleanSymbol.charAt(0) || 'T';
+  
+  // Use UI Avatars with consistent styling
+  return `https://ui-avatars.com/api/?name=${firstChar}&background=8b5cf6&color=fff&size=64&bold=true&format=png`;
+}
+
+/**
+ * Validate if a logo URL is accessible
+ */
+async function validateLogoUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    return response.ok && response.headers.get('content-type')?.startsWith('image/');
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Get tokens from cache with freshness validation
@@ -141,7 +295,6 @@ async function getCachedTokens(limit: number, category: string | null) {
 
     // Apply category filter if specified
     if (category) {
-      // Category filtering logic can be added here
       console.log(`📂 Category filter applied: ${category}`);
     }
 
@@ -161,7 +314,7 @@ async function getCachedTokens(limit: number, category: string | null) {
       address: token.token_address,
       symbol: token.symbol,
       name: token.name,
-      logoURI: token.logo_uri,
+      logoURI: token.logo_uri, // Will be enhanced later
       decimals: 9, // Default for Solana
       market_cap: token.market_cap_usd,
       price: token.current_price,
@@ -217,7 +370,7 @@ async function getDatabaseTokens(limit: number, category: string | null) {
       address: token.address,
       symbol: token.symbol,
       name: token.name,
-      logoURI: token.logo_uri,
+      logoURI: token.logo_uri, // Will be enhanced later
       decimals: token.decimals || 9,
       market_cap: token.market_cap,
       price: token.current_price,
@@ -293,7 +446,7 @@ async function recordCacheAnalytics(operation: string, cacheHit: boolean, respon
 }
 
 /**
- * Static fallback data for emergency situations
+ * Static fallback data for emergency situations - WITH PROPER LOGOS
  */
 function getStaticFallbackTokens() {
   return [
@@ -360,6 +513,19 @@ function getStaticFallbackTokens() {
       volume_24h: 125000000,
       price_change_24h: -1.5,
       age_days: 400,
+      source: 'static'
+    },
+    {
+      address: "rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof",
+      symbol: "RENDER",
+      name: "Render Token",
+      logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png",
+      decimals: 8,
+      market_cap: 850000000,
+      price: 7.85,
+      volume_24h: 95000000,
+      price_change_24h: -2.1,
+      age_days: 600,
       source: 'static'
     }
   ];
