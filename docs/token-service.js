@@ -1,5 +1,5 @@
 // TokenService - Cache-Aware Version with Singleton Pattern
-// Prevents multiple initialization loops and integrates with cache-first edge functions
+// Fixed circular dependency in initialization
 
 class TokenService {
     constructor() {
@@ -29,8 +29,15 @@ class TokenService {
             if (this.isInitializing) {
                 console.log('TokenService: Already initializing, waiting...');
                 // Wait for current initialization to complete
-                while (this.isInitializing && !this.isInitialized) {
+                let attempts = 0;
+                while (this.isInitializing && !this.isInitialized && attempts < 100) {
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                if (attempts >= 100) {
+                    console.error('TokenService: Initialization timeout, forcing completion');
+                    this.isInitializing = false;
+                    return false;
                 }
                 return this.isInitialized;
             }
@@ -53,19 +60,21 @@ class TokenService {
                 this.cacheStatus = 'demo_fallback';
             }
             
-            // Step 3: Generate token pairs
-            this.tokenPairs = await this.generateTokenPairs();
+            // Step 3: Generate token pairs - NO RECURSIVE CALLS
+            this.tokenPairs = this.generateDemoTokenPairs(); // Use demo pairs during initialization
             
-            // Step 4: Start background refresh cycle (only once)
-            if (!this.updateInterval) {
-                this.startBackgroundRefresh();
-            }
-            
+            // Step 4: Mark as initialized BEFORE starting background tasks
             this.lastUpdate = new Date();
             this.isInitialized = true;
             this.isInitializing = false;
             
             console.log(`TokenService initialized: ${this.tokens.length} tokens, ${this.tokenPairs.length} pairs, status: ${this.cacheStatus}`);
+            
+            // Step 5: Start background refresh cycle (only once) - AFTER initialization
+            if (!this.updateInterval) {
+                this.startBackgroundRefresh();
+            }
+            
             return true;
         } catch (error) {
             console.error('TokenService initialization failed:', error);
@@ -306,11 +315,18 @@ class TokenService {
         }
     }
 
-    // Get valid tokens with cache awareness
+    // Get valid tokens with cache awareness - SAFE VERSION
     async getValidTokens(forceRefresh = false) {
         try {
-            if (!this.isInitialized) {
+            // CHANGED: Don't call initialize() if already initializing
+            if (!this.isInitialized && !this.isInitializing) {
                 await this.initialize();
+            }
+            
+            // If still not initialized, return current tokens
+            if (!this.isInitialized) {
+                console.log('TokenService: Not fully initialized, returning current tokens');
+                return this.tokens.filter(token => token.is_active);
             }
             
             // Check if data is stale and needs refresh
@@ -325,7 +341,7 @@ class TokenService {
         }
     }
 
-    // Get eligible tokens (with validation)
+    // Get eligible tokens (with validation) - SAFE VERSION
     async getEligibleTokens(filters = {}) {
         try {
             const validTokens = await this.getValidTokens();
@@ -350,14 +366,15 @@ class TokenService {
         }
     }
 
-    // Get token pairs
+    // Get token pairs - SAFE VERSION
     async getTokenPairs() {
         try {
-            if (!this.isInitialized) {
+            // CHANGED: Don't call initialize() if already initializing
+            if (!this.isInitialized && !this.isInitializing) {
                 await this.initialize();
             }
             
-            return this.tokenPairs;
+            return this.tokenPairs || [];
         } catch (error) {
             console.error('Error getting token pairs:', error);
             return [];
@@ -374,9 +391,15 @@ class TokenService {
         }
     }
 
-    // Generate token pairs with compatibility scoring
+    // Generate token pairs with compatibility scoring - ASYNC VERSION
     async generateTokenPairs(count = 10) {
         try {
+            // CHANGED: Only generate if fully initialized
+            if (!this.isInitialized) {
+                console.log('TokenService: Not initialized, using demo pairs');
+                return this.generateDemoTokenPairs();
+            }
+            
             const eligibleTokens = await this.getEligibleTokens();
             
             if (eligibleTokens.length < 2) {
