@@ -43,6 +43,8 @@ let systemHealthInterval = null;
     window.completedOnboarding = completedOnboarding;
     window.disconnectWallet = disconnectWallet;
     window.validateUsernameInput = validateUsernameInput;
+    window.setupStep3EventListeners = setupStep3EventListeners;
+    window.debugValidationState = debugValidationState;
     
     // Core app function
     window.initializeApp = initializeApp;
@@ -439,6 +441,11 @@ function goToStep(step) {
         stepElement.classList.add('active');
         currentStep = step;
         console.log(`✅ Step ${step} activated`);
+        
+        // Set up step-specific functionality
+        if (step === 3) {
+            setupStep3EventListeners();
+        }
     } else {
         console.error(`❌ Step ${step} element not found`);
     }
@@ -447,6 +454,53 @@ function goToStep(step) {
         indicatorElement.classList.add('active');
     }
 }
+
+// Set up event listeners for Step 3 (Profile Creation)
+function setupStep3EventListeners() {
+    console.log('🎯 Setting up Step 3 event listeners...');
+    
+    try {
+        // Set up username validation
+        const usernameInput = document.getElementById('traderUsername');
+        if (usernameInput) {
+            // Remove any existing event listeners
+            usernameInput.removeEventListener('input', handleUsernameInput);
+            
+            // Add new event listener
+            usernameInput.addEventListener('input', handleUsernameInput);
+            console.log('✅ Username input event listener added');
+            
+            // Trigger initial validation if there's already text
+            if (usernameInput.value.trim()) {
+                console.log('🔄 Triggering initial validation for existing text');
+                handleUsernameInput();
+            }
+        } else {
+            console.error('❌ Username input element not found!');
+        }
+        
+        // Reset validation state
+        usernameValidation = { valid: false, message: '' };
+        
+        // Clear any previous errors
+        clearUsernameError();
+        
+        // Update preview initially
+        updateTraderPreview();
+        
+        // Add debugging info
+        console.log('🐛 Step 3 Debug Info:');
+        console.log(`   Username validation: ${JSON.stringify(usernameValidation)}`);
+        console.log(`   Agreement accepted: ${agreementAccepted}`);
+        console.log(`   WalletService ready: ${walletService?.isReady()}`);
+        
+    } catch (error) {
+        console.error('Error setting up Step 3 event listeners:', error);
+    }
+}
+
+// Handle username input with debouncing
+const handleUsernameInput = debounce(validateUsernameInput, 500);
 
 // ==============================================
 // REAL WALLET FUNCTIONS (PHASE 3)
@@ -611,12 +665,21 @@ async function completeLoginFlow(profile) {
 // USER PROFILE CREATION (REAL IMPLEMENTATION)
 // ==============================================
 
-// Validate username input (real-time)
+// Validate username input (real-time) - Enhanced with error handling
 async function validateUsernameInput() {
     const usernameInput = document.getElementById('traderUsername');
     const createProfileBtn = document.getElementById('createProfileBtn');
     
-    if (!usernameInput || !walletService) return;
+    if (!usernameInput) {
+        console.warn('Username input not found');
+        return;
+    }
+    
+    if (!walletService) {
+        console.warn('WalletService not available for validation');
+        if (createProfileBtn) createProfileBtn.disabled = true;
+        return;
+    }
     
     const username = usernameInput.value.trim();
     
@@ -625,50 +688,67 @@ async function validateUsernameInput() {
     
     if (username.length === 0) {
         usernameValidation = { valid: false, message: '' };
-        createProfileBtn.disabled = true;
+        if (createProfileBtn) createProfileBtn.disabled = true;
+        clearUsernameError();
         return;
     }
     
     try {
-        // Validate format
+        console.log(`🔍 Validating username: ${username}`);
+        
+        // Validate format first
         const formatValidation = walletService.validateUsername(username);
         
         if (!formatValidation.valid) {
             usernameValidation = { valid: false, message: formatValidation.errors[0] };
             usernameInput.classList.add('invalid');
-            createProfileBtn.disabled = true;
+            if (createProfileBtn) createProfileBtn.disabled = true;
             
             // Show error below input
             showUsernameError(formatValidation.errors[0]);
             return;
         }
         
-        // Check availability
-        const availability = await walletService.checkUsernameAvailability(username);
-        
-        if (!availability.available) {
-            usernameValidation = { valid: false, message: availability.error };
-            usernameInput.classList.add('invalid');
-            createProfileBtn.disabled = true;
-            showUsernameError(availability.error);
-            return;
+        // Check availability (with timeout and error handling)
+        try {
+            const availabilityPromise = walletService.checkUsernameAvailability(username);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Availability check timeout')), 5000)
+            );
+            
+            const availability = await Promise.race([availabilityPromise, timeoutPromise]);
+            
+            if (!availability.available) {
+                usernameValidation = { valid: false, message: availability.error || 'Username not available' };
+                usernameInput.classList.add('invalid');
+                if (createProfileBtn) createProfileBtn.disabled = true;
+                showUsernameError(availability.error || 'Username not available');
+                return;
+            }
+            
+        } catch (availabilityError) {
+            console.warn('Username availability check failed:', availabilityError);
+            // Continue with format validation only if availability check fails
+            showUsernameError('Could not verify availability - proceeding with format validation only');
         }
         
         // Valid username
         usernameValidation = { valid: true, message: 'Username available!' };
         usernameInput.classList.add('valid');
-        createProfileBtn.disabled = false;
+        if (createProfileBtn) createProfileBtn.disabled = false;
         clearUsernameError();
         
         // Update preview
         updateTraderPreview();
         
+        console.log('✅ Username validation passed');
+        
     } catch (error) {
         console.error('Username validation error:', error);
-        usernameValidation = { valid: false, message: 'Could not validate username' };
+        usernameValidation = { valid: false, message: 'Validation error occurred' };
         usernameInput.classList.add('invalid');
-        createProfileBtn.disabled = true;
-        showUsernameError('Could not validate username');
+        if (createProfileBtn) createProfileBtn.disabled = true;
+        showUsernameError('Could not validate username - please try again');
     }
 }
 
@@ -696,25 +776,41 @@ function clearUsernameError() {
     }
 }
 
-// Update trader preview
+// Update trader preview - Enhanced with error handling
 function updateTraderPreview() {
-    const usernameInput = document.getElementById('traderUsername');
-    const previewName = document.getElementById('previewName');
-    const previewAvatar = document.getElementById('previewAvatar');
-    const createProfileBtn = document.getElementById('createProfileBtn');
-    
-    if (usernameInput && previewName) {
-        const username = usernameInput.value.trim();
-        previewName.textContent = username || 'Trader Username';
-    }
-    
-    if (previewAvatar) {
-        previewAvatar.textContent = selectedAvatar;
-    }
-    
-    // Enable/disable create profile button
-    if (createProfileBtn) {
-        createProfileBtn.disabled = !usernameValidation.valid || !agreementAccepted;
+    try {
+        const usernameInput = document.getElementById('traderUsername');
+        const previewName = document.getElementById('previewName');
+        const previewAvatar = document.getElementById('previewAvatar');
+        const createProfileBtn = document.getElementById('createProfileBtn');
+        const finalizeBtn = document.getElementById('finalizeBtn');
+        
+        if (usernameInput && previewName) {
+            const username = usernameInput.value.trim();
+            previewName.textContent = username || 'Trader Username';
+        }
+        
+        if (previewAvatar) {
+            previewAvatar.textContent = selectedAvatar;
+        }
+        
+        // Step 3 button: Only check username validation (goes to step 4)
+        if (createProfileBtn) {
+            createProfileBtn.disabled = !usernameValidation.valid;
+        }
+        
+        // Step 4 button: Check both username validation AND agreement (creates profile)
+        if (finalizeBtn) {
+            finalizeBtn.disabled = !usernameValidation.valid || !agreementAccepted;
+        }
+        
+        console.log('✅ Trader preview updated');
+        console.log(`   Username valid: ${usernameValidation.valid}`);
+        console.log(`   Agreement accepted: ${agreementAccepted}`);
+        console.log(`   Step 3 button disabled: ${createProfileBtn?.disabled}`);
+        console.log(`   Step 4 button disabled: ${finalizeBtn?.disabled}`);
+    } catch (error) {
+        console.error('Error updating trader preview:', error);
     }
 }
 
@@ -736,42 +832,66 @@ function selectAvatar(emoji) {
     updateTraderPreview();
 }
 
-// Toggle agreement
+// Toggle agreement - Enhanced with state management
 function toggleAgreement() {
-    agreementAccepted = !agreementAccepted;
-    
-    const checkbox = document.getElementById('agreementCheckbox');
-    const finalizeBtn = document.getElementById('finalizeBtn');
-    
-    if (checkbox) {
-        checkbox.classList.toggle('checked', agreementAccepted);
-        checkbox.innerHTML = agreementAccepted ? '✓' : '';
+    try {
+        agreementAccepted = !agreementAccepted;
+        
+        const checkbox = document.getElementById('agreementCheckbox');
+        const finalizeBtn = document.getElementById('finalizeBtn');
+        
+        if (checkbox) {
+            checkbox.classList.toggle('checked', agreementAccepted);
+            checkbox.innerHTML = agreementAccepted ? '✓' : '';
+        }
+        
+        // Step 4 button: Check both username validation AND agreement
+        if (finalizeBtn) {
+            finalizeBtn.disabled = !agreementAccepted || !usernameValidation.valid;
+        }
+        
+        console.log('📋 Agreement toggled:', agreementAccepted);
+        console.log(`   Username valid: ${usernameValidation.valid}`);
+        console.log(`   Step 4 button disabled: ${finalizeBtn?.disabled}`);
+    } catch (error) {
+        console.error('Error toggling agreement:', error);
     }
-    
-    if (finalizeBtn) {
-        finalizeBtn.disabled = !agreementAccepted;
-    }
-    
-    console.log('📋 Agreement toggled:', agreementAccepted);
 }
 
-// Finalize profile creation
+// Finalize profile creation - Enhanced error handling
 async function finalizeProfile() {
-    if (!agreementAccepted) {
-        showNotification('Please accept the terms to continue', 'warning');
-        return;
-    }
-    
-    if (!usernameValidation.valid) {
-        showNotification('Please enter a valid username', 'warning');
-        return;
-    }
+    console.log('✅ Attempting to finalize profile creation...');
     
     try {
-        console.log('✅ Finalizing profile creation...');
+        if (!agreementAccepted) {
+            showNotification('Please accept the terms to continue', 'warning');
+            return;
+        }
+        
+        if (!usernameValidation.valid) {
+            showNotification('Please enter a valid username', 'warning');
+            return;
+        }
+        
+        if (!walletService) {
+            showNotification('Wallet service not available', 'error');
+            return;
+        }
         
         const usernameInput = document.getElementById('traderUsername');
+        if (!usernameInput) {
+            showNotification('Username input not found', 'error');
+            return;
+        }
+        
         const username = usernameInput.value.trim();
+        
+        if (!username) {
+            showNotification('Please enter a username', 'warning');
+            return;
+        }
+        
+        console.log(`Creating profile for username: ${username}, avatar: ${selectedAvatar}`);
         
         // Create profile using wallet service
         const profile = await walletService.createUserProfile(username, selectedAvatar);
@@ -1124,11 +1244,8 @@ function setupUIEventListeners() {
         });
     });
     
-    // Add real-time username validation
-    const usernameInput = document.getElementById('traderUsername');
-    if (usernameInput) {
-        usernameInput.addEventListener('input', debounce(validateUsernameInput, 500));
-    }
+    // Username validation will be set up when step 3 is reached
+    // This is handled in goToStep function now
     
     console.log('✅ UI event listeners set up');
 }
@@ -1349,6 +1466,40 @@ function loadLeaderboard() {
 }
 
 // ==============================================
+// DEBUG FUNCTIONS
+// ==============================================
+
+// Debug function to check current validation state
+function debugValidationState() {
+    console.log('🐛 VALIDATION DEBUG STATE:');
+    console.log('========================');
+    console.log(`Current Step: ${currentStep}`);
+    console.log(`Username Validation: ${JSON.stringify(usernameValidation)}`);
+    console.log(`Agreement Accepted: ${agreementAccepted}`);
+    console.log(`Selected Avatar: ${selectedAvatar}`);
+    console.log(`WalletService Ready: ${walletService?.isReady()}`);
+    
+    const usernameInput = document.getElementById('traderUsername');
+    const createProfileBtn = document.getElementById('createProfileBtn');
+    const finalizeBtn = document.getElementById('finalizeBtn');
+    
+    console.log(`Username Input Value: "${usernameInput?.value || 'NOT FOUND'}"`);
+    console.log(`Username Input Classes: ${usernameInput?.className || 'NOT FOUND'}`);
+    console.log(`Step 3 Button Disabled: ${createProfileBtn?.disabled ?? 'NOT FOUND'}`);
+    console.log(`Step 4 Button Disabled: ${finalizeBtn?.disabled ?? 'NOT FOUND'}`);
+    console.log('========================');
+    
+    // Test username validation manually
+    if (usernameInput?.value.trim()) {
+        console.log('🔍 Testing manual validation...');
+        validateUsernameInput();
+    }
+}
+
+// Expose debug function globally
+window.debugValidationState = debugValidationState;
+
+// ==============================================
 // NOTIFICATION FUNCTIONS
 // ==============================================
 
@@ -1467,7 +1618,10 @@ window.app = {
     
     // State getters
     getCurrentUser: () => connectedUser,
-    getWalletStatus: () => walletService?.getConnectionStatus() || { isConnected: false }
+    getWalletStatus: () => walletService?.getConnectionStatus() || { isConnected: false },
+    
+    // Debug functions
+    debugValidationState
 };
 
 console.log('📱 App.js Phase 3 integration complete - Real Wallet System ready');
