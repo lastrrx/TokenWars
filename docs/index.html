@@ -39,7 +39,7 @@
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
 
-    <!-- FIXED Navigation with proper onclick handlers -->
+    <!-- Navigation with enhanced wallet integration -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="index.html" class="logo">TokenWars</a>
@@ -57,9 +57,14 @@
                 
                 <!-- Connected State (Hidden by default) -->
                 <li id="traderInfo" style="display: none;">
-                    <div id="navTraderAvatar">🎯</div>
-                    <span id="navTraderName">Trader</span>
-                    <button class="nav-disconnect" onclick="disconnectWallet()">Disconnect</button>
+                    <div class="trader-info-display">
+                        <div id="navTraderAvatar" class="trader-avatar">🎯</div>
+                        <div class="trader-details">
+                            <span id="navTraderName" class="trader-name">Trader</span>
+                            <span id="navTraderBalance" class="trader-balance">0.00 SOL</span>
+                        </div>
+                        <button class="nav-disconnect" onclick="disconnectWallet()" title="Disconnect Wallet">⏻</button>
+                    </div>
                 </li>
             </ul>
 
@@ -92,8 +97,14 @@
                 <h1 class="hero-title">TokenWars</h1>
                 <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                 
-                <div class="trader-welcome-simple">
-                    <p class="welcome-trader">Welcome, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span></p>
+                <div class="trader-welcome-enhanced">
+                    <div class="welcome-message">
+                        <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span></p>
+                        <div class="wallet-info">
+                            <span class="wallet-balance" id="heroWalletBalance">0.00 SOL</span>
+                            <span class="wallet-network">Devnet</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="cta-buttons">
@@ -144,7 +155,7 @@
         </div>
     </div>
 
-    <!-- FIXED Main Content Container with proper section structure -->
+    <!-- Main Content Container -->
     <main class="main-content" id="mainContent" style="display: none;">
         <!-- Markets Section -->
         <section id="markets" class="section" style="display: none;">
@@ -211,7 +222,7 @@
         </section>
     </main>
 
-    <!-- FIXED Wallet Connection Modal with proper structure -->
+    <!-- Enhanced Wallet Connection Modal with Real Integration -->
     <div class="wallet-modal" id="walletModal" style="display: none;">
         <div class="wallet-modal-content">
             <div class="modal-header">
@@ -228,7 +239,7 @@
                 <div class="step-indicator" id="step4Indicator">4</div>
             </div>
 
-            <!-- Step 1: Wallet Selection -->
+            <!-- Step 1: Enhanced Wallet Selection -->
             <div class="step-content active" id="step1Content">
                 <div class="security-info">
                     <div class="security-title">🔒 Security First</div>
@@ -265,11 +276,11 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option" onclick="selectWallet('demo')">
+                    <div class="wallet-option demo-wallet" onclick="selectWallet('demo')">
                         <div class="wallet-icon">🎮</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Demo Mode</div>
-                            <div class="wallet-description">Try without wallet</div>
+                            <div class="wallet-description">Try without wallet (10 SOL)</div>
                             <div class="wallet-status" id="demoStatus">✓ Available</div>
                         </div>
                     </div>
@@ -289,7 +300,7 @@
                 </div>
             </div>
 
-            <!-- Step 2.5: Wallet Confirmation -->
+            <!-- Step 2.5: Enhanced Wallet Confirmation -->
             <div class="step-content" id="step2_5Content">
                 <div class="wallet-confirmation">
                     <div class="confirmation-icon">✅</div>
@@ -309,12 +320,12 @@
 
                     <div class="confirmation-actions" id="confirmationActions" style="display: none;">
                         <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
-                        <button class="btn-modal-primary" id="continueBtn" onclick="continueFromConfirmation()">Continue</button>
+                        <button class="btn-modal-primary" id="continueBtn">Continue</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 3: Trader Profile Creation -->
+            <!-- Step 3: Enhanced Trader Profile Creation -->
             <div class="step-content" id="step3Content">
                 <div class="education-section">
                     <div class="education-title">🎯 Create Your Trader Profile</div>
@@ -332,10 +343,9 @@
                             id="traderUsername" 
                             placeholder="Enter your username..."
                             maxlength="20"
-                            oninput="updateTraderPreview()"
                         >
-                        <div style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">
-                            3-20 characters, alphanumeric and underscores only
+                        <div class="input-requirements">
+                            3-20 characters, alphanumeric and underscores only. No profanity.
                         </div>
                     </div>
 
@@ -432,7 +442,7 @@
         </div>
     </div>
 
-    <!-- FIXED Scripts loading order -->
+    <!-- Scripts loading order for Phase 3 -->
     <script>
         // Ensure configuration is available immediately
         window.SUPABASE_CONFIG = {
@@ -443,12 +453,13 @@
         console.log('✅ Configuration loaded');
     </script>
     
-    <!-- Load core application files in FIXED order -->
+    <!-- Load core application files in PHASE 3 order -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="utils.js"></script>
-    <script src="token-service.js"></script>  <!-- ✅ ADDED: Load TokenService before app.js -->
-    <script src="price-service.js"></script>  <!-- ✅ ADDED: Load PriceService before app.js -->
+    <script src="token-service.js"></script>
+    <script src="price-service.js"></script>
+    <script src="wallet-service.js"></script>  <!-- ✅ NEW: Load WalletService before app.js -->
     <script src="app.js"></script>
     <script src="user.js"></script>
     <script src="competition.js"></script>
@@ -456,7 +467,7 @@
     <!-- Initialize after DOM loads -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM loaded, initializing TokenWars...');
+            console.log('🚀 DOM loaded, initializing TokenWars Phase 3...');
             
             // Initialize app with error handling
             if (typeof window.initializeApp === 'function') {
@@ -468,15 +479,189 @@
             }
         });
         
-        // Test navigation functions immediately
+        // Test Phase 3 functions
         setTimeout(() => {
-            console.log('🧪 Testing Phase 1 navigation functions...');
-            console.log('showMarkets available:', typeof window.showMarkets);
-            console.log('showLeaderboard available:', typeof window.showLeaderboard);
-            console.log('showPortfolio available:', typeof window.showPortfolio);
+            console.log('🧪 Testing Phase 3 wallet functions...');
+            console.log('selectWallet available:', typeof window.selectWallet);
+            console.log('disconnectWallet available:', typeof window.disconnectWallet);
             console.log('openWalletModal available:', typeof window.openWalletModal);
-            console.log('✅ Phase 1 navigation test complete - Ready for user interaction!');
+            console.log('WalletService available:', typeof window.WalletService);
+            console.log('✅ Phase 3 wallet integration test complete - Ready for real wallet connections!');
         }, 1000);
     </script>
+
+    <style>
+        /* Enhanced styles for Phase 3 wallet integration */
+        .trader-info-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 0.75rem;
+        }
+
+        .trader-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .trader-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .trader-name {
+            font-weight: 600;
+            color: #f3f4f6;
+            font-size: 0.875rem;
+        }
+
+        .trader-balance {
+            font-size: 0.75rem;
+            color: #22c55e;
+            font-weight: 500;
+        }
+
+        .nav-disconnect {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .nav-disconnect:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .trader-welcome-enhanced {
+            margin: 1rem 0;
+        }
+
+        .welcome-message {
+            text-align: center;
+        }
+
+        .wallet-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .wallet-balance {
+            font-weight: 600;
+            color: #22c55e;
+            font-size: 1.1rem;
+        }
+
+        .wallet-network {
+            padding: 0.25rem 0.5rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .demo-wallet {
+            border: 2px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .demo-wallet:hover {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+        }
+
+        .input-requirements {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        .form-input.valid {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .form-input.invalid {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .checkbox-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #6b7280;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-custom.checked {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Mobile responsive enhancements */
+        @media (max-width: 768px) {
+            .trader-info-display {
+                gap: 0.5rem;
+                padding: 0.375rem;
+            }
+
+            .trader-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 0.875rem;
+            }
+
+            .trader-name {
+                font-size: 0.8rem;
+            }
+
+            .trader-balance {
+                font-size: 0.7rem;
+            }
+
+            .wallet-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
 </body>
 </html>
