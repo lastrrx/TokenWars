@@ -27,9 +27,14 @@ export default async function handler(req, res) {
   }
   
   try {
-    console.log('Auth request received');
+    console.log('=== AUTH DEBUG ===');
+    console.log('Environment check:', {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_KEY
+    });
     
     const { walletAddress, pin } = req.body;
+    console.log('Received request:', { walletAddress, pin });
     
     // Validate input
     if (!walletAddress || !pin) {
@@ -49,7 +54,7 @@ export default async function handler(req, res) {
       });
     }
     
-    console.log('Looking up admin user:', walletAddress);
+    console.log('Querying database for wallet:', walletAddress);
     
     // Query admin user from database
     const { data: adminUser, error: userError } = await supabase
@@ -59,22 +64,37 @@ export default async function handler(req, res) {
       .eq('is_active', true)
       .single();
     
+    console.log('Database query result:', {
+      found: !!adminUser,
+      error: userError?.message,
+      user: adminUser ? {
+        username: adminUser.username,
+        role: adminUser.role,
+        hasHash: !!adminUser.pin_hash
+      } : null
+    });
+    
     if (userError || !adminUser) {
-      console.log('Admin user not found or error:', userError);
+      console.log('User not found or error:', userError);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
     
-    console.log('Admin user found:', adminUser.username);
+    console.log('Testing PIN verification...');
     
-    // Verify PIN against stored hash using database function
+    // Test PIN verification
     const { data: pinValid, error: pinError } = await supabase
       .rpc('verify_admin_pin_hash', {
         stored_hash: adminUser.pin_hash,
         input_pin: pin
       });
+    
+    console.log('PIN verification result:', {
+      pinValid,
+      pinError: pinError?.message
+    });
     
     if (pinError) {
       console.error('PIN verification error:', pinError);
@@ -85,14 +105,14 @@ export default async function handler(req, res) {
     }
     
     if (!pinValid) {
-      console.log('Invalid PIN for user:', adminUser.username);
+      console.log('PIN verification failed');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
     
-    console.log('Authentication successful for:', adminUser.username);
+    console.log('Authentication successful!');
     
     // Update last login
     await supabase
@@ -100,7 +120,6 @@ export default async function handler(req, res) {
       .update({ last_login: new Date().toISOString() })
       .eq('admin_id', adminUser.admin_id);
     
-    // Generate secure token (simple version)
     const token = 'admin-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     
     return res.status(200).json({
@@ -110,8 +129,7 @@ export default async function handler(req, res) {
         id: adminUser.admin_id,
         username: adminUser.username,
         role: adminUser.role,
-        wallet: adminUser.wallet_address,
-        permissions: adminUser.permissions
+        wallet: adminUser.wallet_address
       }
     });
     
@@ -119,7 +137,8 @@ export default async function handler(req, res) {
     console.error('Auth API error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: error.message
     });
   }
 }
