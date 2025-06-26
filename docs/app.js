@@ -263,11 +263,8 @@ function updateHomePageContent() {
             learnMoreSection.style.display = 'none';
         }
     } else {
-        // Show learn more section for disconnected users
-        const learnMoreSection = document.getElementById('learnMoreSection');
-        if (learnMoreSection) {
-            learnMoreSection.style.display = 'block';
-        }
+        // REMOVED: Don't manipulate learn more section visibility
+        // It's now always visible via CSS
     }
 }
 
@@ -1032,10 +1029,7 @@ async function completeLoginFlow(profile) {
         
         showNotification(`Welcome back, ${profile.username || 'Trader'}!`, 'success');
         
-        // Navigate to competitions after a brief delay
-        setTimeout(() => {
-            showPage('competitions');
-        }, 1000);
+        // REMOVED: Don't auto-navigate to competitions, stay on home page
         
     } catch (error) {
         console.error('Error completing login flow:', error);
@@ -1314,10 +1308,7 @@ async function completedOnboarding() {
             
             showNotification(`Welcome to TokenWars, ${profile.username}!`, 'success');
             
-            // Navigate to competitions
-            setTimeout(() => {
-                showPage('competitions');
-            }, 1000);
+            // REMOVED: Don't auto-navigate to competitions, stay on home page
         } else {
             throw new Error('Profile not found after creation');
         }
@@ -1495,14 +1486,8 @@ function updateUIForConnectedUser() {
             if (navTraderAvatar) navTraderAvatar.textContent = connectedUser.avatar || '🎯';
         }
         
-        // Update dashboard content
-        updateDashboardCards();
-        
-        // ALWAYS show learn more section for connected users too
-        const learnMoreSection = document.getElementById('learnMoreSection');
-        if (learnMoreSection) {
-            learnMoreSection.style.display = 'block';
-        }
+        // Update dashboard content (removed dashboard cards)
+        // Note: Learn more section is now always visible via CSS
         
         console.log('✅ UI updated for connected user:', connectedUser?.username || 'Unknown');
         
