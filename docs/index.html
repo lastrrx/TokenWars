@@ -379,10 +379,10 @@
             </div>
         </div>
 
-        <!-- Add the JavaScript for leaderboard functionality -->
+        <!-- FIXED: Add the JavaScript for leaderboard functionality -->
         <script>
         // ==============================================
-        // LEADERBOARD FUNCTIONALITY
+        // LEADERBOARD FUNCTIONALITY - FIXED VERSION
         // ==============================================
 
         const LeaderboardState = {
@@ -393,15 +393,21 @@
             loading: false,
             lastUpdate: null,
             userPosition: null,
-            isConnected: false
+            isConnected: false,
+            initialized: false
         };
 
-        // Initialize leaderboard when page loads or becomes visible
+        // FIXED: Initialize leaderboard when page loads or becomes visible
         function initializeLeaderboard() {
             console.log('🏆 Initializing leaderboard...');
             
+            if (LeaderboardState.initialized) {
+                console.log('Leaderboard already initialized');
+                return;
+            }
+            
             // Check if user is connected
-            LeaderboardState.isConnected = isWalletConnected();
+            LeaderboardState.isConnected = typeof isWalletConnected === 'function' ? isWalletConnected() : false;
             
             // Load leaderboard data
             loadLeaderboardData();
@@ -409,14 +415,17 @@
             // Set up auto-refresh (every 2 minutes)
             if (!window.leaderboardRefreshInterval) {
                 window.leaderboardRefreshInterval = setInterval(() => {
-                    if (document.getElementById('leaderboardPage').classList.contains('active')) {
+                    const leaderboardPage = document.getElementById('leaderboardPage');
+                    if (leaderboardPage && leaderboardPage.classList.contains('active')) {
                         loadLeaderboardData();
                     }
                 }, 120000); // 2 minutes
             }
+            
+            LeaderboardState.initialized = true;
         }
 
-        // Load leaderboard data from Supabase
+        // FIXED: Load leaderboard data from Supabase with better error handling
         async function loadLeaderboardData() {
             if (LeaderboardState.loading) {
                 console.log('Leaderboard already loading, skipping...');
@@ -429,16 +438,42 @@
             try {
                 console.log('📊 Loading leaderboard data from Supabase...');
 
-                // Check if we have supabase client
-                if (!window.supabaseClient || !window.supabaseClient.getSupabaseClient) {
-                    console.warn('Supabase client not available, loading demo data...');
+                // FIXED: Better Supabase client detection
+                let supabase = null;
+                
+                // Try multiple ways to get Supabase client
+                if (window.supabaseClient && typeof window.supabaseClient.getSupabaseClient === 'function') {
+                    supabase = window.supabaseClient.getSupabaseClient();
+                    console.log('✅ Got Supabase client from window.supabaseClient');
+                } else if (window.supabase) {
+                    supabase = window.supabase;
+                    console.log('✅ Got Supabase client from window.supabase');
+                } else {
+                    console.warn('❌ Supabase client not available, loading demo data...');
                     loadDemoLeaderboardData();
                     return;
                 }
 
-                const supabase = window.supabaseClient.getSupabaseClient();
+                // Test the connection first
+                console.log('🧪 Testing Supabase connection...');
+                
+                // Try a simple query to test connection
+                const { data: testData, error: testError } = await supabase
+                    .from('users')
+                    .select('count')
+                    .limit(1);
+
+                if (testError) {
+                    console.error('Supabase connection test failed:', testError);
+                    console.log('📝 Falling back to demo data due to connection issues');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                console.log('✅ Supabase connection test successful');
 
                 // Get users data
+                console.log('📊 Fetching users from Supabase...');
                 const { data: users, error: usersError } = await supabase
                     .from('users')
                     .select('*')
@@ -446,36 +481,43 @@
 
                 if (usersError) {
                     console.error('Error loading users:', usersError);
+                    console.log('📝 Falling back to demo data due to users query error');
                     loadDemoLeaderboardData();
                     return;
                 }
 
                 // Get leaderboard data if available
+                console.log('📊 Fetching leaderboard data from Supabase...');
                 const { data: leaderboard, error: leaderboardError } = await supabase
                     .from('leaderboards')
                     .select('*')
                     .order('total_winnings', { ascending: false });
 
-                // Process the data
-                if (users && users.length > 0) {
-                    LeaderboardState.users = processLeaderboardData(users, leaderboard);
-                    console.log(`✅ Loaded ${LeaderboardState.users.length} users from database`);
-                } else {
-                    console.log('No users found in database, loading demo data...');
-                    loadDemoLeaderboardData();
-                    return;
+                if (leaderboardError) {
+                    console.warn('Leaderboard table query failed (this is OK):', leaderboardError);
+                    // Continue without leaderboard data - it's optional
                 }
 
-                // Update display
-                updateLeaderboardDisplay();
-                updateStatsDisplay();
-                updateUserPosition();
+                // Process the data
+                if (users && users.length > 0) {
+                    LeaderboardState.users = processLeaderboardData(users, leaderboard || []);
+                    console.log(`✅ Loaded ${LeaderboardState.users.length} users from database`);
+                    
+                    // Update display with real data
+                    updateLeaderboardDisplay();
+                    updateStatsDisplay();
+                    updateUserPosition();
 
-                LeaderboardState.lastUpdate = new Date();
-                updateLastUpdatedTime();
+                    LeaderboardState.lastUpdate = new Date();
+                    updateLastUpdatedTime();
+                } else {
+                    console.log('ℹ️ No users found in database, loading demo data...');
+                    loadDemoLeaderboardData();
+                }
 
             } catch (error) {
                 console.error('Failed to load leaderboard data:', error);
+                console.log('📝 Falling back to demo data due to unexpected error');
                 loadDemoLeaderboardData();
             } finally {
                 LeaderboardState.loading = false;
@@ -483,34 +525,44 @@
             }
         }
 
-        // Process leaderboard data
+        // FIXED: Process leaderboard data with better error handling
         function processLeaderboardData(users, leaderboard) {
+            console.log(`🔄 Processing ${users.length} users and ${leaderboard.length} leaderboard entries...`);
+            
             return users.map((user, index) => {
-                // Find corresponding leaderboard entry
-                const leaderboardEntry = leaderboard?.find(entry => 
-                    entry.user_wallet === user.wallet_address
-                );
+                try {
+                    // Find corresponding leaderboard entry
+                    const leaderboardEntry = leaderboard.find(entry => 
+                        entry.user_wallet === user.wallet_address
+                    );
 
-                return {
-                    rank: index + 1,
-                    username: user.username || 'Anonymous',
-                    avatar: user.avatar || '🎯',
-                    walletAddress: user.wallet_address,
-                    totalWinnings: parseFloat(user.total_winnings || 0),
-                    totalBets: parseInt(user.total_bets || 0),
-                    winRate: parseFloat(user.win_rate || 0),
-                    currentStreak: parseInt(user.current_streak || 0),
-                    competitionsWon: parseInt(leaderboardEntry?.competitions_won || 0),
-                    competitionsParticipated: parseInt(leaderboardEntry?.competitions_participated || 0),
-                    bestStreak: parseInt(leaderboardEntry?.best_streak || user.current_streak || 0),
-                    isDemo: false,
-                    joinDate: new Date(user.created_at),
-                    lastActive: user.last_active ? new Date(user.last_active) : null
-                };
-            });
+                    const processedUser = {
+                        rank: index + 1,
+                        username: user.username || `Trader${index + 1}`,
+                        avatar: user.avatar || '🎯',
+                        walletAddress: user.wallet_address || `UNKNOWN${index}`,
+                        totalWinnings: parseFloat(user.total_winnings || 0),
+                        totalBets: parseInt(user.total_bets || 0),
+                        winRate: parseFloat(user.win_rate || 0),
+                        currentStreak: parseInt(user.current_streak || 0),
+                        competitionsWon: parseInt(leaderboardEntry?.competitions_won || 0),
+                        competitionsParticipated: parseInt(leaderboardEntry?.competitions_participated || user.total_bets || 0),
+                        bestStreak: parseInt(leaderboardEntry?.best_streak || user.current_streak || 0),
+                        isDemo: false,
+                        joinDate: user.created_at ? new Date(user.created_at) : new Date(),
+                        lastActive: user.last_active ? new Date(user.last_active) : new Date()
+                    };
+                    
+                    console.log(`✅ Processed user: ${processedUser.username} (${processedUser.totalWinnings} SOL)`);
+                    return processedUser;
+                } catch (error) {
+                    console.error('Error processing user:', user, error);
+                    return null;
+                }
+            }).filter(user => user !== null); // Remove any failed processing
         }
 
-        // Load demo leaderboard data
+        // Load demo leaderboard data (unchanged)
         function loadDemoLeaderboardData() {
             console.log('🎮 Loading demo leaderboard data...');
 
@@ -607,7 +659,7 @@
             console.log('✅ Demo leaderboard data loaded');
         }
 
-        // Update leaderboard display
+        // Update leaderboard display (unchanged)
         function updateLeaderboardDisplay() {
             const tableContainer = document.getElementById('leaderboardTable');
             if (!tableContainer) return;
@@ -642,7 +694,7 @@
             tableContainer.innerHTML = tableHTML;
         }
 
-        // Create leaderboard row
+        // Create leaderboard row (unchanged)
         function createLeaderboardRow(user) {
             const isTop3 = user.rank <= 3;
             const rankIcons = ['🥇', '🥈', '🥉'];
@@ -682,7 +734,7 @@
             `;
         }
 
-        // Apply filters and sorting
+        // Apply filters and sorting (unchanged)
         function applyFiltersAndSorting() {
             let filteredUsers = [...LeaderboardState.users];
 
@@ -728,7 +780,7 @@
             LeaderboardState.filteredUsers = filteredUsers;
         }
 
-        // Update stats display
+        // Update stats display (unchanged)
         function updateStatsDisplay() {
             const users = LeaderboardState.users;
 
@@ -737,16 +789,23 @@
             const totalWinnings = users.reduce((sum, user) => sum + user.totalWinnings, 0);
             const longestStreak = Math.max(...users.map(user => user.bestStreak), 0);
 
-            document.getElementById('totalTraders').textContent = totalTraders.toLocaleString();
-            document.getElementById('totalCompetitionsWon').textContent = totalCompetitionsWon.toLocaleString();
-            document.getElementById('totalWinnings').textContent = `${totalWinnings.toFixed(1)} SOL`;
-            document.getElementById('longestStreak').textContent = longestStreak;
+            const updateElement = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            };
+
+            updateElement('totalTraders', totalTraders.toLocaleString());
+            updateElement('totalCompetitionsWon', totalCompetitionsWon.toLocaleString());
+            updateElement('totalWinnings', `${totalWinnings.toFixed(1)} SOL`);
+            updateElement('longestStreak', longestStreak);
         }
 
-        // Update user position
+        // FIXED: Update user position with better wallet detection
         function updateUserPosition() {
             const userPositionCard = document.getElementById('userPosition');
             const disconnectedPrompt = document.getElementById('leaderboardDisconnected');
+
+            if (!userPositionCard || !disconnectedPrompt) return;
 
             if (!LeaderboardState.isConnected) {
                 userPositionCard.style.display = 'none';
@@ -756,40 +815,50 @@
 
             disconnectedPrompt.style.display = 'none';
 
-            // Try to find current user
+            // Try to find current user with better wallet service detection
             let currentUser = null;
-            if (window.walletService && window.walletService.getConnectionStatus) {
-                const walletStatus = window.walletService.getConnectionStatus();
-                if (walletStatus.isConnected) {
-                    currentUser = LeaderboardState.users.find(user => 
-                        user.walletAddress === walletStatus.publicKey
-                    );
+            
+            try {
+                if (window.walletService && typeof window.walletService.getConnectionStatus === 'function') {
+                    const walletStatus = window.walletService.getConnectionStatus();
+                    if (walletStatus.isConnected && walletStatus.publicKey) {
+                        currentUser = LeaderboardState.users.find(user => 
+                            user.walletAddress === walletStatus.publicKey
+                        );
+                    }
                 }
+            } catch (error) {
+                console.warn('Error getting wallet status:', error);
             }
 
             if (currentUser) {
                 userPositionCard.style.display = 'block';
-                document.getElementById('userRank').textContent = `#${currentUser.rank}`;
-                document.getElementById('userWinnings').textContent = `${currentUser.totalWinnings.toFixed(1)} SOL`;
-                document.getElementById('userWinRate').textContent = `${currentUser.winRate.toFixed(1)}%`;
-                document.getElementById('userStreak').textContent = currentUser.currentStreak;
+                const updateUserElement = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value;
+                };
+                
+                updateUserElement('userRank', `#${currentUser.rank}`);
+                updateUserElement('userWinnings', `${currentUser.totalWinnings.toFixed(1)} SOL`);
+                updateUserElement('userWinRate', `${currentUser.winRate.toFixed(1)}%`);
+                updateUserElement('userStreak', currentUser.currentStreak);
             } else {
                 userPositionCard.style.display = 'none';
             }
         }
 
-        // Handle filter changes
+        // Handle filter changes (unchanged)
         function handleLeaderboardFilterChange() {
             const periodSelect = document.getElementById('leaderboard-period');
             const sortSelect = document.getElementById('leaderboard-sort');
 
-            LeaderboardState.currentPeriod = periodSelect.value;
-            LeaderboardState.currentSort = sortSelect.value;
+            if (periodSelect) LeaderboardState.currentPeriod = periodSelect.value;
+            if (sortSelect) LeaderboardState.currentSort = sortSelect.value;
 
             updateLeaderboardDisplay();
         }
 
-        // Refresh leaderboard
+        // Refresh leaderboard (unchanged)
         function refreshLeaderboard() {
             const refreshBtn = document.getElementById('refreshBtn');
             if (refreshBtn) {
@@ -805,12 +874,12 @@
             });
         }
 
-        // Update loading state
+        // Update loading state (unchanged)
         function updateLoadingState(isLoading) {
             // This function can be used to show/hide loading indicators
         }
 
-        // Update last updated time
+        // Update last updated time (unchanged)
         function updateLastUpdatedTime() {
             const lastUpdatedElement = document.getElementById('lastUpdated');
             if (lastUpdatedElement && LeaderboardState.lastUpdate) {
@@ -819,7 +888,7 @@
             }
         }
 
-        // Utility functions
+        // Utility functions (unchanged)
         function formatAddress(address) {
             if (!address) return 'Unknown';
             if (address.startsWith('DEMO')) return address;
@@ -841,13 +910,39 @@
             return `${days}d ago`;
         }
 
+        // FIXED: Auto-initialize when leaderboard page becomes active
+        document.addEventListener('DOMContentLoaded', function() {
+            // Monitor page changes to initialize leaderboard when needed
+            const originalShowPage = window.showPage;
+            if (originalShowPage) {
+                window.showPage = function(pageName, updateHash = true) {
+                    const result = originalShowPage(pageName, updateHash);
+                    
+                    if (pageName === 'leaderboard') {
+                        setTimeout(() => {
+                            initializeLeaderboard();
+                        }, 100);
+                    }
+                    
+                    return result;
+                };
+            }
+            
+            // Initialize immediately if we're already on leaderboard page
+            if (window.location.hash === '#leaderboard') {
+                setTimeout(() => {
+                    initializeLeaderboard();
+                }, 500);
+            }
+        });
+
         // Export functions for global use
         window.initializeLeaderboard = initializeLeaderboard;
         window.loadLeaderboardData = loadLeaderboardData;
         window.refreshLeaderboard = refreshLeaderboard;
         window.handleLeaderboardFilterChange = handleLeaderboardFilterChange;
 
-        console.log('✅ Leaderboard functionality loaded');
+        console.log('✅ Fixed leaderboard functionality loaded');
         </script>
 
         <style>
@@ -1186,6 +1281,35 @@
             color: var(--text-secondary);
             max-width: 400px;
             margin: 0 auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        /* CSS Variables for consistent theming */
+        :root {
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --gold: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --surface-dark: #0f172a;
+            --surface-light: #1e293b;
+            --surface: #334155;
+            --surface-elevated: #475569;
+            --border: #334155;
+            --radius-sm: 0.25rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --font-mono: 'Courier New', monospace;
         }
 
         /* Mobile responsiveness */
