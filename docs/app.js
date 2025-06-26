@@ -80,6 +80,48 @@ let liveDataStatus = {
 // ENHANCED SERVICE INITIALIZATION WITH TIMING
 // ==============================================
 
+// Initialize WalletService safely
+async function initializeWalletServiceSafely() {
+    try {
+        console.log('🔗 Initializing WalletService...');
+        
+        if (window.WalletService && typeof window.getWalletService === 'function') {
+            walletService = window.getWalletService();
+            const success = await walletService.initialize();
+            
+            if (success) {
+                console.log('✅ WalletService initialized successfully');
+                return true;
+            } else {
+                console.warn('⚠️ WalletService initialization failed');
+                return false;
+            }
+        } else {
+            console.warn('⚠️ WalletService class not available');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ WalletService initialization failed:', error);
+        return false;
+    }
+}
+
+// Initialize Supabase connection
+async function initializeSupabaseConnection() {
+    try {
+        if (window.supabaseClient && typeof window.supabaseClient.initializeSupabase === 'function') {
+            supabaseClient = await window.supabaseClient.initializeSupabase();
+            return !!supabaseClient;
+        } else {
+            console.warn('⚠️ Supabase client not available');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Supabase initialization failed:', error);
+        return false;
+    }
+}
+
 // Enhanced service initialization with proper timing and live data integration
 async function initializeServicesWithTiming() {
     console.log('🚀 Starting enhanced service initialization with live data...');
@@ -94,10 +136,10 @@ async function initializeServicesWithTiming() {
         }
         
         if (!window.supabase) {
-            throw new Error('Supabase failed to load after 5 seconds');
+            console.warn('⚠️ Supabase not loaded, continuing without it');
+        } else {
+            console.log('✅ Supabase ready');
         }
-        
-        console.log('✅ Supabase ready');
         
         // Step 2: Verify configuration is available
         if (!window.SUPABASE_CONFIG?.url || !window.SUPABASE_CONFIG?.anonKey) {
@@ -105,31 +147,36 @@ async function initializeServicesWithTiming() {
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             if (!window.SUPABASE_CONFIG?.url) {
-                throw new Error('Supabase configuration not available');
+                console.warn('⚠️ Supabase configuration not available, using fallback mode');
             }
         }
         
-        console.log('✅ Supabase configuration ready');
-        
-        // Step 3: Test Edge Function connectivity
-        console.log('🧪 Testing Edge Function connectivity...');
-        const edgeFunctionTest = await testEdgeFunctionConnectivity();
-        
-        if (edgeFunctionTest.success) {
-            console.log('✅ Edge Functions accessible');
-            liveDataStatus.edgeFunctionsReady = true;
+        if (window.SUPABASE_CONFIG?.url) {
+            console.log('✅ Supabase configuration ready');
+            
+            // Step 3: Test Edge Function connectivity
+            console.log('🧪 Testing Edge Function connectivity...');
+            const edgeFunctionTest = await testEdgeFunctionConnectivity();
+            
+            if (edgeFunctionTest.success) {
+                console.log('✅ Edge Functions accessible');
+                liveDataStatus.edgeFunctionsReady = true;
+            } else {
+                console.warn('⚠️ Edge Functions not accessible, will use cache-only mode:', edgeFunctionTest.error);
+                liveDataStatus.edgeFunctionsReady = false;
+            }
+            
+            // Step 4: Initialize Supabase client
+            console.log('🔄 Initializing Supabase client...');
+            const supabaseSuccess = await initializeSupabaseConnection();
+            if (supabaseSuccess) {
+                updateDbStatus('connected', '✅ Database: Connected');
+            } else {
+                updateDbStatus('disconnected', '⚠️ Database: Degraded');
+            }
         } else {
-            console.warn('⚠️ Edge Functions not accessible, will use cache-only mode:', edgeFunctionTest.error);
-            liveDataStatus.edgeFunctionsReady = false;
-        }
-        
-        // Step 4: Initialize Supabase client
-        console.log('🔄 Initializing Supabase client...');
-        const supabaseSuccess = await initializeSupabaseConnection();
-        if (supabaseSuccess) {
-            updateDbStatus('connected', '✅ Database: Connected');
-        } else {
-            updateDbStatus('disconnected', '⚠️ Database: Degraded');
+            console.log('⚠️ Skipping Supabase initialization - configuration not available');
+            updateDbStatus('disconnected', '⚠️ Database: Configuration missing');
         }
         
         // Step 5: Initialize services in proper order with timing
@@ -163,21 +210,25 @@ async function initializeServicesWithTiming() {
         }
         
         // Step 6: Check cache health and populate if needed
-        console.log('🗄️ Checking cache health...');
-        const cacheHealth = await checkCacheHealth();
-        liveDataStatus.tokenCacheCount = cacheHealth.tokenCacheCount;
-        liveDataStatus.priceCacheCount = cacheHealth.priceCacheCount;
-        
-        if (cacheHealth.tokenCacheCount === 0 && liveDataStatus.edgeFunctionsReady) {
-            console.log('🔄 Cache empty, triggering initial live data fetch...');
-            await forceLiveDataRefresh();
+        if (window.SUPABASE_CONFIG?.url) {
+            console.log('🗄️ Checking cache health...');
+            const cacheHealth = await checkCacheHealth();
+            liveDataStatus.tokenCacheCount = cacheHealth.tokenCacheCount;
+            liveDataStatus.priceCacheCount = cacheHealth.priceCacheCount;
+            
+            if (cacheHealth.tokenCacheCount === 0 && liveDataStatus.edgeFunctionsReady) {
+                console.log('🔄 Cache empty, triggering initial live data fetch...');
+                await forceLiveDataRefresh();
+            }
         }
         
         // Step 7: Start background services
         console.log('⚙️ Starting background services...');
         startSystemHealthMonitoring();
         startBackgroundServices();
-        startLiveDataMonitoring();
+        if (liveDataStatus.edgeFunctionsReady) {
+            startLiveDataMonitoring();
+        }
         
         // Update status
         liveDataStatus.initialized = true;
@@ -186,7 +237,7 @@ async function initializeServicesWithTiming() {
         console.log('✅ Enhanced service initialization complete');
         console.log('📊 Live Data Status:', liveDataStatus);
         
-        showNotification('TokenWars ready with live data integration!', 'success');
+        showNotification('TokenWars ready!', 'success');
         
         // Update wallet status display
         updateWalletStatusDisplay();
@@ -204,7 +255,7 @@ async function initializeServicesWithTiming() {
         
     } catch (error) {
         console.error('❌ Enhanced service initialization failed:', error);
-        showErrorNotification('Failed to initialize with live data - using fallback mode');
+        showErrorNotification('Failed to initialize - using fallback mode');
         
         // Update status indicators to show errors
         updateTokenStatus('❌ Tokens: Error');
@@ -458,6 +509,15 @@ async function checkCacheHealth() {
     try {
         console.log('🗄️ Checking cache health...');
         
+        if (!window.supabase) {
+            return {
+                tokenCacheCount: 0,
+                priceCacheCount: 0,
+                error: 'Supabase not available',
+                timestamp: new Date().toISOString()
+            };
+        }
+        
         // Check token cache
         const { data: tokenCache, error: tokenError } = await window.supabase
             .from('token_cache')
@@ -598,16 +658,8 @@ async function initializeApp() {
         if (initResult.success) {
             console.log('✅ App initialization complete with live data integration');
             console.log('📊 Final status:', initResult.liveDataStatus);
-            
-            // Show success message with live data status
-            const statusMessage = initResult.liveDataStatus.tokenCacheCount > 0
-                ? `Live data ready! ${initResult.liveDataStatus.tokenCacheCount} tokens loaded`
-                : 'App ready with cache fallback mode';
-            
-            showNotification(statusMessage, 'success');
         } else {
             console.log('⚠️ App initialization completed with fallbacks');
-            showNotification('App ready with limited features', 'warning');
         }
         
         // Load initial page content
@@ -624,7 +676,7 @@ async function initializeApp() {
 }
 
 // ==============================================
-// NAVIGATION SYSTEM (Unchanged from previous version)
+// NAVIGATION SYSTEM
 // ==============================================
 
 function initializeRouting() {
@@ -798,50 +850,8 @@ function hideAllSections() {
 }
 
 // ==============================================
-// COMPLETE WALLET FUNCTIONS - MISSING IMPLEMENTATIONS
+// COMPLETE WALLET FUNCTIONS
 // ==============================================
-
-// Initialize WalletService safely
-async function initializeWalletServiceSafely() {
-    try {
-        console.log('🔗 Initializing WalletService...');
-        
-        if (window.WalletService && typeof window.getWalletService === 'function') {
-            walletService = window.getWalletService();
-            const success = await walletService.initialize();
-            
-            if (success) {
-                console.log('✅ WalletService initialized successfully');
-                return true;
-            } else {
-                console.warn('⚠️ WalletService initialization failed');
-                return false;
-            }
-        } else {
-            console.warn('⚠️ WalletService class not available');
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ WalletService initialization failed:', error);
-        return false;
-    }
-}
-
-// Initialize Supabase connection
-async function initializeSupabaseConnection() {
-    try {
-        if (window.supabaseClient && typeof window.supabaseClient.initializeSupabase === 'function') {
-            supabaseClient = await window.supabaseClient.initializeSupabase();
-            return !!supabaseClient;
-        } else {
-            console.warn('⚠️ Supabase client not available');
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ Supabase initialization failed:', error);
-        return false;
-    }
-}
 
 // FIXED: Complete openWalletModal function
 function openWalletModal() {
@@ -998,28 +1008,42 @@ function setupStepSpecificFeatures(stepNumber) {
 // Update wallet options status
 function updateWalletOptionsStatus() {
     try {
-        if (!walletService) {
-            console.log('⚠️ WalletService not available for status update');
-            return;
-        }
+        // Simple fallback if WalletService not available
+        const walletStatuses = {
+            phantom: '✓ Available',
+            solflare: '✓ Available',
+            backpack: '✓ Available',
+            demo: '✓ Available'
+        };
         
-        const walletInfo = walletService.getWalletInfo();
-        const availableWallets = walletInfo.available;
-        
-        // Update status for each wallet option
-        Object.keys(availableWallets).forEach(walletType => {
-            const statusElement = document.getElementById(`${walletType}Status`);
-            if (statusElement) {
-                const wallet = availableWallets[walletType];
-                if (wallet.isInstalled) {
-                    statusElement.textContent = '✓ Available';
-                    statusElement.className = 'wallet-status available';
-                } else {
-                    statusElement.textContent = '❌ Not installed';
-                    statusElement.className = 'wallet-status unavailable';
+        if (walletService && walletService.getWalletInfo) {
+            const walletInfo = walletService.getWalletInfo();
+            const availableWallets = walletInfo.available;
+            
+            // Update status for each wallet option
+            Object.keys(availableWallets).forEach(walletType => {
+                const statusElement = document.getElementById(`${walletType}Status`);
+                if (statusElement) {
+                    const wallet = availableWallets[walletType];
+                    if (wallet.isInstalled) {
+                        statusElement.textContent = '✓ Available';
+                        statusElement.className = 'wallet-status available';
+                    } else {
+                        statusElement.textContent = '❌ Not installed';
+                        statusElement.className = 'wallet-status unavailable';
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // Fallback: assume all wallets are available
+            Object.keys(walletStatuses).forEach(walletType => {
+                const statusElement = document.getElementById(`${walletType}Status`);
+                if (statusElement) {
+                    statusElement.textContent = walletStatuses[walletType];
+                    statusElement.className = 'wallet-status available';
+                }
+            });
+        }
         
     } catch (error) {
         console.error('❌ Error updating wallet options status:', error);
@@ -1128,8 +1152,6 @@ function setupStep3EventListeners() {
             usernameInput.addEventListener('input', validateUsernameInput);
             usernameInput.addEventListener('blur', validateUsernameInput);
         }
-        
-        // Avatar selection is handled by onclick in HTML
         
         // Update preview when inputs change
         updateTraderPreview();
@@ -1553,6 +1575,10 @@ function debugValidationState() {
     });
 }
 
+// ==============================================
+// HELPER FUNCTIONS AND UTILITIES
+// ==============================================
+
 // Setup UI event listeners
 function setupUIEventListeners() {
     console.log('🎛️ Setting up UI event listeners...');
@@ -1571,8 +1597,8 @@ function setupUIEventListeners() {
                 if (e.target === modal) {
                     if (modal.classList.contains('wallet-modal')) {
                         closeWalletModal();
-                    } else {
-                        closeCompetitionModal();
+                    } else if (window.closeCompetitionModal) {
+                        window.closeCompetitionModal();
                     }
                 }
             });
@@ -1598,6 +1624,62 @@ function toggleMobileMenu() {
         }
     } catch (error) {
         console.error('❌ Error toggling mobile menu:', error);
+    }
+}
+
+function showNotification(message, type = 'info') {
+    console.log(`📢 [${type.toUpperCase()}] ${message}`);
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        z-index: 9999;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+function showErrorNotification(message) {
+    showNotification(message, 'error');
+}
+
+function updateDbStatus(status, message) {
+    const statusElement = document.getElementById('dbStatus');
+    if (statusElement) {
+        statusElement.className = `db-status ${status}`;
+        statusElement.textContent = message;
+    }
+}
+
+function updateTokenStatus(message) {
+    const statusElement = document.getElementById('tokenStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+        
+        if (message.includes('✅')) {
+            statusElement.className = 'db-status connected';
+        } else if (message.includes('⚠️')) {
+            statusElement.className = 'db-status degraded';
+        } else {
+            statusElement.className = 'db-status disconnected';
+        }
     }
 }
 
@@ -1686,70 +1768,6 @@ function updateWalletStatus() {
     updateWalletStatusDisplay();
 }
 
-console.log('✅ Complete wallet functions loaded and ready');
-
-// ==============================================
-// HELPER FUNCTIONS AND UTILITIES
-// ==============================================
-
-function showNotification(message, type = 'info') {
-    console.log(`📢 [${type.toUpperCase()}] ${message}`);
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 0.5rem;
-        z-index: 9999;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        max-width: 400px;
-        word-wrap: break-word;
-    `;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
-}
-
-function showErrorNotification(message) {
-    showNotification(message, 'error');
-}
-
-function updateDbStatus(status, message) {
-    const statusElement = document.getElementById('dbStatus');
-    if (statusElement) {
-        statusElement.className = `db-status ${status}`;
-        statusElement.textContent = message;
-    }
-}
-
-function updateTokenStatus(message) {
-    const statusElement = document.getElementById('tokenStatus');
-    if (statusElement) {
-        statusElement.textContent = message;
-        
-        if (message.includes('✅')) {
-            statusElement.className = 'db-status connected';
-        } else if (message.includes('⚠️')) {
-            statusElement.className = 'db-status degraded';
-        } else {
-            statusElement.className = 'db-status disconnected';
-        }
-    }
-}
-
-// [Additional helper functions from previous version...]
-
 // ==============================================
 // CLEANUP AND GLOBAL EXPORTS
 // ==============================================
@@ -1836,4 +1854,5 @@ console.log('   ✅ Edge Function connectivity testing and fallbacks');
 console.log('   ✅ Background live data monitoring and refresh');
 console.log('   ✅ Comprehensive error handling and recovery');
 console.log('   ✅ Real-time cache health monitoring');
+console.log('   ✅ Complete wallet connection system');
 console.log('🚀 Ready for live data integration testing!');
