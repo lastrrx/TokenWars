@@ -85,7 +85,14 @@ function initializeRouting() {
 // Update page based on current hash
 function updatePageFromHash() {
     const hash = window.location.hash.substring(1) || 'home';
-    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio', 'how-it-works'];
+    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio'];
+    
+    // Handle how-it-works as external navigation
+    if (hash === 'how-it-works') {
+        console.log('🔗 Hash points to how-it-works, but this should be external navigation');
+        // Don't navigate automatically - let user click the link
+        return;
+    }
     
     if (validPages.includes(hash)) {
         showPage(hash, false); // false = don't update hash again
@@ -100,8 +107,15 @@ function updatePageFromHash() {
 function showPage(pageName, updateHash = true) {
     console.log(`📄 Navigating to page: ${pageName}`);
     
-    // Validate page name
-    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio', 'how-it-works'];
+    // Handle external navigation to how-it-works.html
+    if (pageName === 'how-it-works') {
+        console.log('🔗 Navigating to external how-it-works.html');
+        window.location.href = 'how-it-works.html';
+        return;
+    }
+    
+    // Validate page name for internal pages
+    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio'];
     if (!validPages.includes(pageName)) {
         console.error(`❌ Invalid page name: ${pageName}`);
         return;
