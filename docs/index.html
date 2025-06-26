@@ -388,54 +388,68 @@
                 </div>
             </div>
 
-            <!-- Step 3: Enhanced Trader Profile Creation -->
+            <!-- Step 3: REDESIGNED Trader Profile Creation -->
             <div class="step-content" id="step3Content">
-                <div class="education-section">
-                    <div class="education-title">🎯 Create Your Trader Profile</div>
-                    <div class="education-content">
-                        Your username will be displayed on leaderboards and in competitions. Choose wisely!
+                <div class="profile-creation-container">
+                    <div class="profile-header">
+                        <div class="profile-icon">🎯</div>
+                        <h3 class="profile-title">Create Your Trader Profile</h3>
+                        <p class="profile-subtitle">Your username will be displayed on leaderboards and in competitions. Choose wisely!</p>
                     </div>
-                </div>
 
-                <div class="trader-creator">
-                    <div class="form-group">
-                        <label class="form-label">Trader Username</label>
-                        <input 
-                            type="text" 
-                            class="form-input" 
-                            id="traderUsername" 
-                            placeholder="Enter your username..."
-                            maxlength="20"
-                        >
-                        <div class="input-requirements">
-                            3-20 characters, alphanumeric and underscores only. No profanity.
+                    <div class="profile-form">
+                        <div class="form-section">
+                            <label class="form-label-modern">Trader Username</label>
+                            <div class="input-container">
+                                <input 
+                                    type="text" 
+                                    class="form-input-modern" 
+                                    id="traderUsername" 
+                                    placeholder="Enter your username..."
+                                    maxlength="20"
+                                >
+                                <div class="input-status" id="inputStatus"></div>
+                            </div>
+                            <div class="input-requirements">
+                                3-20 characters, alphanumeric and underscores only. No profanity.
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <label class="form-label-modern">Choose Your Avatar</label>
+                            <div class="avatar-grid-modern" id="avatarGrid">
+                                <div class="avatar-option-modern selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
+                            </div>
+                        </div>
+
+                        <div class="profile-preview-modern">
+                            <div class="preview-card">
+                                <div class="preview-avatar-modern" id="previewAvatar">🎯</div>
+                                <div class="preview-info">
+                                    <div class="preview-name-modern" id="previewName">Trader Username</div>
+                                    <div class="preview-subtitle-modern">Ready to predict token movements</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Choose Your Avatar</label>
-                        <div class="avatar-grid" id="avatarGrid">
-                            <div class="avatar-option selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
-                            <div class="avatar-option" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
-                            <div class="avatar-option" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
-                            <div class="avatar-option" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
-                            <div class="avatar-option" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
-                            <div class="avatar-option" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
-                            <div class="avatar-option" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
-                            <div class="avatar-option" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
-                        </div>
+                    <div class="modal-actions-modern">
+                        <button class="btn-modal-secondary-modern" onclick="goToStep(1)">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn-modal-primary-modern" id="createProfileBtn" onclick="goToStep(4)" disabled>
+                            Create Profile
+                            <span class="btn-icon">→</span>
+                        </button>
                     </div>
-
-                    <div class="trader-preview">
-                        <div class="preview-avatar" id="previewAvatar">🎯</div>
-                        <div class="preview-name" id="previewName">Trader Username</div>
-                        <div class="preview-subtitle">Ready to predict token movements</div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
-                    <button class="btn-modal-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Create Profile</button>
                 </div>
             </div>
 
@@ -571,16 +585,22 @@
             margin: 0 auto;
             padding: 0 2rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start; /* Changed from space-between to flex-start */
             align-items: center;
-            gap: 3rem; /* Reduced from default to bring elements closer */
+            gap: 2rem; /* Much smaller gap */
         }
         
         .nav-links {
             display: flex;
-            gap: 1.5rem; /* Reduced from 2.5rem to bring links closer */
+            gap: 1.5rem;
             list-style: none;
             align-items: center;
+            margin-left: 0; /* Remove any auto margin */
+        }
+        
+        /* Push wallet connection to the right */
+        .nav-links li:last-child {
+            margin-left: auto;
         }
         
         /* Enhanced Step 2 - Connecting State Styles */
@@ -723,11 +743,293 @@
             box-shadow: none;
         }
         
-        .modal-actions {
+        /* REDESIGNED Step 3 - Modern Profile Creation */
+        .profile-creation-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .profile-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .profile-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .profile-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            margin: 0;
+        }
+        
+        .profile-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .profile-form {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .form-label-modern {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .form-input-modern {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-input-modern:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            background: var(--surface-elevated);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .form-input-modern.valid {
+            border-color: var(--accent-green);
+        }
+        
+        .form-input-modern.invalid {
+            border-color: var(--accent-red);
+        }
+        
+        .input-status {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+        
+        .input-requirements {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        
+        .avatar-grid-modern {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+        
+        .avatar-option-modern {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .avatar-option-modern:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .avatar-option-modern.selected {
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .avatar-option-modern.selected::after {
+            content: '✓';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-purple);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .profile-preview-modern {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .preview-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .preview-avatar-modern {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+        
+        .preview-info {
+            flex: 1;
+        }
+        
+        .preview-name-modern {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .preview-subtitle-modern {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .modal-actions-modern {
             display: flex;
             gap: 1rem;
-            justify-content: center;
+            justify-content: space-between;
+            margin-top: 2rem;
             flex-wrap: wrap;
+        }
+        
+        .btn-modal-secondary-modern {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+        }
+        
+        .btn-modal-secondary-modern:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+        
+        .btn-modal-primary-modern {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 2;
+            justify-content: center;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-modal-primary-modern:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-modal-primary-modern:disabled {
+            background: var(--surface-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-modal-primary-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-modal-primary-modern:hover:not(:disabled)::before {
+            left: 100%;
+        }
+        
+        .btn-icon {
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn-modal-primary-modern:hover .btn-icon {
+            transform: translateX(2px);
+        }
+        
+        .btn-modal-secondary-modern:hover .btn-icon {
+            transform: translateX(-2px);
         }
         
         /* Dashboard Grid for Connected Users */
