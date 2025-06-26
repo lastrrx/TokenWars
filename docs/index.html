@@ -4728,6 +4728,180 @@ console.log('🚀 Available functions:', {
     disconnectWallet: typeof disconnectWallet
 });
 </script>
+
+    // WALLET MODAL FIX
+// Add this at the very END of your index.html, right before the closing </body> tag
+// This will override any conflicting definitions
+
+<script>
+console.log('🔧 Applying wallet modal fix...');
+
+// Remove any existing duplicate functions
+if (window.walletModalFixed) {
+    console.log('✅ Wallet modal already fixed, skipping...');
+} else {
+    // Clear any existing intervals that might be causing loops
+    for (let i = 0; i < 10000; i++) {
+        clearInterval(i);
+        clearTimeout(i);
+    }
+
+    // Flag to prevent multiple fixes
+    window.walletModalFixed = true;
+
+    // Store the modal state
+    window.walletModalState = {
+        isOpen: false,
+        isProcessing: false
+    };
+
+    // Override the openWalletModal function with a fixed version
+    window.openWalletModal = function() {
+        console.log('🔗 Opening wallet modal (fixed version)...');
+        
+        // Prevent multiple opens
+        if (window.walletModalState.isOpen || window.walletModalState.isProcessing) {
+            console.log('⚠️ Modal already open or processing, skipping...');
+            return;
+        }
+        
+        window.walletModalState.isProcessing = true;
+        
+        try {
+            const modal = document.getElementById('walletModal');
+            if (!modal) {
+                console.error('❌ Wallet modal element not found');
+                alert('Wallet connection modal not available. Please refresh the page.');
+                window.walletModalState.isProcessing = false;
+                return;
+            }
+            
+            // Show modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Make sure modal is visible
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+            
+            // Reset to step 1
+            if (typeof goToStep === 'function') {
+                goToStep(1);
+            }
+            
+            // Update wallet status displays
+            if (typeof updateWalletOptionsStatus === 'function') {
+                updateWalletOptionsStatus();
+            }
+            
+            window.walletModalState.isOpen = true;
+            window.walletModalState.isProcessing = false;
+            
+            console.log('✅ Wallet modal opened successfully');
+            
+        } catch (error) {
+            console.error('❌ Error opening wallet modal:', error);
+            window.walletModalState.isProcessing = false;
+            showErrorNotification('Failed to open wallet connection');
+        }
+    };
+
+    // Override the closeWalletModal function
+    window.closeWalletModal = function() {
+        console.log('🔐 Closing wallet modal (fixed version)...');
+        
+        try {
+            const modal = document.getElementById('walletModal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+            
+            // Reset modal state
+            if (typeof resetModal === 'function') {
+                resetModal();
+            }
+            
+            window.walletModalState.isOpen = false;
+            
+            console.log('✅ Wallet modal closed');
+            
+        } catch (error) {
+            console.error('❌ Error closing wallet modal:', error);
+        }
+    };
+
+    // Make sure the Connect Wallet button has the correct handler
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fix navigation button
+        const navConnectBtn = document.getElementById('connectWalletBtn');
+        if (navConnectBtn) {
+            const navLink = navConnectBtn.querySelector('a');
+            if (navLink) {
+                navLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.openWalletModal();
+                    return false;
+                };
+            }
+        }
+        
+        // Fix any other connect wallet buttons
+        document.querySelectorAll('[onclick*="openWalletModal"]').forEach(btn => {
+            btn.onclick = function(e) {
+                e.preventDefault();
+                window.openWalletModal();
+                return false;
+            };
+        });
+        
+        // Add click handler to modal background
+        const modal = document.getElementById('walletModal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal && window.walletModalState.isOpen) {
+                    window.closeWalletModal();
+                }
+            });
+        }
+        
+        // Fix close button
+        const closeBtn = modal?.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                window.closeWalletModal();
+            };
+        }
+    });
+
+    console.log('✅ Wallet modal fix applied successfully');
+}
+
+// Also ensure the wallet modal has the correct CSS
+const modalCSS = `
+<style>
+.wallet-modal {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.wallet-modal.show {
+    opacity: 1;
+}
+</style>
+`;
+
+// Add CSS if not already present
+if (!document.getElementById('wallet-modal-fix-css')) {
+    const styleElement = document.createElement('div');
+    styleElement.id = 'wallet-modal-fix-css';
+    styleElement.innerHTML = modalCSS;
+    document.head.appendChild(styleElement.firstChild);
+}
+</script>
     
 </body>
 </html>
