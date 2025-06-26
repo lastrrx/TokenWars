@@ -290,7 +290,7 @@ function truncateAddress(address) {
  */
 
 // Prevent console access in production
-if (window.location.hostname !== 'localhost') {
+if (fales) {//(window.location.hostname !== 'localhost') {
     // Disable right-click
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     
