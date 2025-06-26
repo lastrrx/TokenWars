@@ -3788,5 +3788,290 @@
             }
         }
     </style>
+    
+// ==============================================
+// MISSING WALLET FUNCTIONS - QUICK FIX
+// Add this script to your index.html, just before the closing </body> tag
+// ==============================================
+
+<script>
+// Missing wallet modal functions - add these if they don't exist
+if (typeof goToStep === 'undefined') {
+    window.goToStep = function(step) {
+        console.log('goToStep called:', step);
+        
+        // Hide all step contents
+        const stepContents = document.querySelectorAll('.step-content');
+        stepContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Show target step
+        const targetStep = document.getElementById(`step${step}Content`);
+        if (targetStep) {
+            targetStep.classList.add('active');
+        }
+        
+        // Update step indicators
+        const indicators = document.querySelectorAll('.step-indicator');
+        indicators.forEach((indicator, index) => {
+            if (index + 1 <= step) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        });
+        
+        console.log(`Wallet modal advanced to step ${step}`);
+    };
+}
+
+if (typeof openWalletModal === 'undefined') {
+    window.openWalletModal = function() {
+        console.log('Opening wallet modal...');
+        
+        const modal = document.getElementById('walletModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            goToStep(1);
+            document.body.style.overflow = 'hidden';
+            
+            // Initialize wallet detection
+            checkWalletAvailability();
+        } else {
+            console.error('Wallet modal not found');
+            alert('Wallet connection feature is being set up. Please try again in a moment.');
+        }
+    };
+}
+
+if (typeof closeWalletModal === 'undefined') {
+    window.closeWalletModal = function() {
+        console.log('Closing wallet modal...');
+        
+        const modal = document.getElementById('walletModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    };
+}
+
+if (typeof selectWallet === 'undefined') {
+    window.selectWallet = function(walletType) {
+        console.log('Wallet selected:', walletType);
+        
+        // For demo purposes, show a simple alert
+        if (walletType === 'demo') {
+            alert('Demo mode selected! This will create a temporary wallet with 10 SOL for testing.');
+            // Simulate demo wallet connection
+            simulateDemoWalletConnection();
+        } else {
+            alert(`${walletType} wallet connection will be implemented soon. For now, try Demo Mode.`);
+        }
+        
+        closeWalletModal();
+    };
+}
+
+// Simulate demo wallet connection for testing
+function simulateDemoWalletConnection() {
+    console.log('Simulating demo wallet connection...');
+    
+    // Create demo user data
+    const demoUser = {
+        username: 'DemoTrader',
+        avatar: '🎮',
+        walletAddress: 'DEMO' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        balance: 10.0,
+        isDemo: true
+    };
+    
+    // Update UI to show connected state
+    updateUIForConnectedUser(demoUser);
+    
+    console.log('Demo wallet connected:', demoUser);
+}
+
+// Update UI for connected user
+function updateUIForConnectedUser(user) {
+    console.log('Updating UI for connected user:', user);
+    
+    // Update navigation
+    const connectBtn = document.getElementById('connectWalletBtn');
+    const traderInfo = document.getElementById('traderInfo');
+    
+    if (connectBtn && traderInfo) {
+        connectBtn.style.display = 'none';
+        traderInfo.style.display = 'block';
+        
+        // Update trader info
+        const navTraderName = document.getElementById('navTraderName');
+        const navTraderAvatar = document.getElementById('navTraderAvatar');
+        const navTraderBalance = document.getElementById('navTraderBalance');
+        
+        if (navTraderName) navTraderName.textContent = user.username;
+        if (navTraderAvatar) navTraderAvatar.textContent = user.avatar;
+        if (navTraderBalance) navTraderBalance.textContent = `${user.balance} SOL`;
+    }
+    
+    // Update hero section
+    const heroDisconnected = document.getElementById('heroDisconnected');
+    const heroConnected = document.getElementById('heroConnected');
+    const heroTraderNameText = document.getElementById('heroTraderNameText');
+    
+    if (heroDisconnected && heroConnected) {
+        heroDisconnected.style.display = 'none';
+        heroConnected.style.display = 'block';
+        
+        if (heroTraderNameText) {
+            heroTraderNameText.textContent = user.username;
+        }
+    }
+    
+    // Store connected user globally
+    window.connectedUser = user;
+    window.currentUser = user;
+    
+    // Trigger competitions page update if on that page
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => {
+            if (typeof updateCompetitionsPageVisibility === 'function') {
+                updateCompetitionsPageVisibility();
+            }
+        }, 500);
+    }
+    
+    // Refresh leaderboard if on that page
+    if (window.location.hash === '#leaderboard') {
+        setTimeout(() => {
+            if (typeof loadLeaderboardData === 'function') {
+                loadLeaderboardData();
+            }
+        }, 500);
+    }
+}
+
+// Update UI for disconnected user
+function updateUIForDisconnectedUser() {
+    console.log('Updating UI for disconnected user');
+    
+    // Update navigation
+    const connectBtn = document.getElementById('connectWalletBtn');
+    const traderInfo = document.getElementById('traderInfo');
+    
+    if (connectBtn && traderInfo) {
+        connectBtn.style.display = 'block';
+        traderInfo.style.display = 'none';
+    }
+    
+    // Update hero section
+    const heroDisconnected = document.getElementById('heroDisconnected');
+    const heroConnected = document.getElementById('heroConnected');
+    
+    if (heroDisconnected && heroConnected) {
+        heroDisconnected.style.display = 'block';
+        heroConnected.style.display = 'none';
+    }
+    
+    // Clear connected user
+    window.connectedUser = null;
+    window.currentUser = null;
+    
+    // Trigger competitions page update if on that page
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => {
+            if (typeof updateCompetitionsPageVisibility === 'function') {
+                updateCompetitionsPageVisibility();
+            }
+        }, 500);
+    }
+}
+
+// Add disconnect wallet function
+if (typeof disconnectWallet === 'undefined') {
+    window.disconnectWallet = function() {
+        console.log('Disconnecting wallet...');
+        updateUIForDisconnectedUser();
+        alert('Wallet disconnected successfully!');
+    };
+}
+
+// Check wallet availability (placeholder)
+function checkWalletAvailability() {
+    console.log('Checking wallet availability...');
+    
+    // Update wallet status in modal
+    const statusElements = {
+        phantomStatus: document.getElementById('phantomStatus'),
+        solflareStatus: document.getElementById('solflareStatus'),
+        backpackStatus: document.getElementById('backpackStatus'),
+        demoStatus: document.getElementById('demoStatus')
+    };
+    
+    // For now, mark all as not installed except demo
+    Object.keys(statusElements).forEach(key => {
+        const element = statusElements[key];
+        if (element) {
+            if (key === 'demoStatus') {
+                element.textContent = '✓ Available';
+                element.style.color = '#22c55e';
+            } else {
+                element.textContent = '❌ Not installed';
+                element.style.color = '#ef4444';
+            }
+        }
+    });
+}
+
+// Enhanced showPage function if it doesn't exist
+if (typeof showPage === 'undefined') {
+    window.showPage = function(pageName) {
+        console.log('Navigating to page:', pageName);
+        
+        // Hide all pages
+        document.querySelectorAll('.page-content').forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        // Show target page
+        const targetPage = document.getElementById(pageName + 'Page');
+        if (targetPage) {
+            targetPage.classList.add('active');
+            window.location.hash = pageName;
+            
+            // Initialize page-specific content
+            if (pageName === 'leaderboard' && typeof initializeLeaderboard === 'function') {
+                setTimeout(() => initializeLeaderboard(), 100);
+            }
+            
+            if (pageName === 'competitions' && typeof updateCompetitionsPageVisibility === 'function') {
+                setTimeout(() => updateCompetitionsPageVisibility(), 200);
+            }
+        }
+        
+        // Update active nav link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        const activeLink = document.querySelector(`[data-page="${pageName}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+    };
+}
+
+console.log('✅ Missing wallet functions added');
+console.log('🔧 Functions available:', {
+    goToStep: typeof goToStep,
+    openWalletModal: typeof openWalletModal,
+    closeWalletModal: typeof closeWalletModal,
+    selectWallet: typeof selectWallet,
+    disconnectWallet: typeof disconnectWallet,
+    showPage: typeof showPage
+});
+</script>
+    
 </body>
 </html>
