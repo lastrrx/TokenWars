@@ -1498,10 +1498,10 @@ function updateUIForConnectedUser() {
         // Update dashboard content
         updateDashboardCards();
         
-        // Hide learn more section for connected users
+        // ALWAYS show learn more section for connected users too
         const learnMoreSection = document.getElementById('learnMoreSection');
         if (learnMoreSection) {
-            learnMoreSection.style.display = 'none';
+            learnMoreSection.style.display = 'block';
         }
         
         console.log('✅ UI updated for connected user:', connectedUser?.username || 'Unknown');
