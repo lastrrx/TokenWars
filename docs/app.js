@@ -1,5 +1,5 @@
-// Main Application Logic - Phase 3: ENHANCED WITH HASH-BASED ROUTING
-// Step 1.1 Implementation: Page Structure Redesign with proper navigation
+// Main Application Logic - Phase 3: NAVIGATION CLEANUP
+// Updated routing to remove Markets, keep Competitions as main hub
 
 // Global state
 let walletService = null;
@@ -31,9 +31,9 @@ let pageHistory = ['home'];
     window.initializeRouting = initializeRouting;
     window.navigateToPage = navigateToPage;
     window.updatePageFromHash = updatePageFromHash;
+    window.scrollToLearnMore = scrollToLearnMore;
     
-    // Original navigation functions (maintained for compatibility)
-    window.showMarkets = () => showPage('markets');
+    // Updated navigation functions (removed showMarkets)
     window.showCompetitions = () => showPage('competitions'); 
     window.showLeaderboard = () => showPage('leaderboard');
     window.showPortfolio = () => showPage('portfolio');
@@ -59,16 +59,16 @@ let pageHistory = ['home'];
     // Core app function
     window.initializeApp = initializeApp;
     
-    console.log('✅ All functions exposed globally - Phase 3 with Enhanced Routing ready');
+    console.log('✅ Navigation cleanup complete - Markets removed, Competitions as main hub');
 })();
 
 // ==============================================
-// ENHANCED NAVIGATION SYSTEM - STEP 1.1
+// ENHANCED NAVIGATION SYSTEM - CLEANED UP
 // ==============================================
 
 // Initialize hash-based routing system
 function initializeRouting() {
-    console.log('🧭 Initializing hash-based routing system...');
+    console.log('🧭 Initializing cleaned navigation system...');
     
     // Set up hash change listener
     window.addEventListener('hashchange', updatePageFromHash);
@@ -79,20 +79,14 @@ function initializeRouting() {
     // Handle initial page load
     updatePageFromHash();
     
-    console.log('✅ Routing system initialized');
+    console.log('✅ Clean navigation system initialized');
 }
 
 // Update page based on current hash
 function updatePageFromHash() {
     const hash = window.location.hash.substring(1) || 'home';
-    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio'];
-    
-    // Handle how-it-works as external navigation
-    if (hash === 'how-it-works') {
-        console.log('🔗 Hash points to how-it-works, but this should be external navigation');
-        // Don't navigate automatically - let user click the link
-        return;
-    }
+    // Updated valid pages - removed 'markets', kept 'competitions'
+    const validPages = ['home', 'competitions', 'leaderboard', 'portfolio'];
     
     if (validPages.includes(hash)) {
         showPage(hash, false); // false = don't update hash again
@@ -107,15 +101,8 @@ function updatePageFromHash() {
 function showPage(pageName, updateHash = true) {
     console.log(`📄 Navigating to page: ${pageName}`);
     
-    // Handle external navigation to how-it-works.html
-    if (pageName === 'how-it-works') {
-        console.log('🔗 Navigating to external how-it-works.html');
-        window.location.href = 'how-it-works.html';
-        return;
-    }
-    
-    // Validate page name for internal pages
-    const validPages = ['home', 'markets', 'competitions', 'leaderboard', 'portfolio'];
+    // Updated valid pages list - removed 'markets'
+    const validPages = ['home', 'competitions', 'leaderboard', 'portfolio'];
     if (!validPages.includes(pageName)) {
         console.error(`❌ Invalid page name: ${pageName}`);
         return;
@@ -205,17 +192,32 @@ function updateActiveNavLink(activePageName) {
     }
 }
 
+// Enhanced scrollToLearnMore function for home page
+function scrollToLearnMore() {
+    console.log('📜 Scrolling to Learn More section');
+    
+    const learnMoreSection = document.getElementById('learnMoreSection');
+    if (learnMoreSection) {
+        learnMoreSection.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+        console.log('✅ Scrolled to Learn More section');
+    } else {
+        console.warn('⚠️ Learn More section not found');
+    }
+}
+
 // Load content for specific pages
 function loadPageContent(pageName) {
     console.log(`📦 Loading content for page: ${pageName}`);
     
     switch (pageName) {
-        case 'markets':
-        case 'competitions':
+        case 'competitions': // Updated from 'markets'
             if (connectedUser) {
                 loadActiveCompetitions();
             } else {
-                showConnectWalletPrompt('competitions-grid', 'Connect Wallet to View Markets', 'Connect your wallet to see active token competitions');
+                showConnectWalletPrompt('competitions-grid', 'Connect Wallet to Join Competitions', 'Connect your wallet to participate in token prediction competitions');
             }
             break;
             
@@ -231,20 +233,71 @@ function loadPageContent(pageName) {
             if (connectedUser) {
                 loadUserPortfolio();
             } else {
-                showConnectWalletPrompt('portfolio-content', 'Connect Wallet to View Portfolio', 'Connect your wallet to see your betting history and statistics');
+                showConnectWalletPrompt('portfolio-content', 'Connect Wallet to View Portfolio', 'Connect your wallet to see your prediction history and statistics');
             }
             break;
             
         case 'home':
-            updateHomePageStats();
-            break;
-            
-        case 'how-it-works':
-            // Content is static, no loading needed
+            updateHomePageContent();
             break;
             
         default:
             console.warn(`No specific content loading for page: ${pageName}`);
+    }
+}
+
+// Enhanced home page content updates
+function updateHomePageContent() {
+    console.log('🏠 Updating home page content...');
+    
+    // Update platform stats
+    updateHomePageStats();
+    
+    // Update dashboard for connected users
+    if (connectedUser) {
+        updateDashboardCards();
+        
+        // Hide learn more section for connected users
+        const learnMoreSection = document.getElementById('learnMoreSection');
+        if (learnMoreSection) {
+            learnMoreSection.style.display = 'none';
+        }
+    } else {
+        // Show learn more section for disconnected users
+        const learnMoreSection = document.getElementById('learnMoreSection');
+        if (learnMoreSection) {
+            learnMoreSection.style.display = 'block';
+        }
+    }
+}
+
+// Update dashboard cards for connected users
+function updateDashboardCards() {
+    console.log('📊 Updating dashboard cards...');
+    
+    if (!connectedUser) return;
+    
+    // Update balance
+    const dashboardBalance = document.getElementById('dashboardBalance');
+    if (dashboardBalance && walletService) {
+        const status = walletService.getConnectionStatus();
+        dashboardBalance.textContent = status.formattedBalance + ' SOL';
+    }
+    
+    // Update active predictions (placeholder for now)
+    const activePredictions = document.getElementById('activePredictions');
+    if (activePredictions) {
+        // This would come from database in real implementation
+        activePredictions.textContent = '0 competitions';
+    }
+    
+    // Update win rate (placeholder for now)
+    const winRate = document.getElementById('winRate');
+    const winStats = document.getElementById('winStats');
+    if (winRate && winStats) {
+        // This would come from database in real implementation
+        winRate.textContent = '0%';
+        winStats.textContent = '(0 wins out of 0 total)';
     }
 }
 
@@ -253,9 +306,8 @@ function setupPageSpecificFeatures(pageName) {
     console.log(`⚙️ Setting up features for page: ${pageName}`);
     
     switch (pageName) {
-        case 'markets':
-        case 'competitions':
-            setupMarketFilters();
+        case 'competitions': // Updated from 'markets'
+            setupCompetitionFilters();
             break;
             
         case 'leaderboard':
@@ -266,10 +318,24 @@ function setupPageSpecificFeatures(pageName) {
             setupPortfolioFilters();
             break;
             
-        case 'how-it-works':
-            setupHowItWorksInteractions();
+        case 'home':
+            setupHomePageFeatures();
             break;
     }
+}
+
+// Setup home page specific features
+function setupHomePageFeatures() {
+    console.log('🏠 Setting up home page features...');
+    
+    // Add smooth scrolling for learn more button
+    const learnMoreBtns = document.querySelectorAll('[onclick*="scrollToLearnMore"]');
+    learnMoreBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            scrollToLearnMore();
+        });
+    });
 }
 
 // Update home page statistics
@@ -330,25 +396,23 @@ function animateNumber(element, targetValue) {
     requestAnimationFrame(updateNumber);
 }
 
-// Set up market page filters
-function setupMarketFilters() {
-    console.log('🔧 Setting up market filters...');
+// Set up competition page filters (renamed from market filters)
+function setupCompetitionFilters() {
+    console.log('🔧 Setting up competition filters...');
     
-    const statusFilter = document.getElementById('filter-status');
+    const phaseFilter = document.getElementById('competition-phase');
     const sortFilter = document.getElementById('sort-by');
     
-    if (statusFilter) {
-        statusFilter.addEventListener('change', () => {
-            console.log('Market status filter changed:', statusFilter.value);
-            // Reload competitions with filter
+    if (phaseFilter) {
+        phaseFilter.addEventListener('change', () => {
+            console.log('Competition phase filter changed:', phaseFilter.value);
             loadActiveCompetitions();
         });
     }
     
     if (sortFilter) {
         sortFilter.addEventListener('change', () => {
-            console.log('Market sort changed:', sortFilter.value);
-            // Resort competitions
+            console.log('Competition sort changed:', sortFilter.value);
             loadActiveCompetitions();
         });
     }
@@ -382,49 +446,29 @@ function setupPortfolioFilters() {
     }
 }
 
-// Set up How It Works interactions
-function setupHowItWorksInteractions() {
-    console.log('🔧 Setting up How It Works interactions...');
-    
-    // Add any interactive elements for the how it works page
-    const conceptCards = document.querySelectorAll('.concept-card');
-    conceptCards.forEach((card, index) => {
-        card.addEventListener('mouseenter', () => {
-            card.style.transform = 'translateY(-8px) scale(1.02)';
-        });
-        
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'translateY(-5px) scale(1)';
-        });
-    });
-}
-
 // Navigate to page (public function for external calls)
 function navigateToPage(pageName) {
     showPage(pageName);
 }
 
 // ==============================================
-// ORIGINAL NAVIGATION FUNCTIONS (Compatibility)
+// LEGACY NAVIGATION FUNCTIONS (Updated)
 // ==============================================
 
-function showMarkets() {
-    console.log('📊 Switching to Markets section (legacy function)');
-    showPage('markets');
-}
+// Removed showMarkets function - competitions is the main hub now
 
 function showCompetitions() {
-    console.log('🏁 Switching to Competitions section (legacy function)');
+    console.log('🏁 Switching to Competitions section (main hub)');
     showPage('competitions');
 }
 
 function showLeaderboard() {
-    console.log('🏆 Switching to Leaderboard section (legacy function)');
+    console.log('🏆 Switching to Leaderboard section');
     showPage('leaderboard');
 }
 
 function showPortfolio() {
-    console.log('💼 Switching to Portfolio section (legacy function)');
+    console.log('💼 Switching to Portfolio section');
     showPage('portfolio');
 }
 
@@ -434,11 +478,11 @@ function hideAllSections() {
 }
 
 // ==============================================
-// PHASE 3 APP INITIALIZATION - ENHANCED
+// APP INITIALIZATION - ENHANCED
 // ==============================================
 
 async function initializeApp() {
-    console.log('🚀 Initializing TokenWars app (Phase 3 with Enhanced Navigation)...');
+    console.log('🚀 Initializing TokenWars app (Navigation Cleanup Complete)...');
     
     try {
         // Set up basic UI event listeners first
@@ -492,8 +536,8 @@ async function initializeApp() {
         startSystemHealthMonitoring();
         startBackgroundServices();
         
-        console.log('✅ App initialization complete - Phase 3 with Enhanced Navigation ready');
-        showNotification('TokenWars loaded successfully! Enhanced navigation system active.', 'success');
+        console.log('✅ App initialization complete - Clean Navigation Ready');
+        showNotification('TokenWars loaded successfully! Competition-focused navigation active.', 'success');
         
         // Update wallet status display
         updateWalletStatusDisplay();
@@ -546,7 +590,7 @@ async function initializeTokenServiceSafely() {
                     return true;
                 } else {
                     console.warn('⚠️ TokenService initialized but no tokens loaded');
-                    return true; // Still consider successful for Phase 3
+                    return true; // Still consider successful for navigation phase
                 }
             } else {
                 console.error('❌ TokenService initialization returned false');
@@ -708,7 +752,7 @@ function handleWalletEvents(event, data) {
 }
 
 // ==============================================
-// WALLET MODAL FUNCTIONS (ENHANCED)
+// WALLET MODAL FUNCTIONS (Unchanged)
 // ==============================================
 
 function openWalletModal() {
@@ -836,7 +880,7 @@ function setupStep3EventListeners() {
 const handleUsernameInput = debounce(validateUsernameInput, 500);
 
 // ==============================================
-// REAL WALLET FUNCTIONS (PHASE 3)
+// REAL WALLET FUNCTIONS (Phase 3)
 // ==============================================
 
 // Real wallet status update
@@ -987,6 +1031,11 @@ async function completeLoginFlow(profile) {
         closeWalletModal();
         
         showNotification(`Welcome back, ${profile.username || 'Trader'}!`, 'success');
+        
+        // Navigate to competitions after a brief delay
+        setTimeout(() => {
+            showPage('competitions');
+        }, 1000);
         
     } catch (error) {
         console.error('Error completing login flow:', error);
@@ -1265,9 +1314,9 @@ async function completedOnboarding() {
             
             showNotification(`Welcome to TokenWars, ${profile.username}!`, 'success');
             
-            // Navigate to markets
+            // Navigate to competitions
             setTimeout(() => {
-                showPage('markets');
+                showPage('competitions');
             }, 1000);
         } else {
             throw new Error('Profile not found after creation');
@@ -1394,6 +1443,18 @@ function updateBalanceDisplay(formattedBalance) {
             element.textContent = formattedBalance + ' SOL';
         }
     });
+    
+    // Also update dashboard balance
+    const dashboardBalance = document.getElementById('dashboardBalance');
+    if (dashboardBalance) {
+        dashboardBalance.textContent = formattedBalance + ' SOL';
+    }
+    
+    // Also update hero balance
+    const heroBalance = document.getElementById('heroWalletBalance');
+    if (heroBalance) {
+        heroBalance.textContent = formattedBalance + ' SOL';
+    }
 }
 
 function updateUIForConnectedUser() {
@@ -1434,14 +1495,18 @@ function updateUIForConnectedUser() {
             if (navTraderAvatar) navTraderAvatar.textContent = connectedUser.avatar || '🎯';
         }
         
+        // Update dashboard content
+        updateDashboardCards();
+        
+        // Hide learn more section for connected users
+        const learnMoreSection = document.getElementById('learnMoreSection');
+        if (learnMoreSection) {
+            learnMoreSection.style.display = 'none';
+        }
+        
         console.log('✅ UI updated for connected user:', connectedUser?.username || 'Unknown');
         
-        // If on home page, automatically navigate to markets
-        if (currentPage === 'home') {
-            setTimeout(() => {
-                showPage('markets');
-            }, 500);
-        }
+        // If on home page, don't automatically navigate away - let user choose
         
     } catch (error) {
         console.error('❌ Error updating UI for connected user:', error);
@@ -1476,10 +1541,16 @@ function updateUIForDisconnectedUser() {
             }
         });
         
+        // Show learn more section for disconnected users
+        const learnMoreSection = document.getElementById('learnMoreSection');
+        if (learnMoreSection) {
+            learnMoreSection.style.display = 'block';
+        }
+        
         console.log('✅ UI updated for disconnected user');
         
         // Navigate back to home if on protected pages
-        if (['markets', 'competitions', 'leaderboard', 'portfolio'].includes(currentPage)) {
+        if (['competitions', 'leaderboard', 'portfolio'].includes(currentPage)) {
             showPage('home');
         }
         
@@ -1729,8 +1800,8 @@ function startBackgroundServices() {
         competitionStatusInterval = setInterval(async () => {
             try {
                 if (window.updateCompetitionsDisplay && typeof window.updateCompetitionsDisplay === 'function') {
-                    const isOnMarketsPage = currentPage === 'markets' || currentPage === 'competitions';
-                    if (isOnMarketsPage) {
+                    const isOnCompetitionsPage = currentPage === 'competitions';
+                    if (isOnCompetitionsPage) {
                         await window.updateCompetitionsDisplay();
                     }
                 }
@@ -1752,7 +1823,7 @@ function startBackgroundServices() {
 // ==============================================
 
 function loadActiveCompetitions() {
-    console.log('📊 Loading active competitions with real services...');
+    console.log('📊 Loading active competitions...');
     
     if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
         window.loadRealCompetitions();
@@ -1907,9 +1978,9 @@ window.app = {
     initializeRouting,
     getCurrentPage: () => currentPage,
     getPageHistory: () => [...pageHistory],
+    scrollToLearnMore,
     
-    // Legacy navigation functions (maintained for compatibility)
-    showMarkets,
+    // Updated navigation functions (removed showMarkets)
     showCompetitions,
     showLeaderboard,
     showPortfolio,
@@ -1945,13 +2016,13 @@ window.app = {
     debugValidationState
 };
 
-console.log('📱 App.js Enhanced with Hash-Based Routing - Step 1.1 Complete');
-console.log('🎯 Key Features Added:');
-console.log('   ✅ Hash-based routing system with browser back/forward support');
-console.log('   ✅ Clean page separation (Home, Markets, Competitions, Leaderboard, Portfolio, How It Works)');
-console.log('   ✅ Animated page transitions with active navigation states');
-console.log('   ✅ Enhanced How It Works page (separated from homepage)');
-console.log('   ✅ Improved URL management with proper hash handling');
-console.log('   ✅ Mobile-responsive navigation with smooth transitions');
-console.log('   ✅ Page-specific content loading and feature setup');
-console.log('🚀 Navigation system ready for Step 1.2 implementation!');
+console.log('📱 App.js Navigation Cleanup Complete!');
+console.log('🎯 Key Changes Made:');
+console.log('   ✅ Removed "Markets" tab - Competitions is now the main hub');
+console.log('   ✅ Updated routing to only include: home, competitions, leaderboard, portfolio');
+console.log('   ✅ Enhanced home page with smart connected/disconnected states');
+console.log('   ✅ Added dashboard cards for connected users');
+console.log('   ✅ Added learn more section with scroll functionality');
+console.log('   ✅ Maintained all wallet functionality and profile creation');
+console.log('   ✅ Updated navigation logic to prevent confusion');
+console.log('🚀 Ready for next phase: Smart Home Page implementation!');
