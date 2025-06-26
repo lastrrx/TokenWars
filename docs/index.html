@@ -202,17 +202,73 @@
                                 </div>
                             </div>
                             
-                            <div class="competitions-grid" id="competitions-grid">
-                                <div class="loading">Loading competitions...</div>
+                            <!-- Competition Status Sections -->
+                            <div class="competitions-container">
+                                
+                                <!-- Voting Open Section -->
+                                <div class="competition-section" id="votingSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            🗳️ Voting Open 
+                                            <span class="count-badge" id="votingCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Join these competitions now - voting ends soon!</p>
+                                    </div>
+                                    <div class="competitions-grid" id="votingGrid">
+                                        <div class="loading">Loading voting competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Running Section -->
+                                <div class="competition-section" id="runningSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            ⚡ Currently Running 
+                                            <span class="count-badge" id="runningCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Watch these competitions in progress</p>
+                                    </div>
+                                    <div class="competitions-grid" id="runningGrid">
+                                        <div class="loading">Loading active competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Starting Soon Section -->
+                                <div class="competition-section" id="upcomingSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            ⏰ Starting Soon 
+                                            <span class="count-badge" id="upcomingCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Get ready for these upcoming competitions</p>
+                                    </div>
+                                    <div class="competitions-grid" id="upcomingGrid">
+                                        <div class="loading">Loading upcoming competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Completed Section -->
+                                <div class="competition-section" id="completedSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            🏁 Recently Completed 
+                                            <span class="count-badge" id="completedCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">View results from recent competitions</p>
+                                    </div>
+                                    <div class="competitions-grid" id="completedGrid">
+                                        <div class="loading">Loading completed competitions...</div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </section>
                 </div>
             </div>
         </div>
-
+        
         <!-- LEADERBOARD PAGE -->
-<!-- LEADERBOARD PAGE -->
         <div id="leaderboardPage" class="page-content">
             <div class="main-content">
                 <section class="section">
