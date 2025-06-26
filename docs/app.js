@@ -1,7 +1,7 @@
 // Main Application Logic - Phase 3: NAVIGATION CLEANUP
 // Updated routing to remove Markets, keep Competitions as main hub
 
-// Global state
+// Global state /
 let walletService = null;
 let connectedUser = null;
 let currentStep = 1;
