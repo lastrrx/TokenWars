@@ -24,380 +24,904 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Database Connection Status -->
+    <div id="dbStatus" class="db-status disconnected">
+        Database: Connecting...
+    </div>
+
+    <!-- Token Update Status -->
+    <div id="tokenStatus" class="db-status disconnected" style="top: 3rem;">
+        Tokens: Loading...
+    </div>
+
+    <!-- Animated Background -->
+    <div class="animated-background"></div>
+    <div class="geometric-patterns"></div>
+
+    <!-- CLEANED UP NAVIGATION - Removed Markets, Kept Competitions -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#home" class="logo" onclick="showPage('home'); return false;">TokenWars</a>
+            
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home'); return false;">Home</a></li>
+                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions'); return false;">Competitions</a></li>
+                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard'); return false;">Leaderboard</a></li>
+                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio'); return false;">Portfolio</a></li>
+                <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
+                
+                <!-- Disconnected State -->
+                <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal(); return false;">Connect Wallet</a></li>
+                
+                <!-- Connected State (Hidden by default) -->
+                <li id="traderInfo" style="display: none;">
+                    <div class="trader-info-display">
+                        <div id="navTraderAvatar" class="trader-avatar">🎯</div>
+                        <div class="trader-details">
+                            <span id="navTraderName" class="trader-name">Trader</span>
+                            <span id="navTraderBalance" class="trader-balance">0.00 SOL</span>
+                        </div>
+                        <button class="nav-disconnect" onclick="disconnectWallet()" title="Disconnect Wallet">⏻</button>
+                    </div>
+                </li>
+            </ul>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </nav>
+
+    <!-- PAGE CONTAINER -->
+    <div id="pageContainer" class="page-container">
+        
+        <!-- HOME PAGE - Enhanced with Learn More Section -->
+        <div id="homePage" class="page-content active">
+            <!-- Hero Section -->
+            <div class="hero">
+                <div class="hero-content">
+                    <!-- Disconnected State Hero -->
+                    <div id="heroDisconnected">
+                        <h1 class="hero-title">TokenWars</h1>
+                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
+                        <div class="cta-buttons">
+                            <a href="#" class="btn-hero-primary" onclick="openWalletModal(); return false;">Connect Wallet</a>
+                            <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
+                        </div>
+                    </div>
+
+                    <!-- Connected State Hero -->
+                    <div id="heroConnected" style="display: none;">
+                        <h1 class="hero-title">TokenWars</h1>
+                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
+                        
+                        <div class="trader-welcome-enhanced">
+                            <div class="welcome-message">
+                                <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span>!</p>
+                            </div>
+                        </div>
+                        
+                        <div class="cta-buttons">
+                            <a href="#competitions" class="btn-hero-primary" onclick="showPage('competitions'); return false;">View Competitions</a>
+                            <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learn More Section (for disconnected users) -->
+            <div class="learn-more-section" id="learnMoreSection">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">How TokenWars Works</h2>
+                        <p class="section-description">Simple, fair, and transparent token prediction competitions</p>
+                    </div>
+
+                    <div class="info-cards-grid">
+                        <div class="info-card">
+                            <div class="card-icon">📊</div>
+                            <h3>Simple Predictions</h3>
+                            <p>Pick which tokens will outperform over 7 days. Entry opens 3 days before each competition starts.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">💰</div>
+                            <h3>Fixed Stakes</h3>
+                            <p>0.1 SOL entry fee. Winners split the pool (minus 15% platform fee). Fair and transparent.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">🔐</div>
+                            <h3>Automated Payouts</h3>
+                            <p>Smart contracts handle everything. Escrow opens, competition runs, winners get paid automatically.</p>
+                        </div>
+                    </div>
+
+                    <div class="detailed-guide-cta">
+                        <h3>Want More Details?</h3>
+                        <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
+                        <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
+                            📖 Complete Platform Guide →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Stats Section - REMOVED -->
+            <!-- Stats cards removed as per user feedback -->
+        </div>
+
+        <!-- COMPETITIONS PAGE - The Main Hub (Renamed from Markets) -->
+        <div id="competitionsPage" class="page-content">
+            <div class="main-content">
+                <!-- Disconnected User View -->
+                <div id="competitionsDisconnected">
+                    <section class="section">
+                        <div class="container">
+                            <div class="section-header">
+                                <h2 class="section-title">COMPETITIONS</h2>
+                                <p class="section-description">Connect your wallet to participate in token prediction competitions</p>
+                            </div>
+                            
+                            <div class="competitions-grid">
+                                <div class="empty-competitions">
+                                    <div class="empty-icon">🔗</div>
+                                    <h3>Connect Wallet to Join Competitions</h3>
+                                    <p>Connect your wallet to participate in token prediction competitions and earn SOL rewards.</p>
+                                    <button class="btn-primary" onclick="openWalletModal()">Connect Wallet</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Connected User View -->
+                <div id="competitionsConnected" style="display: none;">
+                    <section class="section">
+                        <div class="container">
+                            <div class="section-header">
+                                <h2 class="section-title">COMPETITIONS</h2>
+                                <div class="section-filters">
+                                    <select id="competition-phase" class="filter-select">
+                                        <option value="all">All Phases</option>
+                                        <option value="entry-open">Entry Open (3 days)</option>
+                                        <option value="running">Running (7 days)</option>
+                                        <option value="completed">Completed</option>
+                                    </select>
+                                    <select id="sort-by" class="filter-select">
+                                        <option value="phase">By Phase</option>
+                                        <option value="pool-size">Pool Size</option>
+                                        <option value="participants">Participants</option>
+                                        <option value="time-remaining">Time Remaining</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="competitions-grid" id="competitions-grid">
+                                <div class="loading">Loading competitions...</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD PAGE -->
+        <div id="leaderboardPage" class="page-content">
+            <div class="main-content">
+                <section class="section">
+                    <div class="container">
+                        <div class="section-header">
+                            <h2 class="section-title">LEADERBOARD</h2>
+                            <div class="section-filters">
+                                <select id="leaderboard-period" class="filter-select">
+                                    <option value="all-time">All Time</option>
+                                    <option value="monthly">This Month</option>
+                                    <option value="weekly">This Week</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="leaderboard-content">
+                            <div class="loading">Loading leaderboard...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- PORTFOLIO PAGE -->
+        <div id="portfolioPage" class="page-content">
+            <div class="main-content">
+                <section class="section">
+                    <div class="container">
+                        <div class="section-header">
+                            <h2 class="section-title">MY PORTFOLIO</h2>
+                            <div class="section-filters">
+                                <select id="portfolio-view" class="filter-select">
+                                    <option value="overview">Overview</option>
+                                    <option value="history">Betting History</option>
+                                    <option value="statistics">Statistics</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="portfolio-content">
+                            <div class="loading">Loading portfolio...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Competition Details Modal -->
+    <div class="competition-modal" id="competitionModal" style="display: none;">
+        <div class="competition-modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Competition Details</h3>
+                <button class="modal-close" onclick="closeCompetitionModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-tokens-section">
+                    <div class="modal-token-card">
+                        <img id="modalTokenALogo" class="modal-token-logo" src="" alt="">
+                        <div class="token-symbol" id="modalTokenASymbol">SOL</div>
+                        <div class="token-name" id="modalTokenAName">Solana</div>
+                        <div class="token-price" id="modalTokenAPrice">$0.00</div>
+                        <div class="price-change" id="modalTokenAChange">+0.00%</div>
+                    </div>
+                    <div class="modal-vs">VS</div>
+                    <div class="modal-token-card">
+                        <img id="modalTokenBLogo" class="modal-token-logo" src="" alt="">
+                        <div class="token-symbol" id="modalTokenBSymbol">USDC</div>
+                        <div class="token-name" id="modalTokenBName">USD Coin</div>
+                        <div class="token-price" id="modalTokenBPrice">$0.00</div>
+                        <div class="price-change" id="modalTokenBChange">+0.00%</div>
+                    </div>
+                </div>
+
+                <div class="competition-stats" id="modalStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="modalParticipants">0</div>
+                        <div class="stat-label">Participants</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="modalPrizePool">0.0 SOL</div>
+                        <div class="stat-label">Prize Pool</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="modalTimeRemaining">--</div>
+                        <div class="stat-label">Time Remaining</div>
+                    </div>
+                </div>
+
+                <div class="betting-interface" id="bettingInterface">
+                    <h4 class="betting-title">Place Your Prediction</h4>
+                    
+                    <div class="token-choice-buttons">
+                        <button class="token-choice-button" id="choiceTokenA" onclick="selectToken('A')">
+                            <div class="token-symbol" id="choiceTokenASymbol">SOL</div>
+                            <div class="bet-button-label">I predict this wins</div>
+                        </button>
+                        <button class="token-choice-button" id="choiceTokenB" onclick="selectToken('B')">
+                            <div class="token-symbol" id="choiceTokenBSymbol">USDC</div>
+                            <div class="bet-button-label">I predict this wins</div>
+                        </button>
+                    </div>
+
+                    <div class="bet-amount-section">
+                        <label for="betAmount" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                            Bet Amount (SOL)
+                        </label>
+                        <input 
+                            type="number" 
+                            id="betAmount" 
+                            class="bet-amount-input" 
+                            value="0.1" 
+                            min="0.1" 
+                            step="0.1"
+                            placeholder="0.1"
+                        >
+                    </div>
+
+                    <button class="place-bet-button" id="placeBetButton" onclick="placeBet()" disabled>
+                        Select a token to continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Wallet Connection Modal (unchanged) -->
+    <div class="wallet-modal" id="walletModal" style="display: none;">
+        <div class="wallet-modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeWalletModal()">×</button>
+                <div class="modal-title" id="modalTitle">Connect Wallet</div>
+                <div class="modal-subtitle" id="modalSubtitle">Choose your preferred Solana wallet to get started</div>
+            </div>
+
+            <!-- Step Indicators -->
+            <div class="step-indicators">
+                <div class="step-indicator active" id="step1Indicator">1</div>
+                <div class="step-indicator" id="step2Indicator">2</div>
+                <div class="step-indicator" id="step3Indicator">3</div>
+                <div class="step-indicator" id="step4Indicator">4</div>
+            </div>
+
+            <!-- Step 1: Enhanced Wallet Selection -->
+            <div class="step-content active" id="step1Content">
+                <div class="security-info">
+                    <div class="security-title">🔒 Security First</div>
+                    <div class="security-text">
+                        TokenWars connects to your wallet securely to track your predictions. We never access your private keys or make unauthorized transactions.
+                    </div>
+                </div>
+
+                <div class="wallet-options">
+                    <div class="wallet-option" onclick="selectWallet('phantom')">
+                        <div class="wallet-icon">👻</div>
+                        <div class="wallet-info">
+                            <div class="wallet-name">Phantom</div>
+                            <div class="wallet-description">Most popular Solana wallet</div>
+                            <div class="wallet-status" id="phantomStatus">Checking...</div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-option" onclick="selectWallet('solflare')">
+                        <div class="wallet-icon">☀️</div>
+                        <div class="wallet-info">
+                            <div class="wallet-name">Solflare</div>
+                            <div class="wallet-description">Secure and feature-rich</div>
+                            <div class="wallet-status" id="solflareStatus">Checking...</div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-option" onclick="selectWallet('backpack')">
+                        <div class="wallet-icon">🎒</div>
+                        <div class="wallet-info">
+                            <div class="wallet-name">Backpack</div>
+                            <div class="wallet-description">Modern crypto wallet</div>
+                            <div class="wallet-status" id="backpackStatus">Checking...</div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-option demo-wallet" onclick="selectWallet('demo')">
+                        <div class="wallet-icon">🎮</div>
+                        <div class="wallet-info">
+                            <div class="wallet-name">Demo Mode</div>
+                            <div class="wallet-description">Try without wallet (10 SOL)</div>
+                            <div class="wallet-status" id="demoStatus">✓ Available</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-modal-secondary" onclick="closeWalletModal()">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Enhanced Connecting State -->
+            <div class="step-content" id="step2Content">
+                <div class="connecting-state">
+                    <div class="loading-animation">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    
+                    <div class="connecting-header">
+                        <h3 class="connecting-title">Connecting to <span id="selectedWalletName">Phantom</span></h3>
+                        <p class="connecting-subtitle">Please approve the connection in your wallet</p>
+                    </div>
+                    
+                    <div class="connection-steps">
+                        <div class="connection-step">
+                            <div class="step-icon">📱</div>
+                            <p>Check your wallet extension</p>
+                        </div>
+                        <div class="connection-step">
+                            <div class="step-icon">✅</div>
+                            <p>Approve the connection request</p>
+                        </div>
+                        <div class="connection-step">
+                            <div class="step-icon">🔗</div>
+                            <p>Wait for confirmation</p>
+                        </div>
+                    </div>
+                    
+                    <div class="connection-help">
+                        <p class="help-text">Having trouble? Make sure your wallet extension is unlocked and try refreshing the page.</p>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-modal-secondary" onclick="goToStep(1)">Go Back</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2.5: REDESIGNED Wallet Confirmation -->
+            <div class="step-content" id="step2_5Content">
+                <div class="wallet-confirmation-modern">
+                    <div class="confirmation-header">
+                        <div class="success-icon-large">✅</div>
+                        <h3 class="confirmation-title">Wallet Connected Successfully!</h3>
+                        <p class="confirmation-subtitle">Your <span id="connectedWalletType">Phantom</span> wallet has been detected</p>
+                    </div>
+                    
+                    <div class="wallet-info-card">
+                        <div class="info-section">
+                            <div class="info-label">Connected Wallet Address:</div>
+                            <div class="wallet-address-modern" id="connectedWalletAddress">Loading...</div>
+                            <div class="info-note">This address will be used for your predictions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-check-card">
+                        <div class="status-header">
+                            <div class="status-icon-large" id="traderStatusIcon">🔍</div>
+                            <div class="status-content">
+                                <h4 class="status-title">Profile Status</h4>
+                                <p class="status-text" id="traderStatusText">Checking for existing profile...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="confirmation-actions-modern" id="confirmationActions" style="display: none;">
+                        <button class="btn-modal-secondary-modern" onclick="goToStep(1)">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn-modal-primary-modern" id="continueBtn">
+                            Continue
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: REDESIGNED Trader Profile Creation -->
+            <div class="step-content" id="step3Content">
+                <div class="profile-creation-container">
+                    <div class="profile-header">
+                        <div class="profile-icon">🎯</div>
+                        <h3 class="profile-title">Create Your Trader Profile</h3>
+                        <p class="profile-subtitle">Your username will be displayed on leaderboards and in competitions. Choose wisely!</p>
+                    </div>
+
+                    <div class="profile-form">
+                        <div class="form-section">
+                            <label class="form-label-modern">Trader Username</label>
+                            <div class="input-container">
+                                <input 
+                                    type="text" 
+                                    class="form-input-modern" 
+                                    id="traderUsername" 
+                                    placeholder="Enter your username..."
+                                    maxlength="20"
+                                >
+                                <div class="input-status" id="inputStatus"></div>
+                            </div>
+                            <div class="input-requirements">
+                                3-20 characters, alphanumeric and underscores only. No profanity.
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <label class="form-label-modern">Choose Your Avatar</label>
+                            <div class="avatar-grid-modern" id="avatarGrid">
+                                <div class="avatar-option-modern selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
+                                <div class="avatar-option-modern" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
+                            </div>
+                        </div>
+
+                        <div class="profile-preview-modern">
+                            <div class="preview-card">
+                                <div class="preview-avatar-modern" id="previewAvatar">🎯</div>
+                                <div class="preview-info">
+                                    <div class="preview-name-modern" id="previewName">Trader Username</div>
+                                    <div class="preview-subtitle-modern">Ready to predict token movements</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions-modern">
+                        <button class="btn-modal-secondary-modern" onclick="goToStep(1)">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn-modal-primary-modern" id="createProfileBtn" onclick="goToStep(4)" disabled>
+                            Create Profile
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: REDESIGNED Platform Rules & Agreement -->
+            <div class="step-content" id="step4Content">
+                <div class="rules-agreement-modern">
+                    <div class="rules-header">
+                        <div class="rules-icon">📋</div>
+                        <h3 class="rules-title">Platform Rules & Agreement</h3>
+                        <p class="rules-subtitle">Please review the competition rules and terms before joining</p>
+                    </div>
+
+                    <div class="rules-content">
+                        <div class="rule-card">
+                            <div class="rule-header">
+                                <div class="rule-icon">📊</div>
+                                <h4 class="rule-title">How Predictions Work</h4>
+                            </div>
+                            <p class="rule-description">
+                                Entry opens for 3 days, then competitions run for 7 days. Pick which tokens will outperform. 
+                                Winners are determined by performance over the full 7-day period.
+                            </p>
+                        </div>
+
+                        <div class="rule-card">
+                            <div class="rule-header">
+                                <div class="rule-icon">💰</div>
+                                <h4 class="rule-title">Prize Distribution</h4>
+                            </div>
+                            <div class="rule-list">
+                                <div class="rule-item">
+                                    <span class="rule-label">Entry Fee:</span>
+                                    <span class="rule-value">0.1 SOL per prediction</span>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-label">Winner's Share:</span>
+                                    <span class="rule-value">Split the pool with other winners</span>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-label">Platform Fee:</span>
+                                    <span class="rule-value">15% for operations and development</span>
+                                </div>
+                                <div class="rule-item">
+                                    <span class="rule-label">Settlement:</span>
+                                    <span class="rule-value">Automatic via smart contracts</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rule-card">
+                            <div class="rule-header">
+                                <div class="rule-icon">🔒</div>
+                                <h4 class="rule-title">Fair Play & Security</h4>
+                            </div>
+                            <p class="rule-description">
+                                All predictions are final once placed. Smart contracts ensure transparent and tamper-proof results. 
+                                Your wallet remains under your control at all times.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="agreement-section-modern">
+                        <div class="agreement-card">
+                            <div class="checkbox-container-modern">
+                                <div class="checkbox-modern" id="agreementCheckbox" onclick="toggleAgreement()">
+                                    <div class="checkbox-check"></div>
+                                </div>
+                                <label class="agreement-text" onclick="toggleAgreement()">
+                                    I understand the platform rules and agree to participate fairly. I acknowledge that predictions involve risk 
+                                    and that I should only use funds I can afford to lose. I understand that all predictions are final.
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions-modern">
+                        <button class="btn-modal-secondary-modern" onclick="goToStep(3)">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn-modal-primary-modern" id="finalizeBtn" onclick="finalizeProfile()" disabled>
+                            Join TokenWars
+                            <span class="btn-icon">🚀</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: REDESIGNED Success Page -->
+            <div class="step-content" id="step5Content">
+                <div class="success-page-modern">
+                    <div class="success-animation">
+                        <div class="success-icon-animated">🏆</div>
+                        <div class="success-particles">
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                            <div class="particle"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="success-content">
+                        <h3 class="success-title-modern">Welcome to TokenWars!</h3>
+                        <p class="success-message-modern">Your trader profile has been created successfully</p>
+                    </div>
+                    
+                    <div class="achievement-card-modern">
+                        <div class="achievement-icon-modern">🎯</div>
+                        <div class="achievement-content">
+                            <h4 class="achievement-title">Achievement Unlocked!</h4>
+                            <p class="achievement-description">First Prediction Ready</p>
+                        </div>
+                    </div>
+                    
+                    <div class="success-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-text">0.1 SOL per prediction</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-text">7-day competitions</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">🎁</div>
+                            <div class="stat-text">Instant payouts</div>
+                        </div>
+                    </div>
+
+                    <div class="success-actions">
+                        <button class="btn-success-primary" onclick="completedOnboarding()">
+                            <span class="btn-text">Start Predicting!</span>
+                            <span class="btn-icon">🚀</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts loading order for Phase 3 -->
+    <script>
+        // Ensure configuration is available immediately
+        window.SUPABASE_CONFIG = {
+            url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
+        };
+        
+        console.log('✅ Configuration loaded');
+
+        // Enhanced scrollToLearnMore function
+        function scrollToLearnMore() {
+            const learnMoreSection = document.getElementById('learnMoreSection');
+            if (learnMoreSection) {
+                learnMoreSection.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
+
+        // Competition modal functions for integration
+        let selectedCompetition = null;
+        let selectedToken = null;
+
+        function openCompetitionModal(competitionId) {
+            console.log('Opening competition modal for:', competitionId);
+            // TODO: Implement with real competition data
+            document.getElementById('competitionModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCompetitionModal() {
+            document.getElementById('competitionModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            selectedCompetition = null;
+            selectedToken = null;
+        }
+
+        function selectToken(tokenSide) {
+            selectedToken = tokenSide;
+            
+            // Update button states
+            document.querySelectorAll('.token-choice-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const selectedButton = document.getElementById(`choiceToken${tokenSide}`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
+            }
+            
+            updatePlaceBetButton();
+        }
+
+        function updatePlaceBetButton() {
+            const button = document.getElementById('placeBetButton');
+            const betAmount = document.getElementById('betAmount').value;
+            
+            if (!selectedToken) {
+                button.textContent = 'Select a token to continue';
+                button.disabled = true;
+            } else if (!betAmount || parseFloat(betAmount) < 0.1) {
+                button.textContent = 'Minimum bet is 0.1 SOL';
+                button.disabled = true;
+            } else {
+                button.textContent = `Place Prediction (${betAmount} SOL)`;
+                button.disabled = false;
+            }
+        }
+
+        function placeBet() {
+            if (!selectedCompetition || !selectedToken) return;
+            
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            if (betAmount < 0.1) return;
+            
+            // Check wallet connection
+            if (!window.connectedUser) {
+                closeCompetitionModal();
+                openWalletModal();
+                return;
+            }
+            
+            console.log('Placing bet:', {
+                competition: selectedCompetition,
+                token: selectedToken,
+                amount: betAmount
+            });
+            
+            alert(`Bet placed successfully! You predicted token ${selectedToken} will win with ${betAmount} SOL.`);
+            closeCompetitionModal();
+        }
+
+        // Update competitions page visibility based on wallet connection
+        function updateCompetitionsPageVisibility() {
+            const connectedView = document.getElementById('competitionsConnected');
+            const disconnectedView = document.getElementById('competitionsDisconnected');
+            
+            if (window.connectedUser) {
+                connectedView.style.display = 'block';
+                disconnectedView.style.display = 'none';
+                
+                // Load competitions data if available
+                if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
+                    window.loadRealCompetitions();
+                }
+            } else {
+                connectedView.style.display = 'none';
+                disconnectedView.style.display = 'block';
+            }
+        }
+
+        // Event listeners for bet amount input
+        document.addEventListener('DOMContentLoaded', function() {
+            const betAmountInput = document.getElementById('betAmount');
+            if (betAmountInput) {
+                betAmountInput.addEventListener('input', updatePlaceBetButton);
+            }
+        });
+    </script>
     
+    <!-- Load core application files in PHASE 3 order -->
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="utils.js"></script>
+    <script src="token-service.js"></script>
+    <script src="price-service.js"></script>
+    <script src="wallet-service.js"></script>
+    <script src="app.js"></script>
+    <script src="user.js"></script>
+    <script src="competition.js"></script>
+    
+    <!-- Initialize after DOM loads -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM loaded, initializing TokenWars...');
+            
+            // Initialize routing system
+            initializeRouting();
+            
+            // Initialize app with error handling
+            if (typeof window.initializeApp === 'function') {
+                window.initializeApp().then(() => {
+                    // Update competitions page after app initialization
+                    updateCompetitionsPageVisibility();
+                }).catch(error => {
+                    console.error('❌ Failed to initialize app:', error);
+                });
+            } else {
+                console.error('❌ initializeApp function not found');
+            }
+            
+            // Override showPage to handle competitions page updates
+            const originalShowPage = window.showPage;
+            if (originalShowPage) {
+                window.showPage = function(pageName, updateHash = true) {
+                    const result = originalShowPage(pageName, updateHash);
+                    
+                    if (pageName === 'competitions') {
+                        setTimeout(() => {
+                            updateCompetitionsPageVisibility();
+                        }, 100);
+                    }
+                    
+                    return result;
+                };
+            }
+            
+            // Override wallet connection handlers
+            const originalUpdateUIForConnectedUser = window.updateUIForConnectedUser;
+            if (originalUpdateUIForConnectedUser) {
+                window.updateUIForConnectedUser = function() {
+                    originalUpdateUIForConnectedUser();
+                    updateCompetitionsPageVisibility();
+                };
+            }
+            
+            const originalUpdateUIForDisconnectedUser = window.updateUIForDisconnectedUser;
+            if (originalUpdateUIForDisconnectedUser) {
+                window.updateUIForDisconnectedUser = function() {
+                    originalUpdateUIForDisconnectedUser();
+                    updateCompetitionsPageVisibility();
+                };
+            }
+        });
+    </script>
+
     <style>
-        /* Enhanced Competitions Styles */
-        .competitions-container {
-            max-width: 1200px;
+        /* Additional styles for navigation cleanup and UX improvements */
+        
+        /* FIXED: Remove bitcoin icon from logo */
+        .logo::before {
+            display: none !important;
+        }
+        
+        /* FIXED: Reduce navigation spacing */
+        .nav-container {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .competitions-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .competitions-title {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .competitions-subtitle {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-        }
-
-        .competitions-filters {
+            padding: 0 2rem;
             display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-button {
-            padding: 0.75rem 1.5rem;
-            border: 2px solid var(--border);
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--radius-lg);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .filter-button:hover {
-            border-color: var(--accent-purple);
-            color: var(--accent-purple);
-        }
-
-        .filter-button.active {
-            border-color: var(--accent-purple);
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--accent-purple);
-        }
-
-        .status-sections {
-            display: flex;
-            flex-direction: column;
-            gap: 3rem;
-        }
-
-        .status-section {
-            background: rgba(31, 41, 55, 0.5);
-            border-radius: var(--radius-xl);
-            padding: 2rem;
-            border: 1px solid var(--border);
-        }
-
-        .status-section-header {
-            display: flex;
-            justify-content: space-between;
+            justify-content: center; /* Center the navigation */
             align-items: center;
-            margin-bottom: 2rem;
+            gap: 2rem;
+            position: relative; /* For absolute positioning of wallet button */
         }
-
-        .status-section-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
+        
+        .nav-links {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .status-section-count {
-            background: rgba(139, 92, 246, 0.2);
-            color: var(--accent-purple);
-            padding: 0.25rem 0.75rem;
-            border-radius: var(--radius-md);
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .status-indicator {
-            font-size: 1.2rem;
-        }
-
-        .competitions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 1.5rem;
+            list-style: none;
+            align-items: center;
+            margin: 0; /* Remove any margin */
         }
-
-        .competition-card {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .competition-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-purple);
-            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
-        }
-
-        .competition-card::before {
-            content: '';
+        
+        /* Position wallet connection absolutely to the right */
+        .nav-links li:last-child {
             position: absolute;
-            top: 0;
-            left: 0;
             right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+            margin-left: 0;
         }
-
-        .competition-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .competition-id {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            background: rgba(139, 92, 246, 0.1);
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--radius-sm);
-        }
-
-        .competition-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: var(--radius-md);
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-voting {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--accent-green);
-        }
-
-        .status-active {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--gold);
-        }
-
-        .status-upcoming {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent-blue);
-        }
-
-        .status-completed {
-            background: rgba(107, 114, 128, 0.2);
-            color: var(--text-muted);
-        }
-
-        .tokens-battle {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .token-info {
-            flex: 1;
+        
+        /* Enhanced Step 2 - Connecting State Styles */
+        .connecting-state {
             text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            margin: 0 auto;
         }
-
-        .token-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            margin: 0 auto 0.5rem;
-            display: block;
-        }
-
-        .token-symbol {
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .token-name {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .token-price {
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            color: var(--text-primary);
-        }
-
-        .price-change {
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .price-change.positive {
-            color: var(--accent-green);
-        }
-
-        .price-change.negative {
-            color: var(--accent-red);
-        }
-
-        .vs-separator {
+        
+        .loading-animation {
+            margin-bottom: 2rem;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            min-width: 60px;
+            justify-content: center;
         }
-
-        .vs-text {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 900;
-            font-size: 1.2rem;
-        }
-
-        .competition-timer {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .timer-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .timer-value {
-            font-family: var(--font-mono);
-            font-weight: 700;
-            color: var(--accent-purple);
-            font-size: 0.9rem;
-        }
-
-        .competition-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: var(--radius-lg);
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .betting-section {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .bet-button {
-            flex: 1;
-            padding: 0.875rem;
-            border: 2px solid var(--border);
-            background: transparent;
-            color: var(--text-primary);
-            border-radius: var(--radius-lg);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .bet-button:hover:not(:disabled) {
-            border-color: var(--accent-purple);
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        .bet-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .bet-button-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .bet-button-token {
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .voting-progress {
-            margin-top: 1rem;
-            background: var(--surface);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            height: 6px;
-        }
-
-        .voting-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
-            border-radius: var(--radius-md);
-            transition: width 0.3s ease;
-        }
-
-        .voting-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-section {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .loading-section {
-            text-align: center;
-            padding: 3rem 2rem;
-        }
-
+        
         .loading-spinner {
             width: 48px;
             height: 48px;
@@ -405,12 +929,1063 @@
             border-top: 4px solid var(--accent-purple);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
         }
-
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        .connecting-header {
+            margin-bottom: 2rem;
+        }
+        
+        .connecting-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .connecting-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+        
+        .connection-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(139, 92, 246, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+        
+        .connection-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(31, 41, 55, 0.3);
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+        }
+        
+        .connection-step:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .step-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .connection-step p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .connection-help {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .help-text {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        /* Modal Action Button Styles */
+        .btn-modal-secondary {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-modal-secondary:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+        
+        .btn-modal-primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-modal-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        }
+        
+        .btn-modal-primary:disabled {
+            background: var(--surface-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* REDESIGNED Step 3 - Modern Profile Creation */
+        .profile-creation-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .profile-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .profile-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .profile-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            margin: 0;
+        }
+        
+        .profile-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .profile-form {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .form-label-modern {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .form-input-modern {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-input-modern:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            background: var(--surface-elevated);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .form-input-modern.valid {
+            border-color: var(--accent-green);
+        }
+        
+        .form-input-modern.invalid {
+            border-color: var(--accent-red);
+        }
+        
+        .input-status {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+        
+        .input-requirements {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        
+        .avatar-grid-modern {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+        
+        .avatar-option-modern {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .avatar-option-modern:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .avatar-option-modern.selected {
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .avatar-option-modern.selected::after {
+            content: '✓';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-purple);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .profile-preview-modern {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .preview-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .preview-avatar-modern {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+        
+        .preview-info {
+            flex: 1;
+        }
+        
+        .preview-name-modern {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .preview-subtitle-modern {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .modal-actions-modern {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn-modal-secondary-modern {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+        }
+        
+        .btn-modal-secondary-modern:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+        
+        .btn-modal-primary-modern {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 2;
+            justify-content: center;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-modal-primary-modern:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-modal-primary-modern:disabled {
+            background: var(--surface-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-modal-primary-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-modal-primary-modern:hover:not(:disabled)::before {
+            left: 100%;
+        }
+        
+        .btn-icon {
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn-modal-primary-modern:hover .btn-icon {
+            transform: translateX(2px);
+        }
+        
+        /* REDESIGNED Step 2.5 - Modern Wallet Confirmation */
+        .wallet-confirmation-modern {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .confirmation-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .success-icon-large {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+            filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3));
+        }
+        
+        .confirmation-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            margin: 0;
+        }
+        
+        .confirmation-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .wallet-info-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-section {
+            text-align: center;
+        }
+        
+        .info-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .wallet-address-modern {
+            font-family: var(--font-mono);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            color: var(--accent-purple);
+            font-weight: 600;
+            margin: 0.5rem 0;
+            word-break: break-all;
+        }
+        
+        .info-note {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+        
+        .status-check-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-icon-large {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .status-content {
+            flex: 1;
+        }
+        
+        .status-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 0.25rem 0;
+        }
+        
+        .status-text {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        .confirmation-actions-modern {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+        }
+        
+        /* REDESIGNED Step 4 - Modern Rules & Agreement */
+        .rules-agreement-modern {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .rules-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .rules-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .rules-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            margin: 0;
+        }
+        
+        .rules-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .rules-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .rule-card {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .rule-card:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.02);
+        }
+        
+        .rule-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .rule-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .rule-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .rule-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .rule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .rule-item:last-child {
+            border-bottom: none;
+        }
+        
+        .rule-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        
+        .rule-value {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-align: right;
+        }
+        
+        .agreement-section-modern {
+            margin-bottom: 2rem;
+        }
+        
+        .agreement-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+        }
+        
+        .checkbox-container-modern {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .checkbox-modern {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            margin-top: 2px;
+            position: relative;
+        }
+        
+        .checkbox-modern:hover {
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .checkbox-modern.checked {
+            border-color: var(--accent-purple);
+            background: var(--accent-purple);
+        }
+        
+        .checkbox-check {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .checkbox-modern.checked .checkbox-check {
+            opacity: 1;
+        }
+        
+        .checkbox-modern.checked .checkbox-check::before {
+            content: '✓';
+        }
+        
+        .agreement-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        /* REDESIGNED Step 5 - Modern Success Page */
+        .success-page-modern {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .success-animation {
+            position: relative;
+            margin-bottom: 2rem;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .success-icon-animated {
+            font-size: 5rem;
+            animation: successBounce 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.5));
+            z-index: 2;
+            position: relative;
+        }
+        
+        @keyframes successBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.1); }
+        }
+        
+        .success-particles {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(45deg, var(--accent-purple), var(--accent-pink));
+            border-radius: 50%;
+            animation: particleFloat 3s ease-in-out infinite;
+        }
+        
+        .particle:nth-child(1) {
+            top: 20%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+        
+        .particle:nth-child(2) {
+            top: 20%;
+            right: 20%;
+            animation-delay: 0.6s;
+        }
+        
+        .particle:nth-child(3) {
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 1.2s;
+        }
+        
+        .particle:nth-child(4) {
+            bottom: 20%;
+            right: 20%;
+            animation-delay: 1.8s;
+        }
+        
+        .particle:nth-child(5) {
+            top: 50%;
+            left: 10%;
+            animation-delay: 2.4s;
+        }
+        
+        @keyframes particleFloat {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+            50% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+        }
+        
+        .success-content {
+            margin-bottom: 2rem;
+        }
+        
+        .success-title-modern {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-purple), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        .success-message-modern {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 1rem 0 0 0;
+        }
+        
+        .achievement-card-modern {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: achievementGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes achievementGlow {
+            0% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.2); }
+            100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+        }
+        
+        .achievement-icon-modern {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+            animation: achievementSpin 3s ease-in-out infinite;
+        }
+        
+        @keyframes achievementSpin {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(10deg); }
+        }
+        
+        .achievement-content {
+            text-align: left;
+            flex: 1;
+        }
+        
+        .achievement-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            margin: 0 0 0.25rem 0;
+        }
+        
+        .achievement-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        .success-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: var(--radius-lg);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            background: rgba(139, 92, 246, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .stat-text {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .success-actions {
+            margin-top: 2rem;
+        }
+        
+        .btn-success-primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 1.2rem 2.5rem;
+            border-radius: var(--radius-xl);
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            transform: translateY(0);
+        }
+        
+        .btn-success-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-success-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .btn-success-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        .btn-success-primary .btn-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn-success-primary:hover .btn-icon {
+            transform: translateX(5px);
+        }
+        
+        /* Remove dashboard cards from connected state - they're now gone */
+        .dashboard-grid {
+            display: none;
+        }
+        
+        /* Dashboard Grid for Connected Users */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .dashboard-card {
+            background: rgba(31, 41, 55, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+        }
+
+        .dashboard-card h3 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .dashboard-card .balance {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-card .count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 0.75rem;
+        }
+
+        .dashboard-card .percentage {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            margin-bottom: 0.25rem;
+        }
+
+        .dashboard-card .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Learn More Section - ALWAYS VISIBLE */
+        .learn-more-section {
+            padding: 4rem 0;
+            background: rgba(15, 23, 42, 0.3);
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            display: block !important; /* Force always visible */
+        }
+
+        .info-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .info-card {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card h3 {
+            color: var(--accent-purple);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .info-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
         }
 
         /* Competition Modal Styles */
@@ -586,58 +2161,81 @@
             cursor: not-allowed;
         }
 
-        /* Connect wallet prompt styles */
-        .connect-wallet-prompt {
+        /* Additional modal styles for consistency */
+        .competition-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: var(--radius-lg);
+        }
+
+        .stat-item {
             text-align: center;
-            padding: 3rem 2rem;
-            background: rgba(31, 41, 55, 0.5);
-            border-radius: var(--radius-xl);
-            border: 1px dashed var(--border);
         }
 
-        .connect-wallet-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .connect-wallet-title {
-            font-size: 1.5rem;
+        .stat-value {
             font-weight: 700;
             color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .bet-button-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .token-symbol {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .token-name {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
             margin-bottom: 0.5rem;
         }
 
-        .connect-wallet-description {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
+        .token-price {
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .price-change {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .price-change.positive {
+            color: var(--accent-green);
+        }
+
+        .price-change.negative {
+            color: var(--accent-red);
         }
 
         /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .competitions-container {
-                padding: 1rem;
-            }
-
-            .competitions-title {
-                font-size: 2rem;
-            }
-
-            .competitions-filters {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .competitions-grid {
+            .dashboard-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .tokens-battle {
-                flex-direction: column;
                 gap: 1rem;
             }
-
-            .vs-separator {
-                transform: rotate(90deg);
+            
+            .info-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .dashboard-card {
+                padding: 1rem;
             }
 
             .modal-tokens-section {
@@ -654,1405 +2252,5 @@
             }
         }
     </style>
-</head>
-<body>
-    <!-- Database Connection Status -->
-    <div id="dbStatus" class="db-status disconnected">
-        Database: Connecting...
-    </div>
-
-    <!-- Token Update Status -->
-    <div id="tokenStatus" class="db-status disconnected" style="top: 3rem;">
-        Tokens: Loading...
-    </div>
-
-    <!-- Animated Background -->
-    <div class="animated-background"></div>
-    <div class="geometric-patterns"></div>
-
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="#home" class="logo" onclick="showPage('home'); return false;">TokenWars</a>
-            
-            <ul class="nav-links">
-                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home'); return false;">Home</a></li>
-                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions'); return false;">Competitions</a></li>
-                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard'); return false;">Leaderboard</a></li>
-                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio'); return false;">Portfolio</a></li>
-                <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
-                
-                <!-- Disconnected State -->
-                <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal(); return false;">Connect Wallet</a></li>
-                
-                <!-- Connected State -->
-                <li id="traderInfo" style="display: none;">
-                    <div class="trader-info-display">
-                        <div id="navTraderAvatar" class="trader-avatar">🎯</div>
-                        <div class="trader-details">
-                            <span id="navTraderName" class="trader-name">Trader</span>
-                            <span id="navTraderBalance" class="trader-balance">0.00 SOL</span>
-                        </div>
-                        <button class="nav-disconnect" onclick="disconnectWallet()" title="Disconnect Wallet">⏻</button>
-                    </div>
-                </li>
-            </ul>
-
-            <!-- Mobile Menu Toggle -->
-            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </button>
-        </div>
-    </nav>
-
-    <!-- PAGE CONTAINER -->
-    <div id="pageContainer" class="page-container">
-        
-        <!-- HOME PAGE -->
-        <div id="homePage" class="page-content active">
-            <!-- Hero Section -->
-            <div class="hero">
-                <div class="hero-content">
-                    <!-- Disconnected State Hero -->
-                    <div id="heroDisconnected">
-                        <h1 class="hero-title">TokenWars</h1>
-                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
-                        <div class="cta-buttons">
-                            <a href="#" class="btn-hero-primary" onclick="openWalletModal(); return false;">Connect Wallet</a>
-                            <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
-                        </div>
-                    </div>
-
-                    <!-- Connected State Hero -->
-                    <div id="heroConnected" style="display: none;">
-                        <h1 class="hero-title">TokenWars</h1>
-                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
-                        
-                        <div class="trader-welcome-enhanced">
-                            <div class="welcome-message">
-                                <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span>!</p>
-                            </div>
-                        </div>
-                        
-                        <div class="cta-buttons">
-                            <a href="#competitions" class="btn-hero-primary" onclick="showPage('competitions'); return false;">View Competitions</a>
-                            <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Learn More Section -->
-            <div class="learn-more-section" id="learnMoreSection">
-                <div class="container">
-                    <div class="section-header">
-                        <h2 class="section-title">How TokenWars Works</h2>
-                        <p class="section-description">Simple, fair, and transparent token prediction competitions</p>
-                    </div>
-
-                    <div class="info-cards-grid">
-                        <div class="info-card">
-                            <div class="card-icon">📊</div>
-                            <h3>Simple Predictions</h3>
-                            <p>Pick which tokens will outperform over 7 days. Entry opens 3 days before each competition starts.</p>
-                        </div>
-                        <div class="info-card">
-                            <div class="card-icon">💰</div>
-                            <h3>Fixed Stakes</h3>
-                            <p>0.1 SOL entry fee. Winners split the pool (minus 15% platform fee). Fair and transparent.</p>
-                        </div>
-                        <div class="info-card">
-                            <div class="card-icon">🔐</div>
-                            <h3>Automated Payouts</h3>
-                            <p>Smart contracts handle everything. Escrow opens, competition runs, winners get paid automatically.</p>
-                        </div>
-                    </div>
-
-                    <div class="detailed-guide-cta">
-                        <h3>Want More Details?</h3>
-                        <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
-                        <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
-                            📖 Complete Platform Guide →
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- COMPETITIONS PAGE - INTEGRATED -->
-        <div id="competitionsPage" class="page-content">
-            <div class="competitions-container">
-                <!-- Connected User View -->
-                <div id="competitionsConnected" style="display: none;">
-                    <div class="competitions-header">
-                        <h1 class="competitions-title">Token Prediction Competitions</h1>
-                        <p class="competitions-subtitle">
-                            Predict which tokens will outperform and win SOL rewards. Entry fee: 0.1 SOL per prediction.
-                        </p>
-                        
-                        <div class="competitions-filters">
-                            <button class="filter-button active" data-filter="all" onclick="filterCompetitions('all')">
-                                All Competitions
-                            </button>
-                            <button class="filter-button" data-filter="voting" onclick="filterCompetitions('voting')">
-                                🗳️ Voting Open
-                            </button>
-                            <button class="filter-button" data-filter="active" onclick="filterCompetitions('active')">
-                                ⚡ Running
-                            </button>
-                            <button class="filter-button" data-filter="upcoming" onclick="filterCompetitions('upcoming')">
-                                ⏰ Upcoming
-                            </button>
-                            <button class="filter-button" data-filter="completed" onclick="filterCompetitions('completed')">
-                                🏁 Completed
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="status-sections" id="statusSections">
-                        <!-- Voting Open Section -->
-                        <div class="status-section" id="votingSection">
-                            <div class="status-section-header">
-                                <h2 class="status-section-title">
-                                    <span class="status-indicator">🗳️</span>
-                                    Voting Open
-                                    <span class="status-section-count" id="votingCount">0</span>
-                                </h2>
-                            </div>
-                            <div class="competitions-grid" id="votingGrid">
-                                <div class="loading-section">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading voting competitions...</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Running Section -->
-                        <div class="status-section" id="activeSection">
-                            <div class="status-section-header">
-                                <h2 class="status-section-title">
-                                    <span class="status-indicator">⚡</span>
-                                    Running Now
-                                    <span class="status-section-count" id="activeCount">0</span>
-                                </h2>
-                            </div>
-                            <div class="competitions-grid" id="activeGrid">
-                                <div class="loading-section">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading active competitions...</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Upcoming Section -->
-                        <div class="status-section" id="upcomingSection">
-                            <div class="status-section-header">
-                                <h2 class="status-section-title">
-                                    <span class="status-indicator">⏰</span>
-                                    Starting Soon
-                                    <span class="status-section-count" id="upcomingCount">0</span>
-                                </h2>
-                            </div>
-                            <div class="competitions-grid" id="upcomingGrid">
-                                <div class="loading-section">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading upcoming competitions...</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Completed Section -->
-                        <div class="status-section" id="completedSection">
-                            <div class="status-section-header">
-                                <h2 class="status-section-title">
-                                    <span class="status-indicator">🏁</span>
-                                    Recently Completed
-                                    <span class="status-section-count" id="completedCount">0</span>
-                                </h2>
-                            </div>
-                            <div class="competitions-grid" id="completedGrid">
-                                <div class="loading-section">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading completed competitions...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Disconnected User View -->
-                <div id="competitionsDisconnected">
-                    <div class="connect-wallet-prompt">
-                        <div class="connect-wallet-icon">🔗</div>
-                        <h2 class="connect-wallet-title">Connect Wallet to Join Competitions</h2>
-                        <p class="connect-wallet-description">
-                            Connect your Solana wallet to participate in token prediction competitions and earn SOL rewards.
-                        </p>
-                        <button class="btn-hero-primary" onclick="openWalletModal()">
-                            Connect Wallet
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- LEADERBOARD PAGE -->
-        <div id="leaderboardPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">LEADERBOARD</h2>
-                            <div class="section-filters">
-                                <select id="leaderboard-period" class="filter-select">
-                                    <option value="all-time">All Time</option>
-                                    <option value="monthly">This Month</option>
-                                    <option value="weekly">This Week</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div id="leaderboard-content">
-                            <div class="loading">Loading leaderboard...</div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- PORTFOLIO PAGE -->
-        <div id="portfolioPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">MY PORTFOLIO</h2>
-                            <div class="section-filters">
-                                <select id="portfolio-view" class="filter-select">
-                                    <option value="overview">Overview</option>
-                                    <option value="history">Betting History</option>
-                                    <option value="statistics">Statistics</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div id="portfolio-content">
-                            <div class="loading">Loading portfolio...</div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
-    <!-- Competition Details Modal -->
-    <div class="competition-modal" id="competitionModal">
-        <div class="competition-modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Competition Details</h3>
-                <button class="modal-close" onclick="closeCompetitionModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-tokens-section">
-                    <div class="modal-token-card">
-                        <img id="modalTokenALogo" class="modal-token-logo" src="" alt="">
-                        <div class="token-symbol" id="modalTokenASymbol">SOL</div>
-                        <div class="token-name" id="modalTokenAName">Solana</div>
-                        <div class="token-price" id="modalTokenAPrice">$0.00</div>
-                        <div class="price-change" id="modalTokenAChange">+0.00%</div>
-                    </div>
-                    <div class="modal-vs">VS</div>
-                    <div class="modal-token-card">
-                        <img id="modalTokenBLogo" class="modal-token-logo" src="" alt="">
-                        <div class="token-symbol" id="modalTokenBSymbol">USDC</div>
-                        <div class="token-name" id="modalTokenBName">USD Coin</div>
-                        <div class="token-price" id="modalTokenBPrice">$0.00</div>
-                        <div class="price-change" id="modalTokenBChange">+0.00%</div>
-                    </div>
-                </div>
-
-                <div class="competition-stats" id="modalStats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalParticipants">0</div>
-                        <div class="stat-label">Participants</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalPrizePool">0.0 SOL</div>
-                        <div class="stat-label">Prize Pool</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalTimeRemaining">--</div>
-                        <div class="stat-label">Time Remaining</div>
-                    </div>
-                </div>
-
-                <div class="betting-interface" id="bettingInterface">
-                    <h4 class="betting-title">Place Your Prediction</h4>
-                    
-                    <div class="token-choice-buttons">
-                        <button class="token-choice-button" id="choiceTokenA" onclick="selectToken('A')">
-                            <div class="token-symbol" id="choiceTokenASymbol">SOL</div>
-                            <div class="bet-button-label">I predict this wins</div>
-                        </button>
-                        <button class="token-choice-button" id="choiceTokenB" onclick="selectToken('B')">
-                            <div class="token-symbol" id="choiceTokenBSymbol">USDC</div>
-                            <div class="bet-button-label">I predict this wins</div>
-                        </button>
-                    </div>
-
-                    <div class="bet-amount-section">
-                        <label for="betAmount" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">
-                            Bet Amount (SOL)
-                        </label>
-                        <input 
-                            type="number" 
-                            id="betAmount" 
-                            class="bet-amount-input" 
-                            value="0.1" 
-                            min="0.1" 
-                            step="0.1"
-                            placeholder="0.1"
-                        >
-                    </div>
-
-                    <button class="place-bet-button" id="placeBetButton" onclick="placeBet()" disabled>
-                        Select a token to continue
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Wallet Connection Modal -->
-    <div class="wallet-modal" id="walletModal" style="display: none;">
-        <div class="wallet-modal-content">
-            <div class="modal-header">
-                <button class="modal-close" onclick="closeWalletModal()">×</button>
-                <div class="modal-title" id="modalTitle">Connect Wallet</div>
-                <div class="modal-subtitle" id="modalSubtitle">Choose your preferred Solana wallet to get started</div>
-            </div>
-
-            <!-- Step Indicators -->
-            <div class="step-indicators">
-                <div class="step-indicator active" id="step1Indicator">1</div>
-                <div class="step-indicator" id="step2Indicator">2</div>
-                <div class="step-indicator" id="step3Indicator">3</div>
-                <div class="step-indicator" id="step4Indicator">4</div>
-            </div>
-
-            <!-- Step 1: Wallet Selection -->
-            <div class="step-content active" id="step1Content">
-                <div class="security-info">
-                    <div class="security-title">🔒 Security First</div>
-                    <div class="security-text">
-                        TokenWars connects to your wallet securely to track your predictions. We never access your private keys or make unauthorized transactions.
-                    </div>
-                </div>
-
-                <div class="wallet-options">
-                    <div class="wallet-option" onclick="selectWallet('phantom')">
-                        <div class="wallet-icon">👻</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Phantom</div>
-                            <div class="wallet-description">Most popular Solana wallet</div>
-                            <div class="wallet-status" id="phantomStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option" onclick="selectWallet('solflare')">
-                        <div class="wallet-icon">☀️</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Solflare</div>
-                            <div class="wallet-description">Secure and feature-rich</div>
-                            <div class="wallet-status" id="solflareStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option" onclick="selectWallet('backpack')">
-                        <div class="wallet-icon">🎒</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Backpack</div>
-                            <div class="wallet-description">Modern crypto wallet</div>
-                            <div class="wallet-status" id="backpackStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option demo-wallet" onclick="selectWallet('demo')">
-                        <div class="wallet-icon">🎮</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Demo Mode</div>
-                            <div class="wallet-description">Try without wallet (10 SOL)</div>
-                            <div class="wallet-status" id="demoStatus">✓ Available</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-modal-secondary" onclick="closeWalletModal()">Cancel</button>
-                </div>
-            </div>
-
-            <!-- Step 2: Connecting State -->
-            <div class="step-content" id="step2Content">
-                <div class="connecting-state">
-                    <div class="loading-animation">
-                        <div class="loading-spinner"></div>
-                    </div>
-                    
-                    <div class="connecting-header">
-                        <h3 class="connecting-title">Connecting to <span id="selectedWalletName">Phantom</span></h3>
-                        <p class="connecting-subtitle">Please approve the connection in your wallet</p>
-                    </div>
-                    
-                    <div class="connection-steps">
-                        <div class="connection-step">
-                            <div class="step-icon">📱</div>
-                            <p>Check your wallet extension</p>
-                        </div>
-                        <div class="connection-step">
-                            <div class="step-icon">✅</div>
-                            <p>Approve the connection request</p>
-                        </div>
-                        <div class="connection-step">
-                            <div class="step-icon">🔗</div>
-                            <p>Wait for confirmation</p>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn-modal-secondary" onclick="goToStep(1)">Go Back</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 2.5: Wallet Confirmation -->
-            <div class="step-content" id="step2_5Content">
-                <div class="wallet-confirmation-modern">
-                    <div class="confirmation-header">
-                        <div class="success-icon-large">✅</div>
-                        <h3 class="confirmation-title">Wallet Connected Successfully!</h3>
-                        <p class="confirmation-subtitle">Your <span id="connectedWalletType">Phantom</span> wallet has been detected</p>
-                    </div>
-                    
-                    <div class="wallet-info-card">
-                        <div class="info-section">
-                            <div class="info-label">Connected Wallet Address:</div>
-                            <div class="wallet-address-modern" id="connectedWalletAddress">Loading...</div>
-                            <div class="info-note">This address will be used for your predictions</div>
-                        </div>
-                    </div>
-                    
-                    <div class="status-check-card">
-                        <div class="status-header">
-                            <div class="status-icon-large" id="traderStatusIcon">🔍</div>
-                            <div class="status-content">
-                                <h4 class="status-title">Profile Status</h4>
-                                <p class="status-text" id="traderStatusText">Checking for existing profile...</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="confirmation-actions-modern" id="confirmationActions" style="display: none;">
-                        <button class="btn-modal-secondary-modern" onclick="goToStep(1)">
-                            <span class="btn-icon">←</span>
-                            Back
-                        </button>
-                        <button class="btn-modal-primary-modern" id="continueBtn">
-                            Continue
-                            <span class="btn-icon">→</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 3: Profile Creation -->
-            <div class="step-content" id="step3Content">
-                <div class="profile-creation-container">
-                    <div class="profile-header">
-                        <div class="profile-icon">🎯</div>
-                        <h3 class="profile-title">Create Your Trader Profile</h3>
-                        <p class="profile-subtitle">Your username will be displayed on leaderboards and in competitions. Choose wisely!</p>
-                    </div>
-
-                    <div class="profile-form">
-                        <div class="form-section">
-                            <label class="form-label-modern">Trader Username</label>
-                            <div class="input-container">
-                                <input 
-                                    type="text" 
-                                    class="form-input-modern" 
-                                    id="traderUsername" 
-                                    placeholder="Enter your username..."
-                                    maxlength="20"
-                                >
-                                <div class="input-status" id="inputStatus"></div>
-                            </div>
-                            <div class="input-requirements">
-                                3-20 characters, alphanumeric and underscores only. No profanity.
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <label class="form-label-modern">Choose Your Avatar</label>
-                            <div class="avatar-grid-modern" id="avatarGrid">
-                                <div class="avatar-option-modern selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
-                                <div class="avatar-option-modern" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
-                            </div>
-                        </div>
-
-                        <div class="profile-preview-modern">
-                            <div class="preview-card">
-                                <div class="preview-avatar-modern" id="previewAvatar">🎯</div>
-                                <div class="preview-info">
-                                    <div class="preview-name-modern" id="previewName">Trader Username</div>
-                                    <div class="preview-subtitle-modern">Ready to predict token movements</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-actions-modern">
-                        <button class="btn-modal-secondary-modern" onclick="goToStep(1)">
-                            <span class="btn-icon">←</span>
-                            Back
-                        </button>
-                        <button class="btn-modal-primary-modern" id="createProfileBtn" onclick="goToStep(4)" disabled>
-                            Create Profile
-                            <span class="btn-icon">→</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 4: Rules & Agreement -->
-            <div class="step-content" id="step4Content">
-                <div class="rules-agreement-modern">
-                    <div class="rules-header">
-                        <div class="rules-icon">📋</div>
-                        <h3 class="rules-title">Platform Rules & Agreement</h3>
-                        <p class="rules-subtitle">Please review the competition rules and terms before joining</p>
-                    </div>
-
-                    <div class="rules-content">
-                        <div class="rule-card">
-                            <div class="rule-header">
-                                <div class="rule-icon">📊</div>
-                                <h4 class="rule-title">How Predictions Work</h4>
-                            </div>
-                            <p class="rule-description">
-                                Entry opens for 3 days, then competitions run for 7 days. Pick which tokens will outperform. 
-                                Winners are determined by performance over the full 7-day period.
-                            </p>
-                        </div>
-
-                        <div class="rule-card">
-                            <div class="rule-header">
-                                <div class="rule-icon">💰</div>
-                                <h4 class="rule-title">Prize Distribution</h4>
-                            </div>
-                            <div class="rule-list">
-                                <div class="rule-item">
-                                    <span class="rule-label">Entry Fee:</span>
-                                    <span class="rule-value">0.1 SOL per prediction</span>
-                                </div>
-                                <div class="rule-item">
-                                    <span class="rule-label">Winner's Share:</span>
-                                    <span class="rule-value">Split the pool with other winners</span>
-                                </div>
-                                <div class="rule-item">
-                                    <span class="rule-label">Platform Fee:</span>
-                                    <span class="rule-value">15% for operations and development</span>
-                                </div>
-                                <div class="rule-item">
-                                    <span class="rule-label">Settlement:</span>
-                                    <span class="rule-value">Automatic via smart contracts</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="rule-card">
-                            <div class="rule-header">
-                                <div class="rule-icon">🔒</div>
-                                <h4 class="rule-title">Fair Play & Security</h4>
-                            </div>
-                            <p class="rule-description">
-                                All predictions are final once placed. Smart contracts ensure transparent and tamper-proof results. 
-                                Your wallet remains under your control at all times.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="agreement-section-modern">
-                        <div class="agreement-card">
-                            <div class="checkbox-container-modern">
-                                <div class="checkbox-modern" id="agreementCheckbox" onclick="toggleAgreement()">
-                                    <div class="checkbox-check"></div>
-                                </div>
-                                <label class="agreement-text" onclick="toggleAgreement()">
-                                    I understand the platform rules and agree to participate fairly. I acknowledge that predictions involve risk 
-                                    and that I should only use funds I can afford to lose. I understand that all predictions are final.
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-actions-modern">
-                        <button class="btn-modal-secondary-modern" onclick="goToStep(3)">
-                            <span class="btn-icon">←</span>
-                            Back
-                        </button>
-                        <button class="btn-modal-primary-modern" id="finalizeBtn" onclick="finalizeProfile()" disabled>
-                            Join TokenWars
-                            <span class="btn-icon">🚀</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 5: Success -->
-            <div class="step-content" id="step5Content">
-                <div class="success-page-modern">
-                    <div class="success-animation">
-                        <div class="success-icon-animated">🏆</div>
-                        <div class="success-particles">
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                            <div class="particle"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="success-content">
-                        <h3 class="success-title-modern">Welcome to TokenWars!</h3>
-                        <p class="success-message-modern">Your trader profile has been created successfully</p>
-                    </div>
-                    
-                    <div class="achievement-card-modern">
-                        <div class="achievement-icon-modern">🎯</div>
-                        <div class="achievement-content">
-                            <h4 class="achievement-title">Achievement Unlocked!</h4>
-                            <p class="achievement-description">First Prediction Ready</p>
-                        </div>
-                    </div>
-                    
-                    <div class="success-stats">
-                        <div class="stat-item">
-                            <div class="stat-icon">💰</div>
-                            <div class="stat-text">0.1 SOL per prediction</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon">⏱️</div>
-                            <div class="stat-text">7-day competitions</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon">🎁</div>
-                            <div class="stat-text">Instant payouts</div>
-                        </div>
-                    </div>
-
-                    <div class="success-actions">
-                        <button class="btn-success-primary" onclick="completedOnboarding()">
-                            <span class="btn-text">Start Predicting!</span>
-                            <span class="btn-icon">🚀</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script>
-        // Configuration
-        window.SUPABASE_CONFIG = {
-            url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
-        };
-
-        // Global state for competitions
-        let competitionsData = {
-            all: [],
-            voting: [],
-            active: [],
-            upcoming: [],
-            completed: []
-        };
-
-        let selectedCompetition = null;
-        let selectedToken = null;
-        let currentFilter = 'all';
-
-        // Enhanced scrollToLearnMore function
-        function scrollToLearnMore() {
-            const learnMoreSection = document.getElementById('learnMoreSection');
-            if (learnMoreSection) {
-                learnMoreSection.scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        }
-
-        // Competition filtering
-        function filterCompetitions(filter) {
-            currentFilter = filter;
-            
-            // Update filter buttons
-            document.querySelectorAll('.filter-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
-            
-            // Show/hide sections based on filter
-            const sections = ['votingSection', 'activeSection', 'upcomingSection', 'completedSection'];
-            
-            if (filter === 'all') {
-                sections.forEach(sectionId => {
-                    document.getElementById(sectionId).style.display = 'block';
-                });
-            } else {
-                sections.forEach(sectionId => {
-                    const section = document.getElementById(sectionId);
-                    const shouldShow = sectionId.includes(filter);
-                    section.style.display = shouldShow ? 'block' : 'none';
-                });
-            }
-        }
-
-        // Load competitions data
-        async function loadCompetitionsData() {
-            try {
-                console.log('Loading competitions data...');
-                
-                // Check if we have database connection
-                if (window.supabaseClient && window.supabaseClient.getActiveCompetitions) {
-                    const competitions = await window.supabaseClient.getActiveCompetitions();
-                    console.log('Loaded competitions from database:', competitions);
-                    
-                    if (competitions && competitions.length > 0) {
-                        processCompetitionsData(competitions);
-                        renderCompetitions();
-                        return;
-                    }
-                }
-                
-                // Fallback to demo data
-                console.log('Using demo competition data');
-                createDemoCompetitions();
-                
-            } catch (error) {
-                console.error('Error loading competitions:', error);
-                createDemoCompetitions();
-            }
-        }
-
-        // Process competitions data into categories
-        function processCompetitionsData(competitions) {
-            const now = new Date();
-            
-            competitionsData = {
-                all: competitions,
-                voting: [],
-                active: [],
-                upcoming: [],
-                completed: []
-            };
-            
-            competitions.forEach(comp => {
-                const status = comp.status || determineCompetitionStatus(comp);
-                
-                switch (status) {
-                    case 'VOTING':
-                        competitionsData.voting.push(comp);
-                        break;
-                    case 'ACTIVE':
-                        competitionsData.active.push(comp);
-                        break;
-                    case 'SETUP':
-                        competitionsData.upcoming.push(comp);
-                        break;
-                    case 'RESOLVED':
-                    case 'CLOSED':
-                        competitionsData.completed.push(comp);
-                        break;
-                }
-            });
-            
-            console.log('Processed competitions:', competitionsData);
-        }
-
-        // Determine competition status from timing
-        function determineCompetitionStatus(competition) {
-            const now = new Date();
-            const startTime = new Date(competition.start_time);
-            const votingEndTime = new Date(competition.voting_end_time);
-            const endTime = new Date(competition.end_time);
-            
-            if (now < startTime) return 'SETUP';
-            if (now >= startTime && now < votingEndTime) return 'VOTING';
-            if (now >= votingEndTime && now < endTime) return 'ACTIVE';
-            if (now >= endTime && !competition.winner_token) return 'CLOSED';
-            if (competition.winner_token) return 'RESOLVED';
-            
-            return competition.status || 'SETUP';
-        }
-
-        // Create demo competitions for testing
-        function createDemoCompetitions() {
-            const demoData = [
-                {
-                    competition_id: 'DEMO-001',
-                    token_a_address: 'So11111111111111111111111111111111111111112',
-                    token_a_symbol: 'SOL',
-                    token_a_name: 'Solana',
-                    token_a_logo_uri: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                    token_a_current_price: 180.50,
-                    token_a_market_cap: 85000000000,
-                    token_b_address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-                    token_b_symbol: 'USDC',
-                    token_b_name: 'USD Coin',
-                    token_b_logo_uri: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-                    token_b_current_price: 1.00,
-                    token_b_market_cap: 25000000000,
-                    status: 'VOTING',
-                    start_time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                    voting_end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-                    end_time: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-                    total_bets: 42,
-                    token_a_bets: 28,
-                    token_b_bets: 14,
-                    total_betting_volume: 4.2,
-                    total_pool: 3.57
-                },
-                {
-                    competition_id: 'DEMO-003',
-                    token_a_address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
-                    token_a_symbol: 'MSOL',
-                    token_a_name: 'Marinade Staked SOL',
-                    token_a_logo_uri: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
-                    token_a_current_price: 195.30,
-                    token_a_market_cap: 1200000000,
-                    token_b_address: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',
-                    token_b_symbol: 'RENDER',
-                    token_b_name: 'Render Token',
-                    token_b_logo_uri: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png',
-                    token_b_current_price: 7.85,
-                    token_b_market_cap: 1180000000,
-                    status: 'SETUP',
-                    start_time: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-                    voting_end_time: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString(),
-                    end_time: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
-                    total_bets: 0,
-                    token_a_bets: 0,
-                    token_b_bets: 0,
-                    total_betting_volume: 0,
-                    total_pool: 0
-                }
-            ];
-            
-            processCompetitionsData(demoData);
-            renderCompetitions();
-        }
-
-        // Render competitions in their respective sections
-        function renderCompetitions() {
-            renderSection('voting', competitionsData.voting, 'votingGrid', 'votingCount');
-            renderSection('active', competitionsData.active, 'activeGrid', 'activeCount');
-            renderSection('upcoming', competitionsData.upcoming, 'upcomingGrid', 'upcomingCount');
-            renderSection('completed', competitionsData.completed, 'completedGrid', 'completedCount');
-        }
-
-        // Render a specific section
-        function renderSection(sectionType, competitions, gridId, countId) {
-            const grid = document.getElementById(gridId);
-            const countElement = document.getElementById(countId);
-            
-            if (!grid || !countElement) return;
-            
-            // Update count
-            countElement.textContent = competitions.length;
-            
-            if (competitions.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-section">
-                        <div class="empty-icon">🎯</div>
-                        <h3>No ${sectionType} competitions</h3>
-                        <p>Check back soon for new competitions!</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Render competition cards
-            grid.innerHTML = competitions.map(comp => createCompetitionCard(comp)).join('');
-        }
-
-        // Create competition card HTML
-        function createCompetitionCard(competition) {
-            const statusClass = getStatusClass(competition.status);
-            const statusDisplay = getStatusDisplay(competition.status);
-            const timeRemaining = formatTimeRemaining(competition);
-            
-            const tokenAPercentage = competition.total_bets > 0 ? 
-                Math.round((competition.token_a_bets / competition.total_bets) * 100) : 50;
-            const tokenBPercentage = 100 - tokenAPercentage;
-            
-            return `
-                <div class="competition-card" onclick="openCompetitionModal('${competition.competition_id}')">
-                    <div class="competition-header">
-                        <div class="competition-id">#${competition.competition_id.slice(-6)}</div>
-                        <div class="competition-status ${statusClass}">${statusDisplay}</div>
-                    </div>
-                    
-                    <div class="tokens-battle">
-                        <div class="token-info">
-                            <img src="${competition.token_a_logo_uri || generateTokenLogo(competition.token_a_symbol)}" 
-                                 alt="${competition.token_a_symbol}" 
-                                 class="token-logo"
-                                 onerror="this.src='${generateTokenLogo(competition.token_a_symbol)}'">
-                            <div class="token-symbol">${competition.token_a_symbol}</div>
-                            <div class="token-name">${truncateText(competition.token_a_name, 12)}</div>
-                            <div class="token-price">${formatPrice(competition.token_a_current_price)}</div>
-                        </div>
-                        
-                        <div class="vs-separator">
-                            <div class="vs-text">VS</div>
-                            <div class="competition-timer">
-                                <div class="timer-label">${getTimerLabel(competition.status)}</div>
-                                <div class="timer-value">${timeRemaining}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="token-info">
-                            <img src="${competition.token_b_logo_uri || generateTokenLogo(competition.token_b_symbol)}" 
-                                 alt="${competition.token_b_symbol}" 
-                                 class="token-logo"
-                                 onerror="this.src='${generateTokenLogo(competition.token_b_symbol)}'">
-                            <div class="token-symbol">${competition.token_b_symbol}</div>
-                            <div class="token-name">${truncateText(competition.token_b_name, 12)}</div>
-                            <div class="token-price">${formatPrice(competition.token_b_current_price)}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="competition-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">${competition.total_bets || 0}</div>
-                            <div class="stat-label">Participants</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">${formatSOL(competition.total_pool || 0)}</div>
-                            <div class="stat-label">Prize Pool</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">0.1 SOL</div>
-                            <div class="stat-label">Entry Fee</div>
-                        </div>
-                    </div>
-                    
-                    ${competition.total_bets > 0 ? `
-                        <div class="voting-progress">
-                            <div class="voting-progress-bar" style="width: ${tokenAPercentage}%"></div>
-                        </div>
-                        <div class="voting-stats">
-                            <span>${competition.token_a_symbol}: ${tokenAPercentage}%</span>
-                            <span>${competition.token_b_symbol}: ${tokenBPercentage}%</span>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="betting-section">
-                        ${createBettingButtons(competition)}
-                    </div>
-                </div>
-            `;
-        }
-
-        // Create betting buttons based on status
-        function createBettingButtons(competition) {
-            const canBet = competition.status === 'VOTING' || competition.status === 'SETUP';
-            
-            if (!canBet) {
-                return `
-                    <button class="bet-button" disabled>
-                        <div class="bet-button-token">${getStatusDisplay(competition.status)}</div>
-                    </button>
-                `;
-            }
-            
-            return `
-                <button class="bet-button" onclick="event.stopPropagation(); selectTokenInCard('${competition.competition_id}', 'A')">
-                    <div class="bet-button-label">Predict</div>
-                    <div class="bet-button-token">${competition.token_a_symbol}</div>
-                </button>
-                <button class="bet-button" onclick="event.stopPropagation(); selectTokenInCard('${competition.competition_id}', 'B')">
-                    <div class="bet-button-label">Predict</div>
-                    <div class="bet-button-token">${competition.token_b_symbol}</div>
-                </button>
-            `;
-        }
-
-        // Competition modal functions
-        function openCompetitionModal(competitionId) {
-            const competition = findCompetitionById(competitionId);
-            if (!competition) return;
-            
-            selectedCompetition = competition;
-            selectedToken = null;
-            
-            // Update modal content
-            updateModalContent(competition);
-            
-            // Show modal
-            document.getElementById('competitionModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeCompetitionModal() {
-            document.getElementById('competitionModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-            selectedCompetition = null;
-            selectedToken = null;
-        }
-
-        function updateModalContent(competition) {
-            // Update title
-            document.getElementById('modalTitle').textContent = 
-                `${competition.token_a_symbol} vs ${competition.token_b_symbol}`;
-            
-            // Update token A
-            document.getElementById('modalTokenALogo').src = 
-                competition.token_a_logo_uri || generateTokenLogo(competition.token_a_symbol);
-            document.getElementById('modalTokenASymbol').textContent = competition.token_a_symbol;
-            document.getElementById('modalTokenAName').textContent = competition.token_a_name;
-            document.getElementById('modalTokenAPrice').textContent = 
-                `${formatPrice(competition.token_a_current_price)}`;
-            
-            // Update token B
-            document.getElementById('modalTokenBLogo').src = 
-                competition.token_b_logo_uri || generateTokenLogo(competition.token_b_symbol);
-            document.getElementById('modalTokenBSymbol').textContent = competition.token_b_symbol;
-            document.getElementById('modalTokenBName').textContent = competition.token_b_name;
-            document.getElementById('modalTokenBPrice').textContent = 
-                `${formatPrice(competition.token_b_current_price)}`;
-            
-            // Update stats
-            document.getElementById('modalParticipants').textContent = competition.total_bets || 0;
-            document.getElementById('modalPrizePool').textContent = formatSOL(competition.total_pool || 0);
-            document.getElementById('modalTimeRemaining').textContent = formatTimeRemaining(competition);
-            
-            // Update choice buttons
-            document.getElementById('choiceTokenASymbol').textContent = competition.token_a_symbol;
-            document.getElementById('choiceTokenBSymbol').textContent = competition.token_b_symbol;
-            
-            // Reset selection
-            document.querySelectorAll('.token-choice-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            updatePlaceBetButton();
-        }
-
-        function selectToken(tokenSide) {
-            selectedToken = tokenSide;
-            
-            // Update button states
-            document.querySelectorAll('.token-choice-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            const selectedButton = document.getElementById(`choiceToken${tokenSide}`);
-            selectedButton.classList.add('selected');
-            
-            updatePlaceBetButton();
-        }
-
-        function updatePlaceBetButton() {
-            const button = document.getElementById('placeBetButton');
-            const betAmount = document.getElementById('betAmount').value;
-            
-            if (!selectedToken) {
-                button.textContent = 'Select a token to continue';
-                button.disabled = true;
-            } else if (!betAmount || parseFloat(betAmount) < 0.1) {
-                button.textContent = 'Minimum bet is 0.1 SOL';
-                button.disabled = true;
-            } else {
-                const tokenSymbol = selectedToken === 'A' ? 
-                    selectedCompetition.token_a_symbol : 
-                    selectedCompetition.token_b_symbol;
-                button.textContent = `Predict ${tokenSymbol} wins (${betAmount} SOL)`;
-                button.disabled = false;
-            }
-        }
-
-        function placeBet() {
-            if (!selectedCompetition || !selectedToken) return;
-            
-            const betAmount = parseFloat(document.getElementById('betAmount').value);
-            if (betAmount < 0.1) return;
-            
-            // Check wallet connection
-            if (!window.connectedUser) {
-                closeCompetitionModal();
-                openWalletModal();
-                return;
-            }
-            
-            // TODO: Implement actual betting logic with wallet integration
-            console.log('Placing bet:', {
-                competition: selectedCompetition.competition_id,
-                token: selectedToken,
-                amount: betAmount
-            });
-            
-            // Show success message
-            alert(`Bet placed successfully! You predicted ${selectedToken === 'A' ? selectedCompetition.token_a_symbol : selectedCompetition.token_b_symbol} will win with ${betAmount} SOL.`);
-            
-            closeCompetitionModal();
-        }
-
-        function selectTokenInCard(competitionId, tokenSide) {
-            // Check wallet connection first
-            if (!window.connectedUser) {
-                openWalletModal();
-                return;
-            }
-            
-            // Open modal with pre-selected token
-            openCompetitionModal(competitionId);
-            setTimeout(() => selectToken(tokenSide), 100);
-        }
-
-        // Utility functions
-        function findCompetitionById(id) {
-            return competitionsData.all.find(comp => comp.competition_id === id);
-        }
-
-        function getStatusClass(status) {
-            const statusMap = {
-                'VOTING': 'status-voting',
-                'ACTIVE': 'status-active',
-                'SETUP': 'status-upcoming',
-                'RESOLVED': 'status-completed',
-                'CLOSED': 'status-completed'
-            };
-            return statusMap[status] || 'status-upcoming';
-        }
-
-        function getStatusDisplay(status) {
-            const statusMap = {
-                'VOTING': '🗳️ Voting Open',
-                'ACTIVE': '⚡ Running',
-                'SETUP': '⏰ Starting Soon',
-                'RESOLVED': '🏁 Completed',
-                'CLOSED': '🏁 Ended'
-            };
-            return statusMap[status] || '⏰ Upcoming';
-        }
-
-        function getTimerLabel(status) {
-            const labelMap = {
-                'VOTING': 'VOTING ENDS',
-                'ACTIVE': 'ENDS IN',
-                'SETUP': 'STARTS IN',
-                'RESOLVED': 'COMPLETED',
-                'CLOSED': 'ENDED'
-            };
-            return labelMap[status] || 'TIME';
-        }
-
-        function formatTimeRemaining(competition) {
-            const now = new Date();
-            let targetTime;
-            
-            switch (competition.status) {
-                case 'VOTING':
-                    targetTime = new Date(competition.voting_end_time);
-                    break;
-                case 'ACTIVE':
-                    targetTime = new Date(competition.end_time);
-                    break;
-                case 'SETUP':
-                    targetTime = new Date(competition.start_time);
-                    break;
-                default:
-                    return 'Ended';
-            }
-            
-            const diff = targetTime - now;
-            if (diff <= 0) return 'Ended';
-            
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (days > 0) return `${days}d ${hours}h`;
-            if (hours > 0) return `${hours}h ${minutes}m`;
-            return `${minutes}m`;
-        }
-
-        function formatPrice(price) {
-            if (price >= 1000) return `${(price / 1000).toFixed(1)}K`;
-            if (price >= 1) return price.toFixed(2);
-            if (price >= 0.01) return price.toFixed(4);
-            return price.toFixed(8);
-        }
-
-        function formatSOL(amount) {
-            if (amount >= 1000) return `${(amount / 1000).toFixed(1)}K SOL`;
-            return `${amount.toFixed(3)} SOL`;
-        }
-
-        function truncateText(text, maxLength) {
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength) + '...';
-        }
-
-        function generateTokenLogo(symbol) {
-            const cleanSymbol = symbol.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-            const firstChar = cleanSymbol.charAt(0) || 'T';
-            return `https://ui-avatars.com/api/?name=${encodeURIComponent(firstChar)}&background=8b5cf6&color=fff&size=64&bold=true&format=png`;
-        }
-
-        // Update competitions page visibility based on wallet connection
-        function updateCompetitionsPageVisibility() {
-            const connectedView = document.getElementById('competitionsConnected');
-            const disconnectedView = document.getElementById('competitionsDisconnected');
-            
-            if (window.connectedUser) {
-                connectedView.style.display = 'block';
-                disconnectedView.style.display = 'none';
-                loadCompetitionsData();
-            } else {
-                connectedView.style.display = 'none';
-                disconnectedView.style.display = 'block';
-            }
-        }
-
-        // Event listeners for bet amount input
-        document.addEventListener('DOMContentLoaded', function() {
-            const betAmountInput = document.getElementById('betAmount');
-            if (betAmountInput) {
-                betAmountInput.addEventListener('input', updatePlaceBetButton);
-            }
-        });
-
-        // Auto-refresh competitions every 30 seconds
-        setInterval(() => {
-            if (window.connectedUser && currentPage === 'competitions') {
-                loadCompetitionsData();
-            }
-        }, 30000);
-
-        // Timer updates every minute
-        setInterval(() => {
-            if (currentPage === 'competitions') {
-                document.querySelectorAll('.timer-value').forEach(timer => {
-                    const card = timer.closest('.competition-card');
-                    if (card) {
-                        const competitionId = card.onclick.toString().match(/'([^']+)'/)?.[1];
-                        const competition = findCompetitionById(competitionId);
-                        if (competition) {
-                            timer.textContent = formatTimeRemaining(competition);
-                        }
-                    }
-                });
-            }
-        }, 60000);
-    </script>
-
-    <!-- Load core application files -->
-    <script src="config.js"></script>
-    <script src="supabase-client.js"></script>
-    <script src="utils.js"></script>
-    <script src="token-service.js"></script>
-    <script src="price-service.js"></script>
-    <script src="wallet-service.js"></script>
-    <script src="app.js"></script>
-    <script src="user.js"></script>
-    <script src="competition.js"></script>
-    
-    <!-- Initialize app -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM loaded, initializing TokenWars with integrated competitions...');
-            
-            // Initialize routing system
-            if (typeof initializeRouting === 'function') {
-                initializeRouting();
-            }
-            
-            // Initialize app
-            if (typeof initializeApp === 'function') {
-                initializeApp().then(() => {
-                    // Update competitions page visibility after app initialization
-                    updateCompetitionsPageVisibility();
-                }).catch(error => {
-                    console.error('❌ Failed to initialize app:', error);
-                });
-            }
-            
-            // Override the showPage function to handle competitions page
-            const originalShowPage = window.showPage;
-            window.showPage = function(pageName, updateHash = true) {
-                const result = originalShowPage(pageName, updateHash);
-                
-                if (pageName === 'competitions') {
-                    updateCompetitionsPageVisibility();
-                }
-                
-                return result;
-            };
-            
-            // Override wallet connection handlers to update competitions
-            const originalUpdateUIForConnectedUser = window.updateUIForConnectedUser;
-            window.updateUIForConnectedUser = function() {
-                if (originalUpdateUIForConnectedUser) {
-                    originalUpdateUIForConnectedUser();
-                }
-                updateCompetitionsPageVisibility();
-            };
-            
-            const originalUpdateUIForDisconnectedUser = window.updateUIForDisconnectedUser;
-            window.updateUIForDisconnectedUser = function() {
-                if (originalUpdateUIForDisconnectedUser) {
-                    originalUpdateUIForDisconnectedUser();
-                }
-                updateCompetitionsPageVisibility();
-            };
-        });
-    </script>
 </body>
-</html>() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    total_bets: 25,
-                    token_a_bets: 15,
-                    token_b_bets: 10,
-                    total_betting_volume: 2.5,
-                    total_pool: 2.125
-                },
-                {
-                    competition_id: 'DEMO-002',
-                    token_a_address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-                    token_a_symbol: 'BONK',
-                    token_a_name: 'Bonk',
-                    token_a_logo_uri: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
-                    token_a_current_price: 0.000023,
-                    token_a_market_cap: 1500000000,
-                    token_b_address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
-                    token_b_symbol: 'JUP',
-                    token_b_name: 'Jupiter',
-                    token_b_logo_uri: 'https://static.jup.ag/jup/icon.png',
-                    token_b_current_price: 1.15,
-                    token_b_market_cap: 1450000000,
-                    status: 'ACTIVE',
-                    start_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                    voting_end_time: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
-                    end_time: new Date(Date.now
+</html>
