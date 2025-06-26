@@ -40,7 +40,7 @@ export default function handler(req, res) {
     }
     
     // Simple hardcoded authentication for testing
-    const validWallet = 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv';
+    const validWallet = 'HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv';
     const validPin = '999196';
     
     console.log('Comparing:', { 
