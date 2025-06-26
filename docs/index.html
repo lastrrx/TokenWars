@@ -1365,27 +1365,37 @@
 
         <!-- PORTFOLIO PAGE -->
         <div id="portfolioPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">MY PORTFOLIO</h2>
-                            <div class="section-filters">
-                                <select id="portfolio-view" class="filter-select">
-                                    <option value="overview">Overview</option>
-                                    <option value="history">Betting History</option>
-                                    <option value="statistics">Statistics</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div id="portfolio-content">
-                            <div class="loading">Loading portfolio...</div>
-                        </div>
+    <div class="main-content">
+        <section class="section">
+            <div class="container">
+                <!-- Portfolio Header -->
+                <div class="section-header">
+                    <h2 class="section-title">MY PORTFOLIO</h2>
+                    <div class="section-filters">
+                        <select id="portfolio-view" class="filter-select" onchange="handlePortfolioViewChange()">
+                            <option value="overview">Overview</option>
+                            <option value="history">Betting History</option>
+                            <option value="statistics">Statistics</option>
+                            <option value="achievements">Achievements</option>
+                        </select>
+                        <button class="btn-refresh" onclick="refreshPortfolioData()">
+                            <span class="refresh-icon">🔄</span> Refresh
+                        </button>
                     </div>
-                </section>
+                </div>
+
+                <!-- Portfolio Content Container -->
+                <div id="portfolio-content">
+                    <!-- Loading state will be shown initially -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading your portfolio...</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
+</div>
 
     <!-- Competition Details Modal -->
     <div class="competition-modal" id="competitionModal" style="display: none;">
