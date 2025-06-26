@@ -437,7 +437,7 @@
                 </div>
             </div>
 
-            <!-- Other steps remain the same... -->
+            <!-- Step 2: Connecting -->
             <div class="step-content" id="step2Content">
                 <div style="text-align: center; padding: 2rem;">
                     <div class="loading-spinner"></div>
@@ -446,7 +446,145 @@
                 </div>
             </div>
 
-            <!-- Additional step content would continue here... -->
+            <!-- Step 2.5: Enhanced Wallet Confirmation -->
+            <div class="step-content" id="step2_5Content">
+                <div class="wallet-confirmation">
+                    <div class="confirmation-icon">✅</div>
+                    <div class="confirmation-title">Wallet Connected Successfully!</div>
+                    <div class="confirmation-subtitle">Your <span id="connectedWalletType">Phantom</span> wallet has been detected</div>
+                    
+                    <div class="wallet-address-display">
+                        <div class="address-label">Connected Wallet Address:</div>
+                        <div class="address-value" id="connectedWalletAddress">Loading...</div>
+                        <div class="address-note">This address will be used for your predictions</div>
+                    </div>
+                    
+                    <div class="trader-status-check">
+                        <div class="status-icon" id="traderStatusIcon">🔍</div>
+                        <div class="status-text" id="traderStatusText">Checking for existing profile...</div>
+                    </div>
+
+                    <div class="confirmation-actions" id="confirmationActions" style="display: none;">
+                        <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
+                        <button class="btn-modal-primary" id="continueBtn">Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Enhanced Trader Profile Creation -->
+            <div class="step-content" id="step3Content">
+                <div class="education-section">
+                    <div class="education-title">🎯 Create Your Trader Profile</div>
+                    <div class="education-content">
+                        Your username will be displayed on leaderboards and in competitions. Choose wisely!
+                    </div>
+                </div>
+
+                <div class="trader-creator">
+                    <div class="form-group">
+                        <label class="form-label">Trader Username</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="traderUsername" 
+                            placeholder="Enter your username..."
+                            maxlength="20"
+                        >
+                        <div class="input-requirements">
+                            3-20 characters, alphanumeric and underscores only. No profanity.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Choose Your Avatar</label>
+                        <div class="avatar-grid" id="avatarGrid">
+                            <div class="avatar-option selected" onclick="selectAvatar('🎯')" data-avatar="🎯">🎯</div>
+                            <div class="avatar-option" onclick="selectAvatar('📈')" data-avatar="📈">📈</div>
+                            <div class="avatar-option" onclick="selectAvatar('💎')" data-avatar="💎">💎</div>
+                            <div class="avatar-option" onclick="selectAvatar('🚀')" data-avatar="🚀">🚀</div>
+                            <div class="avatar-option" onclick="selectAvatar('🐋')" data-avatar="🐋">🐋</div>
+                            <div class="avatar-option" onclick="selectAvatar('⚡')" data-avatar="⚡">⚡</div>
+                            <div class="avatar-option" onclick="selectAvatar('🔥')" data-avatar="🔥">🔥</div>
+                            <div class="avatar-option" onclick="selectAvatar('🌟')" data-avatar="🌟">🌟</div>
+                        </div>
+                    </div>
+
+                    <div class="trader-preview">
+                        <div class="preview-avatar" id="previewAvatar">🎯</div>
+                        <div class="preview-name" id="previewName">Trader Username</div>
+                        <div class="preview-subtitle">Ready to predict token movements</div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
+                    <button class="btn-modal-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Create Profile</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Platform Rules & Agreement -->
+            <div class="step-content" id="step4Content">
+                <div class="education-section">
+                    <div class="education-title">📊 How Predictions Work</div>
+                    <div class="education-content">
+                        Tokens are paired based on similar market caps. You predict which will perform better over 1 hour. 
+                        Winners are determined by TWAP (Time-Weighted Average Price) to prevent manipulation.
+                    </div>
+                </div>
+
+                <div class="education-section">
+                    <div class="education-title">💰 Prize Distribution</div>
+                    <div class="education-content">
+                        <ul class="education-list">
+                            <li><strong>Entry Fee:</strong> 0.1 SOL per prediction</li>
+                            <li><strong>Winner's Share:</strong> Split the pool with other winners</li>
+                            <li><strong>Platform Fee:</strong> 15% for operations and development</li>
+                            <li><strong>Settlement:</strong> Automatic via smart contracts</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="education-section">
+                    <div class="education-title">🔒 Fair Play & Security</div>
+                    <div class="education-content">
+                        All predictions are final once placed. Smart contracts ensure transparent and tamper-proof results. 
+                        Your wallet remains under your control at all times.
+                    </div>
+                </div>
+
+                <div class="agreement-section">
+                    <div class="checkbox-wrapper">
+                        <div class="checkbox-custom" id="agreementCheckbox" onclick="toggleAgreement()"></div>
+                        <label class="checkbox-label" onclick="toggleAgreement()">
+                            I understand the platform rules and agree to participate fairly. I acknowledge that predictions involve risk 
+                            and that I should only use funds I can afford to lose. I understand that all predictions are final.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-modal-secondary" onclick="goToStep(3)">Back</button>
+                    <button class="btn-modal-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Join TokenWars</button>
+                </div>
+            </div>
+
+            <!-- Step 5: Success -->
+            <div class="step-content" id="step5Content">
+                <div class="success-celebration">
+                    <div class="success-icon">🏆</div>
+                    <div class="success-title">Welcome to TokenWars!</div>
+                    <div class="success-message">Your trader profile has been created successfully</div>
+                    
+                    <div class="achievement-unlock">
+                        <div class="achievement-icon">🎯</div>
+                        <div class="achievement-text">Achievement Unlocked: First Prediction Ready!</div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-modal-primary" onclick="completedOnboarding()">Start Predicting!</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
