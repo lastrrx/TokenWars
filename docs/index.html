@@ -5103,6 +5103,258 @@ if (!window.walletModalFixed) {
     console.log('✅ Complete wallet connection fix applied');
 }
 </script>
+
+    // APP INITIALIZATION FIX
+// Add this to the END of your index.html, right before </body>
+// This will fix the initialization errors and ensure wallet modal works
+
+<script>
+console.log('🚑 Emergency app initialization fix...');
+
+// Wait for all scripts to load
+window.addEventListener('load', function() {
+    console.log('🔧 Applying initialization fixes...');
+    
+    // Fix 1: Ensure required functions exist
+    if (typeof window.updateUIForConnectedUser === 'undefined') {
+        window.updateUIForConnectedUser = function() {
+            console.log('updateUIForConnectedUser called (stub)');
+            
+            // Hide connect button
+            const connectBtn = document.getElementById('connectWalletBtn');
+            if (connectBtn) {
+                connectBtn.style.display = 'none';
+            }
+            
+            // Show trader info
+            const traderInfo = document.getElementById('traderInfo');
+            if (traderInfo) {
+                traderInfo.style.display = 'block';
+            }
+            
+            // Update hero sections
+            const heroDisconnected = document.getElementById('heroDisconnected');
+            const heroConnected = document.getElementById('heroConnected');
+            
+            if (heroDisconnected && heroConnected) {
+                heroDisconnected.style.display = 'none';
+                heroConnected.style.display = 'block';
+            }
+            
+            // Update competitions page if needed
+            if (typeof window.updateCompetitionsPageVisibility === 'function') {
+                window.updateCompetitionsPageVisibility();
+            }
+        };
+    }
+    
+    if (typeof window.updateWalletStatusDisplay === 'undefined') {
+        window.updateWalletStatusDisplay = function() {
+            console.log('updateWalletStatusDisplay called (stub)');
+        };
+    }
+    
+    if (typeof window.updateHomePageContent === 'undefined') {
+        window.updateHomePageContent = function() {
+            console.log('updateHomePageContent called (stub)');
+        };
+    }
+    
+    if (typeof window.loadPageContent === 'undefined') {
+        window.loadPageContent = function(pageName) {
+            console.log('loadPageContent called for:', pageName);
+            
+            // Basic page content loading
+            switch (pageName) {
+                case 'portfolio':
+                    if (typeof window.initializePortfolio === 'function') {
+                        window.initializePortfolio();
+                    }
+                    break;
+                case 'competitions':
+                    if (typeof window.updateCompetitionsPageVisibility === 'function') {
+                        window.updateCompetitionsPageVisibility();
+                    }
+                    break;
+            }
+        };
+    }
+    
+    // Fix 2: Ensure wallet modal functions are available
+    if (typeof window.openWalletModal === 'undefined') {
+        window.openWalletModal = function() {
+            console.log('🔗 Opening wallet modal...');
+            
+            const modal = document.getElementById('walletModal');
+            if (!modal) {
+                console.error('❌ Wallet modal not found in DOM');
+                alert('Wallet modal not available. Please refresh the page.');
+                return;
+            }
+            
+            // Show modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Go to step 1 if function exists
+            if (typeof goToStep === 'function') {
+                goToStep(1);
+            } else {
+                console.warn('goToStep function not found');
+                // Manually show step 1
+                document.querySelectorAll('.step-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                const step1 = document.getElementById('step1Content');
+                if (step1) {
+                    step1.classList.add('active');
+                }
+            }
+            
+            console.log('✅ Wallet modal opened');
+        };
+    }
+    
+    if (typeof window.closeWalletModal === 'undefined') {
+        window.closeWalletModal = function() {
+            console.log('🔐 Closing wallet modal...');
+            
+            const modal = document.getElementById('walletModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+            
+            console.log('✅ Wallet modal closed');
+        };
+    }
+    
+    // Fix 3: Set up connect wallet button handlers
+    function setupConnectWalletButtons() {
+        console.log('🔘 Setting up connect wallet buttons...');
+        
+        // Nav button
+        const navConnectBtn = document.getElementById('connectWalletBtn');
+        if (navConnectBtn) {
+            const navLink = navConnectBtn.querySelector('a');
+            if (navLink) {
+                navLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Nav connect button clicked');
+                    window.openWalletModal();
+                    return false;
+                });
+            }
+        }
+        
+        // All buttons with onclick="openWalletModal()"
+        document.querySelectorAll('[onclick*="openWalletModal"]').forEach(btn => {
+            btn.removeAttribute('onclick');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Connect button clicked');
+                window.openWalletModal();
+                return false;
+            });
+        });
+        
+        // Hero buttons
+        const heroButtons = document.querySelectorAll('.btn-hero-primary');
+        heroButtons.forEach(btn => {
+            if (btn.textContent.includes('Connect Wallet')) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Hero connect button clicked');
+                    window.openWalletModal();
+                    return false;
+                });
+            }
+        });
+    }
+    
+    // Fix 4: Initialize the app properly
+    async function safeInitializeApp() {
+        console.log('🚀 Safe app initialization...');
+        
+        try {
+            // Initialize services if available
+            if (window.initializeApp && typeof window.initializeApp === 'function') {
+                await window.initializeApp();
+            } else {
+                console.warn('initializeApp not found, using minimal setup');
+                
+                // Minimal setup
+                if (typeof updateCompetitionsPageVisibility === 'function') {
+                    updateCompetitionsPageVisibility();
+                }
+            }
+            
+            // Set up wallet buttons after a delay
+            setTimeout(setupConnectWalletButtons, 500);
+            
+        } catch (error) {
+            console.error('App initialization error:', error);
+            
+            // Still set up wallet buttons even if init fails
+            setTimeout(setupConnectWalletButtons, 1000);
+        }
+    }
+    
+    // Run initialization
+    safeInitializeApp();
+    
+    // Fix 5: Ensure modal close button works
+    const modalCloseBtn = document.querySelector('.wallet-modal .modal-close');
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', function() {
+            window.closeWalletModal();
+        });
+    }
+    
+    // Fix 6: Click outside modal to close
+    const walletModal = document.getElementById('walletModal');
+    if (walletModal) {
+        walletModal.addEventListener('click', function(e) {
+            if (e.target === walletModal) {
+                window.closeWalletModal();
+            }
+        });
+    }
+    
+    console.log('✅ App initialization fixes applied');
+    
+    // Test the wallet modal after everything is set up
+    setTimeout(() => {
+        console.log('🧪 Testing wallet modal availability...');
+        console.log('openWalletModal exists:', typeof window.openWalletModal);
+        console.log('Wallet modal element exists:', !!document.getElementById('walletModal'));
+        console.log('Connect button exists:', !!document.getElementById('connectWalletBtn'));
+    }, 2000);
+});
+
+// Also add a fallback for immediate use
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick fix for connect wallet button
+    const connectBtn = document.querySelector('#connectWalletBtn a');
+    if (connectBtn) {
+        connectBtn.href = '#';
+        connectBtn.onclick = function(e) {
+            e.preventDefault();
+            if (window.openWalletModal) {
+                window.openWalletModal();
+            } else {
+                alert('Wallet connection is still loading. Please try again in a moment.');
+            }
+            return false;
+        };
+    }
+});
+
+console.log('✅ Emergency fixes loaded');
+</script>
     
 </body>
 </html>
