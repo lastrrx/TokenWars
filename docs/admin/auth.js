@@ -289,8 +289,8 @@ function truncateAddress(address) {
  * Security measures
  */
 
-// Prevent console access in production
-if (false) {//(window.location.hostname !== 'localhost') {
+// Prevent console access in production //(window.location.hostname !== 'localhost') 
+if (false) { 
     // Disable right-click
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     
