@@ -40,18 +40,17 @@
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
 
-    <!-- Enhanced Navigation with Active States -->
+    <!-- CLEANED UP NAVIGATION - Removed Markets, Kept Competitions -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="#home" class="logo" onclick="showPage('home'); return false;">TokenWars</a>
             
             <ul class="nav-links">
                 <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home'); return false;">Home</a></li>
-                <li><a href="#markets" class="nav-link" data-page="markets" onclick="showPage('markets'); return false;">Markets</a></li>
                 <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions'); return false;">Competitions</a></li>
                 <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard'); return false;">Leaderboard</a></li>
                 <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio'); return false;">Portfolio</a></li>
-                <li><a href="#how-it-works" class="nav-link" data-page="how-it-works" onclick="showPage('how-it-works'); return false;">How It Works</a></li>
+                <li><a href="how-it-works.html" class="nav-link" target="_blank">How It Works</a></li>
                 
                 <!-- Disconnected State -->
                 <li id="connectWalletBtn"><a href="#" class="btn-primary" onclick="openWalletModal(); return false;">Connect Wallet</a></li>
@@ -80,10 +79,10 @@
         </div>
     </nav>
 
-    <!-- PAGE CONTAINER - All pages are now properly contained -->
+    <!-- PAGE CONTAINER -->
     <div id="pageContainer" class="page-container">
         
-        <!-- HOME PAGE - Clean Landing Page -->
+        <!-- HOME PAGE - Enhanced with Learn More Section -->
         <div id="homePage" class="page-content active">
             <!-- Hero Section -->
             <div class="hero">
@@ -94,7 +93,7 @@
                         <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                         <div class="cta-buttons">
                             <a href="#" class="btn-hero-primary" onclick="openWalletModal(); return false;">Connect Wallet</a>
-                            <a href="#how-it-works" class="btn-secondary" onclick="showPage('how-it-works'); return false;">Learn More</a>
+                            <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
                         </div>
                     </div>
 
@@ -105,7 +104,7 @@
                         
                         <div class="trader-welcome-enhanced">
                             <div class="welcome-message">
-                                <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span></p>
+                                <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span>!</p>
                                 <div class="wallet-info">
                                     <span class="wallet-balance" id="heroWalletBalance">0.00 SOL</span>
                                     <span class="wallet-network">Devnet</span>
@@ -113,15 +112,69 @@
                             </div>
                         </div>
                         
+                        <!-- Dashboard Cards for Connected Users -->
+                        <div class="dashboard-grid">
+                            <div class="dashboard-card balance-card">
+                                <h3>Your Balance</h3>
+                                <p class="balance" id="dashboardBalance">0.00 SOL</p>
+                            </div>
+                            <div class="dashboard-card active-bets-card">
+                                <h3>Active Predictions</h3>
+                                <p class="count" id="activePredictions">0 competitions</p>
+                                <button onclick="showPage('competitions')" class="btn-secondary">View All</button>
+                            </div>
+                            <div class="dashboard-card performance-card">
+                                <h3>Win Rate</h3>
+                                <p class="percentage" id="winRate">0%</p>
+                                <p class="subtitle" id="winStats">(0 wins out of 0 total)</p>
+                            </div>
+                        </div>
+                        
                         <div class="cta-buttons">
-                            <a href="#markets" class="btn-hero-primary" onclick="showPage('markets'); return false;">View Markets</a>
-                            <a href="#how-it-works" class="btn-secondary" onclick="showPage('how-it-works'); return false;">Learn More</a>
+                            <a href="#competitions" class="btn-hero-primary" onclick="showPage('competitions'); return false;">View Competitions</a>
+                            <a href="how-it-works.html" class="btn-secondary" target="_blank">How It Works</a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Platform Stats Section (Optional) -->
+            <!-- Learn More Section (for disconnected users) -->
+            <div class="learn-more-section" id="learnMoreSection">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">How TokenWars Works</h2>
+                        <p class="section-description">Simple, fair, and transparent token prediction competitions</p>
+                    </div>
+
+                    <div class="info-cards-grid">
+                        <div class="info-card">
+                            <div class="card-icon">📊</div>
+                            <h3>Simple Predictions</h3>
+                            <p>Pick which tokens will outperform over 7 days. Entry opens 3 days before each competition starts.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">💰</div>
+                            <h3>Fixed Stakes</h3>
+                            <p>0.1 SOL entry fee. Winners split the pool (minus 15% platform fee). Fair and transparent.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">🔐</div>
+                            <h3>Automated Payouts</h3>
+                            <p>Smart contracts handle everything. Escrow opens, competition runs, winners get paid automatically.</p>
+                        </div>
+                    </div>
+
+                    <div class="detailed-guide-cta">
+                        <h3>Want More Details?</h3>
+                        <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
+                        <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
+                            📖 Complete Platform Guide →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Stats Section -->
             <div class="platform-stats-section">
                 <div class="container">
                     <div class="stats-grid">
@@ -150,37 +203,7 @@
             </div>
         </div>
 
-        <!-- MARKETS PAGE -->
-        <div id="marketsPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">ACTIVE MARKETS</h2>
-                            <div class="section-filters">
-                                <select id="filter-status" class="filter-select">
-                                    <option value="all">All Markets</option>
-                                    <option value="active">Active</option>
-                                    <option value="upcoming">Upcoming</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                                <select id="sort-by" class="filter-select">
-                                    <option value="time">Time Remaining</option>
-                                    <option value="pool">Pool Size</option>
-                                    <option value="participants">Participants</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="competitions-grid" id="competitions-grid">
-                            <div class="loading">Loading markets...</div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- COMPETITIONS PAGE (Same as Markets for now) -->
+        <!-- COMPETITIONS PAGE - The Main Hub (Renamed from Markets) -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
                 <section class="section">
@@ -188,16 +211,22 @@
                         <div class="section-header">
                             <h2 class="section-title">COMPETITIONS</h2>
                             <div class="section-filters">
-                                <select class="filter-select">
-                                    <option value="all">All Competitions</option>
-                                    <option value="1h">1 Hour</option>
-                                    <option value="24h">24 Hours</option>
-                                    <option value="7d">7 Days</option>
+                                <select id="competition-phase" class="filter-select">
+                                    <option value="all">All Phases</option>
+                                    <option value="entry-open">Entry Open (3 days)</option>
+                                    <option value="running">Running (7 days)</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <select id="sort-by" class="filter-select">
+                                    <option value="phase">By Phase</option>
+                                    <option value="pool-size">Pool Size</option>
+                                    <option value="participants">Participants</option>
+                                    <option value="time-remaining">Time Remaining</option>
                                 </select>
                             </div>
                         </div>
                         
-                        <div class="competitions-grid" id="competitions-grid-2">
+                        <div class="competitions-grid" id="competitions-grid">
                             <div class="loading">Loading competitions...</div>
                         </div>
                     </div>
@@ -248,121 +277,6 @@
                         </div>
                     </div>
                 </section>
-            </div>
-        </div>
-
-        <!-- HOW IT WORKS PAGE - Now properly separated -->
-        <div id="howItWorksPage" class="page-content">
-            <div class="how-it-works-container">
-                <div class="container">
-                    <div class="section-header">
-                        <h2 class="section-title">How TokenWars Works</h2>
-                        <p class="section-description">Learn everything you need to know about token prediction competitions</p>
-                    </div>
-
-                    <div class="how-it-works-content">
-                        <div class="concept-grid">
-                            <div class="concept-card">
-                                <div class="concept-icon">📊</div>
-                                <h3 class="concept-title">Smart Token Matching</h3>
-                                <p class="concept-description">
-                                    Our algorithm pairs tokens with similar market caps (±10%) for fair competition. Predict which token will perform better over 1 hour.
-                                </p>
-                            </div>
-                            
-                            <div class="concept-card">
-                                <div class="concept-icon">💰</div>
-                                <h3 class="concept-title">Fixed Entry Stakes</h3>
-                                <p class="concept-description">
-                                    Simple 0.1 SOL entry fee per prediction. Winners split the pool (minus 15% platform fee). Transparent and straightforward.
-                                </p>
-                            </div>
-                            
-                            <div class="concept-card">
-                                <div class="concept-icon">🔐</div>
-                                <h3 class="concept-title">Trustless Settlement</h3>
-                                <p class="concept-description">
-                                    All funds locked in Solana smart contracts. Winners determined by TWAP (Time-Weighted Average Price) for manipulation resistance.
-                                </p>
-                            </div>
-
-                            <div class="concept-card">
-                                <div class="concept-icon">⚡</div>
-                                <h3 class="concept-title">Quick Battles</h3>
-                                <p class="concept-description">
-                                    Fast-paced 1-hour competitions for active traders. Perfect for those who want rapid results and quick payouts.
-                                </p>
-                            </div>
-
-                            <div class="concept-card">
-                                <div class="concept-icon">🎯</div>
-                                <h3 class="concept-title">Anonymous Betting</h3>
-                                <p class="concept-description">
-                                    Your wallet address stays private. Only your chosen username appears on leaderboards and in competitions.
-                                </p>
-                            </div>
-
-                            <div class="concept-card">
-                                <div class="concept-icon">🏆</div>
-                                <h3 class="concept-title">Instant Payouts</h3>
-                                <p class="concept-description">
-                                    Winners receive their share immediately when competitions end. No waiting, no manual claims required.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Process Flow -->
-                        <div class="process-section">
-                            <h3 class="process-title">5-Step Process</h3>
-                            <div class="process-flow">
-                                <div class="process-step">
-                                    <div class="process-number">1</div>
-                                    <div class="process-info">
-                                        <h4>Pairs Generated</h4>
-                                        <p>Algorithm matches tokens with similar market caps</p>
-                                    </div>
-                                </div>
-                                <div class="process-step">
-                                    <div class="process-number">2</div>
-                                    <div class="process-info">
-                                        <h4>Place Your Bet</h4>
-                                        <p>Choose which token will outperform (0.1 SOL entry)</p>
-                                    </div>
-                                </div>
-                                <div class="process-step">
-                                    <div class="process-number">3</div>
-                                    <div class="process-info">
-                                        <h4>Competition Runs</h4>
-                                        <p>Track live performance for 1 hour</p>
-                                    </div>
-                                </div>
-                                <div class="process-step">
-                                    <div class="process-number">4</div>
-                                    <div class="process-info">
-                                        <h4>TWAP Settlement</h4>
-                                        <p>Fair, manipulation-resistant price determination</p>
-                                    </div>
-                                </div>
-                                <div class="process-step">
-                                    <div class="process-number">5</div>
-                                    <div class="process-info">
-                                        <h4>Instant Payout</h4>
-                                        <p>Winners automatically receive their share</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CTA to detailed guide -->
-                        <div class="detailed-guide-cta">
-                            <h3>Want More Details?</h3>
-                            <p>Check out our comprehensive guide covering TWAP pricing, smart contracts, and advanced strategies.</p>
-                            <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
-                                📖 Full Platform Guide →
-                            </a>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -527,8 +441,8 @@
                 <div class="education-section">
                     <div class="education-title">📊 How Predictions Work</div>
                     <div class="education-content">
-                        Tokens are paired based on similar market caps. You predict which will perform better over 1 hour. 
-                        Winners are determined by TWAP (Time-Weighted Average Price) to prevent manipulation.
+                        Entry opens for 3 days, then competitions run for 7 days. Pick which tokens will outperform. 
+                        Winners are determined by performance over the full 7-day period.
                     </div>
                 </div>
 
@@ -597,6 +511,17 @@
         };
         
         console.log('✅ Configuration loaded');
+
+        // Enhanced scrollToLearnMore function
+        function scrollToLearnMore() {
+            const learnMoreSection = document.getElementById('learnMoreSection');
+            if (learnMoreSection) {
+                learnMoreSection.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
     </script>
     
     <!-- Load core application files in PHASE 3 order -->
@@ -613,7 +538,7 @@
     <!-- Initialize after DOM loads -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM loaded, initializing TokenWars Phase 3...');
+            console.log('🚀 DOM loaded, initializing TokenWars...');
             
             // Initialize routing system
             initializeRouting();
@@ -630,87 +555,86 @@
     </script>
 
     <style>
-        /* Enhanced styles for page structure redesign */
-        .page-container {
-            min-height: 100vh;
-            position: relative;
-        }
-
-        .page-content {
-            display: none;
-            min-height: 100vh;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
-        }
-
-        .page-content.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Platform Stats Section */
-        .platform-stats-section {
-            padding: 4rem 0;
-            background: rgba(15, 23, 42, 0.5);
-            border-top: 1px solid rgba(139, 92, 246, 0.2);
-        }
-
-        .stats-grid {
+        /* Additional styles for navigation cleanup and home page enhancements */
+        
+        /* Dashboard Grid for Connected Users */
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
             max-width: 800px;
-            margin: 0 auto;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .stat-card {
-            text-align: center;
-            padding: 2rem 1rem;
-            background: rgba(31, 41, 55, 0.5);
-            border: 1px solid rgba(139, 92, 246, 0.2);
+        .dashboard-card {
+            background: rgba(31, 41, 55, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
             border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
             transition: all 0.3s ease;
         }
 
-        .stat-card:hover {
+        .dashboard-card:hover {
             transform: translateY(-4px);
-            border-color: #8b5cf6;
+            border-color: var(--accent-purple);
             box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
         }
 
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+        .dashboard-card h3 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .stat-number {
-            font-size: 2rem;
+        .dashboard-card .balance {
+            font-size: 1.8rem;
             font-weight: 700;
-            color: #8b5cf6;
+            color: var(--accent-green);
+            font-family: var(--font-mono);
             margin-bottom: 0.5rem;
         }
 
-        .stat-label {
-            color: #9ca3af;
-            font-weight: 500;
+        .dashboard-card .count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 0.75rem;
         }
 
-        /* How It Works Page Styles */
-        .how-it-works-container {
-            padding: 2rem 0 4rem;
-            margin-top: 80px;
+        .dashboard-card .percentage {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            margin-bottom: 0.25rem;
         }
 
-        .concept-grid {
+        .dashboard-card .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Learn More Section */
+        .learn-more-section {
+            padding: 4rem 0;
+            background: rgba(15, 23, 42, 0.3);
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .info-cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin: 3rem 0;
         }
 
-        .concept-card {
+        .info-card {
             background: rgba(31, 41, 55, 0.5);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(139, 92, 246, 0.2);
@@ -720,127 +644,54 @@
             transition: all 0.3s ease;
         }
 
-        .concept-card:hover {
+        .info-card:hover {
             transform: translateY(-5px);
-            border-color: #8b5cf6;
+            border-color: var(--accent-purple);
             box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
         }
 
-        .concept-icon {
+        .card-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
 
-        .concept-title {
-            color: #8b5cf6;
+        .info-card h3 {
+            color: var(--accent-purple);
             font-weight: 700;
             margin-bottom: 1rem;
             font-size: 1.2rem;
         }
 
-        .concept-description {
-            color: #d1d5db;
+        .info-card p {
+            color: var(--text-secondary);
             line-height: 1.6;
         }
 
-        .process-section {
-            margin: 4rem 0;
-            padding: 3rem;
-            background: rgba(15, 23, 42, 0.3);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
+        /* Hide learn more section for connected users */
+        #heroConnected ~ .learn-more-section {
+            display: none;
         }
 
-        .process-title {
-            text-align: center;
-            color: #8b5cf6;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 2rem;
+        /* Show learn more section only when disconnected hero is active */
+        #heroDisconnected:not([style*="display: none"]) ~ .learn-more-section,
+        #heroDisconnected[style=""] ~ .learn-more-section {
+            display: block;
         }
 
-        .process-flow {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .process-step {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            padding: 1.5rem;
-            background: rgba(31, 41, 55, 0.5);
-            border: 1px solid rgba(139, 92, 246, 0.1);
-            border-radius: 0.75rem;
-            transition: all 0.3s ease;
-        }
-
-        .process-step:hover {
-            border-color: rgba(139, 92, 246, 0.3);
-            background: rgba(139, 92, 246, 0.05);
-        }
-
-        .process-number {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.2rem;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .process-info h4 {
-            color: #8b5cf6;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .process-info p {
-            color: #9ca3af;
-            margin: 0;
-        }
-
-        .detailed-guide-cta {
-            text-align: center;
-            margin: 4rem 0;
-            padding: 3rem;
-            background: rgba(139, 92, 246, 0.05);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-        }
-
-        .detailed-guide-cta h3 {
-            color: #8b5cf6;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .detailed-guide-cta p {
-            color: #9ca3af;
-            margin-bottom: 2rem;
-        }
-
-        /* Mobile responsive */
+        /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .concept-grid {
+            .dashboard-grid {
                 grid-template-columns: 1fr;
-            }
-            
-            .process-step {
-                flex-direction: column;
-                text-align: center;
                 gap: 1rem;
             }
             
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
+            .info-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .dashboard-card {
+                padding: 1rem;
             }
         }
     </style>
