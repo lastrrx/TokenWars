@@ -628,3 +628,11 @@ window.supabaseClient = {
 };
 
 console.log('Supabase client module loaded and exposed globally');
+
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSupabase);
+} else {
+    // DOM already loaded
+    initializeSupabase();
+}
