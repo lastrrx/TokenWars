@@ -174,33 +174,8 @@
                 </div>
             </div>
 
-            <!-- Platform Stats Section -->
-            <div class="platform-stats-section">
-                <div class="container">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">🏆</div>
-                            <div class="stat-number" id="totalCompetitions">1,247</div>
-                            <div class="stat-label">Competitions</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">👥</div>
-                            <div class="stat-number" id="totalUsers">8,423</div>
-                            <div class="stat-label">Traders</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">💰</div>
-                            <div class="stat-number" id="totalVolume">156.8 SOL</div>
-                            <div class="stat-label">Total Volume</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">⚡</div>
-                            <div class="stat-number" id="activeNow">23</div>
-                            <div class="stat-label">Active Now</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Platform Stats Section - REMOVED -->
+            <!-- Stats cards removed as per user feedback -->
         </div>
 
         <!-- COMPETITIONS PAGE - The Main Hub (Renamed from Markets) -->
@@ -351,12 +326,40 @@
                 </div>
             </div>
 
-            <!-- Step 2: Connecting -->
+            <!-- Step 2: Enhanced Connecting State -->
             <div class="step-content" id="step2Content">
-                <div style="text-align: center; padding: 2rem;">
-                    <div class="loading-spinner"></div>
-                    <div style="font-size: 1.2rem; color: #8b5cf6; margin-bottom: 1rem;">Connecting to <span id="selectedWalletName">Phantom</span>...</div>
-                    <div style="color: #9ca3af;">Please approve the connection in your wallet</div>
+                <div class="connecting-state">
+                    <div class="loading-animation">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    
+                    <div class="connecting-header">
+                        <h3 class="connecting-title">Connecting to <span id="selectedWalletName">Phantom</span></h3>
+                        <p class="connecting-subtitle">Please approve the connection in your wallet</p>
+                    </div>
+                    
+                    <div class="connection-steps">
+                        <div class="connection-step">
+                            <div class="step-icon">📱</div>
+                            <p>Check your wallet extension</p>
+                        </div>
+                        <div class="connection-step">
+                            <div class="step-icon">✅</div>
+                            <p>Approve the connection request</p>
+                        </div>
+                        <div class="connection-step">
+                            <div class="step-icon">🔗</div>
+                            <p>Wait for confirmation</p>
+                        </div>
+                    </div>
+                    
+                    <div class="connection-help">
+                        <p class="help-text">Having trouble? Make sure your wallet extension is unlocked and try refreshing the page.</p>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-modal-secondary" onclick="goToStep(1)">Go Back</button>
+                    </div>
                 </div>
             </div>
 
@@ -555,7 +558,177 @@
     </script>
 
     <style>
-        /* Additional styles for navigation cleanup and home page enhancements */
+        /* Additional styles for navigation cleanup and UX improvements */
+        
+        /* FIXED: Remove bitcoin icon from logo */
+        .logo::before {
+            display: none !important;
+        }
+        
+        /* FIXED: Reduce navigation spacing */
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3rem; /* Reduced from default to bring elements closer */
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem; /* Reduced from 2.5rem to bring links closer */
+            list-style: none;
+            align-items: center;
+        }
+        
+        /* Enhanced Step 2 - Connecting State Styles */
+        .connecting-state {
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .loading-animation {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .connecting-header {
+            margin-bottom: 2rem;
+        }
+        
+        .connecting-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .connecting-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+        
+        .connection-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(139, 92, 246, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+        
+        .connection-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(31, 41, 55, 0.3);
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+        }
+        
+        .connection-step:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .step-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .connection-step p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .connection-help {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .help-text {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        /* Modal Action Button Styles */
+        .btn-modal-secondary {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-modal-secondary:hover {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+        
+        .btn-modal-primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-modal-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        }
+        
+        .btn-modal-primary:disabled {
+            background: var(--surface-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
         
         /* Dashboard Grid for Connected Users */
         .dashboard-grid {
