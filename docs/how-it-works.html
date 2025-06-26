@@ -18,211 +18,78 @@
     <link rel="stylesheet" href="styles.css">
     
     <style>
-        /* Base styles matching TokenWars aesthetic */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Additional styles specific to detailed guide */
+        .detailed-guide {
+            background: var(--primary-dark);
+            min-height: 100vh;
         }
 
-        body {
-            background: #0f172a;
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Animated Background */
-        .animated-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            z-index: -2;
-        }
-
-        .geometric-patterns {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.03;
-            background-image: 
-                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(139, 92, 246, 0.1) 35px, rgba(139, 92, 246, 0.1) 70px),
-                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(236, 72, 153, 0.1) 35px, rgba(236, 72, 153, 0.1) 70px);
-            z-index: -1;
-        }
-
-        /* Navigation (simplified for demo) */
-        .navbar {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-            padding: 1rem 0;
+        .guide-navigation {
             position: sticky;
-            top: 0;
-            z-index: 1000;
+            top: 80px;
+            background: rgba(11, 25, 41, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            z-index: 100;
         }
 
-        .nav-container {
+        .guide-nav-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 0 2rem;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #8b5cf6;
-            text-decoration: none;
-        }
-
-        /* Hero Section */
-        .hero-section {
-            padding: 6rem 2rem 4rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
-            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-        }
-
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-            animation: heroGlow 10s ease-in-out infinite alternate;
-        }
-
-        @keyframes heroGlow {
-            0% { transform: rotate(0deg) scale(1); }
-            100% { transform: rotate(180deg) scale(1.1); }
-        }
-
-        .hero-title {
-            font-family: 'Orbitron', monospace;
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 900;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899, #06b6d4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-subtitle {
-            font-size: 1.5rem;
-            color: #d1d5db;
-            margin-bottom: 2rem;
-            font-weight: 300;
-            position: relative;
-            z-index: 1;
-        }
-
-        .trust-badges {
-            display: flex;
-            justify-content: center;
             gap: 2rem;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 1;
+            overflow-x: auto;
         }
 
-        .trust-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            padding: 0.75rem 1.5rem;
-            border-radius: 2rem;
-            color: #10b981;
-            font-weight: 600;
+        .guide-nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
             transition: all 0.3s ease;
         }
 
-        .trust-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
-        }
-
-        .trust-badge.anonymous {
+        .guide-nav-link:hover,
+        .guide-nav-link.active {
+            color: var(--accent-purple);
             background: rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.3);
-            color: #8b5cf6;
         }
 
-        /* Page Container */
-        .page-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        /* Section Styles */
-        .content-section {
-            padding: 5rem 0;
+        .detailed-section {
+            padding: 4rem 0;
             border-bottom: 1px solid rgba(139, 92, 246, 0.1);
         }
 
-        .content-section:last-child {
+        .detailed-section:last-child {
             border-bottom: none;
         }
 
-        .section-header {
-            text-align: center;
-            margin-bottom: 4rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
         .section-number {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 2rem;
             color: white;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            margin: 0 auto 2rem;
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.3);
+            animation: sectionFloat 3s ease-in-out infinite;
         }
 
-        .section-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 1rem;
+        @keyframes sectionFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
-        .section-description {
-            color: #9ca3af;
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto;
-            line-height: 1.8;
-        }
-
-        /* Competition Formats */
         .format-showcase {
             display: flex;
             justify-content: center;
@@ -254,7 +121,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
             opacity: 0;
             transition: opacity 0.3s ease;
             z-index: -1;
@@ -262,7 +129,7 @@
 
         .format-card:hover {
             transform: translateY(-10px);
-            border-color: #8b5cf6;
+            border-color: var(--accent-purple);
             box-shadow: 0 25px 50px rgba(139, 92, 246, 0.3);
         }
 
@@ -277,10 +144,10 @@
         }
 
         .format-name {
-            font-family: 'Orbitron', monospace;
+            font-family: var(--font-display);
             font-size: 1.6rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -289,7 +156,7 @@
 
         .format-duration {
             font-size: 1.2rem;
-            color: #10b981;
+            color: var(--accent-green);
             font-weight: 600;
             margin-bottom: 1rem;
         }
@@ -305,75 +172,11 @@
             padding: 0.5rem 1rem;
             background: rgba(139, 92, 246, 0.1);
             border-radius: 2rem;
-            color: #8b5cf6;
+            color: var(--accent-purple);
             font-weight: 600;
             display: inline-block;
         }
 
-        /* Process Flow */
-        .process-flow {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2rem;
-            margin: 4rem 0;
-            position: relative;
-            flex-wrap: wrap;
-        }
-
-        .process-flow::before {
-            content: '';
-            position: absolute;
-            top: 50px;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #8b5cf6, transparent);
-            z-index: -1;
-        }
-
-        .process-step {
-            flex: 1;
-            text-align: center;
-            min-width: 180px;
-        }
-
-        .process-icon {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            margin: 0 auto 1.5rem;
-            box-shadow: 0 15px 40px rgba(139, 92, 246, 0.3);
-            position: relative;
-            z-index: 1;
-            animation: processFloat 3s ease-in-out infinite;
-            animation-delay: calc(var(--step) * 0.2s);
-        }
-
-        @keyframes processFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .process-title {
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-        }
-
-        .process-desc {
-            color: #9ca3af;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        /* Token Matching Visual */
         .matching-visual {
             background: rgba(31, 41, 55, 0.5);
             backdrop-filter: blur(10px);
@@ -417,7 +220,7 @@
         }
 
         .token-symbol {
-            font-family: 'Orbitron', monospace;
+            font-family: var(--font-display);
             font-size: 1.4rem;
             font-weight: 700;
             color: #ffffff;
@@ -426,14 +229,13 @@
 
         .token-mcap {
             font-size: 1rem;
-            color: #9ca3af;
+            color: var(--text-secondary);
         }
 
         .match-status {
             font-size: 2.5rem;
         }
 
-        /* Prize Distribution Interactive */
         .prize-calculator {
             background: rgba(31, 41, 55, 0.5);
             backdrop-filter: blur(10px);
@@ -461,12 +263,12 @@
             align-items: center;
             margin-bottom: 1rem;
             font-weight: 600;
-            color: #8b5cf6;
+            color: var(--accent-purple);
         }
 
         .slider-value {
             font-size: 1.2rem;
-            color: #ffd700;
+            color: var(--gold);
         }
 
         input[type="range"] {
@@ -484,7 +286,7 @@
             appearance: none;
             width: 24px;
             height: 24px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
             border-radius: 50%;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
@@ -527,11 +329,11 @@
         }
 
         .team-box.team-a .team-name {
-            color: #8b5cf6;
+            color: var(--accent-purple);
         }
 
         .team-box.team-b .team-name {
-            color: #ec4899;
+            color: var(--accent-pink);
         }
 
         .team-players {
@@ -548,7 +350,7 @@
         }
 
         .payout-label {
-            color: #9ca3af;
+            color: var(--text-secondary);
             font-size: 0.9rem;
             margin-bottom: 0.5rem;
         }
@@ -556,13 +358,13 @@
         .payout-amount {
             font-size: 2rem;
             font-weight: 700;
-            color: #ffd700;
+            color: var(--gold);
             margin-bottom: 0.5rem;
             text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
         }
 
         .return-multiplier {
-            color: #10b981;
+            color: var(--accent-green);
             font-weight: 600;
             font-size: 1.2rem;
         }
@@ -576,417 +378,91 @@
             border-radius: 0.75rem;
         }
 
-        /* TWAP Section */
-        .twap-visual {
-            background: rgba(31, 41, 55, 0.5);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1.5rem;
-            padding: 3rem;
-            margin: 3rem 0;
-        }
-
-        .twap-benefits {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .twap-benefit {
-            text-align: center;
-            padding: 2rem;
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .twap-benefit:hover {
-            transform: translateY(-4px);
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        .twap-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .twap-title {
-            color: #8b5cf6;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .twap-desc {
-            color: #d1d5db;
-            font-size: 0.9rem;
-        }
-
-        /* Escrow Flow */
-        .escrow-flow {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-            align-items: center;
-        }
-
-        .escrow-step {
-            text-align: center;
-            position: relative;
-        }
-
-        .escrow-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin: 0 auto 1rem;
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
-            animation: escrowFloat 3s ease-in-out infinite;
-            animation-delay: calc(var(--step) * 0.2s);
-        }
-
-        @keyframes escrowFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .escrow-step:not(:last-child)::after {
-            content: '→';
-            position: absolute;
-            top: 40px;
-            right: -1rem;
-            font-size: 2rem;
-            color: #8b5cf6;
-            animation: arrowPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes arrowPulse {
-            0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(10px); }
-        }
-
-        .escrow-label {
-            font-weight: 700;
-            color: #8b5cf6;
-            margin-bottom: 0.5rem;
-        }
-
-        .escrow-desc {
-            color: #9ca3af;
-            font-size: 0.9rem;
-        }
-
-        .contract-verify {
-            text-align: center;
-            margin-top: 2rem;
-        }
-
-        .verify-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            color: #8b5cf6;
+        .back-to-app {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
             text-decoration: none;
             font-weight: 600;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
             transition: all 0.3s ease;
+            z-index: 1000;
         }
 
-        .verify-button:hover {
-            background: rgba(139, 92, 246, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
-        }
-
-        /* Platform Features */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .feature-card {
-            background: rgba(31, 41, 55, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            border-color: #8b5cf6;
-            box-shadow: 0 15px 30px rgba(139, 92, 246, 0.2);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-title {
-            color: #8b5cf6;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .feature-desc {
-            color: #d1d5db;
-            font-size: 0.9rem;
-        }
-
-        /* Coming Soon Section */
-        .coming-soon-section {
-            margin-top: 3rem;
-            padding: 2rem;
-            background: rgba(139, 92, 246, 0.05);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1rem;
-        }
-
-        .coming-soon-title {
-            text-align: center;
-            color: #8b5cf6;
-            font-weight: 700;
-            margin-bottom: 2rem;
-            font-size: 1.3rem;
-        }
-
-        .coming-soon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .coming-soon-item {
-            background: rgba(31, 41, 55, 0.3);
-            border: 1px solid rgba(139, 92, 246, 0.1);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            text-align: center;
-            opacity: 0.7;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .coming-soon-item::before {
-            content: 'COMING SOON';
-            position: absolute;
-            top: 10px;
-            right: -30px;
-            background: #8b5cf6;
-            color: white;
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 0.2rem 2rem;
-            transform: rotate(45deg);
-        }
-
-        .coming-soon-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            opacity: 0.5;
-        }
-
-        .coming-soon-name {
-            font-weight: 600;
-            color: #9ca3af;
-            font-size: 0.9rem;
-        }
-
-        /* CTA Section */
-        .cta-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            border-radius: 2rem;
-            padding: 4rem 2rem;
-            text-align: center;
-            margin: 5rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-            animation: ctaGlow 8s ease-in-out infinite alternate;
-        }
-
-        @keyframes ctaGlow {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(90deg); }
-        }
-
-        .cta-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 1rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-subtitle {
-            font-size: 1.3rem;
-            color: #d1d5db;
-            margin-bottom: 3rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-steps {
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
-            margin-bottom: 3rem;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-step {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .cta-step-number {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.2rem;
-            color: white;
-        }
-
-        .cta-step-text {
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            color: white;
-            padding: 1.5rem 4rem;
-            border-radius: 1rem;
-            font-size: 1.3rem;
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 15px 40px rgba(139, 92, 246, 0.3);
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-button:hover {
+        .back-to-app:hover {
             transform: translateY(-3px);
-            box-shadow: 0 20px 50px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 12px 35px rgba(139, 92, 246, 0.6);
         }
 
-        /* Mobile Responsive */
+        /* Mobile responsive */
         @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.5rem;
+            .distribution-visual {
+                grid-template-columns: 1fr;
             }
-
-            .hero-subtitle {
-                font-size: 1.2rem;
-            }
-
-            .section-title {
-                font-size: 2rem;
-            }
-
-            .trust-badges {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
+            
             .format-showcase {
                 flex-direction: column;
                 align-items: center;
             }
-
-            .process-flow {
+            
+            .guide-nav-container {
+                padding: 0 1rem;
+            }
+            
+            .match-example {
                 flex-direction: column;
-                align-items: center;
-            }
-
-            .process-flow::before {
-                display: none;
-            }
-
-            .escrow-step::after {
-                display: none;
-            }
-
-            .distribution-visual {
-                grid-template-columns: 1fr;
-            }
-
-            .cta-steps {
-                flex-direction: column;
-                gap: 1.5rem;
+                gap: 1rem;
             }
         }
     </style>
 </head>
-<body>
-    <!-- Animated Background -->
-    <div class="animated-background"></div>
-    <div class="geometric-patterns"></div>
-
-    <!-- Navigation (Simplified for demo) -->
+<body class="detailed-guide">
+    <!-- Navigation matching main app -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="index.html" class="logo">TokenWars</a>
+            <div style="display: flex; gap: 1rem;">
+                <a href="index.html" class="btn-primary">← Back to App</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Guide Section Navigation -->
+    <nav class="guide-navigation">
+        <div class="guide-nav-container">
+            <a href="#formats" class="guide-nav-link">Competition Formats</a>
+            <a href="#process" class="guide-nav-link">How It Works</a>
+            <a href="#matching" class="guide-nav-link">Token Matching</a>
+            <a href="#prizes" class="guide-nav-link">Prize Distribution</a>
+            <a href="#twap" class="guide-nav-link">TWAP Pricing</a>
+            <a href="#security" class="guide-nav-link">Security & Escrow</a>
+            <a href="#features" class="guide-nav-link">Platform Features</a>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <div class="hero-section">
-        <h1 class="hero-title">How TokenWars Works</h1>
-        <p class="hero-subtitle">Pick the winner. Beat the market. Claim your rewards.</p>
-        
-        <div class="trust-badges">
-            <div class="trust-badge anonymous">
-                <span>🔐</span>
-                <span>Anonymous & Secure</span>
-            </div>
-            <div class="trust-badge">
-                <span>⚡</span>
-                <span>Instant Payouts</span>
-            </div>
-            <div class="trust-badge">
-                <span>📊</span>
-                <span>Fair TWAP Pricing</span>
+    <div class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">How TokenWars Works</h1>
+            <p class="hero-motto">Complete Guide to Token Prediction Competitions</p>
+            
+            <div class="trust-badges" style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 2rem;">
+                <div class="trust-badge" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1.5rem; border-radius: 2rem; color: #10b981; font-weight: 600;">
+                    <span>🔐</span>
+                    <span>Anonymous & Secure</span>
+                </div>
+                <div class="trust-badge" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1.5rem; border-radius: 2rem; color: #10b981; font-weight: 600;">
+                    <span>⚡</span>
+                    <span>Instant Payouts</span>
+                </div>
+                <div class="trust-badge" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1.5rem; border-radius: 2rem; color: #10b981; font-weight: 600;">
+                    <span>📊</span>
+                    <span>Fair TWAP Pricing</span>
+                </div>
             </div>
         </div>
     </div>
@@ -995,371 +471,291 @@
     <div class="page-container">
         
         <!-- Section 1: Competition Formats -->
-        <section class="content-section" id="competition-formats">
-            <div class="section-header">
-                <div class="section-number">1</div>
-                <h2 class="section-title">Competition Formats</h2>
-                <p class="section-description">
-                    Choose your battle timeframe. All competitions are anonymous - only your username is visible.
-                </p>
-            </div>
-
-            <div class="format-showcase">
-                <div class="format-card">
-                    <div class="format-icon">⚡</div>
-                    <div class="format-name">Quick Battle</div>
-                    <div class="format-duration">1 Hour</div>
-                    <div class="format-details">
-                        Lightning-fast predictions for active traders who love rapid action
-                    </div>
-                    <div class="entry-fee">Entry: 0.1 SOL</div>
+        <section id="formats" class="detailed-section">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-number">1</div>
+                    <h2 class="section-title">Competition Formats</h2>
+                    <p class="section-description">
+                        Choose your battle timeframe. All competitions are anonymous - only your username is visible.
+                    </p>
                 </div>
 
-                <div class="format-card">
-                    <div class="format-icon">📅</div>
-                    <div class="format-name">Daily Duel</div>
-                    <div class="format-duration">24 Hours</div>
-                    <div class="format-details">
-                        Our most popular format - perfect for daily market movements
+                <div class="format-showcase">
+                    <div class="format-card">
+                        <div class="format-icon">⚡</div>
+                        <div class="format-name">Quick Battle</div>
+                        <div class="format-duration">1 Hour</div>
+                        <div class="format-details">
+                            Lightning-fast predictions for active traders who love rapid action
+                        </div>
+                        <div class="entry-fee">Entry: 0.1 SOL</div>
                     </div>
-                    <div class="entry-fee">Entry: 0.1 SOL</div>
-                </div>
 
-                <div class="format-card">
-                    <div class="format-icon">📊</div>
-                    <div class="format-name">Weekly War</div>
-                    <div class="format-duration">7 Days</div>
-                    <div class="format-details">
-                        For strategic traders with longer-term market convictions
+                    <div class="format-card">
+                        <div class="format-icon">📅</div>
+                        <div class="format-name">Daily Duel</div>
+                        <div class="format-duration">24 Hours</div>
+                        <div class="format-details">
+                            Our most popular format - perfect for daily market movements
+                        </div>
+                        <div class="entry-fee">Entry: 0.1 SOL</div>
                     </div>
-                    <div class="entry-fee">Entry: 0.1 SOL</div>
+
+                    <div class="format-card">
+                        <div class="format-icon">📊</div>
+                        <div class="format-name">Weekly War</div>
+                        <div class="format-duration">7 Days</div>
+                        <div class="format-details">
+                            For strategic traders with longer-term market convictions
+                        </div>
+                        <div class="entry-fee">Entry: 0.1 SOL</div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Section 2: How It Works -->
-        <section class="content-section" id="how-it-works">
-            <div class="section-header">
-                <div class="section-number">2</div>
-                <h2 class="section-title">How It Works</h2>
-                <p class="section-description">
-                    Simple 5-step process from token selection to instant payout
-                </p>
-            </div>
-
-            <div class="process-flow">
-                <div class="process-step" style="--step: 0">
-                    <div class="process-icon">🎲</div>
-                    <h3 class="process-title">Pairs Generated</h3>
-                    <p class="process-desc">Algorithm matches similar market cap tokens</p>
+        <section id="process" class="detailed-section">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-number">2</div>
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-description">
+                        Simple 5-step process from token selection to instant payout
+                    </p>
                 </div>
 
-                <div class="process-step" style="--step: 1">
-                    <div class="process-icon">💡</div>
-                    <h3 class="process-title">Place Your Anonymous Bet</h3>
-                    <p class="process-desc">Pick which token will outperform</p>
-                </div>
+                <div class="process-flow">
+                    <div class="process-step" style="--step: 0">
+                        <div class="process-number">1</div>
+                        <div class="process-info">
+                            <h4>Pairs Generated</h4>
+                            <p>Algorithm matches similar market cap tokens automatically</p>
+                        </div>
+                    </div>
 
-                <div class="process-step" style="--step: 2">
-                    <div class="process-icon">📈</div>
-                    <h3 class="process-title">Competition Runs</h3>
-                    <p class="process-desc">Track live performance</p>
-                </div>
+                    <div class="process-step" style="--step: 1">
+                        <div class="process-number">2</div>
+                        <div class="process-info">
+                            <h4>Place Your Anonymous Bet</h4>
+                            <p>Pick which token will outperform with 0.1 SOL entry fee</p>
+                        </div>
+                    </div>
 
-                <div class="process-step" style="--step: 3">
-                    <div class="process-icon">⚖️</div>
-                    <h3 class="process-title">TWAP Settlement</h3>
-                    <p class="process-desc">Fair, manipulation-resistant pricing</p>
-                </div>
+                    <div class="process-step" style="--step: 2">
+                        <div class="process-number">3</div>
+                        <div class="process-info">
+                            <h4>Competition Runs</h4>
+                            <p>Track live performance with real-time price updates</p>
+                        </div>
+                    </div>
 
-                <div class="process-step" style="--step: 4">
-                    <div class="process-icon">💰</div>
-                    <h3 class="process-title">Instant Payout</h3>
-                    <p class="process-desc">Winners split 85% of pool</p>
+                    <div class="process-step" style="--step: 3">
+                        <div class="process-number">4</div>
+                        <div class="process-info">
+                            <h4>TWAP Settlement</h4>
+                            <p>Fair, manipulation-resistant pricing determines winner</p>
+                        </div>
+                    </div>
+
+                    <div class="process-step" style="--step: 4">
+                        <div class="process-number">5</div>
+                        <div class="process-info">
+                            <h4>Instant Payout</h4>
+                            <p>Winners automatically receive their share of 85% pool</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Section 3: Smart Token Matching -->
-        <section class="content-section" id="token-matching">
-            <div class="section-header">
-                <div class="section-number">3</div>
-                <h2 class="section-title">Smart Token Matching</h2>
-                <p class="section-description">
-                    Our algorithm ensures fair competition by pairing tokens with similar market caps (±10% range)
-                </p>
-            </div>
-
-            <div class="matching-visual">
-                <h3 style="text-align: center; color: #8b5cf6; margin-bottom: 2rem;">Market Cap Matching Examples</h3>
-                
-                <div class="matching-examples">
-                    <div class="match-example valid">
-                        <div class="token-info">
-                            <div class="token-symbol">BONK</div>
-                            <div class="token-mcap">$500M</div>
-                        </div>
-                        <div class="match-status">✅</div>
-                        <div class="token-info">
-                            <div class="token-symbol">WIF</div>
-                            <div class="token-mcap">$480M</div>
-                        </div>
-                    </div>
-
-                    <div class="match-example valid">
-                        <div class="token-info">
-                            <div class="token-symbol">JUP</div>
-                            <div class="token-mcap">$1.2B</div>
-                        </div>
-                        <div class="match-status">✅</div>
-                        <div class="token-info">
-                            <div class="token-symbol">ORCA</div>
-                            <div class="token-mcap">$1.15B</div>
-                        </div>
-                    </div>
-
-                    <div class="match-example invalid">
-                        <div class="token-info">
-                            <div class="token-symbol">SOL</div>
-                            <div class="token-mcap">$50B</div>
-                        </div>
-                        <div class="match-status">❌</div>
-                        <div class="token-info">
-                            <div class="token-symbol">BONK</div>
-                            <div class="token-mcap">$500M</div>
-                        </div>
-                    </div>
+        <section id="matching" class="detailed-section">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <h2 class="section-title">Smart Token Matching</h2>
+                    <p class="section-description">
+                        Our algorithm ensures fair competition by pairing tokens with similar market caps (±10% range)
+                    </p>
                 </div>
 
-                <p style="text-align: center; color: #9ca3af; margin-top: 2rem;">
-                    Tokens must have minimum $1M liquidity, be 30+ days old, and have active trading volume
-                </p>
+                <div class="matching-visual">
+                    <h3 style="text-align: center; color: var(--accent-purple); margin-bottom: 2rem;">Market Cap Matching Examples</h3>
+                    
+                    <div class="matching-examples">
+                        <div class="match-example valid">
+                            <div class="token-info">
+                                <div class="token-symbol">BONK</div>
+                                <div class="token-mcap">$500M</div>
+                            </div>
+                            <div class="match-status">✅</div>
+                            <div class="token-info">
+                                <div class="token-symbol">WIF</div>
+                                <div class="token-mcap">$480M</div>
+                            </div>
+                        </div>
+
+                        <div class="match-example valid">
+                            <div class="token-info">
+                                <div class="token-symbol">JUP</div>
+                                <div class="token-mcap">$1.2B</div>
+                            </div>
+                            <div class="match-status">✅</div>
+                            <div class="token-info">
+                                <div class="token-symbol">ORCA</div>
+                                <div class="token-mcap">$1.15B</div>
+                            </div>
+                        </div>
+
+                        <div class="match-example invalid">
+                            <div class="token-info">
+                                <div class="token-symbol">SOL</div>
+                                <div class="token-mcap">$50B</div>
+                            </div>
+                            <div class="match-status">❌</div>
+                            <div class="token-info">
+                                <div class="token-symbol">BONK</div>
+                                <div class="token-mcap">$500M</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="text-align: center; color: var(--text-secondary); margin-top: 2rem;">
+                        Tokens must have minimum $1M liquidity, be 30+ days old, and have active trading volume
+                    </p>
+                </div>
             </div>
         </section>
 
         <!-- Section 4: Prize Distribution -->
-        <section class="content-section" id="prize-distribution">
-            <div class="section-header">
-                <div class="section-number">4</div>
-                <h2 class="section-title">Prize Distribution</h2>
-                <p class="section-description">
-                    Interactive calculator - see how your potential winnings change based on participation!
-                </p>
-            </div>
-
-            <div class="prize-calculator">
-                <div class="calculator-controls">
-                    <div class="slider-control">
-                        <div class="slider-label">
-                            <span>Token A vs Token B Split</span>
-                            <span class="slider-value" id="splitValue">60% vs 40%</span>
-                        </div>
-                        <input type="range" id="splitSlider" min="10" max="90" value="60" step="5">
-                    </div>
-                    <p style="text-align: center; color: #9ca3af; margin-top: 1rem; font-size: 0.95rem;">
-                        Drag the slider to see how predictions affect payouts
+        <section id="prizes" class="detailed-section">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-number">4</div>
+                    <h2 class="section-title">Prize Distribution</h2>
+                    <p class="section-description">
+                        Interactive calculator - see how your potential winnings change based on participation!
                     </p>
                 </div>
 
-                <div class="distribution-visual">
-                    <div class="team-box team-a">
-                        <h4 class="team-name">Token A Believers</h4>
-                        <div class="team-players"><span id="teamAPercent">60</span>% of players</div>
-                        <div class="payout-info">
-                            <div class="payout-label">If Token A wins, each gets:</div>
-                            <div class="payout-amount" id="payoutA">1.42 SOL</div>
-                            <div class="return-multiplier" id="returnA">14.2x return!</div>
+                <div class="prize-calculator">
+                    <div class="calculator-controls">
+                        <div class="slider-control">
+                            <div class="slider-label">
+                                <span>Token A vs Token B Split</span>
+                                <span class="slider-value" id="splitValue">60% vs 40%</span>
+                            </div>
+                            <input type="range" id="splitSlider" min="10" max="90" value="60" step="5">
+                        </div>
+                        <p style="text-align: center; color: var(--text-secondary); margin-top: 1rem; font-size: 0.95rem;">
+                            Drag the slider to see how predictions affect payouts
+                        </p>
+                    </div>
+
+                    <div class="distribution-visual">
+                        <div class="team-box team-a">
+                            <h4 class="team-name">Token A Believers</h4>
+                            <div class="team-players"><span id="teamAPercent">60</span>% of players</div>
+                            <div class="payout-info">
+                                <div class="payout-label">If Token A wins, each gets:</div>
+                                <div class="payout-amount" id="payoutA">1.42 SOL</div>
+                                <div class="return-multiplier" id="returnA">14.2x return!</div>
+                            </div>
+                        </div>
+
+                        <div class="team-box team-b">
+                            <h4 class="team-name">Token B Believers</h4>
+                            <div class="team-players"><span id="teamBPercent">40</span>% of players</div>
+                            <div class="payout-info">
+                                <div class="payout-label">If Token B wins, each gets:</div>
+                                <div class="payout-amount" id="payoutB">2.13 SOL</div>
+                                <div class="return-multiplier" id="returnB">21.3x return!</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="team-box team-b">
-                        <h4 class="team-name">Token B Believers</h4>
-                        <div class="team-players"><span id="teamBPercent">40</span>% of players</div>
-                        <div class="payout-info">
-                            <div class="payout-label">If Token B wins, each gets:</div>
-                            <div class="payout-amount" id="payoutB">2.13 SOL</div>
-                            <div class="return-multiplier" id="returnB">21.3x return!</div>
-                        </div>
+                    <div class="pool-summary">
+                        <p style="font-size: 1.1rem; color: var(--accent-purple); font-weight: 600;">
+                            Example: 100 players × 0.1 SOL = 10 SOL pool | Winners get 85% (8.5 SOL) | Platform fee 15% (1.5 SOL)
+                        </p>
                     </div>
-                </div>
-
-                <div class="pool-summary">
-                    <p style="font-size: 1.1rem; color: #8b5cf6; font-weight: 600;">
-                        Example: 100 players × 0.1 SOL = 10 SOL pool | Winners get 85% (8.5 SOL) | Platform fee 15% (1.5 SOL)
-                    </p>
                 </div>
             </div>
         </section>
 
-        <!-- Section 5: TWAP Pricing Explained -->
-        <section class="content-section" id="twap-pricing">
-            <div class="section-header">
-                <div class="section-number">5</div>
-                <h2 class="section-title">TWAP Pricing Explained</h2>
-                <p class="section-description">
-                    Time-Weighted Average Price ensures fair and manipulation-resistant results
-                </p>
-            </div>
+        <!-- Continue with remaining sections... -->
+        <section id="twap" class="detailed-section">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-number">5</div>
+                    <h2 class="section-title">TWAP Pricing Explained</h2>
+                    <p class="section-description">
+                        Time-Weighted Average Price ensures fair and manipulation-resistant results
+                    </p>
+                </div>
 
-            <div class="twap-visual">
-                <h3 style="text-align: center; color: #8b5cf6; margin-bottom: 2rem;">Why TWAP?</h3>
-                
-                <div class="twap-benefits">
-                    <div class="twap-benefit">
-                        <div class="twap-icon">🚫</div>
-                        <h4 class="twap-title">No Pump & Dump</h4>
-                        <p class="twap-desc">Single large trades can't affect the outcome</p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="concept-icon">🚫</div>
+                        <h3 class="concept-title">No Pump & Dump</h3>
+                        <p class="concept-description">Single large trades can't affect the outcome</p>
                     </div>
 
-                    <div class="twap-benefit">
-                        <div class="twap-icon">⚡</div>
-                        <h4 class="twap-title">No Flash Loans</h4>
-                        <p class="twap-desc">Time-based averaging prevents instant manipulation</p>
+                    <div class="concept-card">
+                        <div class="concept-icon">⚡</div>
+                        <h3 class="concept-title">No Flash Loans</h3>
+                        <p class="concept-description">Time-based averaging prevents instant manipulation</p>
                     </div>
 
-                    <div class="twap-benefit">
-                        <div class="twap-icon">🔍</div>
-                        <h4 class="twap-title">Multi-DEX Data</h4>
-                        <p class="twap-desc">Aggregates prices from Jupiter, Orca, Raydium</p>
+                    <div class="concept-card">
+                        <div class="concept-icon">🔍</div>
+                        <h3 class="concept-title">Multi-DEX Data</h3>
+                        <p class="concept-description">Aggregates prices from Jupiter, Orca, Raydium</p>
                     </div>
                 </div>
 
-                <p style="text-align: center; color: #9ca3af; margin-top: 2rem;">
+                <p style="text-align: center; color: var(--text-secondary); margin-top: 2rem; font-size: 1.1rem;">
                     We calculate 30-minute TWAP windows at competition start and end for the fairest results
                 </p>
             </div>
         </section>
 
-        <!-- Section 6: Security & Escrow -->
-        <section class="content-section" id="security-escrow">
-            <div class="section-header">
-                <div class="section-number">6</div>
-                <h2 class="section-title">Security & Escrow</h2>
-                <p class="section-description">
-                    All funds are secured in audited Solana smart contracts
-                </p>
-            </div>
-
-            <div class="escrow-flow">
-                <div class="escrow-step" style="--step: 0">
-                    <div class="escrow-icon">💳</div>
-                    <div class="escrow-label">Entry Fees</div>
-                    <div class="escrow-desc">0.1 SOL per player</div>
-                </div>
-
-                <div class="escrow-step" style="--step: 1">
-                    <div class="escrow-icon">🔒</div>
-                    <div class="escrow-label">Smart Contract</div>
-                    <div class="escrow-desc">Funds locked securely</div>
-                </div>
-
-                <div class="escrow-step" style="--step: 2">
-                    <div class="escrow-icon">⚡</div>
-                    <div class="escrow-label">Competition Runs</div>
-                    <div class="escrow-desc">No access to funds</div>
-                </div>
-
-                <div class="escrow-step" style="--step: 3">
-                    <div class="escrow-icon">🏆</div>
-                    <div class="escrow-label">Auto-Distribution</div>
-                    <div class="escrow-desc">Winners paid instantly</div>
-                </div>
-            </div>
-
-            <div class="contract-verify">
-                <p style="color: #9ca3af; margin-bottom: 1rem;">All funds secured in audited smart contracts</p>
-                <a href="https://explorer.solana.com/address/[PLACEHOLDER_CONTRACT_ADDRESS]" target="_blank" class="verify-button">
-                    🔍 Verify Contract on Solana Explorer
-                </a>
-            </div>
-        </section>
-
-        <!-- Section 7: Platform Features -->
-        <section class="content-section" id="platform-features">
-            <div class="section-header">
-                <div class="section-number">7</div>
-                <h2 class="section-title">Platform Features</h2>
-                <p class="section-description">
-                    Everything you need to make winning predictions
-                </p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔐</div>
-                    <h4 class="feature-title">Anonymous Betting</h4>
-                    <p class="feature-desc">Wallet addresses always hidden, only usernames visible</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h4 class="feature-title">Live Tracking</h4>
-                    <p class="feature-desc">Real-time price updates and performance metrics</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h4 class="feature-title">Instant Payouts</h4>
-                    <p class="feature-desc">Automatic distribution as soon as competition ends</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">⚖️</div>
-                    <h4 class="feature-title">Fair Matching</h4>
-                    <p class="feature-desc">Algorithm-based pairing ensures balanced competitions</p>
-                </div>
-            </div>
-
-            <div class="coming-soon-section">
-                <h3 class="coming-soon-title">Coming Soon</h3>
-                <div class="coming-soon-grid">
-                    <div class="coming-soon-item">
-                        <div class="coming-soon-icon">🎯</div>
-                        <div class="coming-soon-name">Parlay Bets</div>
+        <!-- Final CTA Section -->
+        <section class="detailed-section">
+            <div class="container">
+                <div class="detailed-guide-cta">
+                    <h2 style="font-size: 3rem; margin-bottom: 1rem;">Ready to Start?</h2>
+                    <p style="font-size: 1.3rem; margin-bottom: 3rem;">Join thousands making winning predictions on TokenWars</p>
+                    
+                    <div style="display: flex; justify-content: center; gap: 3rem; margin: 3rem 0; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; color: white;">1</div>
+                            <div style="color: white; font-weight: 600; font-size: 1.1rem;">Connect Wallet (Stays Private)</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; color: white;">2</div>
+                            <div style="color: white; font-weight: 600; font-size: 1.1rem;">Choose Your Battle</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; color: white;">3</div>
+                            <div style="color: white; font-weight: 600; font-size: 1.1rem;">Pick Your Winner</div>
+                        </div>
                     </div>
-                    <div class="coming-soon-item">
-                        <div class="coming-soon-icon">💪</div>
-                        <div class="coming-soon-name">Confidence Levels</div>
-                    </div>
-                    <div class="coming-soon-item">
-                        <div class="coming-soon-icon">🎮</div>
-                        <div class="coming-soon-name">Custom Competitions</div>
-                    </div>
-                    <div class="coming-soon-item">
-                        <div class="coming-soon-icon">👥</div>
-                        <div class="coming-soon-name">Social Features</div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- Section 8: Getting Started CTA -->
-        <section class="content-section" id="getting-started">
-            <div class="cta-section">
-                <h2 class="cta-title">Ready to Start?</h2>
-                <p class="cta-subtitle">Join thousands making winning predictions on TokenWars</p>
-                
-                <div class="cta-steps">
-                    <div class="cta-step">
-                        <div class="cta-step-number">1</div>
-                        <div class="cta-step-text">Connect Wallet (Stays Private)</div>
-                    </div>
-                    <div class="cta-step">
-                        <div class="cta-step-number">2</div>
-                        <div class="cta-step-text">Choose Your Battle</div>
-                    </div>
-                    <div class="cta-step">
-                        <div class="cta-step-number">3</div>
-                        <div class="cta-step-text">Pick Your Winner</div>
-                    </div>
+                    <a href="index.html" style="display: inline-block; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color: white; padding: 1.5rem 4rem; border-radius: 1rem; font-size: 1.3rem; font-weight: 700; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 15px 40px rgba(139, 92, 246, 0.3);">
+                        Place Your First Bet
+                    </a>
                 </div>
-
-                <a href="index.html" class="cta-button">
-                    Place Your First Bet
-                </a>
             </div>
         </section>
     </div>
+
+    <!-- Fixed back to app button -->
+    <a href="index.html" class="back-to-app">
+        ← Back to App
+    </a>
 
     <script>
         // Prize Calculator Logic
@@ -1400,19 +796,51 @@
         // Set initial values
         updatePrizeCalculator();
 
-        // Smooth scrolling for anchor links
+        // Enhanced smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
+                    const headerOffset = 160; // Account for sticky nav
+                    const elementPosition = target.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
                     });
                 }
             });
         });
+
+        // Active section highlighting in navigation
+        function updateActiveSection() {
+            const sections = document.querySelectorAll('.detailed-section');
+            const navLinks = document.querySelectorAll('.guide-nav-link');
+            
+            let currentSection = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.getBoundingClientRect().top;
+                if (sectionTop <= 200) {
+                    currentSection = section.id;
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${currentSection}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // Update active section on scroll
+        window.addEventListener('scroll', updateActiveSection);
+        
+        // Initial active section update
+        updateActiveSection();
     </script>
 </body>
 </html>
