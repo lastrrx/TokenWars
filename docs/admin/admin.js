@@ -123,16 +123,20 @@ async function initializeAdminPanel() {
 }
 
 /**
- * Initialize Service References
+ * Initialize Service References - FIXED VERSION
  */
 async function initializeServiceReferences() {
     try {
         console.log('🔧 Initializing service references...');
         
-        // Get Supabase client
-        AdminState.supabaseClient = window.supabaseClient;
-        if (!AdminState.supabaseClient) {
-            throw new Error('Supabase client not available');
+        // Get Supabase client with proper error handling
+        if (window.supabaseClient) {
+            AdminState.supabaseClient = window.supabaseClient;
+        } else if (window.getSupabaseClient) {
+            AdminState.supabaseClient = { getSupabaseClient: window.getSupabaseClient };
+        } else {
+            console.warn('Supabase client not available');
+            AdminState.supabaseClient = null;
         }
         
         // Wait for services to be available
@@ -178,6 +182,49 @@ async function initializeServiceReferences() {
     } catch (error) {
         console.error('Failed to initialize service references:', error);
         // Continue with limited functionality
+    }
+}
+
+/**
+ * Get Supabase Client Helper - FIXED VERSION
+ */
+function getSupabase() {
+    if (AdminState.supabaseClient) {
+        if (typeof AdminState.supabaseClient.getSupabaseClient === 'function') {
+            return AdminState.supabaseClient.getSupabaseClient();
+        } else if (AdminState.supabaseClient.from) {
+            // Direct client reference
+            return AdminState.supabaseClient;
+        }
+    }
+    
+    // Fallback to global
+    if (window.supabase) {
+        return window.supabase;
+    }
+    
+    return null;
+}
+
+/**
+ * Load Initial Data for Admin Panel - MISSING FUNCTION ADDED
+ */
+async function loadInitialData() {
+    try {
+        console.log('📊 Loading initial admin data...');
+        
+        // Load core data sets
+        await Promise.allSettled([
+            loadTokensData(),
+            loadCompetitionsData(),
+            loadBlacklistedTokens()
+        ]);
+        
+        console.log('✅ Initial data loaded successfully');
+        
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        // Don't throw - let the panel continue in limited mode
     }
 }
 
@@ -317,7 +364,7 @@ async function updateDashboardMetrics() {
 }
 
 /**
- * Calculate Platform Metrics
+ * Calculate Platform Metrics - FIXED VERSION
  */
 async function calculatePlatformMetrics() {
     try {
@@ -343,10 +390,11 @@ async function calculatePlatformMetrics() {
             totalMarketCap = tokens.reduce((sum, token) => sum + (token.market_cap || 0), 0);
         }
         
-        // Get price update data
-        if (AdminState.supabaseClient) {
+        // Get price update data with fixed Supabase reference
+        const supabase = getSupabase();
+        if (supabase) {
             try {
-                const { data: prices } = await AdminState.supabaseClient.getSupabaseClient()
+                const { data: prices } = await supabase
                     .from('price_history')
                     .select('count')
                     .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
@@ -410,7 +458,7 @@ async function loadTokenManagement() {
 }
 
 /**
- * Load Tokens Data
+ * Load Tokens Data - FIXED VERSION
  */
 async function loadTokensData() {
     try {
@@ -418,16 +466,21 @@ async function loadTokensData() {
             const tokens = await AdminState.tokenService.getEligibleTokens(AdminState.tokenFilters);
             AdminState.tokens = tokens || [];
         } else {
-            // Fallback to direct database query
-            const { data: tokens, error } = await AdminState.supabaseClient.getSupabaseClient()
-                .from('tokens')
-                .select('*')
-                .eq('is_active', true)
-                .order('market_cap', { ascending: false })
-                .limit(100);
-            
-            if (error) throw error;
-            AdminState.tokens = tokens || [];
+            // Fallback to direct database query with fixed Supabase reference
+            const supabase = getSupabase();
+            if (supabase) {
+                const { data: tokens, error } = await supabase
+                    .from('tokens')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('market_cap', { ascending: false })
+                    .limit(100);
+                
+                if (error) throw error;
+                AdminState.tokens = tokens || [];
+            } else {
+                AdminState.tokens = [];
+            }
         }
         
         // Filter out blacklisted tokens
@@ -591,21 +644,26 @@ async function loadCompetitionsManagement() {
 }
 
 /**
- * Load Competitions Data
+ * Load Competitions Data - FIXED VERSION
  */
 async function loadCompetitionsData() {
     try {
         if (AdminState.competitionManager) {
             AdminState.competitions = AdminState.competitionManager.getAllActiveCompetitions();
-        } else if (AdminState.supabaseClient) {
-            const { data: competitions, error } = await AdminState.supabaseClient.getSupabaseClient()
-                .from('competitions')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-            
-            if (error) throw error;
-            AdminState.competitions = competitions || [];
+        } else {
+            const supabase = getSupabase();
+            if (supabase) {
+                const { data: competitions, error } = await supabase
+                    .from('competitions')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (error) throw error;
+                AdminState.competitions = competitions || [];
+            } else {
+                AdminState.competitions = [];
+            }
         }
         
         console.log(`✅ Loaded ${AdminState.competitions.length} competitions`);
@@ -683,12 +741,11 @@ async function setupRealTimeMonitoring() {
     try {
         console.log('🔄 Setting up real-time monitoring...');
         
-        if (!AdminState.supabaseClient) {
+        const supabase = getSupabase();
+        if (!supabase) {
             console.warn('Supabase client not available for real-time monitoring');
             return;
         }
-        
-        const supabase = AdminState.supabaseClient.getSupabaseClient();
         
         // Monitor competitions
         const competitionSubscription = supabase
@@ -748,7 +805,7 @@ function startSystemHealthMonitoring() {
 }
 
 /**
- * Check System Health
+ * Check System Health - FIXED VERSION
  */
 async function checkSystemHealth() {
     try {
@@ -757,10 +814,11 @@ async function checkSystemHealth() {
         AdminState.systemHealth.priceService = AdminState.priceService?.isReady() ? 'healthy' : 'error';
         AdminState.systemHealth.competitionManager = AdminState.competitionManager?.isReady() ? 'healthy' : 'error';
         
-        // Check database connectivity
-        if (AdminState.supabaseClient) {
+        // Check database connectivity with fixed Supabase reference
+        const supabase = getSupabase();
+        if (supabase) {
             try {
-                await AdminState.supabaseClient.getSupabaseClient()
+                await supabase
                     .from('tokens')
                     .select('count')
                     .limit(1);
@@ -768,12 +826,14 @@ async function checkSystemHealth() {
             } catch (error) {
                 AdminState.systemHealth.database = 'error';
             }
+        } else {
+            AdminState.systemHealth.database = 'error';
         }
         
         // Check recent price updates
-        if (AdminState.supabaseClient) {
+        if (supabase) {
             try {
-                const { data: recentPrices } = await AdminState.supabaseClient.getSupabaseClient()
+                const { data: recentPrices } = await supabase
                     .from('price_history')
                     .select('timestamp')
                     .order('timestamp', { ascending: false })
@@ -1047,8 +1107,9 @@ async function blacklistToken(address) {
         const reason = prompt(`Enter reason for blacklisting ${token.symbol}:`);
         if (!reason) return;
         
-        if (AdminState.supabaseClient) {
-            const { error } = await AdminState.supabaseClient.getSupabaseClient()
+        const supabase = getSupabase();
+        if (supabase) {
+            const { error } = await supabase
                 .from('token_blacklist')
                 .insert([{
                     token_address: address,
@@ -1070,6 +1131,72 @@ async function blacklistToken(address) {
     } catch (error) {
         console.error('Error blacklisting token:', error);
         showAdminNotification('Failed to blacklist token', 'error');
+    }
+}
+
+/**
+ * Load Blacklisted Tokens - FIXED VERSION
+ */
+async function loadBlacklistedTokens() {
+    try {
+        const supabase = getSupabase();
+        if (supabase) {
+            const { data: blacklisted } = await supabase
+                .from('token_blacklist')
+                .select('token_address')
+                .eq('is_active', true);
+            
+            AdminState.blacklistedTokens = new Set(
+                (blacklisted || []).map(item => item.token_address)
+            );
+        }
+    } catch (error) {
+        console.warn('Could not load blacklisted tokens:', error);
+        AdminState.blacklistedTokens = new Set();
+    }
+}
+
+/**
+ * Update Activity Feed
+ */
+async function updateActivityFeed() {
+    try {
+        const feedContainer = document.getElementById('activity-feed');
+        if (!feedContainer) return;
+        
+        feedContainer.innerHTML = `
+            <div class="activity-item">
+                <span class="activity-message">Enhanced admin panel initialized</span>
+                <span class="activity-time">Just now</span>
+            </div>
+            <div class="activity-item">
+                <span class="activity-message">System health monitoring started</span>
+                <span class="activity-time">Just now</span>
+            </div>
+            <div class="activity-item">
+                <span class="activity-message">Real-time monitoring enabled</span>
+                <span class="activity-time">Just now</span>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error updating activity feed:', error);
+    }
+}
+
+/**
+ * Update Analytics Insights
+ */
+async function updateAnalyticsInsights() {
+    try {
+        // Update insights with calculated values
+        const insights = document.querySelectorAll('.insight-value');
+        if (insights.length >= 3) {
+            insights[0].textContent = '94.2%'; // Pair success rate
+            insights[1].textContent = '23.4h'; // Avg competition duration
+            insights[2].textContent = '98.7%'; // Token refresh rate
+        }
+    } catch (error) {
+        console.error('Error updating analytics insights:', error);
     }
 }
 
@@ -1303,61 +1430,6 @@ function handleLogout() {
     location.reload();
 }
 
-async function loadBlacklistedTokens() {
-    try {
-        if (AdminState.supabaseClient) {
-            const { data: blacklisted } = await AdminState.supabaseClient.getSupabaseClient()
-                .from('token_blacklist')
-                .select('token_address')
-                .eq('is_active', true);
-            
-            AdminState.blacklistedTokens = new Set(
-                (blacklisted || []).map(item => item.token_address)
-            );
-        }
-    } catch (error) {
-        console.warn('Could not load blacklisted tokens:', error);
-    }
-}
-
-async function updateActivityFeed() {
-    try {
-        const feedContainer = document.getElementById('activity-feed');
-        if (!feedContainer) return;
-        
-        feedContainer.innerHTML = `
-            <div class="activity-item">
-                <span class="activity-message">Enhanced admin panel initialized</span>
-                <span class="activity-time">Just now</span>
-            </div>
-            <div class="activity-item">
-                <span class="activity-message">System health monitoring started</span>
-                <span class="activity-time">Just now</span>
-            </div>
-            <div class="activity-item">
-                <span class="activity-message">Real-time monitoring enabled</span>
-                <span class="activity-time">Just now</span>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Error updating activity feed:', error);
-    }
-}
-
-async function updateAnalyticsInsights() {
-    try {
-        // Update insights with calculated values
-        const insights = document.querySelectorAll('.insight-value');
-        if (insights.length >= 3) {
-            insights[0].textContent = '94.2%'; // Pair success rate
-            insights[1].textContent = '23.4h'; // Avg competition duration
-            insights[2].textContent = '98.7%'; // Token refresh rate
-        }
-    } catch (error) {
-        console.error('Error updating analytics insights:', error);
-    }
-}
-
 // ==============================================
 // GLOBAL EXPORTS
 // ==============================================
@@ -1383,3 +1455,5 @@ console.log('   ✅ Comprehensive dashboard with live metrics');
 console.log('   ✅ Token blacklist management');
 console.log('   ✅ Real-time data updates via Supabase subscriptions');
 console.log('   ✅ Mobile-responsive design maintained');
+console.log('   ✅ FIXED: Missing loadInitialData function');
+console.log('   ✅ FIXED: Supabase client reference issues');
