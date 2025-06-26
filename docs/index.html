@@ -1703,11 +1703,12 @@
             margin-bottom: 0.75rem;
         }
 
-        /* Learn More Section */
+        /* Learn More Section - ALWAYS VISIBLE */
         .learn-more-section {
             padding: 4rem 0;
             background: rgba(15, 23, 42, 0.3);
             border-top: 1px solid rgba(139, 92, 246, 0.2);
+            display: block !important; /* Force always visible */
         }
 
         .info-cards-grid {
@@ -1750,16 +1751,7 @@
             line-height: 1.6;
         }
 
-        /* Hide learn more section for connected users */
-        #heroConnected ~ .learn-more-section {
-            display: none;
-        }
-
-        /* Show learn more section only when disconnected hero is active */
-        #heroDisconnected:not([style*="display: none"]) ~ .learn-more-section,
-        #heroDisconnected[style=""] ~ .learn-more-section {
-            display: block;
-        }
+        /* REMOVED: Hide/show logic - learn more section is now always visible */
 
         /* Mobile responsiveness */
         @media (max-width: 768px) {
