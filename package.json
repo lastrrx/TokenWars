@@ -12,7 +12,7 @@
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "build": "npm run build:frontend",
-    "build:frontend": "mkdir -p dist && cp -r frontend/* dist/",
+    "build:frontend": "mkdir -p dist && cp -r docs/* dist/",
     "deploy": "npm run build && npm run setup",
     "lint": "eslint backend/ frontend/ --ext .js",
     "lint:fix": "eslint backend/ frontend/ --ext .js --fix",
