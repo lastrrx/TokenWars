@@ -212,6 +212,7 @@
         </div>
 
         <!-- LEADERBOARD PAGE -->
+<!-- LEADERBOARD PAGE -->
         <div id="leaderboardPage" class="page-content">
             <div class="main-content">
                 <section class="section">
@@ -219,20 +220,968 @@
                         <div class="section-header">
                             <h2 class="section-title">LEADERBOARD</h2>
                             <div class="section-filters">
-                                <select id="leaderboard-period" class="filter-select">
+                                <select id="leaderboard-period" class="filter-select" onchange="handleLeaderboardFilterChange()">
                                     <option value="all-time">All Time</option>
                                     <option value="monthly">This Month</option>
                                     <option value="weekly">This Week</option>
                                 </select>
+                                <select id="leaderboard-sort" class="filter-select" onchange="handleLeaderboardFilterChange()">
+                                    <option value="winnings">Total Winnings</option>
+                                    <option value="win-rate">Win Rate</option>
+                                    <option value="streak">Current Streak</option>
+                                    <option value="competitions">Competitions Won</option>
+                                </select>
                             </div>
                         </div>
+
+                        <!-- Leaderboard Stats Overview -->
+                        <div class="leaderboard-stats">
+                            <div class="stat-card">
+                                <div class="stat-icon">👥</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalTraders">0</div>
+                                    <div class="stat-label">Total Traders</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏆</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalCompetitionsWon">0</div>
+                                    <div class="stat-label">Competitions Won</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">💰</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalWinnings">0 SOL</div>
+                                    <div class="stat-label">Total Winnings</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🔥</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="longestStreak">0</div>
+                                    <div class="stat-label">Longest Streak</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leaderboard Content -->
                         <div id="leaderboard-content">
-                            <div class="loading">Loading leaderboard...</div>
+                            
+                            <!-- Connected User's Position (if connected) -->
+                            <div id="userPosition" class="user-position-card" style="display: none;">
+                                <div class="user-position-header">
+                                    <h3>Your Position</h3>
+                                    <div class="position-badge" id="userRank">#-</div>
+                                </div>
+                                <div class="user-position-stats">
+                                    <div class="position-stat">
+                                        <span class="stat-label">Total Winnings:</span>
+                                        <span class="stat-value" id="userWinnings">0 SOL</span>
+                                    </div>
+                                    <div class="position-stat">
+                                        <span class="stat-label">Win Rate:</span>
+                                        <span class="stat-value" id="userWinRate">0%</span>
+                                    </div>
+                                    <div class="position-stat">
+                                        <span class="stat-label">Current Streak:</span>
+                                        <span class="stat-value" id="userStreak">0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Top 10 Leaderboard -->
+                            <div class="leaderboard-table-container">
+                                <div class="leaderboard-table-header">
+                                    <h3>🏆 Top Traders</h3>
+                                    <div class="refresh-indicator">
+                                        <span class="last-updated" id="lastUpdated">Last updated: Never</span>
+                                        <button class="refresh-btn" onclick="refreshLeaderboard()" id="refreshBtn">
+                                            <span class="refresh-icon">🔄</span>
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="leaderboard-table" id="leaderboardTable">
+                                    <div class="loading">Loading leaderboard...</div>
+                                </div>
+                            </div>
+
+                            <!-- Disconnected User Prompt -->
+                            <div id="leaderboardDisconnected" class="disconnected-prompt" style="display: none;">
+                                <div class="prompt-icon">🔗</div>
+                                <h3>Connect Wallet to See Your Ranking</h3>
+                                <p>Connect your wallet to see your position on the leaderboard and track your trading performance.</p>
+                                <button class="btn-primary" onclick="openWalletModal()">Connect Wallet</button>
+                            </div>
+
                         </div>
                     </div>
                 </section>
             </div>
         </div>
+
+        <!-- Add the JavaScript for leaderboard functionality -->
+        <script>
+        // ==============================================
+        // LEADERBOARD FUNCTIONALITY
+        // ==============================================
+
+        const LeaderboardState = {
+            users: [],
+            filteredUsers: [],
+            currentPeriod: 'all-time',
+            currentSort: 'winnings',
+            loading: false,
+            lastUpdate: null,
+            userPosition: null,
+            isConnected: false
+        };
+
+        // Initialize leaderboard when page loads or becomes visible
+        function initializeLeaderboard() {
+            console.log('🏆 Initializing leaderboard...');
+            
+            // Check if user is connected
+            LeaderboardState.isConnected = isWalletConnected();
+            
+            // Load leaderboard data
+            loadLeaderboardData();
+            
+            // Set up auto-refresh (every 2 minutes)
+            if (!window.leaderboardRefreshInterval) {
+                window.leaderboardRefreshInterval = setInterval(() => {
+                    if (document.getElementById('leaderboardPage').classList.contains('active')) {
+                        loadLeaderboardData();
+                    }
+                }, 120000); // 2 minutes
+            }
+        }
+
+        // Load leaderboard data from Supabase
+        async function loadLeaderboardData() {
+            if (LeaderboardState.loading) {
+                console.log('Leaderboard already loading, skipping...');
+                return;
+            }
+
+            LeaderboardState.loading = true;
+            updateLoadingState(true);
+
+            try {
+                console.log('📊 Loading leaderboard data from Supabase...');
+
+                // Check if we have supabase client
+                if (!window.supabaseClient || !window.supabaseClient.getSupabaseClient) {
+                    console.warn('Supabase client not available, loading demo data...');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                const supabase = window.supabaseClient.getSupabaseClient();
+
+                // Get users data
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .order('total_winnings', { ascending: false });
+
+                if (usersError) {
+                    console.error('Error loading users:', usersError);
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                // Get leaderboard data if available
+                const { data: leaderboard, error: leaderboardError } = await supabase
+                    .from('leaderboards')
+                    .select('*')
+                    .order('total_winnings', { ascending: false });
+
+                // Process the data
+                if (users && users.length > 0) {
+                    LeaderboardState.users = processLeaderboardData(users, leaderboard);
+                    console.log(`✅ Loaded ${LeaderboardState.users.length} users from database`);
+                } else {
+                    console.log('No users found in database, loading demo data...');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                // Update display
+                updateLeaderboardDisplay();
+                updateStatsDisplay();
+                updateUserPosition();
+
+                LeaderboardState.lastUpdate = new Date();
+                updateLastUpdatedTime();
+
+            } catch (error) {
+                console.error('Failed to load leaderboard data:', error);
+                loadDemoLeaderboardData();
+            } finally {
+                LeaderboardState.loading = false;
+                updateLoadingState(false);
+            }
+        }
+
+        // Process leaderboard data
+        function processLeaderboardData(users, leaderboard) {
+            return users.map((user, index) => {
+                // Find corresponding leaderboard entry
+                const leaderboardEntry = leaderboard?.find(entry => 
+                    entry.user_wallet === user.wallet_address
+                );
+
+                return {
+                    rank: index + 1,
+                    username: user.username || 'Anonymous',
+                    avatar: user.avatar || '🎯',
+                    walletAddress: user.wallet_address,
+                    totalWinnings: parseFloat(user.total_winnings || 0),
+                    totalBets: parseInt(user.total_bets || 0),
+                    winRate: parseFloat(user.win_rate || 0),
+                    currentStreak: parseInt(user.current_streak || 0),
+                    competitionsWon: parseInt(leaderboardEntry?.competitions_won || 0),
+                    competitionsParticipated: parseInt(leaderboardEntry?.competitions_participated || 0),
+                    bestStreak: parseInt(leaderboardEntry?.best_streak || user.current_streak || 0),
+                    isDemo: false,
+                    joinDate: new Date(user.created_at),
+                    lastActive: user.last_active ? new Date(user.last_active) : null
+                };
+            });
+        }
+
+        // Load demo leaderboard data
+        function loadDemoLeaderboardData() {
+            console.log('🎮 Loading demo leaderboard data...');
+
+            const demoUsers = [
+                {
+                    rank: 1,
+                    username: 'CryptoKing',
+                    avatar: '👑',
+                    walletAddress: 'DEMO1...',
+                    totalWinnings: 45.7,
+                    totalBets: 89,
+                    winRate: 67.4,
+                    currentStreak: 8,
+                    competitionsWon: 23,
+                    competitionsParticipated: 89,
+                    bestStreak: 12,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date()
+                },
+                {
+                    rank: 2,
+                    username: 'TokenMaster',
+                    avatar: '🎯',
+                    walletAddress: 'DEMO2...',
+                    totalWinnings: 38.2,
+                    totalBets: 76,
+                    winRate: 63.2,
+                    currentStreak: 5,
+                    competitionsWon: 19,
+                    competitionsParticipated: 76,
+                    bestStreak: 9,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 3,
+                    username: 'SolanaWiz',
+                    avatar: '🧙',
+                    walletAddress: 'DEMO3...',
+                    totalWinnings: 31.8,
+                    totalBets: 65,
+                    winRate: 58.5,
+                    currentStreak: 3,
+                    competitionsWon: 15,
+                    competitionsParticipated: 65,
+                    bestStreak: 7,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 6 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 4,
+                    username: 'DegenTrader',
+                    avatar: '🚀',
+                    walletAddress: 'DEMO4...',
+                    totalWinnings: 28.4,
+                    totalBets: 92,
+                    winRate: 52.2,
+                    currentStreak: 0,
+                    competitionsWon: 13,
+                    competitionsParticipated: 92,
+                    bestStreak: 6,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 5,
+                    username: 'HODLQueen',
+                    avatar: '💎',
+                    walletAddress: 'DEMO5...',
+                    totalWinnings: 24.1,
+                    totalBets: 45,
+                    winRate: 71.1,
+                    currentStreak: 4,
+                    competitionsWon: 11,
+                    competitionsParticipated: 45,
+                    bestStreak: 8,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 30 * 60 * 1000)
+                }
+            ];
+
+            LeaderboardState.users = demoUsers;
+            updateLeaderboardDisplay();
+            updateStatsDisplay();
+            
+            LeaderboardState.lastUpdate = new Date();
+            updateLastUpdatedTime();
+
+            console.log('✅ Demo leaderboard data loaded');
+        }
+
+        // Update leaderboard display
+        function updateLeaderboardDisplay() {
+            const tableContainer = document.getElementById('leaderboardTable');
+            if (!tableContainer) return;
+
+            // Apply filters and sorting
+            applyFiltersAndSorting();
+
+            if (LeaderboardState.filteredUsers.length === 0) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <h3>No traders found</h3>
+                        <p>Be the first to join a competition and appear on the leaderboard!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create leaderboard table
+            const tableHTML = `
+                <div class="leaderboard-header">
+                    <div class="rank-col">Rank</div>
+                    <div class="trader-col">Trader</div>
+                    <div class="winnings-col">Winnings</div>
+                    <div class="stats-col">Win Rate</div>
+                    <div class="streak-col">Streak</div>
+                    <div class="competitions-col">Competitions</div>
+                </div>
+                ${LeaderboardState.filteredUsers.slice(0, 50).map(user => createLeaderboardRow(user)).join('')}
+            `;
+
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        // Create leaderboard row
+        function createLeaderboardRow(user) {
+            const isTop3 = user.rank <= 3;
+            const rankIcons = ['🥇', '🥈', '🥉'];
+            const rankDisplay = isTop3 ? rankIcons[user.rank - 1] : `#${user.rank}`;
+
+            return `
+                <div class="leaderboard-row ${isTop3 ? 'top-3' : ''}" data-wallet="${user.walletAddress}">
+                    <div class="rank-col">
+                        <span class="rank-display">${rankDisplay}</span>
+                    </div>
+                    <div class="trader-col">
+                        <div class="trader-info">
+                            <div class="trader-avatar">${user.avatar}</div>
+                            <div class="trader-details">
+                                <div class="trader-name">${user.username}</div>
+                                <div class="trader-address">${formatAddress(user.walletAddress)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="winnings-col">
+                        <div class="winnings-amount">${user.totalWinnings.toFixed(1)} SOL</div>
+                        <div class="winnings-usd">$${(user.totalWinnings * 180).toFixed(0)}</div>
+                    </div>
+                    <div class="stats-col">
+                        <div class="win-rate">${user.winRate.toFixed(1)}%</div>
+                        <div class="total-bets">${user.totalBets} bets</div>
+                    </div>
+                    <div class="streak-col">
+                        <div class="current-streak ${user.currentStreak > 0 ? 'positive' : ''}">${user.currentStreak}</div>
+                        <div class="best-streak">Best: ${user.bestStreak}</div>
+                    </div>
+                    <div class="competitions-col">
+                        <div class="competitions-won">${user.competitionsWon}</div>
+                        <div class="competitions-total">of ${user.competitionsParticipated}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Apply filters and sorting
+        function applyFiltersAndSorting() {
+            let filteredUsers = [...LeaderboardState.users];
+
+            // Apply period filter
+            if (LeaderboardState.currentPeriod !== 'all-time') {
+                const now = new Date();
+                let cutoffDate;
+
+                if (LeaderboardState.currentPeriod === 'weekly') {
+                    cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                } else if (LeaderboardState.currentPeriod === 'monthly') {
+                    cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                }
+
+                if (cutoffDate) {
+                    filteredUsers = filteredUsers.filter(user => 
+                        user.lastActive && user.lastActive > cutoffDate
+                    );
+                }
+            }
+
+            // Apply sorting
+            filteredUsers.sort((a, b) => {
+                switch (LeaderboardState.currentSort) {
+                    case 'winnings':
+                        return b.totalWinnings - a.totalWinnings;
+                    case 'win-rate':
+                        return b.winRate - a.winRate;
+                    case 'streak':
+                        return b.currentStreak - a.currentStreak;
+                    case 'competitions':
+                        return b.competitionsWon - a.competitionsWon;
+                    default:
+                        return b.totalWinnings - a.totalWinnings;
+                }
+            });
+
+            // Update ranks
+            filteredUsers.forEach((user, index) => {
+                user.rank = index + 1;
+            });
+
+            LeaderboardState.filteredUsers = filteredUsers;
+        }
+
+        // Update stats display
+        function updateStatsDisplay() {
+            const users = LeaderboardState.users;
+
+            const totalTraders = users.length;
+            const totalCompetitionsWon = users.reduce((sum, user) => sum + user.competitionsWon, 0);
+            const totalWinnings = users.reduce((sum, user) => sum + user.totalWinnings, 0);
+            const longestStreak = Math.max(...users.map(user => user.bestStreak), 0);
+
+            document.getElementById('totalTraders').textContent = totalTraders.toLocaleString();
+            document.getElementById('totalCompetitionsWon').textContent = totalCompetitionsWon.toLocaleString();
+            document.getElementById('totalWinnings').textContent = `${totalWinnings.toFixed(1)} SOL`;
+            document.getElementById('longestStreak').textContent = longestStreak;
+        }
+
+        // Update user position
+        function updateUserPosition() {
+            const userPositionCard = document.getElementById('userPosition');
+            const disconnectedPrompt = document.getElementById('leaderboardDisconnected');
+
+            if (!LeaderboardState.isConnected) {
+                userPositionCard.style.display = 'none';
+                disconnectedPrompt.style.display = 'block';
+                return;
+            }
+
+            disconnectedPrompt.style.display = 'none';
+
+            // Try to find current user
+            let currentUser = null;
+            if (window.walletService && window.walletService.getConnectionStatus) {
+                const walletStatus = window.walletService.getConnectionStatus();
+                if (walletStatus.isConnected) {
+                    currentUser = LeaderboardState.users.find(user => 
+                        user.walletAddress === walletStatus.publicKey
+                    );
+                }
+            }
+
+            if (currentUser) {
+                userPositionCard.style.display = 'block';
+                document.getElementById('userRank').textContent = `#${currentUser.rank}`;
+                document.getElementById('userWinnings').textContent = `${currentUser.totalWinnings.toFixed(1)} SOL`;
+                document.getElementById('userWinRate').textContent = `${currentUser.winRate.toFixed(1)}%`;
+                document.getElementById('userStreak').textContent = currentUser.currentStreak;
+            } else {
+                userPositionCard.style.display = 'none';
+            }
+        }
+
+        // Handle filter changes
+        function handleLeaderboardFilterChange() {
+            const periodSelect = document.getElementById('leaderboard-period');
+            const sortSelect = document.getElementById('leaderboard-sort');
+
+            LeaderboardState.currentPeriod = periodSelect.value;
+            LeaderboardState.currentSort = sortSelect.value;
+
+            updateLeaderboardDisplay();
+        }
+
+        // Refresh leaderboard
+        function refreshLeaderboard() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '<span class="refresh-icon spinning">🔄</span> Refreshing...';
+                refreshBtn.disabled = true;
+            }
+
+            loadLeaderboardData().finally(() => {
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<span class="refresh-icon">🔄</span> Refresh';
+                    refreshBtn.disabled = false;
+                }
+            });
+        }
+
+        // Update loading state
+        function updateLoadingState(isLoading) {
+            // This function can be used to show/hide loading indicators
+        }
+
+        // Update last updated time
+        function updateLastUpdatedTime() {
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            if (lastUpdatedElement && LeaderboardState.lastUpdate) {
+                const timeAgo = getTimeAgo(LeaderboardState.lastUpdate);
+                lastUpdatedElement.textContent = `Last updated: ${timeAgo}`;
+            }
+        }
+
+        // Utility functions
+        function formatAddress(address) {
+            if (!address) return 'Unknown';
+            if (address.startsWith('DEMO')) return address;
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        // Export functions for global use
+        window.initializeLeaderboard = initializeLeaderboard;
+        window.loadLeaderboardData = loadLeaderboardData;
+        window.refreshLeaderboard = refreshLeaderboard;
+        window.handleLeaderboardFilterChange = handleLeaderboardFilterChange;
+
+        console.log('✅ Leaderboard functionality loaded');
+        </script>
+
+        <style>
+        /* ==============================================
+           LEADERBOARD STYLES
+           ============================================== */
+
+        .leaderboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-position-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .user-position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .user-position-header h3 {
+            color: var(--accent-green);
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .position-badge {
+            background: var(--accent-green);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .user-position-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .position-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .position-stat:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-table-container {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .leaderboard-table-header {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .leaderboard-table-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+        }
+
+        .refresh-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .refresh-btn {
+            background: var(--accent-purple);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+            background: #7c3aed;
+            transform: translateY(-1px);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .refresh-icon.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .leaderboard-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 120px 100px 100px 120px;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 120px 100px 100px 120px;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            align-items: center;
+        }
+
+        .leaderboard-row:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .leaderboard-row.top-3 {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.05));
+            border-left: 3px solid var(--gold);
+        }
+
+        .leaderboard-row:last-child {
+            border-bottom: none;
+        }
+
+        .rank-display {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .trader-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .trader-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .trader-details {
+            flex: 1;
+        }
+
+        .trader-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .trader-address {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .winnings-amount {
+            font-weight: 700;
+            color: var(--accent-green);
+            margin-bottom: 0.25rem;
+        }
+
+        .winnings-usd {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .win-rate {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .total-bets {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .current-streak {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .current-streak.positive {
+            color: var(--accent-green);
+        }
+
+        .best-streak {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .competitions-won {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .competitions-total {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .disconnected-prompt {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 1rem;
+            margin-top: 2rem;
+        }
+
+        .prompt-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .disconnected-prompt h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .disconnected-prompt p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .leaderboard-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-icon {
+                font-size: 1.5rem;
+            }
+
+            .stat-value {
+                font-size: 1.2rem;
+            }
+
+            .leaderboard-header {
+                grid-template-columns: 60px 1fr 80px 80px;
+                gap: 0.5rem;
+                padding: 0.75rem;
+            }
+
+            .leaderboard-row {
+                grid-template-columns: 60px 1fr 80px 80px;
+                gap: 0.5rem;
+                padding: 1rem 0.75rem;
+            }
+
+            .stats-col, .competitions-col {
+                display: none;
+            }
+
+            .leaderboard-table-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .refresh-indicator {
+                justify-content: center;
+            }
+
+            .user-position-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
 
         <!-- PORTFOLIO PAGE -->
         <div id="portfolioPage" class="page-content">
