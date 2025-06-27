@@ -2413,3 +2413,38 @@ html > .wallet-modal,
 /* ===================================== */
 /* END WALLET MODAL FIXES */
 /* ===================================== */
+
+.logo::before {
+    content: "" !important;
+    display: none !important;
+    font-size: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+}
+
+/* Alternative approach - remove any pseudo-elements entirely */
+.logo {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-decoration: none;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.logo:hover {
+    color: var(--gold);
+    transform: translateY(-1px);
+}
+
+/* Make sure no pseudo-elements exist */
+.logo::before,
+.logo::after {
+    display: none !important;
+}
