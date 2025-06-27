@@ -1,5 +1,5 @@
-// Enhanced Competition.js - Real Database Integration
-// Integrates competitions page with main app and Supabase database
+// Enhanced Competition.js - Complete Database Integration Fix
+// Fully functional competition system with real Supabase integration
 
 // Global state for competitions
 const CompetitionState = {
@@ -11,7 +11,8 @@ const CompetitionState = {
     loading: false,
     selectedCompetition: null,
     userBets: new Map(),
-    realTimeSubscription: null
+    realTimeSubscription: null,
+    initialized: false
 };
 
 /**
@@ -21,32 +22,215 @@ async function initializeCompetitionSystem() {
     console.log('🏁 Initializing enhanced competition system with real database...');
     
     try {
-        // Get service references
-        CompetitionState.supabaseClient = window.supabaseClient;
-        CompetitionState.walletService = window.getWalletService?.();
-        CompetitionState.tokenService = window.getTokenService?.();
-        
-        if (!CompetitionState.supabaseClient) {
-            console.warn('⚠️ Supabase client not available, using demo data');
-            await loadDemoCompetitions();
+        // Prevent multiple initializations
+        if (CompetitionState.initialized) {
+            console.log('Competition system already initialized');
             return;
         }
         
-        // Load real competitions from database
-        await loadRealCompetitions();
+        // Get service references with fallbacks
+        CompetitionState.supabaseClient = window.supabaseClient || window.supabase;
+        CompetitionState.walletService = window.walletService || window.getWalletService?.();
+        CompetitionState.tokenService = window.tokenService || window.getTokenService?.();
         
-        // Set up real-time subscriptions
-        setupRealTimeSubscriptions();
+        console.log('Service availability check:');
+        console.log('- Supabase:', !!CompetitionState.supabaseClient);
+        console.log('- Wallet Service:', !!CompetitionState.walletService);
+        console.log('- Token Service:', !!CompetitionState.tokenService);
+        
+        // Initialize the page structure first
+        await ensureCompetitionStructure();
+        
+        // Load competitions based on database availability
+        if (CompetitionState.supabaseClient) {
+            console.log('✅ Database available, loading real competitions...');
+            await loadRealCompetitions();
+        } else {
+            console.log('📝 Database not available, loading demo competitions...');
+            await loadDemoCompetitions();
+        }
+        
+        // Set up real-time subscriptions if database available
+        if (CompetitionState.supabaseClient) {
+            setupRealTimeSubscriptions();
+        }
         
         // Start periodic updates
         startPeriodicUpdates();
         
+        CompetitionState.initialized = true;
         console.log('✅ Enhanced competition system initialized successfully');
         
     } catch (error) {
         console.error('❌ Failed to initialize competition system:', error);
-        // Fallback to demo data
+        // Always ensure demo data is available
         await loadDemoCompetitions();
+        CompetitionState.initialized = true;
+    }
+}
+
+/**
+ * Ensure Competition Page Structure Exists
+ */
+async function ensureCompetitionStructure() {
+    console.log('🏗️ Ensuring competition page structure...');
+    
+    const connectedView = document.getElementById('competitionsConnected');
+    const disconnectedView = document.getElementById('competitionsDisconnected');
+    
+    if (!connectedView || !disconnectedView) {
+        console.warn('⚠️ Competition view elements not found');
+        return;
+    }
+    
+    // Check if we need to create the competition structure
+    const existingGrid = connectedView.querySelector('.competitions-grid');
+    if (!existingGrid) {
+        console.log('📝 Creating missing competition structure...');
+        createCompetitionStructure();
+    }
+    
+    // Update visibility based on wallet connection
+    updateCompetitionPageVisibility();
+}
+
+/**
+ * Create Competition Structure in Connected View
+ */
+function createCompetitionStructure() {
+    const connectedView = document.getElementById('competitionsConnected');
+    if (!connectedView) return;
+    
+    const competitionsHTML = `
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">COMPETITIONS</h2>
+                    <p class="section-description">Predict token performance and earn SOL rewards</p>
+                </div>
+                
+                <div class="competitions-container">
+                    <!-- Voting Open Section -->
+                    <div class="competition-section" id="votingSection">
+                        <div class="section-header-mini">
+                            <h3 class="section-title-mini">
+                                🗳️ Voting Open 
+                                <span class="count-badge" id="votingCount">0</span>
+                            </h3>
+                            <p class="section-description-mini">Join these competitions now - voting ends soon!</p>
+                        </div>
+                        <div class="competitions-grid" id="votingGrid">
+                            <div class="loading">Loading voting competitions...</div>
+                        </div>
+                    </div>
+
+                    <!-- Running Section -->
+                    <div class="competition-section" id="runningSection">
+                        <div class="section-header-mini">
+                            <h3 class="section-title-mini">
+                                ⚡ Currently Running 
+                                <span class="count-badge" id="runningCount">0</span>
+                            </h3>
+                            <p class="section-description-mini">Watch these competitions in progress</p>
+                        </div>
+                        <div class="competitions-grid" id="runningGrid">
+                            <div class="loading">Loading active competitions...</div>
+                        </div>
+                    </div>
+
+                    <!-- Starting Soon Section -->
+                    <div class="competition-section" id="upcomingSection">
+                        <div class="section-header-mini">
+                            <h3 class="section-title-mini">
+                                ⏰ Starting Soon 
+                                <span class="count-badge" id="upcomingCount">0</span>
+                            </h3>
+                            <p class="section-description-mini">Get ready for these upcoming competitions</p>
+                        </div>
+                        <div class="competitions-grid" id="upcomingGrid">
+                            <div class="loading">Loading upcoming competitions...</div>
+                        </div>
+                    </div>
+
+                    <!-- Completed Section -->
+                    <div class="competition-section" id="completedSection">
+                        <div class="section-header-mini">
+                            <h3 class="section-title-mini">
+                                🏁 Recently Completed 
+                                <span class="count-badge" id="completedCount">0</span>
+                            </h3>
+                            <p class="section-description-mini">View results from recent competitions</p>
+                        </div>
+                        <div class="competitions-grid" id="completedGrid">
+                            <div class="loading">Loading completed competitions...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    `;
+    
+    connectedView.innerHTML = competitionsHTML;
+    console.log('✅ Competition structure created');
+}
+
+/**
+ * Update Competition Page Visibility Based on Wallet Connection
+ */
+function updateCompetitionPageVisibility() {
+    console.log('👀 Updating competition page visibility...');
+    
+    const connectedView = document.getElementById('competitionsConnected');
+    const disconnectedView = document.getElementById('competitionsDisconnected');
+    
+    if (!connectedView || !disconnectedView) {
+        console.warn('⚠️ Competition view elements not found');
+        return;
+    }
+    
+    const isConnected = checkWalletConnection();
+    console.log(`💼 Wallet connection status: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    
+    if (isConnected) {
+        connectedView.style.display = 'block';
+        disconnectedView.style.display = 'none';
+        console.log('✅ Showing connected competitions view');
+    } else {
+        connectedView.style.display = 'none';
+        disconnectedView.style.display = 'block';
+        console.log('❌ Showing disconnected view - wallet not connected');
+    }
+}
+
+/**
+ * Enhanced Wallet Connection Check
+ */
+function checkWalletConnection() {
+    try {
+        // Check multiple possible indicators
+        const checks = [
+            () => window.connectedUser && window.connectedUser !== null,
+            () => window.currentUser && window.currentUser !== null,
+            () => document.getElementById('traderInfo')?.style.display !== 'none',
+            () => document.getElementById('navTraderName')?.textContent !== 'Trader',
+            () => CompetitionState.walletService?.isConnected?.(),
+            () => {
+                const status = CompetitionState.walletService?.getConnectionStatus?.();
+                return status?.isConnected;
+            },
+            () => document.getElementById('connectWalletBtn')?.style.display === 'none'
+        ];
+        
+        return checks.some(check => {
+            try {
+                return check();
+            } catch (error) {
+                return false;
+            }
+        });
+    } catch (error) {
+        console.warn('Error checking wallet connection:', error);
+        return false;
     }
 }
 
@@ -56,49 +240,73 @@ async function initializeCompetitionSystem() {
 async function loadRealCompetitions() {
     try {
         CompetitionState.loading = true;
-        updateCompetitionsDisplay();
+        showLoadingState();
         
         console.log('📊 Loading real competitions from database...');
         
-        // Get competitions using supabase client
-        const competitions = await CompetitionState.supabaseClient.getActiveCompetitions();
+        let supabase = null;
+        
+        // Try multiple ways to get Supabase client
+        if (CompetitionState.supabaseClient?.getSupabaseClient) {
+            supabase = CompetitionState.supabaseClient.getSupabaseClient();
+            console.log('✅ Got Supabase client from service');
+        } else if (window.supabaseClient?.getSupabaseClient) {
+            supabase = window.supabaseClient.getSupabaseClient();
+            console.log('✅ Got Supabase client from window.supabaseClient');
+        } else if (window.supabase) {
+            supabase = window.supabase;
+            console.log('✅ Got Supabase client from window.supabase');
+        } else {
+            console.warn('❌ No Supabase client available');
+            throw new Error('Supabase client not available');
+        }
+        
+        // Test the connection
+        console.log('🧪 Testing Supabase connection...');
+        const { data: testData, error: testError } = await supabase
+            .from('competitions')
+            .select('count')
+            .limit(1);
+            
+        if (testError) {
+            console.warn('Supabase connection test failed:', testError);
+            throw new Error('Database connection failed');
+        }
+        
+        console.log('✅ Supabase connection successful');
+        
+        // Get competitions from database
+        const { data: competitions, error } = await supabase
+            .from('competitions')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('Error loading competitions:', error);
+            throw new Error(`Database query failed: ${error.message}`);
+        }
         
         if (competitions && competitions.length > 0) {
-            // Enhance with real-time data
+            // Process and enhance competition data
             CompetitionState.activeCompetitions = await enhanceCompetitionsWithRealData(competitions);
             console.log(`✅ Loaded ${competitions.length} real competitions`);
+            
+            // Load user bets if wallet connected
+            if (checkWalletConnection()) {
+                await loadUserBets();
+            }
+            
         } else {
-            console.log('ℹ️ No real competitions found, loading demo data');
-            await loadDemoCompetitions();
-            return;
-        }
-        
-        // Load user bets if wallet connected (FIXED)
-let isWalletConnected = false;
-try {
-    if (CompetitionState.walletService) {
-        if (typeof CompetitionState.walletService.isConnected === 'function') {
-            isWalletConnected = CompetitionState.walletService.isConnected();
-        } else if (typeof CompetitionState.walletService.getConnectionStatus === 'function') {
-            const status = CompetitionState.walletService.getConnectionStatus();
-            isWalletConnected = status && status.isConnected;
-        }
-    }
-} catch (error) {
-    console.warn('Could not check wallet connection:', error);
-    isWalletConnected = false;
-}
-
-if (isWalletConnected) {
-            await loadUserBets();
+            console.log('ℹ️ No competitions found in database');
+            CompetitionState.activeCompetitions = [];
         }
         
         CompetitionState.lastUpdate = new Date();
         updateCompetitionsDisplay();
-        updateStatsDisplay();
         
     } catch (error) {
         console.error('❌ Failed to load real competitions:', error);
+        console.log('📝 Falling back to demo competitions...');
         await loadDemoCompetitions();
     } finally {
         CompetitionState.loading = false;
@@ -106,21 +314,33 @@ if (isWalletConnected) {
 }
 
 /**
- * Enhance Competitions with Real Token Data
+ * Enhanced Competition Data Processing
  */
 async function enhanceCompetitionsWithRealData(competitions) {
+    console.log(`🔄 Processing ${competitions.length} competitions...`);
+    
     const enhanced = [];
     
     for (const competition of competitions) {
         try {
-            // Get token data from token service if available
+            // Determine current status
+            const status = determineCompetitionStatus(competition);
+            
+            // Calculate time remaining
+            const timeRemaining = calculateTimeRemaining(competition, status);
+            
+            // Get token data if token service is available
             let tokenAData = null;
             let tokenBData = null;
             
             if (CompetitionState.tokenService) {
                 try {
-                    tokenAData = await CompetitionState.tokenService.getTokenByAddress(competition.token_a_address);
-                    tokenBData = await CompetitionState.tokenService.getTokenByAddress(competition.token_b_address);
+                    if (competition.token_a_address) {
+                        tokenAData = await CompetitionState.tokenService.getTokenByAddress(competition.token_a_address);
+                    }
+                    if (competition.token_b_address) {
+                        tokenBData = await CompetitionState.tokenService.getTokenByAddress(competition.token_b_address);
+                    }
                 } catch (tokenError) {
                     console.warn('Could not fetch token data:', tokenError);
                 }
@@ -128,63 +348,66 @@ async function enhanceCompetitionsWithRealData(competitions) {
             
             // Create enhanced competition object
             const enhancedCompetition = {
-                id: competition.competition_id,
-                competitionId: competition.competition_id,
-                status: determineCompetitionStatus(competition),
+                id: competition.id || competition.competition_id,
+                competitionId: competition.id || competition.competition_id,
+                status: status,
                 
                 // Token A data
                 tokenA: {
-                    address: competition.token_a_address,
-                    symbol: tokenAData?.symbol || competition.token_a_symbol,
-                    name: tokenAData?.name || competition.token_a_name,
-                    logo: tokenAData?.logoURI || generateFallbackLogo(competition.token_a_symbol),
-                    currentPrice: tokenAData?.price || 0,
+                    address: competition.token_a_address || '',
+                    symbol: tokenAData?.symbol || competition.token_a_symbol || 'TOKEN_A',
+                    name: tokenAData?.name || competition.token_a_name || 'Token A',
+                    logo: tokenAData?.logoURI || generateFallbackLogo(competition.token_a_symbol || 'TOKEN_A'),
+                    currentPrice: tokenAData?.price || parseFloat(competition.token_a_price || 0),
                     priceChange24h: tokenAData?.price_change_24h || 0,
                     marketCap: tokenAData?.market_cap || 0
                 },
                 
                 // Token B data
                 tokenB: {
-                    address: competition.token_b_address,
-                    symbol: tokenBData?.symbol || competition.token_b_symbol,
-                    name: tokenBData?.name || competition.token_b_name,
-                    logo: tokenBData?.logoURI || generateFallbackLogo(competition.token_b_symbol),
-                    currentPrice: tokenBData?.price || 0,
+                    address: competition.token_b_address || '',
+                    symbol: tokenBData?.symbol || competition.token_b_symbol || 'TOKEN_B',
+                    name: tokenBData?.name || competition.token_b_name || 'Token B',
+                    logo: tokenBData?.logoURI || generateFallbackLogo(competition.token_b_symbol || 'TOKEN_B'),
+                    currentPrice: tokenBData?.price || parseFloat(competition.token_b_price || 0),
                     priceChange24h: tokenBData?.price_change_24h || 0,
                     marketCap: tokenBData?.market_cap || 0
                 },
                 
                 // Competition timing
-                startTime: new Date(competition.start_time),
-                votingEndTime: new Date(competition.voting_end_time),
-                endTime: new Date(competition.end_time),
-                timeRemaining: calculateTimeRemaining(competition),
+                startTime: new Date(competition.start_time || Date.now()),
+                votingEndTime: new Date(competition.voting_end_time || Date.now() + 24 * 60 * 60 * 1000),
+                endTime: new Date(competition.end_time || Date.now() + 7 * 24 * 60 * 60 * 1000),
+                timeRemaining: timeRemaining,
                 
                 // Betting data
-                participants: competition.total_bets || 0,
-                prizePool: parseFloat(competition.total_pool || 0),
-                tokenAVotes: competition.token_a_bets || 0,
-                tokenBVotes: competition.token_b_bets || 0,
-                totalBettingVolume: competition.total_betting_volume || 0,
+                participants: parseInt(competition.participant_count || 0),
+                prizePool: parseFloat(competition.prize_pool || 0),
+                tokenAVotes: parseInt(competition.token_a_votes || 0),
+                tokenBVotes: parseInt(competition.token_b_votes || 0),
+                totalBettingVolume: parseFloat(competition.total_betting_volume || 0),
                 
                 // Performance data (for running competitions)
-                tokenAPerformance: competition.token_a_current_performance || null,
-                tokenBPerformance: competition.token_b_current_performance || null,
+                tokenAPerformance: parseFloat(competition.token_a_current_performance || 0),
+                tokenBPerformance: parseFloat(competition.token_b_current_performance || 0),
                 
                 // Metadata
-                createdAt: new Date(competition.created_at),
+                createdAt: new Date(competition.created_at || Date.now()),
                 isRealData: true,
-                betAmount: 0.1, // SOL
-                platformFee: 15 // Percentage
+                betAmount: parseFloat(competition.entry_fee || 0.1),
+                platformFee: parseInt(competition.platform_fee || 15)
             };
             
             enhanced.push(enhancedCompetition);
+            console.log(`✅ Enhanced competition: ${enhancedCompetition.tokenA.symbol} vs ${enhancedCompetition.tokenB.symbol}`);
             
         } catch (error) {
-            console.error('Failed to enhance competition:', competition.competition_id, error);
+            console.error('Failed to enhance competition:', competition.id || competition.competition_id, error);
+            // Skip this competition but continue with others
         }
     }
     
+    console.log(`🎯 Successfully enhanced ${enhanced.length} competitions`);
     return enhanced;
 }
 
@@ -197,10 +420,12 @@ function determineCompetitionStatus(competition) {
     const votingEndTime = new Date(competition.voting_end_time);
     const endTime = new Date(competition.end_time);
     
-    if (competition.status === 'RESOLVED' || competition.status === 'CANCELLED') {
+    // Check explicit status first
+    if (competition.status === 'RESOLVED' || competition.status === 'CANCELLED' || competition.status === 'completed') {
         return 'completed';
     }
     
+    // Determine status based on timing
     if (now < startTime) {
         return 'upcoming';
     } else if (now >= startTime && now < votingEndTime) {
@@ -215,17 +440,16 @@ function determineCompetitionStatus(competition) {
 /**
  * Calculate Time Remaining for Competition
  */
-function calculateTimeRemaining(competition) {
+function calculateTimeRemaining(competition, status) {
     const now = new Date();
-    const status = determineCompetitionStatus(competition);
     
     switch (status) {
         case 'upcoming':
-            return new Date(competition.start_time) - now;
+            return Math.max(0, new Date(competition.start_time) - now);
         case 'voting':
-            return new Date(competition.voting_end_time) - now;
+            return Math.max(0, new Date(competition.voting_end_time) - now);
         case 'running':
-            return new Date(competition.end_time) - now;
+            return Math.max(0, new Date(competition.end_time) - now);
         default:
             return 0;
     }
@@ -236,47 +460,69 @@ function calculateTimeRemaining(competition) {
  */
 async function loadUserBets() {
     try {
-        // Check wallet connection properly (FIXED)
-        let isWalletConnected = false;
-        try {
-            if (CompetitionState.walletService) {
-                if (typeof CompetitionState.walletService.isConnected === 'function') {
-                    isWalletConnected = CompetitionState.walletService.isConnected();
-                } else if (typeof CompetitionState.walletService.getConnectionStatus === 'function') {
-                    const status = CompetitionState.walletService.getConnectionStatus();
-                    isWalletConnected = status && status.isConnected;
-                }
-            }
-        } catch (error) {
-            console.warn('Could not check wallet connection in loadUserBets:', error);
-            isWalletConnected = false;
-        }
+        console.log('👤 Loading user bets...');
         
-        if (!isWalletConnected) {
+        if (!checkWalletConnection()) {
+            console.log('No wallet connected, skipping user bets');
             return;
         }
         
-        const walletAddress = CompetitionState.walletService.getWalletAddress();
-        
-        // Try to get user bets from database
-        if (CompetitionState.supabaseClient?.getSupabaseClient) {
-            const supabase = CompetitionState.supabaseClient.getSupabaseClient();
-            
-            const { data: bets, error } = await supabase
-                .from('bets')
-                .select('*')
-                .eq('user_wallet', walletAddress)
-                .in('status', ['PLACED', 'WON', 'LOST']);
-            
-            if (!error && bets) {
-                // Map bets by competition ID
-                CompetitionState.userBets.clear();
-                bets.forEach(bet => {
-                    CompetitionState.userBets.set(bet.competition_id, bet);
-                });
-                
-                console.log(`✅ Loaded ${bets.length} user bets`);
+        // Get wallet address
+        let walletAddress = null;
+        try {
+            if (CompetitionState.walletService?.getWalletAddress) {
+                walletAddress = CompetitionState.walletService.getWalletAddress();
+            } else if (window.connectedUser?.walletAddress) {
+                walletAddress = window.connectedUser.walletAddress;
+            } else if (window.currentUser?.walletAddress) {
+                walletAddress = window.currentUser.walletAddress;
             }
+        } catch (error) {
+            console.warn('Could not get wallet address:', error);
+        }
+        
+        if (!walletAddress) {
+            console.log('No wallet address available');
+            return;
+        }
+        
+        // Get Supabase client
+        let supabase = null;
+        if (CompetitionState.supabaseClient?.getSupabaseClient) {
+            supabase = CompetitionState.supabaseClient.getSupabaseClient();
+        } else if (window.supabaseClient?.getSupabaseClient) {
+            supabase = window.supabaseClient.getSupabaseClient();
+        } else if (window.supabase) {
+            supabase = window.supabase;
+        }
+        
+        if (!supabase) {
+            console.log('No Supabase client available for user bets');
+            return;
+        }
+        
+        // Query user bets
+        const { data: bets, error } = await supabase
+            .from('bets')
+            .select('*')
+            .eq('user_wallet', walletAddress)
+            .in('status', ['PLACED', 'WON', 'LOST']);
+        
+        if (error) {
+            console.warn('Error loading user bets:', error);
+            return;
+        }
+        
+        if (bets && bets.length > 0) {
+            // Store bets by competition ID
+            CompetitionState.userBets.clear();
+            bets.forEach(bet => {
+                CompetitionState.userBets.set(bet.competition_id, bet);
+            });
+            
+            console.log(`✅ Loaded ${bets.length} user bets`);
+        } else {
+            console.log('No user bets found');
         }
         
     } catch (error) {
@@ -285,12 +531,12 @@ async function loadUserBets() {
 }
 
 /**
- * Update Competition Display with Enhanced UI
+ * Update Competition Display
  */
 function updateCompetitionsDisplay() {
     console.log('🎨 Updating competitions display...');
     
-    // Show loading state
+    // Show loading state if still loading
     if (CompetitionState.loading) {
         showLoadingState();
         return;
@@ -308,13 +554,10 @@ function updateCompetitionsDisplay() {
     // Update counts
     updateSectionCounts(competitionsByStatus);
     
-    // Set up card interactions
-    setupCardInteractions();
-    
-    // Start or update timers
+    // Start timers
     startCompetitionTimers();
     
-    console.log('✅ Competition display updated successfully');
+    console.log('✅ Competition display updated');
 }
 
 /**
@@ -335,7 +578,7 @@ function groupCompetitionsByStatus() {
         }
     });
     
-    // Sort each group
+    // Sort each group appropriately
     Object.keys(groups).forEach(status => {
         groups[status].sort((a, b) => {
             if (status === 'completed') {
@@ -354,7 +597,10 @@ function groupCompetitionsByStatus() {
  */
 function updateSection(sectionName, competitions) {
     const grid = document.getElementById(`${sectionName}Grid`);
-    if (!grid) return;
+    if (!grid) {
+        console.warn(`Grid element ${sectionName}Grid not found`);
+        return;
+    }
     
     if (competitions.length === 0) {
         grid.innerHTML = createEmptyState(sectionName);
@@ -362,29 +608,19 @@ function updateSection(sectionName, competitions) {
     }
     
     const cardsHTML = competitions.map(competition => 
-        createEnhancedCompetitionCard(competition)
+        createCompetitionCard(competition)
     ).join('');
     
     grid.innerHTML = cardsHTML;
 }
 
 /**
- * Create Enhanced Competition Card with Real Data
+ * Create Competition Card
  */
-function createEnhancedCompetitionCard(competition) {
+function createCompetitionCard(competition) {
     const userBet = CompetitionState.userBets.get(competition.competitionId);
     const hasUserBet = !!userBet;
     const userPrediction = userBet?.chosen_token;
-    
-    const totalVotes = competition.tokenAVotes + competition.tokenBVotes;
-    const tokenAPercentage = totalVotes > 0 ? (competition.tokenAVotes / totalVotes * 100) : 50;
-    
-    const statusLabels = {
-        voting: 'Voting Open',
-        running: 'Running',
-        upcoming: 'Upcoming',
-        completed: 'Completed'
-    };
     
     const statusIcons = {
         voting: '🗳️',
@@ -393,95 +629,69 @@ function createEnhancedCompetitionCard(competition) {
         completed: '🏁'
     };
     
+    const statusLabels = {
+        voting: 'Voting Open',
+        running: 'Running',
+        upcoming: 'Starting Soon',
+        completed: 'Completed'
+    };
+    
     return `
-        <div class="competition-card enhanced-card" 
+        <div class="competition-card" 
              data-competition-id="${competition.competitionId}"
              data-status="${competition.status}"
-             onclick="openEnhancedCompetitionModal('${competition.competitionId}')">
+             onclick="openCompetitionModal('${competition.competitionId}')">
             
-            <!-- Card Status Badge -->
-            <div class="card-status ${competition.status}">
-                ${statusIcons[competition.status]} ${statusLabels[competition.status]}
+            <div class="competition-header">
+                <div class="competition-id">#${competition.competitionId}</div>
+                <div class="competition-status status-${competition.status}">
+                    ${statusIcons[competition.status]} ${statusLabels[competition.status]}
+                </div>
             </div>
             
-            <!-- User Bet Indicator -->
             ${hasUserBet ? `
                 <div class="user-bet-indicator">
-                    <span class="bet-icon">🎯</span>
-                    <span class="bet-text">Your Prediction: ${userPrediction === 'token_a' ? competition.tokenA.symbol : competition.tokenB.symbol}</span>
+                    🎯 Your Prediction: ${userPrediction === 'token_a' ? competition.tokenA.symbol : competition.tokenB.symbol}
                 </div>
             ` : ''}
             
-            <!-- Token Battle Display -->
-            <div class="token-battle enhanced-battle">
-                <!-- Token A -->
+            <div class="tokens-battle">
                 <div class="token-info ${userPrediction === 'token_a' ? 'user-selected' : ''}">
                     <img src="${competition.tokenA.logo}" 
                          alt="${competition.tokenA.symbol}" 
                          class="token-logo"
                          onerror="this.src='${generateFallbackLogo(competition.tokenA.symbol)}'" />
-                    <div class="token-details">
-                        <h4>${competition.tokenA.symbol}</h4>
-                        <p>${truncateText(competition.tokenA.name, 15)}</p>
-                        ${competition.status === 'running' && competition.tokenAPerformance !== null ? `
-                            <div class="performance ${competition.tokenAPerformance >= 0 ? 'positive' : 'negative'}">
-                                ${competition.tokenAPerformance >= 0 ? '+' : ''}${competition.tokenAPerformance.toFixed(2)}%
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <!-- VS Divider -->
-                <div class="vs-divider">
-                    <span class="vs-text">VS</span>
-                    ${competition.status !== 'upcoming' ? `
-                        <div class="vote-ratio">
-                            ${Math.round(tokenAPercentage)}% - ${Math.round(100 - tokenAPercentage)}%
-                        </div>
+                    <div class="token-symbol">${competition.tokenA.symbol}</div>
+                    <div class="token-name">${truncateText(competition.tokenA.name, 20)}</div>
+                    ${competition.tokenA.currentPrice > 0 ? `
+                        <div class="token-price">$${competition.tokenA.currentPrice.toFixed(6)}</div>
                     ` : ''}
                 </div>
                 
-                <!-- Token B -->
+                <div class="vs-separator">
+                    <div class="vs-text">VS</div>
+                    <div class="competition-timer">
+                        <div class="timer-label">${getTimerLabel(competition.status)}</div>
+                        <div class="timer-value" data-time="${competition.timeRemaining}" data-status="${competition.status}">
+                            ${formatTimeRemaining(competition.timeRemaining, competition.status)}
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="token-info ${userPrediction === 'token_b' ? 'user-selected' : ''}">
                     <img src="${competition.tokenB.logo}" 
                          alt="${competition.tokenB.symbol}" 
                          class="token-logo"
                          onerror="this.src='${generateFallbackLogo(competition.tokenB.symbol)}'" />
-                    <div class="token-details">
-                        <h4>${competition.tokenB.symbol}</h4>
-                        <p>${truncateText(competition.tokenB.name, 15)}</p>
-                        ${competition.status === 'running' && competition.tokenBPerformance !== null ? `
-                            <div class="performance ${competition.tokenBPerformance >= 0 ? 'positive' : 'negative'}">
-                                ${competition.tokenBPerformance >= 0 ? '+' : ''}${competition.tokenBPerformance.toFixed(2)}%
-                            </div>
-                        ` : ''}
-                    </div>
+                    <div class="token-symbol">${competition.tokenB.symbol}</div>
+                    <div class="token-name">${truncateText(competition.tokenB.name, 20)}</div>
+                    ${competition.tokenB.currentPrice > 0 ? `
+                        <div class="token-price">$${competition.tokenB.currentPrice.toFixed(6)}</div>
+                    ` : ''}
                 </div>
             </div>
             
-            <!-- Betting Progress Bar -->
-            ${competition.status !== 'upcoming' && totalVotes > 0 ? `
-                <div class="betting-progress">
-                    <div class="progress-fill" style="width: ${tokenAPercentage}%"></div>
-                </div>
-                <div class="vote-breakdown">
-                    <span>${competition.tokenAVotes} votes (${Math.round(tokenAPercentage)}%)</span>
-                    <span>${competition.tokenBVotes} votes (${Math.round(100 - tokenAPercentage)}%)</span>
-                </div>
-            ` : ''}
-            
-            <!-- Timer Display -->
-            <div class="timer enhanced-timer">
-                <span class="timer-icon">⏱️</span>
-                <span class="time-remaining" 
-                      data-time="${competition.timeRemaining}" 
-                      data-status="${competition.status}">
-                    ${formatTimeRemaining(competition.timeRemaining, competition.status)}
-                </span>
-            </div>
-            
-            <!-- Competition Stats -->
-            <div class="card-stats enhanced-stats">
+            <div class="competition-stats">
                 <div class="stat-item">
                     <div class="stat-value">${competition.participants}</div>
                     <div class="stat-label">Participants</div>
@@ -496,14 +706,10 @@ function createEnhancedCompetitionCard(competition) {
                 </div>
             </div>
             
-            <!-- Action Button -->
-            <button class="action-button enhanced-action" 
-                    onclick="handleCompetitionAction('${competition.competitionId}', '${competition.status}', event)"
-                    ${competition.status === 'upcoming' ? 'disabled' : ''}>
-                ${getActionButtonText(competition.status, hasUserBet)}
-            </button>
+            <div class="betting-section">
+                ${getBettingButtons(competition, hasUserBet)}
+            </div>
             
-            <!-- Real Data Indicator -->
             <div class="data-indicator">
                 <span class="data-dot ${competition.isRealData ? 'live' : 'demo'}"></span>
                 <span class="data-text">${competition.isRealData ? 'Live Data' : 'Demo Data'}</span>
@@ -513,167 +719,33 @@ function createEnhancedCompetitionCard(competition) {
 }
 
 /**
- * Enhanced Competition Modal
+ * Get Betting Buttons Based on Competition Status
  */
-function openEnhancedCompetitionModal(competitionId) {
-    const competition = CompetitionState.activeCompetitions.find(c => c.competitionId === competitionId);
-    if (!competition) return;
-    
-    CompetitionState.selectedCompetition = competition;
-    const userBet = CompetitionState.userBets.get(competitionId);
-    
-    const modal = document.getElementById('competitionModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalContent = document.getElementById('modalContent');
-    
-    if (!modal || !modalTitle || !modalContent) {
-        console.warn('Modal elements not found');
-        return;
+function getBettingButtons(competition, hasUserBet) {
+    if (hasUserBet) {
+        return `<button class="bet-button" disabled>✅ Prediction Placed</button>`;
     }
     
-    modalTitle.textContent = `${competition.tokenA.symbol} vs ${competition.tokenB.symbol}`;
-    
-    modalContent.innerHTML = createEnhancedModalContent(competition, userBet);
-    
-    modal.classList.add('active');
-    
-    // Set up modal interactions
-    setupModalInteractions(competition, userBet);
-}
-
-/**
- * Create Enhanced Modal Content
- */
-function createEnhancedModalContent(competition, userBet) {
-    const hasUserBet = !!userBet;
-    const totalVotes = competition.tokenAVotes + competition.tokenBVotes;
-    const tokenAPercentage = totalVotes > 0 ? (competition.tokenAVotes / totalVotes * 100) : 50;
-    
-    return `
-        <div class="modal-competition-details">
-            <!-- Competition Header -->
-            <div class="modal-header-info">
-                <div class="competition-status-badge ${competition.status}">
-                    ${getStatusDisplay(competition.status)}
-                </div>
-                <div class="competition-timing">
-                    <strong>Timeline:</strong><br>
-                    Voting: ${formatDate(competition.startTime)} - ${formatDate(competition.votingEndTime)}<br>
-                    Competition: ${formatDate(competition.votingEndTime)} - ${formatDate(competition.endTime)}
-                </div>
-            </div>
-            
-            <!-- Token Details -->
-            <div class="modal-token-comparison">
-                <div class="token-card">
-                    <img src="${competition.tokenA.logo}" alt="${competition.tokenA.symbol}" class="modal-token-logo" />
-                    <h3>${competition.tokenA.symbol}</h3>
-                    <p>${competition.tokenA.name}</p>
-                    <div class="token-stats">
-                        <div>Price: $${competition.tokenA.currentPrice.toFixed(6)}</div>
-                        <div class="${competition.tokenA.priceChange24h >= 0 ? 'positive' : 'negative'}">
-                            24h: ${competition.tokenA.priceChange24h >= 0 ? '+' : ''}${competition.tokenA.priceChange24h.toFixed(2)}%
-                        </div>
-                        <div>Market Cap: ${formatMarketCap(competition.tokenA.marketCap)}</div>
-                    </div>
-                    <div class="vote-count">
-                        ${competition.tokenAVotes} votes (${Math.round(tokenAPercentage)}%)
-                    </div>
-                </div>
-                
-                <div class="vs-large">VS</div>
-                
-                <div class="token-card">
-                    <img src="${competition.tokenB.logo}" alt="${competition.tokenB.symbol}" class="modal-token-logo" />
-                    <h3>${competition.tokenB.symbol}</h3>
-                    <p>${competition.tokenB.name}</p>
-                    <div class="token-stats">
-                        <div>Price: $${competition.tokenB.currentPrice.toFixed(6)}</div>
-                        <div class="${competition.tokenB.priceChange24h >= 0 ? 'positive' : 'negative'}">
-                            24h: ${competition.tokenB.priceChange24h >= 0 ? '+' : ''}${competition.tokenB.priceChange24h.toFixed(2)}%
-                        </div>
-                        <div>Market Cap: ${formatMarketCap(competition.tokenB.marketCap)}</div>
-                    </div>
-                    <div class="vote-count">
-                        ${competition.tokenBVotes} votes (${Math.round(100 - tokenAPercentage)}%)
-                    </div>
-                </div>
-            </div>
-            
-            <!-- User Bet Status -->
-            ${hasUserBet ? `
-                <div class="user-bet-status">
-                    <h3>Your Prediction</h3>
-                    <p>You predicted <strong>${userBet.chosen_token === 'token_a' ? competition.tokenA.symbol : competition.tokenB.symbol}</strong> will outperform</p>
-                    <p>Bet Amount: ${userBet.amount} SOL</p>
-                    <p>Status: ${userBet.status}</p>
-                    ${userBet.payout_amount > 0 ? `<p>Potential Payout: ${userBet.payout_amount} SOL</p>` : ''}
-                </div>
-            ` : ''}
-            
-            <!-- Betting Interface -->
-            ${competition.status === 'voting' && !hasUserBet ? `
-                <div class="betting-interface">
-                    <h3>Place Your Prediction</h3>
-                    <p>Entry Fee: ${competition.betAmount} SOL</p>
-                    <div class="betting-buttons">
-                        <button class="bet-button token-a" onclick="placeBet('${competition.competitionId}', 'token_a')">
-                            Predict ${competition.tokenA.symbol} Wins
-                        </button>
-                        <button class="bet-button token-b" onclick="placeBet('${competition.competitionId}', 'token_b')">
-                            Predict ${competition.tokenB.symbol} Wins
-                        </button>
-                    </div>
-                </div>
-            ` : ''}
-            
-            <!-- Competition Rules -->
-            <div class="competition-rules">
-                <h3>How It Works</h3>
-                <ul>
-                    <li>Voting period: 3 days to place predictions</li>
-                    <li>Competition period: 7 days of price tracking</li>
-                    <li>Winner determined by token performance using TWAP</li>
-                    <li>Winners split the prize pool (minus ${competition.platformFee}% platform fee)</li>
-                    <li>Automatic payouts via smart contracts</li>
-                </ul>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Handle Competition Action (Betting)
- */
-async function handleCompetitionAction(competitionId, status, event) {
-    event.stopPropagation();
-    
-    console.log(`🎯 Competition action: ${competitionId}, status: ${status}`);
-    
-    if (status === 'voting') {
-        // Check wallet connection
-        if (!CompetitionState.walletService?.isConnected()) {
-            showNotification('Please connect your wallet to place predictions', 'warning');
-            // Trigger wallet connection modal
-            if (window.openWalletModal) {
-                window.openWalletModal();
-            }
-            return;
-        }
-        
-        // Check if user already has a bet
-        const userBet = CompetitionState.userBets.get(competitionId);
-        if (userBet) {
-            showNotification('You have already placed a prediction for this competition', 'info');
-            openEnhancedCompetitionModal(competitionId);
-            return;
-        }
-        
-        // Open detailed modal for betting
-        openEnhancedCompetitionModal(competitionId);
-    } else {
-        // Open modal for viewing details
-        openEnhancedCompetitionModal(competitionId);
+    switch (competition.status) {
+        case 'voting':
+            return `
+                <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_a')">
+                    <div class="bet-button-label">Predict</div>
+                    <div class="bet-button-token">${competition.tokenA.symbol}</div>
+                </button>
+                <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_b')">
+                    <div class="bet-button-label">Predict</div>
+                    <div class="bet-button-token">${competition.tokenB.symbol}</div>
+                </button>
+            `;
+        case 'running':
+            return `<button class="bet-button" disabled>⚡ Running</button>`;
+        case 'upcoming':
+            return `<button class="bet-button" disabled>⏰ Coming Soon</button>`;
+        case 'completed':
+            return `<button class="bet-button" disabled>🏁 Completed</button>`;
+        default:
+            return `<button class="bet-button" disabled>View Details</button>`;
     }
 }
 
@@ -684,9 +756,12 @@ async function placeBet(competitionId, chosenToken) {
     try {
         console.log(`💰 Placing bet: ${competitionId}, token: ${chosenToken}`);
         
-        // Validate wallet connection
-        if (!CompetitionState.walletService?.isConnected()) {
-            showNotification('Wallet not connected', 'error');
+        // Check wallet connection
+        if (!checkWalletConnection()) {
+            showNotification('Please connect your wallet to place predictions', 'warning');
+            if (window.openWalletModal) {
+                window.openWalletModal();
+            }
             return;
         }
         
@@ -702,110 +777,286 @@ async function placeBet(competitionId, chosenToken) {
             return;
         }
         
-        // Check wallet balance
-        const walletBalance = CompetitionState.walletService.getBalance();
-        if (walletBalance < competition.betAmount) {
-            showNotification(`Insufficient balance. Need ${competition.betAmount} SOL`, 'error');
+        // Check if user already has a bet
+        const existingBet = CompetitionState.userBets.get(competitionId);
+        if (existingBet) {
+            showNotification('You have already placed a prediction for this competition', 'info');
             return;
         }
         
-        // Show confirmation
+        // Get token name for confirmation
         const tokenName = chosenToken === 'token_a' ? competition.tokenA.symbol : competition.tokenB.symbol;
-        const confirmed = confirm(`Place ${competition.betAmount} SOL bet on ${tokenName}?`);
         
+        // Show confirmation
+        const confirmed = confirm(`Place ${competition.betAmount} SOL bet on ${tokenName}?\n\nThis prediction cannot be changed once placed.`);
         if (!confirmed) return;
-        
-        // Disable betting buttons during transaction
-        const bettingButtons = document.querySelectorAll('.bet-button');
-        bettingButtons.forEach(btn => {
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-        });
         
         showNotification('Processing bet...', 'info');
         
-        // Create bet record in database
+        // Get Supabase client for real bet placement
+        let supabase = null;
         if (CompetitionState.supabaseClient?.getSupabaseClient) {
-            const supabase = CompetitionState.supabaseClient.getSupabaseClient();
-            const walletAddress = CompetitionState.walletService.getWalletAddress();
-            
-            const betData = {
-                user_wallet: walletAddress,
-                competition_id: competitionId,
-                chosen_token: chosenToken,
-                amount: competition.betAmount,
-                status: 'PLACED',
-                timestamp: new Date().toISOString()
-            };
-            
-            const { data: bet, error } = await supabase
-                .from('bets')
-                .insert([betData])
-                .select()
-                .single();
-            
-            if (error) {
-                throw new Error(`Database error: ${error.message}`);
-            }
-            
-            // Store user bet locally
-            CompetitionState.userBets.set(competitionId, bet);
-            
-            // Update competition data
-            if (chosenToken === 'token_a') {
-                competition.tokenAVotes += 1;
-            } else {
-                competition.tokenBVotes += 1;
-            }
-            competition.participants += 1;
-            competition.prizePool += competition.betAmount;
-            
-            showNotification(`Bet placed successfully on ${tokenName}!`, 'success');
-            
-            // Refresh display
-            updateCompetitionsDisplay();
-            
-            // Close modal and reopen with updated data
-            closeCompetitionModal();
-            setTimeout(() => openEnhancedCompetitionModal(competitionId), 300);
-            
+            supabase = CompetitionState.supabaseClient.getSupabaseClient();
+        } else if (window.supabaseClient?.getSupabaseClient) {
+            supabase = window.supabaseClient.getSupabaseClient();
+        } else if (window.supabase) {
+            supabase = window.supabase;
+        }
+        
+        if (supabase) {
+            // Real database bet placement
+            await placeBetInDatabase(supabase, competitionId, chosenToken, competition, tokenName);
         } else {
-            // Demo mode - simulate bet placement
-            showNotification(`Demo bet placed on ${tokenName}!`, 'success');
-            
-            // Update local data
-            const demoBet = {
-                competition_id: competitionId,
-                chosen_token: chosenToken,
-                amount: competition.betAmount,
-                status: 'PLACED'
-            };
-            
-            CompetitionState.userBets.set(competitionId, demoBet);
-            
-            if (chosenToken === 'token_a') {
-                competition.tokenAVotes += 1;
-            } else {
-                competition.tokenBVotes += 1;
-            }
-            competition.participants += 1;
-            competition.prizePool += competition.betAmount;
-            
-            updateCompetitionsDisplay();
-            closeCompetitionModal();
-            setTimeout(() => openEnhancedCompetitionModal(competitionId), 300);
+            // Demo mode bet placement
+            await placeDemoBet(competitionId, chosenToken, competition, tokenName);
         }
         
     } catch (error) {
         console.error('Failed to place bet:', error);
         showNotification(`Failed to place bet: ${error.message}`, 'error');
-        
-        // Re-enable buttons
-        const bettingButtons = document.querySelectorAll('.bet-button');
-        bettingButtons.forEach(btn => {
-            btn.disabled = false;
-        });
     }
+}
+
+/**
+ * Place Bet in Database
+ */
+async function placeBetInDatabase(supabase, competitionId, chosenToken, competition, tokenName) {
+    try {
+        // Get wallet address
+        let walletAddress = null;
+        if (CompetitionState.walletService?.getWalletAddress) {
+            walletAddress = CompetitionState.walletService.getWalletAddress();
+        } else if (window.connectedUser?.walletAddress) {
+            walletAddress = window.connectedUser.walletAddress;
+        } else if (window.currentUser?.walletAddress) {
+            walletAddress = window.currentUser.walletAddress;
+        }
+        
+        if (!walletAddress) {
+            throw new Error('Could not get wallet address');
+        }
+        
+        // Create bet record
+        const betData = {
+            user_wallet: walletAddress,
+            competition_id: competitionId,
+            chosen_token: chosenToken,
+            amount: competition.betAmount,
+            status: 'PLACED',
+            timestamp: new Date().toISOString()
+        };
+        
+        const { data: bet, error } = await supabase
+            .from('bets')
+            .insert([betData])
+            .select()
+            .single();
+        
+        if (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
+        
+        // Store bet locally
+        CompetitionState.userBets.set(competitionId, bet);
+        
+        // Update competition stats locally
+        updateCompetitionStats(competition, chosenToken);
+        
+        showNotification(`Bet placed successfully on ${tokenName}!`, 'success');
+        
+        // Refresh display
+        updateCompetitionsDisplay();
+        
+    } catch (error) {
+        throw new Error(`Database bet failed: ${error.message}`);
+    }
+}
+
+/**
+ * Place Demo Bet
+ */
+async function placeDemoBet(competitionId, chosenToken, competition, tokenName) {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Create demo bet
+    const demoBet = {
+        competition_id: competitionId,
+        chosen_token: chosenToken,
+        amount: competition.betAmount,
+        status: 'PLACED',
+        timestamp: new Date().toISOString()
+    };
+    
+    // Store bet locally
+    CompetitionState.userBets.set(competitionId, demoBet);
+    
+    // Update competition stats locally
+    updateCompetitionStats(competition, chosenToken);
+    
+    showNotification(`Demo bet placed on ${tokenName}!`, 'success');
+    
+    // Refresh display
+    updateCompetitionsDisplay();
+}
+
+/**
+ * Update Competition Stats After Bet
+ */
+function updateCompetitionStats(competition, chosenToken) {
+    if (chosenToken === 'token_a') {
+        competition.tokenAVotes += 1;
+    } else {
+        competition.tokenBVotes += 1;
+    }
+    competition.participants += 1;
+    competition.prizePool += competition.betAmount;
+}
+
+/**
+ * Open Competition Modal
+ */
+function openCompetitionModal(competitionId) {
+    const competition = CompetitionState.activeCompetitions.find(c => c.competitionId === competitionId);
+    if (!competition) {
+        console.warn('Competition not found:', competitionId);
+        return;
+    }
+    
+    const userBet = CompetitionState.userBets.get(competitionId);
+    
+    // Simple alert for now - can be enhanced with a proper modal later
+    let message = `Competition: ${competition.tokenA.symbol} vs ${competition.tokenB.symbol}\n`;
+    message += `Status: ${competition.status}\n`;
+    message += `Participants: ${competition.participants}\n`;
+    message += `Prize Pool: ${competition.prizePool.toFixed(1)} SOL\n`;
+    message += `Entry Fee: ${competition.betAmount} SOL\n`;
+    
+    if (userBet) {
+        const predictedToken = userBet.chosen_token === 'token_a' ? competition.tokenA.symbol : competition.tokenB.symbol;
+        message += `\nYour Prediction: ${predictedToken}\n`;
+        message += `Bet Amount: ${userBet.amount} SOL`;
+    }
+    
+    alert(message);
+}
+
+/**
+ * Load Demo Competitions (Fallback)
+ */
+async function loadDemoCompetitions() {
+    console.log('📝 Loading demo competitions...');
+    
+    const now = Date.now();
+    
+    const demoCompetitions = [
+        {
+            competitionId: 'demo-1',
+            status: 'voting',
+            tokenA: {
+                address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB263',
+                symbol: 'BONK',
+                name: 'Bonk',
+                logo: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
+                currentPrice: 0.000023,
+                priceChange24h: 2.5,
+                marketCap: 1500000000
+            },
+            tokenB: {
+                address: '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs',
+                symbol: 'POPCAT',
+                name: 'Popcat',
+                logo: generateFallbackLogo('POPCAT'),
+                currentPrice: 1.45,
+                priceChange24h: -1.2,
+                marketCap: 1400000000
+            },
+            startTime: new Date(now - 24 * 60 * 60 * 1000),
+            votingEndTime: new Date(now + 2 * 24 * 60 * 60 * 1000),
+            endTime: new Date(now + 9 * 24 * 60 * 60 * 1000),
+            timeRemaining: 2 * 24 * 60 * 60 * 1000,
+            participants: 42,
+            prizePool: 4.2,
+            tokenAVotes: 25,
+            tokenBVotes: 17,
+            betAmount: 0.1,
+            platformFee: 15,
+            isRealData: false
+        },
+        {
+            competitionId: 'demo-2',
+            status: 'running',
+            tokenA: {
+                address: 'So11111111111111111111111111111111111111112',
+                symbol: 'SOL',
+                name: 'Solana',
+                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+                currentPrice: 180.50,
+                priceChange24h: 3.2,
+                marketCap: 85000000000
+            },
+            tokenB: {
+                address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                symbol: 'USDC',
+                name: 'USD Coin',
+                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+                currentPrice: 1.00,
+                priceChange24h: 0.1,
+                marketCap: 25000000000
+            },
+            startTime: new Date(now - 4 * 24 * 60 * 60 * 1000),
+            votingEndTime: new Date(now - 24 * 60 * 60 * 1000),
+            endTime: new Date(now + 3 * 24 * 60 * 60 * 1000),
+            timeRemaining: 3 * 24 * 60 * 60 * 1000,
+            participants: 78,
+            prizePool: 7.8,
+            tokenAVotes: 45,
+            tokenBVotes: 33,
+            tokenAPerformance: 1.5,
+            tokenBPerformance: 0.05,
+            betAmount: 0.1,
+            platformFee: 15,
+            isRealData: false
+        },
+        {
+            competitionId: 'demo-3',
+            status: 'upcoming',
+            tokenA: {
+                address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+                symbol: 'mSOL',
+                name: 'Marinade SOL',
+                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
+                currentPrice: 195.30,
+                priceChange24h: 2.8,
+                marketCap: 1200000000
+            },
+            tokenB: {
+                address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+                symbol: 'JUP',
+                name: 'Jupiter',
+                logo: 'https://static.jup.ag/jup/icon.png',
+                currentPrice: 1.15,
+                priceChange24h: -0.5,
+                marketCap: 1500000000
+            },
+            startTime: new Date(now + 6 * 60 * 60 * 1000),
+            votingEndTime: new Date(now + 3 * 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000),
+            endTime: new Date(now + 10 * 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000),
+            timeRemaining: 6 * 60 * 60 * 1000,
+            participants: 0,
+            prizePool: 0,
+            tokenAVotes: 0,
+            tokenBVotes: 0,
+            betAmount: 0.1,
+            platformFee: 15,
+            isRealData: false
+        }
+    ];
+    
+    CompetitionState.activeCompetitions = demoCompetitions;
+    updateCompetitionsDisplay();
+    
+    console.log('✅ Demo competitions loaded');
 }
 
 /**
@@ -814,22 +1065,32 @@ async function placeBet(competitionId, chosenToken) {
 function setupRealTimeSubscriptions() {
     try {
         if (!CompetitionState.supabaseClient?.getSupabaseClient) {
-            console.log('Real-time subscriptions not available');
+            console.log('📡 Real-time subscriptions not available - no Supabase client');
             return;
         }
         
         const supabase = CompetitionState.supabaseClient.getSupabaseClient();
+        if (!supabase.channel) {
+            console.log('📡 Real-time subscriptions not available - no channel method');
+            return;
+        }
         
-        // Subscribe to competition changes
+        // Subscribe to competition and bet changes
         CompetitionState.realTimeSubscription = supabase
             .channel('competitions_changes')
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'competitions' },
-                handleCompetitionChange
+                (payload) => {
+                    console.log('🔄 Competition changed:', payload);
+                    setTimeout(() => loadRealCompetitions(), 1000);
+                }
             )
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'bets' },
-                handleBetChange
+                (payload) => {
+                    console.log('🎯 Bet changed:', payload);
+                    setTimeout(() => loadRealCompetitions(), 1000);
+                }
             )
             .subscribe();
         
@@ -841,47 +1102,24 @@ function setupRealTimeSubscriptions() {
 }
 
 /**
- * Handle Real-Time Competition Changes
- */
-function handleCompetitionChange(payload) {
-    console.log('🔄 Competition changed:', payload);
-    
-    // Refresh competitions data
-    setTimeout(() => {
-        loadRealCompetitions();
-    }, 1000);
-}
-
-/**
- * Handle Real-Time Bet Changes
- */
-function handleBetChange(payload) {
-    console.log('🎯 Bet changed:', payload);
-    
-    // Update local competition data
-    const bet = payload.new;
-    if (bet) {
-        const competition = CompetitionState.activeCompetitions.find(c => c.competitionId === bet.competition_id);
-        if (competition) {
-            // Recalculate vote counts and prize pool
-            // This is a simplified update - in production you'd want to refetch the data
-            updateCompetitionsDisplay();
-        }
-    }
-}
-
-/**
  * Start Periodic Updates
  */
 function startPeriodicUpdates() {
     // Update every 5 minutes
-    setInterval(async () => {
-        try {
-            await loadRealCompetitions();
-        } catch (error) {
-            console.error('Periodic update failed:', error);
-        }
-    }, 5 * 60 * 1000);
+    if (!window.competitionUpdateInterval) {
+        window.competitionUpdateInterval = setInterval(async () => {
+            try {
+                if (document.getElementById('competitionsPage')?.classList.contains('active')) {
+                    console.log('🔄 Periodic competition update...');
+                    if (CompetitionState.supabaseClient) {
+                        await loadRealCompetitions();
+                    }
+                }
+            } catch (error) {
+                console.error('Periodic update failed:', error);
+            }
+        }, 5 * 60 * 1000);
+    }
     
     console.log('✅ Periodic updates started (5-minute intervals)');
 }
@@ -890,80 +1128,39 @@ function startPeriodicUpdates() {
  * Start Competition Timers
  */
 function startCompetitionTimers() {
-    // Update timers every second
-    setInterval(() => {
-        document.querySelectorAll('.time-remaining').forEach(timer => {
-            const timeLeft = parseInt(timer.dataset.time);
-            const status = timer.dataset.status;
-            const newTime = Math.max(0, timeLeft - 1000);
-            
-            timer.dataset.time = newTime;
-            timer.textContent = formatTimeRemaining(newTime, status);
-            
-            // Update competition object
-            const card = timer.closest('.competition-card');
-            if (card) {
-                const compId = card.dataset.competitionId;
-                const comp = CompetitionState.activeCompetitions.find(c => c.competitionId === compId);
-                if (comp) {
-                    comp.timeRemaining = newTime;
-                    
-                    // Check if status needs to change
-                    const newStatus = determineCompetitionStatus({
-                        start_time: comp.startTime.toISOString(),
-                        voting_end_time: comp.votingEndTime.toISOString(),
-                        end_time: comp.endTime.toISOString(),
-                        status: comp.status
-                    });
-                    
-                    if (newStatus !== comp.status) {
-                        comp.status = newStatus;
-                        // Trigger a display refresh
-                        setTimeout(() => updateCompetitionsDisplay(), 1000);
+    if (!window.competitionTimerInterval) {
+        window.competitionTimerInterval = setInterval(() => {
+            document.querySelectorAll('.timer-value').forEach(timer => {
+                const timeLeft = parseInt(timer.dataset.time) || 0;
+                const status = timer.dataset.status;
+                const newTime = Math.max(0, timeLeft - 1000);
+                
+                timer.dataset.time = newTime;
+                timer.textContent = formatTimeRemaining(newTime, status);
+                
+                // Update competition state
+                const card = timer.closest('.competition-card');
+                if (card) {
+                    const compId = card.dataset.competitionId;
+                    const comp = CompetitionState.activeCompetitions.find(c => c.competitionId === compId);
+                    if (comp) {
+                        comp.timeRemaining = newTime;
+                        
+                        // Check if status needs to change
+                        if (newTime <= 0) {
+                            setTimeout(() => {
+                                if (CompetitionState.supabaseClient) {
+                                    loadRealCompetitions();
+                                } else {
+                                    updateCompetitionsDisplay();
+                                }
+                            }, 1000);
+                        }
                     }
                 }
-            }
-        });
-    }, 1000);
-}
-
-/**
- * Update Stats Display
- */
-function updateStatsDisplay() {
-    const stats = calculateCompetitionStats();
-    
-    // Update stats elements if they exist
-    const updateStat = (id, value) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    };
-    
-    updateStat('totalCompetitions', stats.total);
-    updateStat('totalParticipants', stats.participants.toLocaleString());
-    updateStat('totalPrizePool', `${stats.prizePool.toFixed(1)} SOL`);
-    updateStat('avgParticipants', Math.round(stats.avgParticipants));
-}
-
-/**
- * Calculate Competition Statistics
- */
-function calculateCompetitionStats() {
-    const competitions = CompetitionState.activeCompetitions;
-    
-    const total = competitions.length;
-    const participants = competitions.reduce((sum, comp) => sum + comp.participants, 0);
-    const prizePool = competitions.reduce((sum, comp) => sum + comp.prizePool, 0);
-    const avgParticipants = total > 0 ? participants / total : 0;
-    
-    return {
-        total,
-        participants,
-        prizePool,
-        avgParticipants
-    };
+            });
+        }, 1000);
+    }
 }
 
 /**
@@ -979,200 +1176,27 @@ function updateSectionCounts(competitionsByStatus) {
 }
 
 /**
- * Setup Card Interactions
+ * Show Loading State
  */
-function setupCardInteractions() {
-    // Re-enable click handlers on cards
-    document.querySelectorAll('.competition-card').forEach(card => {
-        const competitionId = card.dataset.competitionId;
-        if (competitionId) {
-            card.style.cursor = 'pointer';
+function showLoadingState() {
+    const grids = ['votingGrid', 'runningGrid', 'upcomingGrid', 'completedGrid'];
+    
+    grids.forEach(gridId => {
+        const grid = document.getElementById(gridId);
+        if (grid) {
+            grid.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading competitions...</p>
+                </div>
+            `;
         }
     });
 }
 
 /**
- * Setup Modal Interactions
+ * Create Empty State
  */
-function setupModalInteractions(competition, userBet) {
-    // Add any additional modal-specific interactions here
-    console.log('Setting up modal interactions for:', competition.competitionId);
-}
-
-/**
- * Close Competition Modal
- */
-function closeCompetitionModal() {
-    const modal = document.getElementById('competitionModal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
-    CompetitionState.selectedCompetition = null;
-}
-
-/**
- * Load Demo Competitions (Fallback)
- */
-async function loadDemoCompetitions() {
-    console.log('📝 Loading demo competitions...');
-    
-    const demoCompetitions = [
-        {
-            competitionId: 'demo-1',
-            status: 'voting',
-            tokenA: {
-                address: 'So11111111111111111111111111111111111111112',
-                symbol: 'SOL',
-                name: 'Solana',
-                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                currentPrice: 180.50,
-                priceChange24h: 2.5,
-                marketCap: 85000000000
-            },
-            tokenB: {
-                address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-                symbol: 'USDC',
-                name: 'USD Coin',
-                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-                currentPrice: 1.00,
-                priceChange24h: 0.1,
-                marketCap: 25000000000
-            },
-            startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-            votingEndTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-            endTime: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
-            timeRemaining: 2 * 24 * 60 * 60 * 1000,
-            participants: 156,
-            prizePool: 15.6,
-            tokenAVotes: 89,
-            tokenBVotes: 67,
-            betAmount: 0.1,
-            platformFee: 15,
-            isRealData: false
-        },
-        {
-            competitionId: 'demo-2',
-            status: 'running',
-            tokenA: {
-                address: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
-                symbol: 'mSOL',
-                name: 'Marinade SOL',
-                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png',
-                currentPrice: 195.30,
-                priceChange24h: 3.2,
-                marketCap: 1200000000
-            },
-            tokenB: {
-                address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-                symbol: 'BONK',
-                name: 'Bonk',
-                logo: generateFallbackLogo('BONK'),
-                currentPrice: 0.000023,
-                priceChange24h: -1.8,
-                marketCap: 1500000000
-            },
-            startTime: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-            votingEndTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-            endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-            timeRemaining: 3 * 24 * 60 * 60 * 1000,
-            participants: 203,
-            prizePool: 20.3,
-            tokenAVotes: 101,
-            tokenBVotes: 102,
-            tokenAPerformance: 1.5,
-            tokenBPerformance: -0.8,
-            betAmount: 0.1,
-            platformFee: 15,
-            isRealData: false
-        }
-    ];
-    
-    CompetitionState.activeCompetitions = demoCompetitions;
-    updateCompetitionsDisplay();
-    updateStatsDisplay();
-    
-    console.log('✅ Demo competitions loaded');
-}
-
-/**
- * Utility Functions
- */
-
-function formatTimeRemaining(milliseconds, status) {
-    if (milliseconds <= 0) return 'Ended';
-
-    const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((milliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
-
-    const statusPrefixes = {
-        upcoming: 'Voting starts in',
-        voting: 'Voting ends in',
-        running: 'Ends in',
-        completed: 'Ended'
-    };
-
-    const prefix = statusPrefixes[status] || '';
-    
-    if (days > 0) {
-        return `${prefix} ${days}d ${hours}h`;
-    } else if (hours > 0) {
-        return `${prefix} ${hours}h ${minutes}m`;
-    } else {
-        return `${prefix} ${minutes}m`;
-    }
-}
-
-function formatDate(date) {
-    return new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function formatMarketCap(marketCap) {
-    if (marketCap >= 1e9) {
-        return `${(marketCap / 1e9).toFixed(1)}B`;
-    } else if (marketCap >= 1e6) {
-        return `${(marketCap / 1e6).toFixed(1)}M`;
-    } else {
-        return `${(marketCap / 1e3).toFixed(0)}K`;
-    }
-}
-
-function getActionButtonText(status, hasUserBet) {
-    if (hasUserBet) return 'View Details';
-    
-    switch (status) {
-        case 'voting': return 'Place Prediction';
-        case 'running': return 'View Competition';
-        case 'upcoming': return 'Voting Not Started';
-        case 'completed': return 'View Results';
-        default: return 'View Details';
-    }
-}
-
-function getStatusDisplay(status) {
-    const displays = {
-        voting: '🗳️ Voting Open',
-        running: '⚡ Running',
-        upcoming: '⏰ Upcoming',
-        completed: '🏁 Completed'
-    };
-    return displays[status] || status;
-}
-
-function generateFallbackLogo(symbol) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(symbol)}&background=8b5cf6&color=fff&size=48&bold=true`;
-}
-
-function truncateText(text, maxLength) {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-}
-
 function createEmptyState(sectionName) {
     const messages = {
         voting: 'No voting competitions available',
@@ -1190,22 +1214,9 @@ function createEmptyState(sectionName) {
     `;
 }
 
-function showLoadingState() {
-    const grids = ['votingGrid', 'runningGrid', 'upcomingGrid', 'completedGrid'];
-    
-    grids.forEach(gridId => {
-        const grid = document.getElementById(gridId);
-        if (grid) {
-            grid.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>Loading competitions...</p>
-                </div>
-            `;
-        }
-    });
-}
-
+/**
+ * Show Notification
+ */
 function showNotification(message, type = 'info') {
     console.log(`📢 [${type.toUpperCase()}] ${message}`);
     
@@ -1224,7 +1235,7 @@ function showNotification(message, type = 'info') {
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         max-width: 400px;
         word-wrap: break-word;
-        animation: slideIn 0.3s ease-out;
+        font-weight: 500;
     `;
     notification.textContent = message;
     
@@ -1233,27 +1244,77 @@ function showNotification(message, type = 'info') {
     // Auto-remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
-            notification.style.animation = 'slideOut 0.3s ease-in';
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s ease';
             setTimeout(() => notification.remove(), 300);
         }
     }, 5000);
 }
 
 /**
+ * Utility Functions
+ */
+
+function formatTimeRemaining(milliseconds, status) {
+    if (milliseconds <= 0) {
+        const endLabels = {
+            upcoming: 'Voting Open',
+            voting: 'Competition Started',
+            running: 'Competition Ended',
+            completed: 'Ended'
+        };
+        return endLabels[status] || 'Ended';
+    }
+
+    const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((milliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) {
+        return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else {
+        return `${minutes}m`;
+    }
+}
+
+function getTimerLabel(status) {
+    const labels = {
+        upcoming: 'VOTING STARTS',
+        voting: 'VOTING ENDS',
+        running: 'ENDS IN',
+        completed: 'ENDED'
+    };
+    return labels[status] || 'TIME';
+}
+
+function generateFallbackLogo(symbol) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(symbol)}&background=8b5cf6&color=fff&size=48&bold=true`;
+}
+
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+/**
  * Integration Functions for Main App
  */
 
-// Function to be called from main app when competitions page is shown
+// Function to be called when competitions page is shown
 function initializeCompetitionsPage() {
-    console.log('🏁 Initializing competitions page...');
+    console.log('🏁 Initializing competitions page from main app...');
     
-    // Initialize if not already done
-    if (CompetitionState.activeCompetitions.length === 0) {
+    // Update page visibility first
+    updateCompetitionPageVisibility();
+    
+    // Initialize or refresh competitions
+    if (!CompetitionState.initialized) {
         initializeCompetitionSystem();
     } else {
-        // Refresh data
+        // Just refresh display
         updateCompetitionsDisplay();
-        updateStatsDisplay();
     }
 }
 
@@ -1261,26 +1322,44 @@ function initializeCompetitionsPage() {
 function handleWalletConnectionChange(isConnected, walletAddress) {
     console.log('👛 Wallet connection changed:', isConnected, walletAddress);
     
+    // Update page visibility
+    updateCompetitionPageVisibility();
+    
     if (isConnected) {
-        // Load user bets
-        loadUserBets();
+        // Load user bets for connected wallet
+        loadUserBets().then(() => {
+            updateCompetitionsDisplay();
+        });
     } else {
         // Clear user bets
         CompetitionState.userBets.clear();
+        updateCompetitionsDisplay();
     }
-    
-    // Refresh display to show/hide betting options
-    updateCompetitionsDisplay();
 }
 
-// Function to cleanup when leaving competitions page
+// Function to cleanup when leaving page
 function cleanupCompetitionsPage() {
     console.log('🧹 Cleaning up competitions page...');
     
     // Cancel real-time subscription
     if (CompetitionState.realTimeSubscription) {
-        CompetitionState.realTimeSubscription.unsubscribe();
+        try {
+            CompetitionState.realTimeSubscription.unsubscribe();
+        } catch (error) {
+            console.warn('Error unsubscribing from real-time updates:', error);
+        }
         CompetitionState.realTimeSubscription = null;
+    }
+    
+    // Clear intervals
+    if (window.competitionUpdateInterval) {
+        clearInterval(window.competitionUpdateInterval);
+        window.competitionUpdateInterval = null;
+    }
+    
+    if (window.competitionTimerInterval) {
+        clearInterval(window.competitionTimerInterval);
+        window.competitionTimerInterval = null;
     }
 }
 
@@ -1289,25 +1368,42 @@ function cleanupCompetitionsPage() {
  */
 window.initializeCompetitionSystem = initializeCompetitionSystem;
 window.loadRealCompetitions = loadRealCompetitions;
+window.loadDemoCompetitions = loadDemoCompetitions;
 window.updateCompetitionsDisplay = updateCompetitionsDisplay;
-window.openEnhancedCompetitionModal = openEnhancedCompetitionModal;
-window.closeCompetitionModal = closeCompetitionModal;
-window.handleCompetitionAction = handleCompetitionAction;
+window.updateCompetitionPageVisibility = updateCompetitionPageVisibility;
+window.openCompetitionModal = openCompetitionModal;
 window.placeBet = placeBet;
 window.initializeCompetitionsPage = initializeCompetitionsPage;
 window.handleWalletConnectionChange = handleWalletConnectionChange;
 window.cleanupCompetitionsPage = cleanupCompetitionsPage;
 
-// For debugging
+// For debugging and development
 window.CompetitionState = CompetitionState;
+window.checkWalletConnection = checkWalletConnection;
 
-console.log('✅ Enhanced Competition.js loaded with real database integration');
-console.log('🚀 Features:');
+// Auto-initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 Competition.js DOM ready, setting up...');
+    
+    // Wait a bit for other services to initialize
+    setTimeout(() => {
+        // Only initialize if we're on the competitions page
+        const competitionsPage = document.getElementById('competitionsPage');
+        if (competitionsPage && competitionsPage.classList.contains('active')) {
+            initializeCompetitionSystem();
+        }
+    }, 1000);
+});
+
+console.log('✅ Enhanced Competition.js loaded successfully');
+console.log('🚀 Available Features:');
 console.log('   ✅ Real Supabase database integration');
-console.log('   ✅ Live competition data with token information');
-console.log('   ✅ Real-time betting and updates');
-console.log('   ✅ User bet tracking and history');
-console.log('   ✅ Wallet integration for predictions');
-console.log('   ✅ Enhanced UI with status-based sections');
-console.log('   ✅ Competition timers and status management');
-console.log('   ✅ Demo mode fallback for development');
+console.log('   ✅ Automatic page structure creation');
+console.log('   ✅ Enhanced wallet connection detection');
+console.log('   ✅ Real-time competition data');
+console.log('   ✅ User bet tracking and placement');
+console.log('   ✅ Live timers and status updates');
+console.log('   ✅ Demo mode fallback');
+console.log('   ✅ Responsive competition cards');
+console.log('   ✅ Notification system');
+console.log('   ✅ Error handling and recovery');
