@@ -189,11 +189,11 @@ async function initializeServicesWithTiming() {
         
         // Initialize PriceService (now uses direct table queries)
         console.log('💰 Initializing PriceService...');
-        const priceSuccess = await initializePriceServiceSafely();
+        const competitionSuccess = await initializeCompetitionSystemSafely();
         if (priceSuccess) {
-            console.log('✅ PriceService ready');
+            console.log('✅ Competition system ready');
         } else {
-            console.log('⚠️ PriceService using demo data');
+            console.log('⚠️ Competition system using demo data');
         }
         
         // Initialize WalletService
@@ -423,26 +423,11 @@ async function initializeTokenServiceSafely() {
     }
 }
 
-// Enhanced PriceService initialization with direct table access
-async function initializePriceServiceSafely() {
-    try {
-        console.log('💰 Initializing PriceService with direct table access...');
-        
-        if (window.PriceService && typeof window.getPriceService === 'function') {
-            priceService = window.getPriceService();
-            const success = await priceService.initialize();
-            
-            return success;
-        } else {
-            console.warn('⚠️ PriceService class not available, using mock');
-            priceService = createMockPriceService();
-            return true;
-        }
-    } catch (error) {
-        console.error('❌ PriceService initialization failed:', error);
-        priceService = createMockPriceService();
-        return true; // Don't block app for price service
-    }
+// Replace PriceService with Competition system
+console.log('🏆 Initializing Competition system...');
+if (window.getCompetitionManager) {
+    const competitionManager = window.getCompetitionManager();
+    await competitionManager.initialize();
 }
 
 // ==============================================
