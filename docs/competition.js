@@ -73,8 +73,23 @@ async function loadRealCompetitions() {
             return;
         }
         
-        // Load user bets if wallet connected
-        if (CompetitionState.walletService?.isConnected()) {
+        // Load user bets if wallet connected (FIXED)
+let isWalletConnected = false;
+try {
+    if (CompetitionState.walletService) {
+        if (typeof CompetitionState.walletService.isConnected === 'function') {
+            isWalletConnected = CompetitionState.walletService.isConnected();
+        } else if (typeof CompetitionState.walletService.getConnectionStatus === 'function') {
+            const status = CompetitionState.walletService.getConnectionStatus();
+            isWalletConnected = status && status.isConnected;
+        }
+    }
+} catch (error) {
+    console.warn('Could not check wallet connection:', error);
+    isWalletConnected = false;
+}
+
+if (isWalletConnected) {
             await loadUserBets();
         }
         
