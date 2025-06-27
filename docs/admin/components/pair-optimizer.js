@@ -1,492 +1,634 @@
 /**
- * PairOptimizer Component - Token Pair Optimization Engine
- * Updated with database integration for approved tokens and pair generation
+ * PairOptimizer Component - ANALYTICS ONLY
+ * Read-only analytics dashboard for token_pairs table - NO generation functionality
  */
 
 class PairOptimizer {
     constructor(adminState) {
         this.adminState = adminState;
         this.isInitialized = false;
-        this.optimizationInterval = null;
+        this.analyticsInterval = null;
         this.performanceChart = null;
-        this.abTestResults = [];
+        this.pairAnalytics = [];
         
-        // Optimization algorithms
-        this.algorithms = {
-            MARKET_CAP_MATCHING: 'market_cap_matching',
-            VOLATILITY_BALANCE: 'volatility_balance',
-            COMMUNITY_INTEREST: 'community_interest',
-            HISTORICAL_PERFORMANCE: 'historical_performance'
+        // Analytics state - NO generation functionality
+        this.analyticsState = {
+            overview: {
+                totalPairs: 0,
+                activePairs: 0,
+                avgMarketCapDiff: 0,
+                avgCompatibility: 0,
+                lastUpdate: null,
+                nextUpdate: 'Edge Function Automated',
+                pairGenerationStatus: 'Automated via Edge Functions'
+            },
+            performance: {
+                successRate: 0,
+                avgEngagement: 0,
+                revenuePerPair: 0,
+                totalGenerated: 0,
+                successful: 0,
+                avgDuration: 0,
+                userSatisfaction: 0
+            },
+            categories: {
+                conservative: 0,
+                balanced: 0,
+                aggressive: 0,
+                experimental: 0
+            },
+            recentActivity: [],
+            topPerformingPairs: [],
+            compatibilityDistribution: {}
         };
         
-        // Pair generation strategies
-        this.strategies = {
-            CONSERVATIVE: 'conservative',
-            BALANCED: 'balanced',
-            AGGRESSIVE: 'aggressive',
-            EXPERIMENTAL: 'experimental'
-        };
-        
-        console.log('PairOptimizer: Component initialized');
+        console.log('PairOptimizer: Component initialized - ANALYTICS ONLY');
     }
 
     /**
-     * Initialize Pair Optimizer Component
+     * Initialize Pair Optimizer Analytics Component
      */
     async initialize() {
         try {
-            console.log('⚡ Initializing Pair Optimizer...');
+            console.log('📈 Initializing Pair Analytics Dashboard...');
             
-            // Load optimization settings
-            await this.loadOptimizationSettings();
+            // Load pair analytics data
+            await this.loadPairAnalyticsData();
+            
+            // Set up analytics monitoring
+            this.startAnalyticsMonitoring();
             
             // Set up event listeners
             this.setupEventListeners();
             
             this.isInitialized = true;
-            console.log('✅ Pair Optimizer initialized successfully');
+            console.log('✅ Pair Analytics Dashboard initialized successfully');
             
             return true;
         } catch (error) {
-            console.error('Failed to initialize Pair Optimizer:', error);
+            console.error('Failed to initialize Pair Analytics Dashboard:', error);
+            this.showAdminNotification('Failed to initialize Pair Analytics Dashboard', 'error');
             return false;
         }
     }
 
     /**
-     * Load Optimization Settings
+     * Load Pair Analytics Data from Database
      */
-    async loadOptimizationSettings() {
-        try {
-            const supabase = this.getSupabase();
-            if (!supabase) {
-                this.setDefaultOptimizationSettings();
-                return;
-            }
-
-            // Try to load from database
-            const { data: settings, error } = await supabase
-                .from('pair_optimization_settings')
-                .select('*')
-                .eq('is_active', true)
-                .single();
-
-            if (error || !settings) {
-                console.warn('Using default optimization settings');
-                this.setDefaultOptimizationSettings();
-                return;
-            }
-
-            this.adminState.pairOptimizationState.algorithm = {
-                ...this.adminState.pairOptimizationState.algorithm,
-                ...settings.algorithm_config
-            };
-
-            console.log('✅ Optimization settings loaded from database');
-            
-        } catch (error) {
-            console.error('Error loading optimization settings:', error);
-            this.setDefaultOptimizationSettings();
-        }
-    }
-
-    /**
-     * Set Default Optimization Settings
-     */
-    setDefaultOptimizationSettings() {
-        this.adminState.pairOptimizationState.algorithm = {
-            marketCapTolerance: 10, // 10% tolerance
-            liquidityMinimum: 30,
-            newTokenPriority: 25,
-            balancedExposure: 75,
-            communityWeight: 40,
-            feedbackWeight: 30,
-            minFeedbackCount: 10
-        };
-    }
-
-    /**
-     * Get Available Tokens from Database
-     */
-    async getAvailableTokens() {
+    async loadPairAnalyticsData() {
         try {
             const supabase = this.getSupabase();
             if (!supabase) {
                 throw new Error('Database connection not available');
             }
 
-            // Get approved tokens with their cache data
-            const { data: approvedTokens, error } = await supabase
-                .from('token_approvals')
-                .select(`
-                    token_address,
-                    token_symbol,
-                    token_name,
-                    token_cache!inner (
-                        current_price,
-                        market_cap_usd,
-                        volume_24h,
-                        price_change_24h,
-                        logo_uri,
-                        data_source
-                    )
-                `)
-                .eq('token_cache.cache_status', 'FRESH')
-                .order('token_cache.market_cap_usd', { ascending: false });
-
-            if (error) {
-                throw error;
-            }
-
-            if (!approvedTokens || approvedTokens.length === 0) {
-                console.warn('No approved tokens found');
-                return [];
-            }
-
-            // Transform data to expected format
-            return approvedTokens.map(item => ({
-                address: item.token_address,
-                symbol: item.token_symbol,
-                name: item.token_name,
-                marketCap: item.token_cache.market_cap_usd,
-                price: item.token_cache.current_price,
-                volume24h: item.token_cache.volume_24h,
-                priceChange24h: item.token_cache.price_change_24h,
-                logoURI: item.token_cache.logo_uri,
-                dataSource: item.token_cache.data_source
-            }));
-
-        } catch (error) {
-            console.error('Error getting available tokens:', error);
-            this.showAdminNotification('Failed to load approved tokens', 'error');
-            return [];
-        }
-    }
-
-    /**
-     * Generate Optimal Pairs
-     */
-    async generateOptimalPairs() {
-        try {
-            console.log('⚡ Generating optimal token pairs...');
-            this.showAdminNotification('Generating optimal pairs...', 'info');
+            console.log('📊 Loading pair analytics data from database...');
             
-            // Get current algorithm settings
-            const settings = this.adminState.pairOptimizationState.algorithm;
+            // Load pair overview data
+            await this.loadPairOverview();
             
-            // Get approved tokens from database
-            const tokens = await this.getAvailableTokens();
-            if (tokens.length < 2) {
-                this.showAdminNotification('Insufficient approved tokens for pair generation', 'warning');
-                return;
-            }
+            // Load pair performance metrics
+            await this.loadPairPerformance();
             
-            console.log(`Found ${tokens.length} approved tokens for pair generation`);
+            // Load recent pair activity
+            await this.loadRecentPairActivity();
             
-            // Generate pairs using market cap matching algorithm
-            const optimalPairs = await this.runPairGenerationAlgorithm(tokens, settings);
+            // Load top performing pairs
+            await this.loadTopPerformingPairs();
             
-            if (optimalPairs.length === 0) {
-                this.showAdminNotification('No compatible pairs found with current settings', 'warning');
-                return;
-            }
+            // Calculate analytics
+            this.calculateAnalytics();
             
-            // Save generated pairs to database
-            await this.savePairsToDatabase(optimalPairs);
-            
-            this.showAdminNotification(
-                `Generated ${optimalPairs.length} optimal pairs successfully`, 
-                'success'
-            );
+            console.log('✅ Pair analytics data loaded successfully');
             
         } catch (error) {
-            console.error('Error generating optimal pairs:', error);
-            this.showAdminNotification('Failed to generate optimal pairs', 'error');
-        }
-    }
-
-    /**
-     * Run Pair Generation Algorithm
-     */
-    async runPairGenerationAlgorithm(tokens, settings) {
-        const pairs = [];
-        const usedTokens = new Set();
-        
-        // Calculate market cap tolerance
-        const tolerance = settings.marketCapTolerance / 100; // Convert percentage to decimal
-        
-        console.log(`Using market cap tolerance: ${settings.marketCapTolerance}%`);
-        
-        // Sort tokens by market cap for efficient pairing
-        const sortedTokens = [...tokens].sort((a, b) => b.marketCap - a.marketCap);
-        
-        for (let i = 0; i < sortedTokens.length - 1; i++) {
-            const tokenA = sortedTokens[i];
-            
-            // Skip if token already used
-            if (usedTokens.has(tokenA.address)) continue;
-            
-            for (let j = i + 1; j < sortedTokens.length; j++) {
-                const tokenB = sortedTokens[j];
-                
-                // Skip if token already used
-                if (usedTokens.has(tokenB.address)) continue;
-                
-                // Calculate market cap ratio
-                const minMarketCap = Math.min(tokenA.marketCap, tokenB.marketCap);
-                const maxMarketCap = Math.max(tokenA.marketCap, tokenB.marketCap);
-                const marketCapDifference = Math.abs(tokenA.marketCap - tokenB.marketCap);
-                const marketCapRatio = marketCapDifference / minMarketCap;
-                
-                // Check if within tolerance
-                if (marketCapRatio <= tolerance) {
-                    const compatibility = this.calculatePairCompatibility(tokenA, tokenB, settings);
-                    
-                    pairs.push({
-                        tokenA,
-                        tokenB,
-                        compatibility,
-                        marketCapRatio,
-                        algorithm: this.algorithms.MARKET_CAP_MATCHING,
-                        strategy: this.determineStrategy(compatibility.score),
-                        generatedAt: new Date()
-                    });
-                    
-                    // Mark tokens as used
-                    usedTokens.add(tokenA.address);
-                    usedTokens.add(tokenB.address);
-                    
-                    console.log(`✅ Paired ${tokenA.symbol} with ${tokenB.symbol} (ratio: ${(marketCapRatio * 100).toFixed(1)}%)`);
-                    break; // Move to next tokenA
-                }
-            }
-        }
-        
-        // Sort pairs by compatibility score
-        return pairs.sort((a, b) => b.compatibility.score - a.compatibility.score);
-    }
-
-    /**
-     * Calculate Pair Compatibility
-     */
-    calculatePairCompatibility(tokenA, tokenB, settings) {
-        let score = 0;
-        const factors = [];
-        
-        // Market cap similarity (already within tolerance, so give high score)
-        const marketCapRatio = Math.min(tokenA.marketCap, tokenB.marketCap) / 
-                              Math.max(tokenA.marketCap, tokenB.marketCap);
-        const marketCapScore = marketCapRatio; // 0 to 1 scale
-        score += marketCapScore * 0.4;
-        factors.push({ factor: 'market_cap', score: marketCapScore });
-        
-        // Volume similarity
-        const volumeRatio = Math.min(tokenA.volume24h, tokenB.volume24h) / 
-                           Math.max(tokenA.volume24h, tokenB.volume24h);
-        const volumeScore = volumeRatio;
-        score += volumeScore * 0.3;
-        factors.push({ factor: 'volume', score: volumeScore });
-        
-        // Price volatility balance
-        const volatilityDiff = Math.abs(Math.abs(tokenA.priceChange24h) - Math.abs(tokenB.priceChange24h));
-        const volatilityScore = Math.max(0, 1 - (volatilityDiff / 100)); // Normalize to 0-1
-        score += volatilityScore * 0.3;
-        factors.push({ factor: 'volatility', score: volatilityScore });
-        
-        return {
-            score: Math.min(score, 1.0),
-            factors,
-            marketCapRatio,
-            volumeRatio,
-            volatilityDiff
-        };
-    }
-
-    /**
-     * Determine Strategy Based on Score
-     */
-    determineStrategy(compatibilityScore) {
-        if (compatibilityScore >= 0.9) return this.strategies.CONSERVATIVE;
-        if (compatibilityScore >= 0.8) return this.strategies.BALANCED;
-        if (compatibilityScore >= 0.7) return this.strategies.AGGRESSIVE;
-        return this.strategies.EXPERIMENTAL;
-    }
-
-    /**
-     * Save Pairs to Database
-     */
-    async savePairsToDatabase(pairs) {
-        try {
-            const supabase = this.getSupabase();
-            if (!supabase) {
-                throw new Error('Database connection not available');
-            }
-
-            const now = new Date().toISOString();
-            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
-            
-            // Prepare pairs for insertion
-            const pairRecords = pairs.map(pair => ({
-                token_a_address: pair.tokenA.address,
-                token_a_symbol: pair.tokenA.symbol,
-                token_a_name: pair.tokenA.name,
-                token_b_address: pair.tokenB.address,
-                token_b_symbol: pair.tokenB.symbol,
-                token_b_name: pair.tokenB.name,
-                market_cap_ratio: pair.marketCapRatio,
-                compatibility_score: pair.compatibility.score,
-                algorithm_used: pair.algorithm,
-                strategy_type: pair.strategy,
-                is_active: true,
-                created_by: adminWallet,
-                created_at: now,
-                last_updated: now,
-                metadata: {
-                    volume_ratio: pair.compatibility.volumeRatio,
-                    volatility_diff: pair.compatibility.volatilityDiff,
-                    factors: pair.compatibility.factors
-                }
-            }));
-
-            // Insert pairs into database
-            const { data, error } = await supabase
-                .from('token_pairs')
-                .insert(pairRecords)
-                .select();
-
-            if (error) {
-                throw error;
-            }
-
-            console.log(`✅ Saved ${data.length} pairs to database`);
-            
-            // Log to admin audit log
-            await this.logAdminAction('pair_generation', {
-                action: 'generate_pairs',
-                pairs_count: data.length,
-                algorithm: this.algorithms.MARKET_CAP_MATCHING,
-                settings: {
-                    marketCapTolerance: this.adminState.pairOptimizationState.algorithm.marketCapTolerance
-                }
-            });
-            
-            return data;
-            
-        } catch (error) {
-            console.error('Error saving pairs to database:', error);
+            console.error('Error loading pair analytics data:', error);
             throw error;
         }
     }
 
     /**
-     * Test Pair Combination
+     * Load Pair Overview from token_pairs Table
      */
-    async testPairCombination() {
+    async loadPairOverview() {
         try {
-            console.log('🧪 Testing pair combination...');
+            const supabase = this.getSupabase();
             
-            // Get test parameters
-            const testConfig = {
-                tokenA: prompt('Enter first token symbol:'),
-                tokenB: prompt('Enter second token symbol:')
-            };
+            // Get all active token pairs
+            const { data: allPairs, error: pairsError } = await supabase
+                .from('token_pairs')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (pairsError) {
+                throw pairsError;
+            }
+
+            this.pairAnalytics = allPairs || [];
             
-            if (!testConfig.tokenA || !testConfig.tokenB) {
-                this.showAdminNotification('Test cancelled - missing token symbols', 'warning');
-                return;
+            // Calculate overview metrics
+            this.analyticsState.overview.totalPairs = this.pairAnalytics.length;
+            this.analyticsState.overview.activePairs = this.pairAnalytics.filter(p => p.is_active).length;
+            
+            // Calculate average market cap difference
+            const marketCapDiffs = this.pairAnalytics
+                .filter(p => p.market_cap_ratio !== null)
+                .map(p => p.market_cap_ratio * 100);
+            
+            this.analyticsState.overview.avgMarketCapDiff = marketCapDiffs.length > 0 ?
+                marketCapDiffs.reduce((sum, diff) => sum + diff, 0) / marketCapDiffs.length : 0;
+            
+            // Calculate average compatibility
+            const compatibilityScores = this.pairAnalytics
+                .filter(p => p.compatibility_score !== null)
+                .map(p => p.compatibility_score);
+            
+            this.analyticsState.overview.avgCompatibility = compatibilityScores.length > 0 ?
+                compatibilityScores.reduce((sum, score) => sum + score, 0) / compatibilityScores.length : 0;
+            
+            // Get last update time
+            if (this.pairAnalytics.length > 0) {
+                const lastUpdate = this.pairAnalytics[0].created_at;
+                this.analyticsState.overview.lastUpdate = lastUpdate;
             }
             
-            // Get tokens from database
-            const tokens = await this.getAvailableTokens();
-            const tokenA = tokens.find(t => t.symbol.toUpperCase() === testConfig.tokenA.toUpperCase());
-            const tokenB = tokens.find(t => t.symbol.toUpperCase() === testConfig.tokenB.toUpperCase());
-            
-            if (!tokenA || !tokenB) {
-                this.showAdminNotification('One or both tokens not found in approved list', 'error');
-                return;
-            }
-            
-            // Calculate compatibility
-            const settings = this.adminState.pairOptimizationState.algorithm;
-            const compatibility = this.calculatePairCompatibility(tokenA, tokenB, settings);
-            
-            // Calculate market cap ratio
-            const minMarketCap = Math.min(tokenA.marketCap, tokenB.marketCap);
-            const marketCapDifference = Math.abs(tokenA.marketCap - tokenB.marketCap);
-            const marketCapRatio = marketCapDifference / minMarketCap;
-            const withinTolerance = marketCapRatio <= (settings.marketCapTolerance / 100);
-            
-            // Show test results
-            this.showTestResults({
-                tokenA,
-                tokenB,
-                compatibility,
-                marketCapRatio,
-                withinTolerance,
-                tolerance: settings.marketCapTolerance
-            });
+            console.log(`✅ Loaded ${this.pairAnalytics.length} token pairs for analytics`);
             
         } catch (error) {
-            console.error('Error testing pair combination:', error);
-            this.showAdminNotification('Pair combination test failed', 'error');
+            console.error('Error loading pair overview:', error);
+            throw error;
         }
     }
 
     /**
-     * Show Test Results
+     * Load Pair Performance Metrics
      */
-    showTestResults(results) {
+    async loadPairPerformance() {
+        try {
+            const supabase = this.getSupabase();
+            
+            // Get competitions that used these pairs to calculate performance
+            const { data: competitions, error: compError } = await supabase
+                .from('competitions')
+                .select('*')
+                .in('status', ['COMPLETED', 'RESOLVED'])
+                .order('created_at', { ascending: false })
+                .limit(100);
+
+            if (compError) {
+                console.warn('Could not load competition data for performance metrics:', compError);
+                return;
+            }
+
+            if (competitions && competitions.length > 0) {
+                // Calculate performance metrics from completed competitions
+                const totalCompetitions = competitions.length;
+                const successfulCompetitions = competitions.filter(c => c.winner_token).length;
+                
+                this.analyticsState.performance.successRate = totalCompetitions > 0 ?
+                    (successfulCompetitions / totalCompetitions) * 100 : 0;
+                
+                // Calculate average pool size as engagement metric
+                const avgPoolSize = competitions
+                    .filter(c => c.total_pool)
+                    .reduce((sum, c) => sum + (c.total_pool || 0), 0) / totalCompetitions;
+                
+                this.analyticsState.performance.avgEngagement = avgPoolSize || 0;
+                
+                // Calculate revenue per pair (platform fees collected)
+                const totalRevenue = competitions
+                    .reduce((sum, c) => sum + (c.platform_fee_collected || 0), 0);
+                
+                this.analyticsState.performance.revenuePerPair = this.analyticsState.overview.totalPairs > 0 ?
+                    totalRevenue / this.analyticsState.overview.totalPairs : 0;
+                
+                this.analyticsState.performance.totalGenerated = this.analyticsState.overview.totalPairs;
+                this.analyticsState.performance.successful = successfulCompetitions;
+            }
+            
+            console.log('✅ Pair performance metrics calculated');
+            
+        } catch (error) {
+            console.error('Error loading pair performance:', error);
+            // Don't throw - performance metrics are optional
+        }
+    }
+
+    /**
+     * Load Recent Pair Activity
+     */
+    async loadRecentPairActivity() {
+        try {
+            // Get recent pair activity (last 10 pairs created)
+            const recentPairs = this.pairAnalytics
+                .slice(0, 10)
+                .map(pair => ({
+                    tokenA: pair.token_a_symbol,
+                    tokenB: pair.token_b_symbol,
+                    compatibility: pair.compatibility_score,
+                    category: pair.category,
+                    createdAt: pair.created_at,
+                    usageCount: pair.usage_count || 0
+                }));
+            
+            this.analyticsState.recentActivity = recentPairs;
+            console.log(`✅ Loaded ${recentPairs.length} recent pair activities`);
+            
+        } catch (error) {
+            console.error('Error loading recent pair activity:', error);
+        }
+    }
+
+    /**
+     * Load Top Performing Pairs
+     */
+    async loadTopPerformingPairs() {
+        try {
+            // Sort pairs by usage count and compatibility score
+            const topPairs = this.pairAnalytics
+                .filter(pair => pair.usage_count > 0 || pair.compatibility_score > 0)
+                .sort((a, b) => {
+                    const scoreA = (a.usage_count || 0) * 0.6 + (a.compatibility_score || 0) * 0.4;
+                    const scoreB = (b.usage_count || 0) * 0.6 + (b.compatibility_score || 0) * 0.4;
+                    return scoreB - scoreA;
+                })
+                .slice(0, 10)
+                .map(pair => ({
+                    tokenA: pair.token_a_symbol,
+                    tokenB: pair.token_b_symbol,
+                    compatibility: pair.compatibility_score,
+                    usageCount: pair.usage_count || 0,
+                    lastUsed: pair.last_used,
+                    category: pair.category,
+                    marketCapRatio: pair.market_cap_ratio
+                }));
+            
+            this.analyticsState.topPerformingPairs = topPairs;
+            console.log(`✅ Loaded ${topPairs.length} top performing pairs`);
+            
+        } catch (error) {
+            console.error('Error loading top performing pairs:', error);
+        }
+    }
+
+    /**
+     * Calculate Additional Analytics
+     */
+    calculateAnalytics() {
+        try {
+            // Calculate category distribution
+            const categories = this.pairAnalytics.reduce((acc, pair) => {
+                const category = pair.category || 'unknown';
+                acc[category] = (acc[category] || 0) + 1;
+                return acc;
+            }, {});
+            
+            this.analyticsState.categories = {
+                conservative: categories.conservative || 0,
+                balanced: categories.balanced || 0,
+                aggressive: categories.aggressive || 0,
+                experimental: categories.experimental || 0
+            };
+            
+            // Calculate compatibility distribution
+            const compatibilityRanges = {
+                excellent: 0, // 90-100%
+                good: 0,      // 70-89%
+                fair: 0,      // 50-69%
+                poor: 0       // <50%
+            };
+            
+            this.pairAnalytics.forEach(pair => {
+                const score = pair.compatibility_score || 0;
+                if (score >= 90) compatibilityRanges.excellent++;
+                else if (score >= 70) compatibilityRanges.good++;
+                else if (score >= 50) compatibilityRanges.fair++;
+                else compatibilityRanges.poor++;
+            });
+            
+            this.analyticsState.compatibilityDistribution = compatibilityRanges;
+            
+            console.log('✅ Additional analytics calculated');
+            
+        } catch (error) {
+            console.error('Error calculating analytics:', error);
+        }
+    }
+
+    /**
+     * Start Analytics Monitoring
+     */
+    startAnalyticsMonitoring() {
+        try {
+            // Refresh analytics every 5 minutes
+            this.analyticsInterval = setInterval(async () => {
+                try {
+                    await this.refreshAnalytics();
+                } catch (error) {
+                    console.error('Analytics monitoring error:', error);
+                }
+            }, 5 * 60 * 1000);
+
+            console.log('✅ Analytics monitoring started');
+            
+        } catch (error) {
+            console.error('Failed to start analytics monitoring:', error);
+        }
+    }
+
+    /**
+     * Refresh Analytics Data
+     */
+    async refreshAnalytics() {
+        try {
+            console.log('🔄 Refreshing pair analytics...');
+            await this.loadPairAnalyticsData();
+            this.updateAnalyticsDisplay();
+            console.log('✅ Pair analytics refreshed');
+            
+        } catch (error) {
+            console.error('Error refreshing analytics:', error);
+        }
+    }
+
+    /**
+     * Update Analytics Display
+     */
+    updateAnalyticsDisplay() {
+        try {
+            // Update overview metrics
+            this.updateElement('total-pairs', this.analyticsState.overview.totalPairs);
+            this.updateElement('active-pairs-count', this.analyticsState.overview.activePairs);
+            this.updateElement('avg-market-cap-diff', this.analyticsState.overview.avgMarketCapDiff.toFixed(1) + '%');
+            this.updateElement('avg-compatibility', this.analyticsState.overview.avgCompatibility.toFixed(1) + '%');
+            
+            // Update status information
+            this.updateElement('last-pair-update', this.formatRelativeTime(this.analyticsState.overview.lastUpdate));
+            this.updateElement('next-pair-update', this.analyticsState.overview.nextUpdate);
+            
+            // Update pair analytics table
+            this.updatePairAnalyticsTable();
+            
+            // Update performance chart if needed
+            this.updatePerformanceChart();
+            
+            console.log('✅ Analytics display updated');
+            
+        } catch (error) {
+            console.error('Error updating analytics display:', error);
+        }
+    }
+
+    /**
+     * Update Pair Analytics Table
+     */
+    updatePairAnalyticsTable() {
+        const tbody = document.getElementById('pairs-analytics-tbody');
+        if (!tbody) return;
+        
+        if (this.pairAnalytics.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No pair data available</td></tr>';
+            return;
+        }
+        
+        // Show first 20 pairs
+        const displayPairs = this.pairAnalytics.slice(0, 20);
+        
+        tbody.innerHTML = displayPairs.map(pair => `
+            <tr>
+                <td>
+                    <div style="font-weight: 600;">${pair.token_a_symbol}</div>
+                    <div style="font-size: 0.875rem; color: #94a3b8;">${pair.token_a_name || 'N/A'}</div>
+                </td>
+                <td>
+                    <div style="font-weight: 600;">${pair.token_b_symbol}</div>
+                    <div style="font-size: 0.875rem; color: #94a3b8;">${pair.token_b_name || 'N/A'}</div>
+                </td>
+                <td>${pair.market_cap_ratio ? (pair.market_cap_ratio * 100).toFixed(1) + '%' : 'N/A'}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 60px; height: 4px; background: #e5e7eb; border-radius: 2px;">
+                            <div style="width: ${(pair.compatibility_score || 0)}%; height: 100%; background: ${this.getCompatibilityColor(pair.compatibility_score)}; border-radius: 2px;"></div>
+                        </div>
+                        <span>${pair.compatibility_score ? pair.compatibility_score.toFixed(1) + '%' : 'N/A'}</span>
+                    </div>
+                </td>
+                <td><span class="status-badge ${pair.category || 'unknown'}">${pair.category || 'Unknown'}</span></td>
+                <td>${this.formatRelativeTime(pair.created_at)}</td>
+                <td>
+                    <div>Used: ${pair.usage_count || 0} times</div>
+                    ${pair.last_used ? `<div style="font-size: 0.875rem; color: #94a3b8;">Last: ${this.formatRelativeTime(pair.last_used)}</div>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    /**
+     * Get Compatibility Color for Progress Bar
+     */
+    getCompatibilityColor(score) {
+        if (!score) return '#6b7280';
+        if (score >= 90) return '#22c55e';
+        if (score >= 70) return '#3b82f6';
+        if (score >= 50) return '#f59e0b';
+        return '#ef4444';
+    }
+
+    /**
+     * Update Performance Chart
+     */
+    updatePerformanceChart() {
+        try {
+            const canvas = document.getElementById('pair-performance-chart');
+            if (!canvas) return;
+            
+            // Destroy existing chart
+            if (this.performanceChart) {
+                this.performanceChart.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Create compatibility distribution chart
+            this.performanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Excellent (90%+)', 'Good (70-89%)', 'Fair (50-69%)', 'Poor (<50%)'],
+                    datasets: [{
+                        data: [
+                            this.analyticsState.compatibilityDistribution.excellent,
+                            this.analyticsState.compatibilityDistribution.good,
+                            this.analyticsState.compatibilityDistribution.fair,
+                            this.analyticsState.compatibilityDistribution.poor
+                        ],
+                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderColor: '#1f2937',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Pair Compatibility Distribution',
+                            color: '#f3f4f6'
+                        },
+                        legend: {
+                            labels: {
+                                color: '#f3f4f6'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('✅ Performance chart updated');
+            
+        } catch (error) {
+            console.error('Error updating performance chart:', error);
+        }
+    }
+
+    /**
+     * Export Pair Analytics
+     */
+    async exportPairAnalytics() {
+        try {
+            console.log('📤 Exporting pair analytics...');
+            this.showAdminNotification('Preparing analytics export...', 'info');
+            
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                overview: this.analyticsState.overview,
+                performance: this.analyticsState.performance,
+                categories: this.analyticsState.categories,
+                compatibilityDistribution: this.analyticsState.compatibilityDistribution,
+                recentActivity: this.analyticsState.recentActivity,
+                topPerformingPairs: this.analyticsState.topPerformingPairs,
+                allPairs: this.pairAnalytics.map(pair => ({
+                    tokenA: pair.token_a_symbol,
+                    tokenB: pair.token_b_symbol,
+                    compatibility: pair.compatibility_score,
+                    marketCapRatio: pair.market_cap_ratio,
+                    category: pair.category,
+                    usageCount: pair.usage_count,
+                    created: pair.created_at,
+                    lastUsed: pair.last_used
+                }))
+            };
+            
+            // Create and download file
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tokenwars-pair-analytics-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showAdminNotification('Analytics exported successfully', 'success');
+            
+            // Log admin action
+            await this.logAdminAction('analytics_export', {
+                action: 'export_pair_analytics',
+                export_type: 'full_analytics',
+                pairs_count: this.pairAnalytics.length,
+                admin_wallet: sessionStorage.getItem('adminWallet') || 'admin'
+            });
+            
+        } catch (error) {
+            console.error('Error exporting analytics:', error);
+            this.showAdminNotification('Export failed', 'error');
+        }
+    }
+
+    /**
+     * View Detailed Pair Analysis
+     */
+    async viewDetailedAnalysis() {
+        try {
+            this.showDetailedAnalysisModal();
+            
+        } catch (error) {
+            console.error('Error viewing detailed analysis:', error);
+            this.showAdminNotification('Failed to load detailed analysis', 'error');
+        }
+    }
+
+    /**
+     * Show Detailed Analysis Modal
+     */
+    showDetailedAnalysisModal() {
         const modalHtml = `
-            <div class="modal" id="test-results-modal">
-                <div class="modal-content">
+            <div class="modal" id="detailed-analysis-modal">
+                <div class="modal-content" style="max-width: 1200px;">
                     <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
-                    <h3>🧪 Pair Combination Test Results</h3>
+                    <h3>📈 Detailed Pair Analysis</h3>
                     
-                    <div style="margin: 1rem 0;">
-                        <h4>Token Pair</h4>
-                        <p><strong>${results.tokenA.symbol}</strong> (MC: $${this.formatNumber(results.tokenA.marketCap)}) 
-                           vs 
-                           <strong>${results.tokenB.symbol}</strong> (MC: $${this.formatNumber(results.tokenB.marketCap)})</p>
-                    </div>
-                    
-                    <div style="margin: 1rem 0;">
-                        <h4>Market Cap Analysis</h4>
-                        <p><strong>Market Cap Difference:</strong> ${(results.marketCapRatio * 100).toFixed(1)}%</p>
-                        <p><strong>Tolerance Setting:</strong> ${results.tolerance}%</p>
-                        <p><strong>Within Tolerance:</strong> 
-                            <span class="status-badge ${results.withinTolerance ? 'active' : 'inactive'}">
-                                ${results.withinTolerance ? 'YES ✅' : 'NO ❌'}
-                            </span>
-                        </p>
-                    </div>
-                    
-                    <div style="margin: 1rem 0;">
-                        <h4>Compatibility Score</h4>
-                        <p><strong>Overall Score:</strong> ${(results.compatibility.score * 100).toFixed(1)}%</p>
-                        <div style="margin-top: 0.5rem;">
-                            ${results.compatibility.factors.map(factor => `
-                                <div style="display: flex; justify-content: space-between; margin: 0.25rem 0;">
-                                    <span>${factor.factor.replace('_', ' ').toUpperCase()}:</span>
-                                    <span>${(factor.score * 100).toFixed(1)}%</span>
-                                </div>
-                            `).join('')}
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                        <div class="metric-card">
+                            <h4>Performance Summary</h4>
+                            <p><strong>Success Rate:</strong> ${this.analyticsState.performance.successRate.toFixed(1)}%</p>
+                            <p><strong>Avg Engagement:</strong> ${this.analyticsState.performance.avgEngagement.toFixed(2)} SOL</p>
+                            <p><strong>Revenue per Pair:</strong> ${this.analyticsState.performance.revenuePerPair.toFixed(3)} SOL</p>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <h4>Category Distribution</h4>
+                            <p><strong>Conservative:</strong> ${this.analyticsState.categories.conservative}</p>
+                            <p><strong>Balanced:</strong> ${this.analyticsState.categories.balanced}</p>
+                            <p><strong>Aggressive:</strong> ${this.analyticsState.categories.aggressive}</p>
+                            <p><strong>Experimental:</strong> ${this.analyticsState.categories.experimental}</p>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <h4>Compatibility Ranges</h4>
+                            <p><strong>Excellent (90%+):</strong> ${this.analyticsState.compatibilityDistribution.excellent}</p>
+                            <p><strong>Good (70-89%):</strong> ${this.analyticsState.compatibilityDistribution.good}</p>
+                            <p><strong>Fair (50-69%):</strong> ${this.analyticsState.compatibilityDistribution.fair}</p>
+                            <p><strong>Poor (<50%):</strong> ${this.analyticsState.compatibilityDistribution.poor}</p>
                         </div>
                     </div>
                     
-                    <div style="margin: 1rem 0;">
-                        <h4>Recommendation</h4>
-                        <p class="status-badge ${results.withinTolerance && results.compatibility.score >= 0.7 ? 'active' : 
-                                                results.withinTolerance && results.compatibility.score >= 0.5 ? 'warning' : 
-                                                'inactive'}">
-                            ${results.withinTolerance ? 
-                                (results.compatibility.score >= 0.7 ? 'Excellent pair - highly recommended' :
-                                 results.compatibility.score >= 0.5 ? 'Good pair - acceptable' :
-                                 'Poor compatibility - not recommended') :
-                                'Market cap difference exceeds tolerance'}
-                        </p>
+                    <div style="margin: 2rem 0;">
+                        <h4>🏆 Top Performing Pairs</h4>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Pair</th>
+                                        <th>Compatibility</th>
+                                        <th>Usage Count</th>
+                                        <th>Category</th>
+                                        <th>Last Used</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${this.analyticsState.topPerformingPairs.map(pair => `
+                                        <tr>
+                                            <td><strong>${pair.tokenA}</strong> vs <strong>${pair.tokenB}</strong></td>
+                                            <td>${pair.compatibility ? pair.compatibility.toFixed(1) + '%' : 'N/A'}</td>
+                                            <td>${pair.usageCount}</td>
+                                            <td><span class="status-badge ${pair.category}">${pair.category}</span></td>
+                                            <td>${pair.lastUsed ? this.formatRelativeTime(pair.lastUsed) : 'Never'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     
-                    <div style="text-align: right; margin-top: 2rem;">
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="window.PairOptimizer.instance.exportPairAnalytics()">
+                            📤 Export Analytics
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.PairOptimizer.instance.refreshAnalytics()">
+                            🔄 Refresh Data
+                        </button>
                         <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
                             Close
                         </button>
@@ -496,77 +638,6 @@ class PairOptimizer {
         `;
         
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
-
-    /**
-     * Save Optimization Settings
-     */
-    async saveOptimizationSettings() {
-        try {
-            console.log('💾 Saving optimization settings...');
-            
-            // Get values from form
-            const settings = this.getSettingsFromForm();
-            
-            // Update state
-            this.adminState.pairOptimizationState.algorithm = {
-                ...this.adminState.pairOptimizationState.algorithm,
-                ...settings
-            };
-            
-            // Save to database
-            const supabase = this.getSupabase();
-            if (supabase) {
-                await supabase
-                    .from('pair_optimization_settings')
-                    .upsert({
-                        id: 1,
-                        algorithm_config: this.adminState.pairOptimizationState.algorithm,
-                        is_active: true,
-                        updated_at: new Date().toISOString(),
-                        updated_by: sessionStorage.getItem('adminWallet') || 'admin'
-                    });
-                
-                // Log action
-                await this.logAdminAction('settings_update', {
-                    action: 'update_pair_optimization_settings',
-                    settings: settings
-                });
-            }
-            
-            this.showAdminNotification('Optimization settings saved successfully', 'success');
-            
-        } catch (error) {
-            console.error('Error saving optimization settings:', error);
-            this.showAdminNotification('Failed to save settings', 'error');
-        }
-    }
-
-    /**
-     * Get Settings from Form
-     */
-    getSettingsFromForm() {
-        const settings = {};
-        
-        const sliders = [
-            'market-cap-tolerance',
-            'liquidity-minimum',
-            'new-token-priority',
-            'balanced-exposure',
-            'community-weight',
-            'feedback-weight',
-            'min-feedback-count'
-        ];
-        
-        sliders.forEach(sliderId => {
-            const slider = document.getElementById(sliderId);
-            if (slider) {
-                const key = sliderId.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                settings[key] = parseInt(slider.value);
-            }
-        });
-        
-        return settings;
     }
 
     /**
@@ -583,11 +654,11 @@ class PairOptimizer {
                 .from('admin_audit_log')
                 .insert({
                     admin_id: adminWallet,
-                    action_type: actionType,
+                    action: actionType,
                     action_data: actionData,
                     ip_address: 'web-client',
                     user_agent: navigator.userAgent,
-                    created_at: new Date().toISOString()
+                    timestamp: new Date().toISOString()
                 });
 
             console.log(`📝 Admin action logged: ${actionType}`);
@@ -601,52 +672,18 @@ class PairOptimizer {
      * Setup Event Listeners
      */
     setupEventListeners() {
-        // Optimization actions
+        // Analytics actions
         document.addEventListener('click', (e) => {
-            if (e.target.onclick?.toString().includes('generateOptimalPairs')) {
-                this.generateOptimalPairs();
-            } else if (e.target.onclick?.toString().includes('testPairCombination')) {
-                this.testPairCombination();
-            } else if (e.target.onclick?.toString().includes('saveOptimizationSettings')) {
-                this.saveOptimizationSettings();
-            } else if (e.target.onclick?.toString().includes('resetToDefaults')) {
-                this.resetToDefaults();
+            if (e.target.onclick?.toString().includes('exportPairAnalytics')) {
+                this.exportPairAnalytics();
+            } else if (e.target.onclick?.toString().includes('viewDetailedAnalysis')) {
+                this.viewDetailedAnalysis();
+            } else if (e.target.onclick?.toString().includes('refreshPairAnalytics')) {
+                this.refreshAnalytics();
             }
         });
 
-        console.log('✅ Pair optimizer event listeners set up');
-    }
-
-    /**
-     * Reset to Defaults
-     */
-    resetToDefaults() {
-        if (!confirm('🔄 Reset all optimization settings to defaults?')) {
-            return;
-        }
-        
-        this.setDefaultOptimizationSettings();
-        this.updateAlgorithmSettingsDisplay();
-        
-        this.showAdminNotification('Settings reset to defaults', 'warning');
-        console.log('🔄 Optimization settings reset to defaults');
-    }
-
-    /**
-     * Update Algorithm Settings Display
-     */
-    updateAlgorithmSettingsDisplay() {
-        const settings = this.adminState.pairOptimizationState.algorithm;
-        
-        Object.entries(settings).forEach(([key, value]) => {
-            const elementId = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-            const slider = document.getElementById(elementId);
-            
-            if (slider) {
-                slider.value = value;
-                slider.dispatchEvent(new Event('input'));
-            }
-        });
+        console.log('✅ Pair analytics event listeners set up');
     }
 
     // ===== UTILITY FUNCTIONS =====
@@ -671,17 +708,28 @@ class PairOptimizer {
     }
 
     /**
-     * Format Number
+     * Update Element Helper
      */
-    formatNumber(num) {
-        if (num >= 1000000000) {
-            return (num / 1000000000).toFixed(1) + 'B';
-        } else if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
         }
-        return num.toString();
+    }
+
+    /**
+     * Format Relative Time
+     */
+    formatRelativeTime(dateString) {
+        if (!dateString) return 'Never';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
     }
 
     /**
@@ -699,9 +747,9 @@ class PairOptimizer {
      * Cleanup
      */
     cleanup() {
-        if (this.optimizationInterval) {
-            clearInterval(this.optimizationInterval);
-            this.optimizationInterval = null;
+        if (this.analyticsInterval) {
+            clearInterval(this.analyticsInterval);
+            this.analyticsInterval = null;
         }
         
         if (this.performanceChart) {
@@ -709,7 +757,7 @@ class PairOptimizer {
             this.performanceChart = null;
         }
         
-        console.log('🧹 Pair Optimizer cleaned up');
+        console.log('🧹 Pair Analytics cleaned up');
     }
 }
 
@@ -719,4 +767,11 @@ PairOptimizer.instance = null;
 // Export for global use
 window.PairOptimizer = PairOptimizer;
 
-console.log('✅ PairOptimizer component loaded with database integration');
+console.log('✅ PairOptimizer component loaded - ANALYTICS ONLY');
+console.log('📈 Features:');
+console.log('   📊 Read-only analytics dashboard for token_pairs table');
+console.log('   🚫 NO pair generation functionality (handled by edge functions)');
+console.log('   📈 Compatibility distribution and performance metrics');
+console.log('   🏆 Top performing pairs analysis');
+console.log('   📤 Analytics export functionality');
+console.log('   ⏰ Real-time monitoring and refresh capabilities');
