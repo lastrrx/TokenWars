@@ -156,8 +156,17 @@
         <!-- COMPETITIONS PAGE -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
-                <!-- Disconnected User View -->
-                <div id="competitionsDisconnected">
+                <!-- Always show competitions - wallet connection only affects betting -->
+                <div id="competitionsConnected">
+                    <!-- Competition.js will create the structure here -->
+                    <div class="loading-competitions">
+                        <div class="loading-spinner"></div>
+                        <p>Loading competitions...</p>
+                    </div>
+                </div>
+
+                <!-- Hidden disconnected view - not used anymore -->
+                <div id="competitionsDisconnected" style="display: none;">
                     <section class="section">
                         <div class="container">
                             <div class="section-header">
@@ -175,15 +184,6 @@
                             </div>
                         </div>
                     </section>
-                </div>
-
-                <!-- Connected User View - Initially Empty, Competition.js Will Populate -->
-                <div id="competitionsConnected" style="display: none;">
-                    <!-- Competition.js will create the structure here -->
-                    <div class="loading-competitions">
-                        <div class="loading-spinner"></div>
-                        <p>Loading competitions...</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -2392,8 +2392,17 @@
             box-shadow: 0 0 8px var(--accent-green);
         }
 
-        .data-dot.demo {
-            background: var(--gold);
+        /* Connect wallet required button styling */
+        .bet-button.connect-wallet-required {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            border: 2px solid var(--accent-blue);
+        }
+
+        .bet-button.connect-wallet-required:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
         }
 
         /* Loading states */
