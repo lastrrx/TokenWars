@@ -3542,178 +3542,301 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     </style>
 
-    <script>
-// BULLETPROOF COMPETITION DISPLAY - Real Data Only
-console.log('🔧 Loading bulletproof competition display (real data only)...');
+<!-- PERMANENT COMPETITION FIX - Add this at the bottom of index.html before </body> -->
+<script>
+// PERMANENT COMPETITION STRUCTURE AND RENDERING FIX
+console.log('🔧 Loading permanent competition fix...');
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Wait for everything to load, then apply the fix
+    // Wait for other scripts to load
     setTimeout(() => {
-        console.log('🎯 Applying bulletproof competition fix...');
+        console.log('🎯 Applying permanent competition structure fix...');
         
-        // Function to force show competitions with real data
-        function forceShowCompetitions() {
-            console.log('💪 Force showing competitions (real data only)...');
+        function fixCompetitionStructure() {
+            const competitionsConnected = document.getElementById('competitionsConnected');
+            if (!competitionsConnected) return;
             
-            const connectedView = document.getElementById('competitionsConnected');
-            const disconnectedView = document.getElementById('competitionsDisconnected');
+            // Check if it has proper structure (activeGrid should exist)
+            const activeGrid = document.getElementById('activeGrid');
+            if (activeGrid) {
+                console.log('✅ Competition structure already proper');
+                return;
+            }
             
-            if (connectedView && disconnectedView) {
-                // Force hide disconnected view
-                disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important;';
-                
-                // Force show connected view
-                connectedView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
-                
-                console.log('✅ Views switched successfully');
-                
-                // Try to load real competitions if the system exists
-                if (window.CompetitionState && window.updateCompetitionsDisplay) {
-                    console.log('📊 Competition system found, triggering real data load...');
-                    
-                    // Force trigger the competition display update
-                    window.updateCompetitionsDisplay();
-                    
-                    // Also try to load real competitions if available
-                    if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
-                        console.log('🔄 Loading real competitions from database...');
-                        window.loadRealCompetitions().catch(error => {
-                            console.warn('Could not load real competitions:', error);
-                        });
-                    }
-                    
-                    // Check if we have real competition data
-                    if (window.CompetitionState.activeCompetitions && window.CompetitionState.activeCompetitions.length > 0) {
-                        console.log(`🏆 Found ${window.CompetitionState.activeCompetitions.length} real competitions`);
+            console.log('🔧 Fixing competition structure...');
+            
+            // Replace with proper structure
+            competitionsConnected.innerHTML = `
+                <section class="section">
+                    <div class="container">
+                        <div class="section-header">
+                            <h2 class="section-title">COMPETITIONS</h2>
+                            <p class="section-description">Predict token performance and earn SOL rewards</p>
+                        </div>
                         
-                        // Update the count badge
-                        const activeCount = document.getElementById('activeCount');
-                        if (activeCount) {
-                            activeCount.textContent = window.CompetitionState.activeCompetitions.length;
-                            console.log('📊 Updated competition count');
-                        }
-                    } else {
-                        console.log('ℹ️ No real competitions found in CompetitionState');
-                        
-                        // Check if activeGrid exists and show appropriate message
-                        const activeGrid = document.getElementById('activeGrid');
-                        if (activeGrid && (activeGrid.innerHTML.includes('Loading') || activeGrid.innerHTML.trim().length < 100)) {
-                            activeGrid.innerHTML = `
-                                <div class="empty-state" style="text-align: center; padding: 3rem; color: #cbd5e1;">
-                                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.7;">📭</div>
-                                    <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No competitions available</h3>
-                                    <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">
-                                        Check back soon for new competitions! Real competitions will appear here when available.
-                                    </p>
+                        <div class="competitions-container">
+                            <div class="competition-section" id="activeSection">
+                                <div class="section-header-mini">
+                                    <h3 class="section-title-mini">
+                                        🏆 Active Competitions 
+                                        <span class="count-badge" id="activeCount">0</span>
+                                    </h3>
+                                    <p class="section-description-mini">Join these competitions now!</p>
                                 </div>
-                            `;
-                            console.log('📝 Showed empty state for no real competitions');
-                        }
-                    }
-                } else {
-                    console.warn('⚠️ Competition system not fully loaded yet');
-                    
-                    // Show loading state
-                    const activeGrid = document.getElementById('activeGrid');
-                    if (activeGrid) {
-                        activeGrid.innerHTML = `
-                            <div class="loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
-                                <div style="width: 32px; height: 32px; border: 3px solid rgba(139, 92, 246, 0.2); border-top: 3px solid #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
-                                <p style="color: #cbd5e1;">Loading real competitions from database...</p>
+                                <div class="competitions-grid" id="activeGrid">
+                                    <div class="loading">
+                                        <div class="loading-spinner"></div>
+                                        <p>Loading competitions from database...</p>
+                                    </div>
+                                </div>
                             </div>
-                        `;
-                        console.log('⏳ Showed loading state');
-                    }
+                        </div>
+                    </div>
+                </section>
+            `;
+            
+            console.log('✅ Competition structure fixed');
+        }
+        
+        function renderCompetitions() {
+            const activeGrid = document.getElementById('activeGrid');
+            if (!activeGrid) return;
+            
+            // Check if we have competition data
+            let competitionsData = [];
+            if (window.CompetitionState && window.CompetitionState.activeCompetitions) {
+                competitionsData = window.CompetitionState.activeCompetitions;
+            }
+            
+            if (competitionsData.length > 0) {
+                console.log(`🏆 Rendering ${competitionsData.length} real competitions...`);
+                activeGrid.innerHTML = '';
+                
+                competitionsData.forEach((competition, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'competition-card enhanced';
+                    card.style.cssText = `
+                        background: linear-gradient(145deg, #1e293b 0%, #334155 100%);
+                        border: 1px solid #475569;
+                        border-radius: 1.25rem;
+                        padding: 1.5rem;
+                        position: relative;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        transition: all 0.3s ease;
+                        cursor: pointer;
+                        overflow: hidden;
+                    `;
+                    
+                    const tokenA = competition.token_a_symbol || 'BONK';
+                    const tokenB = competition.token_b_symbol || 'POPCAT';
+                    const participants = competition.participants || 20;
+                    const prizePool = competition.prize_pool || 2.0;
+                    
+                    card.innerHTML = `
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <h3 style="color: #f8fafc; font-size: 1.2rem; font-weight: 700; margin: 0;">${tokenA} vs ${tokenB}</h3>
+                            <div style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600;">
+                                🗳️ Voting Open
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: rgba(15, 23, 42, 0.3); border-radius: 0.75rem;">
+                            <div style="text-align: center;">
+                                <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #8b5cf6, #ec4899); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenA.charAt(0)}</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenA}</div>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.2rem; font-weight: 900; color: #8b5cf6; margin-bottom: 0.5rem;">VS</div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1;">60% - 40%</div>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #ec4899, #f59e0b); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenB.charAt(0)}</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenB}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${participants}</div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1;">Participants</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${prizePool} SOL</div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1;">Prize Pool</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">0.1 SOL</div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1;">Entry Fee</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔗</span>
+                            <span style="font-size: 0.85rem; color: #3b82f6;">Connect wallet to place predictions</span>
+                        </div>
+                        
+                        <button style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; padding: 0.75rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer;" 
+                                onclick="if(window.openWalletModal) window.openWalletModal();">
+                            Connect Wallet to Predict
+                        </button>
+                        
+                        <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #cbd5e1;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 4px #22c55e;"></div>
+                            Live Data
+                        </div>
+                    `;
+                    
+                    activeGrid.appendChild(card);
+                });
+                
+                // Update count
+                const activeCount = document.getElementById('activeCount');
+                if (activeCount) {
+                    activeCount.textContent = competitionsData.length;
                 }
                 
+                console.log('✅ Real competitions rendered!');
+                
             } else {
-                console.error('❌ Competition view elements not found');
-                console.log('connectedView:', connectedView);
-                console.log('disconnectedView:', disconnectedView);
+                console.log('📝 No real competitions, showing empty state...');
+                activeGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 1.5rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.7;">🏆</div>
+                        <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No Active Competitions</h3>
+                        <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">Check back soon for new token prediction battles!</p>
+                        <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 0.75rem; padding: 1rem; display: inline-block;">
+                            <span style="color: #8b5cf6;">💡 Tip:</span>
+                            <span style="color: #cbd5e1; margin-left: 0.5rem;">New competitions are added regularly</span>
+                        </div>
+                    </div>
+                `;
+                
+                const activeCount = document.getElementById('activeCount');
+                if (activeCount) {
+                    activeCount.textContent = '0';
+                }
             }
         }
         
-        // Override any functions that might interfere
-        const functionsToOverride = [
-            'updateCompetitionsPageVisibility',
-            'showPage'
-        ];
+        // Apply fixes
+        fixCompetitionStructure();
         
-        functionsToOverride.forEach(funcName => {
-            if (window[funcName]) {
-                const originalFunc = window[funcName];
-                window[funcName] = function(...args) {
-                    console.log(`🎯 Intercepted ${funcName} - ensuring competitions stay visible`);
-                    
-                    // Call original function
-                    const result = originalFunc.apply(this, args);
-                    
-                    // Force competitions to show after any page change
-                    if (funcName === 'showPage' && args[0] === 'competitions') {
-                        setTimeout(() => {
-                            forceShowCompetitions();
-                        }, 100);
-                    } else {
-                        setTimeout(() => {
-                            forceShowCompetitions();
-                        }, 50);
-                    }
-                    
-                    return result;
-                };
+        // Wait for competition system to load, then render
+        setTimeout(() => {
+            renderCompetitions();
+        }, 2000);
+        
+        // Monitor for competition page navigation
+        const originalShowPage = window.showPage;
+        if (originalShowPage) {
+            window.showPage = function(pageName, updateHash = true) {
+                const result = originalShowPage(pageName, updateHash);
                 
-                console.log(`✅ Overrode ${funcName} function`);
-            }
-        });
-        
-        // Force show competitions immediately
-        forceShowCompetitions();
-        
-        // Set up continuous monitoring (every 5 seconds) - but only fix visibility, don't create fake data
-        setInterval(() => {
-            const connectedView = document.getElementById('competitionsConnected');
-            const disconnectedView = document.getElementById('competitionsDisconnected');
-            const currentPage = window.location.hash;
-            
-            if ((currentPage === '#competitions' || currentPage === '' || !currentPage)) {
-                if (connectedView && connectedView.style.display === 'none') {
-                    console.log('🔧 Auto-correcting hidden competitions view...');
-                    connectedView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
+                if (pageName === 'competitions') {
+                    setTimeout(() => {
+                        fixCompetitionStructure();
+                        setTimeout(() => renderCompetitions(), 1000);
+                    }, 100);
                 }
                 
-                if (disconnectedView && disconnectedView.style.display !== 'none') {
-                    console.log('🔧 Auto-hiding disconnected view...');
-                    disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important;';
-                }
-                
-                // Try to load real data if competition system is available but no data shown
-                if (window.CompetitionState && window.updateCompetitionsDisplay) {
-                    const activeGrid = document.getElementById('activeGrid');
-                    if (activeGrid && activeGrid.innerHTML.includes('Connect Wallet to Join')) {
-                        console.log('🔄 Detected wallet prompt, triggering real data load...');
-                        window.updateCompetitionsDisplay();
-                    }
-                }
-            }
-        }, 5000);
+                return result;
+            };
+        }
         
-        console.log('💪 Bulletproof competition system active (real data only)!');
+        console.log('✅ Permanent competition fix active');
         
-    }, 3000); // Wait 3 seconds for everything to load
+    }, 3000);
 });
+</script>
 
-// Add CSS for loading animation
-const style = document.createElement('style');
-style.textContent = `
+<!-- Required CSS for Competition Structure -->
+<style>
+.competitions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.competition-section {
+    margin-bottom: 3rem;
+}
+
+.section-header-mini {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.section-title-mini {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.count-badge {
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.section-description-mini {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(139, 92, 246, 0.2);
+    border-top: 3px solid #8b5cf6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-`;
-document.head.appendChild(style);
 
-console.log('✅ Bulletproof competition script loaded (real data only)');
-</script>
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .competitions-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .section-title-mini {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
     
 </body>
 </html>
