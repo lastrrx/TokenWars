@@ -236,7 +236,23 @@ function calculateTimeRemaining(competition) {
  */
 async function loadUserBets() {
     try {
-        if (!CompetitionState.walletService?.isConnected()) {
+        // Check wallet connection properly (FIXED)
+        let isWalletConnected = false;
+        try {
+            if (CompetitionState.walletService) {
+                if (typeof CompetitionState.walletService.isConnected === 'function') {
+                    isWalletConnected = CompetitionState.walletService.isConnected();
+                } else if (typeof CompetitionState.walletService.getConnectionStatus === 'function') {
+                    const status = CompetitionState.walletService.getConnectionStatus();
+                    isWalletConnected = status && status.isConnected;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not check wallet connection in loadUserBets:', error);
+            isWalletConnected = false;
+        }
+        
+        if (!isWalletConnected) {
             return;
         }
         
