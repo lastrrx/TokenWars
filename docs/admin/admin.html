@@ -13,6 +13,20 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* CSS Variables for Admin Theme */
+        :root {
+            --admin-bg: #0f172a;
+            --admin-surface: #1e293b;
+            --admin-border: #334155;
+            --admin-text: #f1f5f9;
+            --admin-text-secondary: #94a3b8;
+            --admin-primary: #8b5cf6;
+            --admin-success: #22c55e;
+            --admin-warning: #f59e0b;
+            --admin-error: #ef4444;
+            --admin-info: #3b82f6;
+        }
+
         /* Enhanced Production Styles */
         .loading-overlay {
             position: fixed;
@@ -95,6 +109,90 @@
         .status-indicator.stale { background: #f59e0b; }
         .status-indicator.unknown { background: #6b7280; }
 
+        /* Enhanced Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+        }
+
+        .metric-card h3 {
+            color: var(--admin-text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin: 0 0 0.75rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            color: var(--admin-text);
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .metric-change {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .metric-change.positive { color: var(--admin-success); }
+        .metric-change.negative { color: var(--admin-error); }
+
+        /* Cache Health Grid */
+        .cache-health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cache-health-card {
+            background: var(--admin-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .cache-metric {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .cache-metric.excellent { color: var(--admin-success); }
+        .cache-metric.good { color: var(--admin-info); }
+        .cache-metric.warning { color: var(--admin-warning); }
+        .cache-metric.error { color: var(--admin-error); }
+
+        .cache-health-card .label {
+            color: var(--admin-text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         /* Production Enhanced Sections */
         .production-section {
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
@@ -117,90 +215,306 @@
             font-weight: 600;
         }
 
-        /* Competition Automation Styles */
-        .automation-controls {
-            background: var(--admin-surface);
-            border: 1px solid var(--admin-border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
+        /* Enhanced Automation Styles */
         .automation-status {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 1rem;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
             background: var(--admin-bg);
-            border-radius: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--admin-border);
         }
 
         .automation-status.active {
-            border-left: 4px solid #22c55e;
+            border-left: 4px solid var(--admin-success);
+            background: rgba(34, 197, 94, 0.05);
         }
 
         .automation-status.inactive {
-            border-left: 4px solid #ef4444;
+            border-left: 4px solid var(--admin-error);
+            background: rgba(239, 68, 68, 0.05);
         }
 
+        .automation-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* Enhanced Parameter Grid */
         .automation-parameters {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
             margin-bottom: 1.5rem;
         }
 
         .parameter-control {
             background: var(--admin-bg);
             border: 1px solid var(--admin-border);
-            border-radius: 8px;
-            padding: 1rem;
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .parameter-control:hover {
+            border-color: var(--admin-primary);
+            transform: translateY(-1px);
         }
 
         .parameter-control label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             font-weight: 600;
             color: var(--admin-text-secondary);
-            font-size: 0.875rem;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .parameter-input {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.75rem;
             background: var(--admin-surface);
             border: 1px solid var(--admin-border);
-            border-radius: 4px;
+            border-radius: 6px;
             color: var(--admin-text);
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .parameter-input:focus {
+            outline: none;
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
         }
 
         .parameter-value {
+            margin-top: 0.75rem;
             text-align: center;
-            font-size: 0.875rem;
-            color: var(--admin-primary);
-            font-weight: 600;
-            margin-top: 0.5rem;
+            line-height: 1.4;
         }
 
+        .parameter-value > div:first-child {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--admin-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .parameter-value > div:last-child {
+            font-size: 0.75rem;
+            color: var(--admin-text-secondary);
+            font-weight: 500;
+        }
+
+        /* Enhanced Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--admin-primary), #7c3aed);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--admin-success), #16a34a);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--admin-error), #dc2626);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--admin-warning), #ea580c);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, var(--admin-info), #2563eb);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--admin-surface);
+            color: var(--admin-text-secondary);
+            border: 1px solid var(--admin-border);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Cache Controls Grid */
+        .cache-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* Batch Controls */
+        .batch-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .selected-count {
+            margin-left: auto;
+            padding: 0.5rem 1rem;
+            background: var(--admin-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: var(--admin-text-secondary);
+        }
+
+        /* Enhanced Table Styles */
+        .table-container {
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th {
+            background: var(--admin-bg);
+            color: var(--admin-text-secondary);
+            font-weight: 600;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--admin-border);
+        }
+
+        .admin-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--admin-border);
+            color: var(--admin-text);
+            font-size: 0.875rem;
+        }
+
+        .admin-table tr:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        /* Security Warning */
         .security-warning {
             background: rgba(245, 158, 11, 0.1);
-            border: 1px solid #f59e0b;
+            border: 1px solid var(--admin-warning);
             border-radius: 8px;
             padding: 1rem;
             margin-bottom: 1rem;
-            color: #f59e0b;
+            color: var(--admin-warning);
         }
 
+        /* Download Section */
         .download-section {
             background: var(--admin-surface);
             border: 1px solid var(--admin-border);
             border-radius: 8px;
-            padding: 1rem;
+            padding: 1.25rem;
             margin-bottom: 1rem;
         }
 
-        /* Responsive adjustments */
+        .download-section h4 {
+            margin: 0 0 1rem 0;
+            color: var(--admin-text);
+            font-size: 1rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--admin-text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .close-modal:hover {
+            background: var(--admin-bg);
+            color: var(--admin-text);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .automation-parameters {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
             .automation-parameters {
                 grid-template-columns: 1fr;
@@ -209,6 +523,45 @@
             .automation-status {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .automation-controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cache-health-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }
+
+            .cache-controls, .batch-controls {
+                justify-content: center;
+            }
+
+            .selected-count {
+                margin-left: 0;
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .production-section {
+                padding: 1rem;
+            }
+            
+            .parameter-control {
+                padding: 1rem;
+            }
+            
+            .btn {
+                padding: 0.625rem 1rem;
+                font-size: 0.8125rem;
             }
         }
     </style>
