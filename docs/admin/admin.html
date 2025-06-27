@@ -1074,6 +1074,50 @@
                         </div>
                     </div>
                 </div>
+            
+                <!-- Competition Controls -->
+                <div class="phase2-section">
+                    <div class="phase2-badge">Phase 4</div>
+                    <h3>🛠️ Competition Controls</h3>
+                    <div class="cache-controls">
+                        <button id="create-competition-btn" class="btn btn-primary">
+                            🚀 Create New Competition
+                        </button>
+                        <button class="btn btn-secondary" onclick="renderCompetitionsTable()">
+                            🔄 Refresh List
+                        </button>
+                        <button class="btn btn-info" onclick="viewCompetitionAnalytics()">
+                            📊 View Analytics
+                        </button>
+                    </div>
+                </div>
+            
+                <!-- Enhanced Active Competitions -->
+                <div class="competitions-list">
+                    <h3>🏃 Active Competitions</h3>
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>🆔 ID</th>
+                                    <th>🪙 Tokens</th>
+                                    <th>📊 Status</th>
+                                    <th>👥 Participants</th>
+                                    <th>💰 Pool Size</th>
+                                    <th>⏰ End Time</th>
+                                    <th>🤖 Type</th>
+                                    <th>🛠️ Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="competitions-tbody">
+                                <tr>
+                                    <td colspan="8">Loading competitions...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
                 <!-- Enhanced Active Competitions -->
                 <div class="competitions-list">
