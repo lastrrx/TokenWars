@@ -3541,5 +3541,179 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     </style>
+
+    <script>
+// BULLETPROOF COMPETITION DISPLAY - Real Data Only
+console.log('🔧 Loading bulletproof competition display (real data only)...');
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for everything to load, then apply the fix
+    setTimeout(() => {
+        console.log('🎯 Applying bulletproof competition fix...');
+        
+        // Function to force show competitions with real data
+        function forceShowCompetitions() {
+            console.log('💪 Force showing competitions (real data only)...');
+            
+            const connectedView = document.getElementById('competitionsConnected');
+            const disconnectedView = document.getElementById('competitionsDisconnected');
+            
+            if (connectedView && disconnectedView) {
+                // Force hide disconnected view
+                disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important;';
+                
+                // Force show connected view
+                connectedView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
+                
+                console.log('✅ Views switched successfully');
+                
+                // Try to load real competitions if the system exists
+                if (window.CompetitionState && window.updateCompetitionsDisplay) {
+                    console.log('📊 Competition system found, triggering real data load...');
+                    
+                    // Force trigger the competition display update
+                    window.updateCompetitionsDisplay();
+                    
+                    // Also try to load real competitions if available
+                    if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
+                        console.log('🔄 Loading real competitions from database...');
+                        window.loadRealCompetitions().catch(error => {
+                            console.warn('Could not load real competitions:', error);
+                        });
+                    }
+                    
+                    // Check if we have real competition data
+                    if (window.CompetitionState.activeCompetitions && window.CompetitionState.activeCompetitions.length > 0) {
+                        console.log(`🏆 Found ${window.CompetitionState.activeCompetitions.length} real competitions`);
+                        
+                        // Update the count badge
+                        const activeCount = document.getElementById('activeCount');
+                        if (activeCount) {
+                            activeCount.textContent = window.CompetitionState.activeCompetitions.length;
+                            console.log('📊 Updated competition count');
+                        }
+                    } else {
+                        console.log('ℹ️ No real competitions found in CompetitionState');
+                        
+                        // Check if activeGrid exists and show appropriate message
+                        const activeGrid = document.getElementById('activeGrid');
+                        if (activeGrid && (activeGrid.innerHTML.includes('Loading') || activeGrid.innerHTML.trim().length < 100)) {
+                            activeGrid.innerHTML = `
+                                <div class="empty-state" style="text-align: center; padding: 3rem; color: #cbd5e1;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.7;">📭</div>
+                                    <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No competitions available</h3>
+                                    <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">
+                                        Check back soon for new competitions! Real competitions will appear here when available.
+                                    </p>
+                                </div>
+                            `;
+                            console.log('📝 Showed empty state for no real competitions');
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ Competition system not fully loaded yet');
+                    
+                    // Show loading state
+                    const activeGrid = document.getElementById('activeGrid');
+                    if (activeGrid) {
+                        activeGrid.innerHTML = `
+                            <div class="loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
+                                <div style="width: 32px; height: 32px; border: 3px solid rgba(139, 92, 246, 0.2); border-top: 3px solid #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
+                                <p style="color: #cbd5e1;">Loading real competitions from database...</p>
+                            </div>
+                        `;
+                        console.log('⏳ Showed loading state');
+                    }
+                }
+                
+            } else {
+                console.error('❌ Competition view elements not found');
+                console.log('connectedView:', connectedView);
+                console.log('disconnectedView:', disconnectedView);
+            }
+        }
+        
+        // Override any functions that might interfere
+        const functionsToOverride = [
+            'updateCompetitionsPageVisibility',
+            'showPage'
+        ];
+        
+        functionsToOverride.forEach(funcName => {
+            if (window[funcName]) {
+                const originalFunc = window[funcName];
+                window[funcName] = function(...args) {
+                    console.log(`🎯 Intercepted ${funcName} - ensuring competitions stay visible`);
+                    
+                    // Call original function
+                    const result = originalFunc.apply(this, args);
+                    
+                    // Force competitions to show after any page change
+                    if (funcName === 'showPage' && args[0] === 'competitions') {
+                        setTimeout(() => {
+                            forceShowCompetitions();
+                        }, 100);
+                    } else {
+                        setTimeout(() => {
+                            forceShowCompetitions();
+                        }, 50);
+                    }
+                    
+                    return result;
+                };
+                
+                console.log(`✅ Overrode ${funcName} function`);
+            }
+        });
+        
+        // Force show competitions immediately
+        forceShowCompetitions();
+        
+        // Set up continuous monitoring (every 5 seconds) - but only fix visibility, don't create fake data
+        setInterval(() => {
+            const connectedView = document.getElementById('competitionsConnected');
+            const disconnectedView = document.getElementById('competitionsDisconnected');
+            const currentPage = window.location.hash;
+            
+            if ((currentPage === '#competitions' || currentPage === '' || !currentPage)) {
+                if (connectedView && connectedView.style.display === 'none') {
+                    console.log('🔧 Auto-correcting hidden competitions view...');
+                    connectedView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
+                }
+                
+                if (disconnectedView && disconnectedView.style.display !== 'none') {
+                    console.log('🔧 Auto-hiding disconnected view...');
+                    disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important;';
+                }
+                
+                // Try to load real data if competition system is available but no data shown
+                if (window.CompetitionState && window.updateCompetitionsDisplay) {
+                    const activeGrid = document.getElementById('activeGrid');
+                    if (activeGrid && activeGrid.innerHTML.includes('Connect Wallet to Join')) {
+                        console.log('🔄 Detected wallet prompt, triggering real data load...');
+                        window.updateCompetitionsDisplay();
+                    }
+                }
+            }
+        }, 5000);
+        
+        console.log('💪 Bulletproof competition system active (real data only)!');
+        
+    }, 3000); // Wait 3 seconds for everything to load
+});
+
+// Add CSS for loading animation
+const style = document.createElement('style');
+style.textContent = `
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+`;
+document.head.appendChild(style);
+
+console.log('✅ Bulletproof competition script loaded (real data only)');
+</script>
+    
 </body>
 </html>
