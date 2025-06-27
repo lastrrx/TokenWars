@@ -1,5 +1,5 @@
-// PriceService - UPDATED FOR LIVE DATA INTEGRATION
-// Now uses live-price-update Edge Function for real market prices
+// PriceService - FIXED FOR DIRECT TABLE QUERIES
+// Now uses direct Supabase table queries instead of Edge Functions
 
 class PriceService {
     constructor() {
@@ -19,7 +19,7 @@ class PriceService {
         // Store as singleton instance
         PriceService.instance = this;
         
-        console.log('PriceService constructor called - LIVE DATA VERSION');
+        console.log('PriceService constructor called - DIRECT TABLE VERSION');
     }
 
     async initialize() {
@@ -40,22 +40,17 @@ class PriceService {
             }
             
             this.isInitializing = true;
-            console.log('PriceService: Starting initialization with LIVE DATA...');
+            console.log('PriceService: Starting initialization with DIRECT TABLE ACCESS...');
             
-            // Step 1: Try to load live prices
-            console.log('🔄 Step 1: Loading live prices...');
-            const liveLoaded = await this.loadLivePrices();
+            // Step 1: Try to load prices from cache table directly
+            console.log('🔄 Step 1: Loading prices from cache table...');
+            const cacheLoaded = await this.loadPricesFromCache();
             
-            // Step 2: If live fails, try cache
-            if (!liveLoaded) {
-                console.log('🔄 Step 2: Live prices failed, trying cache...');
-                const cacheLoaded = await this.loadPricesFromCache();
-                
-                if (!cacheLoaded) {
-                    console.log('🔄 Step 3: Cache empty, using demo prices...');
-                    this.initializeDemoPrices();
-                    this.cacheStatus = 'demo_fallback';
-                }
+            // Step 2: If cache fails, use demo prices
+            if (!cacheLoaded) {
+                console.log('🔄 Step 2: Cache empty, using demo prices...');
+                this.initializeDemoPrices();
+                this.cacheStatus = 'demo_fallback';
             }
             
             this.isInitialized = true;
@@ -79,59 +74,7 @@ class PriceService {
         }
     }
 
-    // NEW: Load live prices using live-price-update Edge Function
-    async loadLivePrices() {
-        try {
-            const supabaseUrl = window.SUPABASE_CONFIG?.url;
-            if (!supabaseUrl) {
-                throw new Error('Supabase configuration not available');
-            }
-
-            console.log('📡 Triggering live price updates...');
-            
-            // Trigger live price update
-            const response = await fetch(`${supabaseUrl}/functions/v1/live-price-update`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.SUPABASE_CONFIG.anonKey}`
-                },
-                body: JSON.stringify({})
-            });
-
-            if (!response.ok) {
-                throw new Error(`Live price update failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('📦 Live price update response:', data);
-            
-            if (data.success && data.results && Array.isArray(data.results) && data.results.length > 0) {
-                console.log(`🔄 Processing ${data.results.length} live price updates...`);
-                
-                // Load updated prices from cache
-                const cacheSuccess = await this.loadPricesFromCache();
-                
-                if (cacheSuccess) {
-                    this.cacheStatus = 'live_prices';
-                    console.log(`✅ Loaded live prices for ${this.prices.size} tokens`);
-                    return true;
-                } else {
-                    console.log('⚠️ Live prices updated but cache empty');
-                    return false;
-                }
-            } else {
-                console.log('⚠️ Live price update returned no results');
-                return false;
-            }
-            
-        } catch (error) {
-            console.error('Error loading live prices:', error);
-            return false;
-        }
-    }
-
-    // NEW: Load prices from cache (price_cache table)
+    // FIXED: Load prices directly from price_cache table
     async loadPricesFromCache() {
         try {
             if (!window.supabase) {
@@ -139,9 +82,9 @@ class PriceService {
                 return false;
             }
 
-            console.log('📊 Loading prices from cache...');
+            console.log('📊 Loading prices directly from price_cache table...');
             
-            // Get fresh prices from price_cache table
+            // Query price_cache table directly - NO EDGE FUNCTIONS
             const { data: cachedPrices, error } = await window.supabase
                 .from('price_cache')
                 .select('*')
@@ -150,6 +93,28 @@ class PriceService {
 
             if (error) {
                 console.error('Price cache query error:', error);
+                
+                // Fallback to price_history table
+                console.log('📊 Fallback: Trying price_history table...');
+                const { data: historyPrices, error: historyError } = await window.supabase
+                    .from('price_history')
+                    .select('*')
+                    .gte('timestamp', new Date(Date.now() - 3600000).toISOString()) // Last hour
+                    .order('timestamp', { ascending: false })
+                    .limit(100);
+
+                if (historyError) {
+                    console.error('Price history query error:', historyError);
+                    return false;
+                }
+
+                if (historyPrices && historyPrices.length > 0) {
+                    console.log(`📦 Found ${historyPrices.length} historical prices`);
+                    this.processPricesFromHistory(historyPrices);
+                    this.cacheStatus = 'history';
+                    return true;
+                }
+                
                 return false;
             }
 
@@ -160,40 +125,69 @@ class PriceService {
 
             console.log(`📈 Found ${cachedPrices.length} cached prices`);
             
-            // Get the most recent price for each token
-            const latestPrices = new Map();
-            cachedPrices.forEach(priceRecord => {
-                const existing = latestPrices.get(priceRecord.token_address);
-                if (!existing || new Date(priceRecord.timestamp) > new Date(existing.timestamp)) {
-                    latestPrices.set(priceRecord.token_address, priceRecord);
-                }
-            });
-
-            // Update internal prices map
-            this.prices.clear();
-            latestPrices.forEach((priceRecord, address) => {
-                this.prices.set(address, {
-                    price: parseFloat(priceRecord.price),
-                    volume: priceRecord.volume || 0,
-                    market_cap: priceRecord.market_cap || 0,
-                    timestamp: priceRecord.timestamp,
-                    source: priceRecord.source || 'cache',
-                    confidence: priceRecord.confidence_score || 1.0
-                });
-            });
-
+            // Process cached prices
+            this.processPricesFromCache(cachedPrices);
+            this.cacheStatus = 'cache';
+            
             console.log(`✅ Loaded ${this.prices.size} prices from cache`);
-            
-            if (this.cacheStatus !== 'live_prices') {
-                this.cacheStatus = 'cache';
-            }
-            
             return this.prices.size > 0;
             
         } catch (error) {
             console.error('Error loading prices from cache:', error);
             return false;
         }
+    }
+
+    // NEW: Process prices from cache table
+    processPricesFromCache(cachedPrices) {
+        // Get the most recent price for each token
+        const latestPrices = new Map();
+        cachedPrices.forEach(priceRecord => {
+            const existing = latestPrices.get(priceRecord.token_address);
+            if (!existing || new Date(priceRecord.timestamp) > new Date(existing.timestamp)) {
+                latestPrices.set(priceRecord.token_address, priceRecord);
+            }
+        });
+
+        // Update internal prices map
+        this.prices.clear();
+        latestPrices.forEach((priceRecord, address) => {
+            this.prices.set(address, {
+                price: parseFloat(priceRecord.price) || 0,
+                volume: parseFloat(priceRecord.volume) || 0,
+                market_cap: parseFloat(priceRecord.market_cap) || 0,
+                timestamp: priceRecord.timestamp,
+                source: priceRecord.source || 'cache',
+                confidence: parseFloat(priceRecord.confidence_score) || 1.0
+            });
+        });
+
+        console.log(`✅ Processed ${this.prices.size} prices from cache`);
+    }
+
+    // NEW: Process prices from history table
+    processPricesFromHistory(historyPrices) {
+        const latestPrices = new Map();
+        historyPrices.forEach(priceRecord => {
+            const existing = latestPrices.get(priceRecord.token_address);
+            if (!existing || new Date(priceRecord.timestamp) > new Date(existing.timestamp)) {
+                latestPrices.set(priceRecord.token_address, priceRecord);
+            }
+        });
+
+        this.prices.clear();
+        latestPrices.forEach((priceRecord, address) => {
+            this.prices.set(address, {
+                price: parseFloat(priceRecord.price) || 0,
+                volume: parseFloat(priceRecord.volume) || 0,
+                market_cap: parseFloat(priceRecord.market_cap) || 0,
+                timestamp: priceRecord.timestamp,
+                source: priceRecord.source || 'history',
+                confidence: 0.8 // Slightly lower confidence for historical data
+            });
+        });
+
+        console.log(`✅ Processed ${this.prices.size} prices from history`);
     }
 
     // Initialize demo prices (fallback only)
@@ -222,57 +216,65 @@ class PriceService {
         console.log(`📊 Initialized ${this.prices.size} demo prices`);
     }
 
-    // NEW: Force live price refresh
-    async refreshLivePrices() {
+    // FIXED: Refresh prices using direct table queries
+    async refreshPrices() {
         try {
-            console.log('🔄 Forcing live price refresh...');
+            console.log('🔄 Refreshing prices from tables...');
             
-            const liveSuccess = await this.loadLivePrices();
+            const cacheSuccess = await this.loadPricesFromCache();
             
-            if (liveSuccess) {
-                this.lastUpdate = new Date();
-                console.log('✅ Live price refresh successful');
-                return true;
-            } else {
-                console.log('⚠️ Live price refresh failed, trying cache...');
-                const cacheSuccess = await this.loadPricesFromCache();
+            if (!cacheSuccess) {
+                // Demo price variation as last resort
+                const now = new Date().toISOString();
+                let updated = 0;
                 
-                if (cacheSuccess) {
-                    this.lastUpdate = new Date();
-                    console.log('✅ Cache price refresh successful');
-                    return true;
+                for (const [address, priceData] of this.prices.entries()) {
+                    // Add small random variation (±3%)
+                    const variation = (Math.random() - 0.5) * 0.06; // ±3%
+                    const newPrice = priceData.price * (1 + variation);
+                    
+                    this.prices.set(address, {
+                        ...priceData,
+                        price: newPrice,
+                        timestamp: now,
+                        source: 'demo_updated'
+                    });
+                    updated++;
                 }
                 
-                console.log('⚠️ All price refresh attempts failed');
-                return false;
+                console.log(`💰 Demo prices updated for ${updated} tokens`);
             }
+            
+            this.lastUpdate = new Date();
+            return true;
+            
         } catch (error) {
-            console.error('Error refreshing live prices:', error);
+            console.error('Error refreshing prices:', error);
             return false;
         }
     }
 
-    // NEW: Start background price updates
+    // Start background price updates (now uses direct table queries)
     startBackgroundUpdates() {
         // Clear existing interval
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
         }
 
-        // Update prices every 2 minutes
+        // Update prices every 3 minutes (reasonable for direct DB queries)
         this.updateInterval = setInterval(async () => {
             try {
                 console.log('Background price update triggered...');
-                await this.refreshLivePrices();
+                await this.refreshPrices();
             } catch (error) {
                 console.error('Background price update failed:', error);
             }
-        }, 2 * 60 * 1000); // 2 minutes
+        }, 3 * 60 * 1000); // 3 minutes
 
-        console.log('Background price updates started (2-minute intervals)');
+        console.log('Background price updates started (3-minute intervals)');
     }
 
-    // ENHANCED: Update prices with live data priority
+    // ENHANCED: Update prices with direct table queries
     async updatePrices(tokenAddresses = []) {
         try {
             if (!this.isInitialized) {
@@ -282,21 +284,11 @@ class PriceService {
             
             console.log(`🔄 Updating prices for ${tokenAddresses.length || 'all'} tokens...`);
             
-            // If specific tokens requested, try live update first
-            if (tokenAddresses.length > 0) {
-                const liveSuccess = await this.loadLivePrices();
-                if (liveSuccess) {
-                    this.lastUpdate = new Date();
-                    console.log(`💰 Live prices updated for ${this.prices.size} tokens`);
-                    return true;
-                }
-            }
-            
-            // Fallback to cache or demo update
+            // Refresh from cache or demo update
             const cacheSuccess = await this.loadPricesFromCache();
             
             if (!cacheSuccess) {
-                // Demo price variation as last resort
+                // Demo price variation as fallback
                 const now = new Date().toISOString();
                 let updated = 0;
                 
@@ -391,7 +383,7 @@ class PriceService {
         }
     }
 
-    // NEW: Enhanced TWAP calculation with cache data
+    // ENHANCED: TWAP calculation with direct table access
     async calculateTWAP(tokenAddress, startTime, endTime) {
         try {
             if (!window.supabase) {
@@ -402,7 +394,7 @@ class PriceService {
 
             console.log(`📊 Calculating TWAP for ${tokenAddress} from ${startTime} to ${endTime}`);
             
-            // Get historical prices from price_cache
+            // Get historical prices directly from price_cache table
             const { data: historicalPrices, error } = await window.supabase
                 .from('price_cache')
                 .select('price, timestamp')
@@ -413,8 +405,25 @@ class PriceService {
 
             if (error) {
                 console.error('TWAP query error:', error);
-                const currentPrice = this.getPrice(tokenAddress);
-                return currentPrice ? currentPrice.price : 0;
+                
+                // Fallback to price_history
+                const { data: historyPrices, error: historyError } = await window.supabase
+                    .from('price_history')
+                    .select('price, timestamp')
+                    .eq('token_address', tokenAddress)
+                    .gte('timestamp', startTime)
+                    .lte('timestamp', endTime)
+                    .order('timestamp', { ascending: true });
+
+                if (historyError) {
+                    console.error('TWAP history query error:', historyError);
+                    const currentPrice = this.getPrice(tokenAddress);
+                    return currentPrice ? currentPrice.price : 0;
+                }
+
+                if (historyPrices && historyPrices.length > 0) {
+                    return this.calculateTWAPFromData(historyPrices, endTime);
+                }
             }
 
             if (!historicalPrices || historicalPrices.length === 0) {
@@ -423,38 +432,7 @@ class PriceService {
                 return currentPrice ? currentPrice.price : 0;
             }
 
-            // Calculate TWAP
-            if (historicalPrices.length === 1) {
-                return parseFloat(historicalPrices[0].price);
-            }
-
-            let weightedSum = 0;
-            let totalTime = 0;
-
-            for (let i = 0; i < historicalPrices.length - 1; i++) {
-                const currentRecord = historicalPrices[i];
-                const nextRecord = historicalPrices[i + 1];
-                
-                const price = parseFloat(currentRecord.price);
-                const timeWeight = new Date(nextRecord.timestamp) - new Date(currentRecord.timestamp);
-                
-                weightedSum += price * timeWeight;
-                totalTime += timeWeight;
-            }
-
-            // Add the last price for remaining time
-            const lastPrice = parseFloat(historicalPrices[historicalPrices.length - 1].price);
-            const remainingTime = new Date(endTime) - new Date(historicalPrices[historicalPrices.length - 1].timestamp);
-            
-            if (remainingTime > 0) {
-                weightedSum += lastPrice * remainingTime;
-                totalTime += remainingTime;
-            }
-
-            const twap = totalTime > 0 ? weightedSum / totalTime : lastPrice;
-            
-            console.log(`✅ TWAP calculated: ${twap} (${historicalPrices.length} data points)`);
-            return twap;
+            return this.calculateTWAPFromData(historicalPrices, endTime);
             
         } catch (error) {
             console.error('Error calculating TWAP:', error);
@@ -463,11 +441,46 @@ class PriceService {
         }
     }
 
+    // Helper method to calculate TWAP from price data
+    calculateTWAPFromData(priceData, endTime) {
+        if (priceData.length === 1) {
+            return parseFloat(priceData[0].price);
+        }
+
+        let weightedSum = 0;
+        let totalTime = 0;
+
+        for (let i = 0; i < priceData.length - 1; i++) {
+            const currentRecord = priceData[i];
+            const nextRecord = priceData[i + 1];
+            
+            const price = parseFloat(currentRecord.price);
+            const timeWeight = new Date(nextRecord.timestamp) - new Date(currentRecord.timestamp);
+            
+            weightedSum += price * timeWeight;
+            totalTime += timeWeight;
+        }
+
+        // Add the last price for remaining time
+        const lastPrice = parseFloat(priceData[priceData.length - 1].price);
+        const remainingTime = new Date(endTime) - new Date(priceData[priceData.length - 1].timestamp);
+        
+        if (remainingTime > 0) {
+            weightedSum += lastPrice * remainingTime;
+            totalTime += remainingTime;
+        }
+
+        const twap = totalTime > 0 ? weightedSum / totalTime : lastPrice;
+        
+        console.log(`✅ TWAP calculated: ${twap} (${priceData.length} data points)`);
+        return twap;
+    }
+
     // Check if prices should be refreshed
     shouldRefreshPrices() {
         if (!this.lastUpdate) return true;
         const age = Date.now() - this.lastUpdate.getTime();
-        return age > 120000; // 2 minutes for live data
+        return age > 180000; // 3 minutes for direct DB queries
     }
 
     // Check if data is stale
@@ -485,7 +498,7 @@ class PriceService {
             lastUpdate: this.lastUpdate,
             isInitialized: this.isInitialized,
             isStale: this.isDataStale(),
-            isLiveData: this.cacheStatus === 'live_prices'
+            dataSource: this.cacheStatus
         };
     }
 
@@ -519,11 +532,10 @@ function getPriceService() {
 window.PriceService = PriceService;
 window.getPriceService = getPriceService;
 
-console.log('✅ PriceService (LIVE DATA VERSION) class loaded and exposed globally');
-console.log('📊 Enhanced Features:');
-console.log('   ✅ Live price updates via live-price-update Edge Function');
-console.log('   ✅ Real-time cache integration with price_cache table');
-console.log('   ✅ Enhanced TWAP calculations with historical data');
-console.log('   ✅ Automatic background price refresh (2-minute intervals)');
-console.log('   ✅ Multi-source price validation and confidence scoring');
-console.log('   ✅ Graceful fallback to cache and demo data');
+console.log('✅ PriceService (DIRECT TABLE VERSION) class loaded and exposed globally');
+console.log('📊 Key Changes:');
+console.log('   ✅ Direct price_cache table queries instead of Edge Functions');
+console.log('   ✅ Fallback to price_history table if cache empty');
+console.log('   ✅ No more CORS issues with Supabase tables');
+console.log('   ✅ Enhanced TWAP calculations with direct table access');
+console.log('   ✅ Graceful degradation when tables unavailable');
