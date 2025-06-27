@@ -6309,6 +6309,295 @@ document.addEventListener('DOMContentLoaded', function() {
 
 console.log('💪 Forceful wallet modal fix loaded');
 </script>
+
+    <!-- WALLET MODAL BUTTON FIX - Add this after the previous script -->
+<script>
+console.log('🔘 Loading wallet modal button fix...');
+
+function setupWalletButtons() {
+    console.log('🔧 Setting up wallet modal buttons...');
+    
+    try {
+        // Set up close button
+        const closeButton = document.querySelector('#walletModal .modal-close');
+        if (closeButton) {
+            closeButton.onclick = function(e) {
+                e.preventDefault();
+                console.log('❌ Close button clicked');
+                closeWalletModal();
+            };
+            console.log('✅ Close button set up');
+        } else {
+            console.warn('⚠️ Close button not found');
+        }
+        
+        // Set up wallet option buttons
+        const walletOptions = document.querySelectorAll('#walletModal .wallet-option');
+        console.log(`🔍 Found ${walletOptions.length} wallet options`);
+        
+        walletOptions.forEach((option, index) => {
+            console.log(`🔧 Setting up wallet option ${index + 1}`);
+            
+            // Remove any existing onclick handlers
+            option.removeAttribute('onclick');
+            
+            // Determine wallet type based on content
+            let walletType = 'demo';
+            const text = option.textContent.toLowerCase();
+            
+            if (text.includes('phantom')) {
+                walletType = 'phantom';
+            } else if (text.includes('solflare')) {
+                walletType = 'solflare';
+            } else if (text.includes('backpack')) {
+                walletType = 'backpack';
+            } else if (text.includes('demo')) {
+                walletType = 'demo';
+            }
+            
+            console.log(`📝 Wallet option ${index + 1} detected as: ${walletType}`);
+            
+            // Add click handler
+            option.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`🔗 ${walletType} wallet option clicked`);
+                selectWalletFixed(walletType);
+            };
+            
+            // Add visual feedback
+            option.style.cursor = 'pointer';
+            option.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.02)';
+                this.style.transition = 'transform 0.2s';
+            });
+            option.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+        
+        // Set up Cancel button
+        const cancelButtons = document.querySelectorAll('#walletModal button');
+        cancelButtons.forEach(button => {
+            if (button.textContent.toLowerCase().includes('cancel')) {
+                button.onclick = function(e) {
+                    e.preventDefault();
+                    console.log('🚫 Cancel button clicked');
+                    closeWalletModal();
+                };
+                console.log('✅ Cancel button set up');
+            }
+        });
+        
+        // Set up ESC key handler
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('walletModal');
+                if (modal && modal.classList.contains('force-show')) {
+                    console.log('⌨️ ESC key pressed, closing modal');
+                    closeWalletModal();
+                }
+            }
+        });
+        
+        console.log('✅ All wallet buttons set up successfully');
+        
+    } catch (error) {
+        console.error('❌ Error setting up wallet buttons:', error);
+    }
+}
+
+function selectWalletFixed(walletType) {
+    console.log(`🎯 Wallet selected: ${walletType}`);
+    
+    try {
+        // Update the selected wallet name in step 2
+        const walletNameElement = document.getElementById('selectedWalletName');
+        if (walletNameElement) {
+            const walletNames = {
+                phantom: 'Phantom',
+                solflare: 'Solflare',
+                backpack: 'Backpack',
+                demo: 'Demo Mode'
+            };
+            walletNameElement.textContent = walletNames[walletType] || walletType;
+        }
+        
+        // Go to connecting step (step 2)
+        showStep(2);
+        
+        // Simulate connection process
+        setTimeout(() => {
+            handleWalletConnection(walletType);
+        }, 2000); // 2 second delay to show connecting state
+        
+    } catch (error) {
+        console.error('❌ Error selecting wallet:', error);
+        alert('Error selecting wallet: ' + error.message);
+    }
+}
+
+function handleWalletConnection(walletType) {
+    console.log(`🔄 Handling connection for ${walletType}...`);
+    
+    try {
+        if (walletType === 'demo') {
+            // Demo wallet - create demo user
+            const demoUser = {
+                username: 'DemoTrader' + Math.floor(Math.random() * 1000),
+                avatar: '🎮',
+                walletAddress: 'DEMO' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                balance: 10.0,
+                isDemo: true,
+                walletType: 'demo'
+            };
+            
+            console.log('✅ Demo wallet connected:', demoUser);
+            
+            // Store user globally
+            window.connectedUser = demoUser;
+            window.currentUser = demoUser;
+            
+            // Close modal
+            closeWalletModal();
+            
+            // Update UI
+            updateConnectedUI(demoUser);
+            
+            // Show success message
+            setTimeout(() => {
+                alert('🎮 Demo wallet connected successfully!\n\nYou now have 10 SOL to test with.\nExplore the platform and try making predictions!');
+                
+                // Navigate to competitions page
+                if (typeof showPage === 'function') {
+                    showPage('competitions');
+                }
+            }, 500);
+            
+        } else {
+            // Real wallet connection
+            console.log(`Real wallet connection for ${walletType} not implemented yet`);
+            
+            setTimeout(() => {
+                alert(`${walletType} wallet connection is not implemented yet.\n\nPlease try "Demo Mode" to test the platform with 10 SOL.`);
+                
+                // Go back to step 1
+                showStep(1);
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error handling wallet connection:', error);
+        alert('Connection failed: ' + error.message);
+        showStep(1);
+    }
+}
+
+// Enhanced updateConnectedUI function
+function updateConnectedUI(user) {
+    console.log('👤 Updating UI for connected user:', user);
+    
+    try {
+        // Update navigation
+        const connectBtn = document.getElementById('connectWalletBtn');
+        const traderInfo = document.getElementById('traderInfo');
+        
+        if (connectBtn && traderInfo) {
+            connectBtn.style.display = 'none';
+            traderInfo.style.display = 'block';
+            
+            // Update trader info
+            const navTraderName = document.getElementById('navTraderName');
+            const navTraderAvatar = document.getElementById('navTraderAvatar');
+            const navTraderBalance = document.getElementById('navTraderBalance');
+            
+            if (navTraderName) navTraderName.textContent = user.username;
+            if (navTraderAvatar) navTraderAvatar.textContent = user.avatar;
+            if (navTraderBalance) navTraderBalance.textContent = `${user.balance.toFixed(1)} SOL`;
+        }
+        
+        // Update hero section
+        const heroDisconnected = document.getElementById('heroDisconnected');
+        const heroConnected = document.getElementById('heroConnected');
+        const heroTraderNameText = document.getElementById('heroTraderNameText');
+        
+        if (heroDisconnected && heroConnected) {
+            heroDisconnected.style.display = 'none';
+            heroConnected.style.display = 'block';
+            
+            if (heroTraderNameText) {
+                heroTraderNameText.textContent = user.username;
+            }
+        }
+        
+        console.log('✅ UI updated for connected user');
+        
+        // Trigger any page-specific updates
+        setTimeout(() => {
+            if (typeof updateCompetitionsPageVisibility === 'function') {
+                updateCompetitionsPageVisibility();
+            }
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Error updating UI for connected user:', error);
+    }
+}
+
+// Enhanced closeWalletModal function
+window.closeWalletModal = function() {
+    console.log('🔐 Closing wallet modal...');
+    
+    try {
+        const modal = document.getElementById('walletModal');
+        if (modal) {
+            modal.classList.remove('force-show');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        console.log('✅ Wallet modal closed');
+        
+    } catch (error) {
+        console.error('❌ Error closing wallet modal:', error);
+    }
+};
+
+// Set up buttons when modal opens
+const originalOpenWalletModal = window.openWalletModal;
+window.openWalletModal = function() {
+    console.log('🔗 Opening wallet modal with button setup...');
+    
+    // Call original function
+    if (originalOpenWalletModal) {
+        originalOpenWalletModal();
+    }
+    
+    // Set up buttons after a short delay
+    setTimeout(() => {
+        setupWalletButtons();
+    }, 100);
+};
+
+// Override selectWallet function
+window.selectWallet = selectWalletFixed;
+
+// Set up buttons immediately if modal is already open
+setTimeout(() => {
+    const modal = document.getElementById('walletModal');
+    if (modal && modal.classList.contains('force-show')) {
+        console.log('🔧 Modal already open, setting up buttons...');
+        setupWalletButtons();
+    }
+}, 500);
+
+console.log('🔘 Wallet modal button fix loaded');
+console.log('Available functions:', {
+    setupWalletButtons: typeof setupWalletButtons,
+    selectWalletFixed: typeof selectWalletFixed,
+    handleWalletConnection: typeof handleWalletConnection
+});
+</script>
     
 </body>
 </html>
