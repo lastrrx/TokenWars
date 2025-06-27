@@ -69,7 +69,7 @@ let dataStatus = {
     // Enhanced app functions
     window.initializeApp = initializeApp;
     window.initializeServicesWithTiming = initializeServicesWithTiming;
-    window.testDirectTableAccess = testDirectTableAccess;
+    window.testBasicTableAccess = testBasicTableAccess;
     window.refreshDataFromTables = refreshDataFromTables;
     window.checkCacheHealth = checkCacheHealth;
     
@@ -127,7 +127,7 @@ async function initializeSupabaseConnection() {
         dataStatus.supabaseReady = true;
         
         // Test basic connectivity with a simple query
-        const connectivityTest = await testDirectTableAccess();
+        const connectivityTest = await testBasicTableAccess();
         
         if (connectivityTest.success) {
             console.log('✅ Supabase table access working');
@@ -263,9 +263,9 @@ async function initializeServicesWithTiming() {
 }
 
 // FIXED: Test direct table access instead of Edge Functions
-async function testDirectTableAccess() {
+async function testBasicTableAccess() {
     try {
-        console.log('🧪 Testing direct table access...');
+        console.log('🧪 Testing basic table access...');
         
         if (!window.supabase) {
             throw new Error('Supabase client not available');
@@ -339,7 +339,7 @@ async function testDirectTableAccess() {
         
         const successCount = tests.filter(t => t.success).length;
         
-        console.log('✅ Direct table access test results:', tests);
+        console.log('✅ Basic table access test results:', tests);
         
         return {
             success: successCount > 0,
@@ -349,7 +349,7 @@ async function testDirectTableAccess() {
         };
         
     } catch (error) {
-        console.error('❌ Direct table access test failed:', error);
+        console.error('❌ Basic table access test failed:', error);
         return { success: false, error: error.message };
     }
 }
@@ -551,13 +551,13 @@ async function checkCacheHealth() {
     }
 }
 
-// Test direct table access integration
-async function testDirectTableAccess() {
-    console.log('🧪 Testing complete direct table access integration...');
+// Test basic table access integration
+async function testBasicTableAccessIntegration() {
+    console.log('🧪 Testing complete basic table access integration...');
     
     try {
         // Test table connectivity
-        const tableTest = await testDirectTableAccess();
+        const tableTest = await testBasicTableAccess();
         console.log('📡 Table access test:', tableTest);
         
         // Check cache health
@@ -597,7 +597,7 @@ async function testDirectTableAccess() {
             timestamp: new Date().toISOString()
         };
         
-        console.log('🎯 Direct table access test results:', testResults);
+        console.log('🎯 Basic table access test results:', testResults);
         
         // Display results in notification
         const hasData = cacheHealth.tokenCacheCount > 0;
@@ -611,7 +611,7 @@ async function testDirectTableAccess() {
         return testResults;
         
     } catch (error) {
-        console.error('❌ Direct table access test failed:', error);
+        console.error('❌ Basic table access test failed:', error);
         showNotification('Table access test failed', 'error');
         return { error: error.message };
     }
@@ -1825,7 +1825,8 @@ window.app = {
     cleanup,
     
     // Fixed data functions
-    testDirectTableAccess,
+    testBasicTableAccess,
+    testBasicTableAccessIntegration,
     refreshDataFromTables,
     checkCacheHealth,
     
