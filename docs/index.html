@@ -156,7 +156,7 @@
             <!-- Stats cards removed as per user feedback -->
         </div>
 
-        <!-- COMPETITIONS PAGE - The Main Hub (Renamed from Markets) -->
+        <!-- COMPETITIONS PAGE - The Main Hub (COMPLETE FIXED VERSION) -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
                 <!-- Disconnected User View -->
@@ -180,12 +180,13 @@
                     </section>
                 </div>
 
-                <!-- Connected User View -->
+                <!-- FIXED: Connected User View - Complete Structure -->
                 <div id="competitionsConnected" style="display: none;">
                     <section class="section">
                         <div class="container">
                             <div class="section-header">
                                 <h2 class="section-title">COMPETITIONS</h2>
+                                <p class="section-description">Predict token performance and earn SOL rewards</p>
                                 <div class="section-filters">
                                     <select id="competition-phase" class="filter-select">
                                         <option value="all">All Phases</option>
@@ -205,8 +206,26 @@
                             <!-- Competition Status Sections -->
                             <div class="competitions-container">
                                 
-                                <!-- Voting Open Section -->
-                                <div class="competition-section" id="votingSection">
+                                <!-- Active Competitions Section (Main Display) -->
+                                <div class="competition-section" id="activeSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            🏆 Active Competitions 
+                                            <span class="count-badge" id="activeCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Join these competitions now!</p>
+                                    </div>
+                                    <div class="competitions-grid" id="activeGrid">
+                                        <!-- Real competitions will be inserted here by competition.js -->
+                                        <div class="loading">
+                                            <div class="loading-spinner"></div>
+                                            <p>Loading competitions from database...</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Optional: Additional sections (can be used when HTML structure is expanded later) -->
+                                <div class="competition-section" id="votingSection" style="display: none;">
                                     <div class="section-header-mini">
                                         <h3 class="section-title-mini">
                                             🗳️ Voting Open 
@@ -219,8 +238,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Running Section -->
-                                <div class="competition-section" id="runningSection">
+                                <div class="competition-section" id="runningSection" style="display: none;">
                                     <div class="section-header-mini">
                                         <h3 class="section-title-mini">
                                             ⚡ Currently Running 
@@ -233,8 +251,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Starting Soon Section -->
-                                <div class="competition-section" id="upcomingSection">
+                                <div class="competition-section" id="upcomingSection" style="display: none;">
                                     <div class="section-header-mini">
                                         <h3 class="section-title-mini">
                                             ⏰ Starting Soon 
@@ -247,8 +264,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Completed Section -->
-                                <div class="competition-section" id="completedSection">
+                                <div class="competition-section" id="completedSection" style="display: none;">
                                     <div class="section-header-mini">
                                         <h3 class="section-title-mini">
                                             🏁 Recently Completed 
@@ -262,11 +278,538 @@
                                 </div>
 
                             </div>
+
+                            <!-- Competition Stats Summary -->
+                            <div class="competition-stats-summary" style="margin-top: 3rem;">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">🏆</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalCompetitions">0</div>
+                                            <div class="stat-label">Active Competitions</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">👥</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalParticipants">0</div>
+                                            <div class="stat-label">Total Participants</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">💰</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalPrizePool">0.0 SOL</div>
+                                            <div class="stat-label">Total Prize Pool</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📊</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="avgParticipants">0</div>
+                                            <div class="stat-label">Avg Participants</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>
             </div>
         </div>
+
+        <!-- Additional CSS for the FIXED competitions structure -->
+        <style>
+        /* ==============================================
+           COMPLETE COMPETITION PAGE STYLING (FIXED)
+           ============================================== */
+
+        /* Competition Grid Styling */
+        .competitions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .competitions-container {
+            margin-top: 2rem;
+        }
+
+        .competition-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header-mini {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .section-title-mini {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .count-badge {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
+        .section-description-mini {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        /* Competition Card Styling */
+        .competition-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .competition-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
+        }
+
+        .competition-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+        }
+
+        .card-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .card-status.voting {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        .card-status.running {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+        }
+
+        .card-status.upcoming {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        .card-status.completed {
+            background: rgba(107, 114, 128, 0.1);
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            color: #6b7280;
+        }
+
+        /* Token Battle Styling */
+        .token-battle, .enhanced-battle {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .token-info {
+            text-align: center;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .token-info.user-selected {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .token-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-bottom: 0.5rem;
+            object-fit: cover;
+        }
+
+        .token-details h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .token-details p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .performance {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .performance.positive {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        .performance.negative {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .vs-divider {
+            text-align: center;
+            padding: 0 1rem;
+        }
+
+        .vs-text {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--accent-purple);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .vote-ratio {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Timer and Stats Styling */
+        .timer, .enhanced-timer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .timer-icon {
+            font-size: 1rem;
+        }
+
+        .time-remaining {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .card-stats, .enhanced-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Action Button Styling */
+        .action-button, .enhanced-action {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-button:hover:not(:disabled), .enhanced-action:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .action-button:disabled, .enhanced-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Data Indicator */
+        .data-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .data-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .data-dot.live {
+            background: #22c55e;
+            box-shadow: 0 0 4px #22c55e;
+        }
+
+        .data-dot.demo {
+            background: #f59e0b;
+            box-shadow: 0 0 4px #f59e0b;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(139, 92, 246, 0.2);
+            border-top: 3px solid var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-competitions {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1.5rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.7;
+        }
+
+        .empty-competitions h3, .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .empty-competitions p, .empty-state p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Stats Summary Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        /* Betting Progress Bar */
+        .betting-progress {
+            height: 4px;
+            background: rgba(107, 114, 128, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+            transition: width 0.3s ease;
+        }
+
+        .vote-breakdown {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* User Bet Indicator */
+        .user-bet-indicator {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #22c55e;
+        }
+
+        .bet-icon {
+            font-size: 1rem;
+        }
+
+        .bet-text {
+            font-weight: 500;
+        }
+
+        /* Enhanced Card Styling */
+        .enhanced-card {
+            /* Additional styling for enhanced cards */
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .competitions-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .token-battle, .enhanced-battle {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .vs-divider {
+                order: -1;
+                padding: 0.5rem 0;
+            }
+            
+            .card-stats, .enhanced-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .section-title-mini {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-stats, .enhanced-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .empty-competitions {
+                padding: 2rem 1rem;
+            }
+
+            .empty-icon {
+                font-size: 3rem;
+            }
+        }
+        </style>
         
         <!-- LEADERBOARD PAGE -->
         <div id="leaderboardPage" class="page-content">
