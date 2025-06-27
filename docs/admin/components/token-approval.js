@@ -1,6 +1,6 @@
 /**
  * TokenApproval Component - Token Approval Workflow System
- * Handles pending token reviews, batch operations, and auto-approval rules
+ * Updated with real database integration - no demo fallbacks
  */
 
 class TokenApproval {
@@ -16,18 +16,7 @@ class TokenApproval {
             PENDING: 'pending',
             REVIEWING: 'reviewing',
             APPROVED: 'approved',
-            REJECTED: 'rejected',
-            AUTO_APPROVED: 'auto_approved'
-        };
-        
-        // Auto-approval criteria
-        this.defaultAutoApprovalRules = {
-            minMarketCap: 5000000, // $5M
-            minAge: 30, // days
-            minLiquidity: 0.3, // 30%
-            verificationRequired: false,
-            maxAutoApprovalsPerHour: 10,
-            requiresManualReview: ['rugpull_risk', 'honeypot_detected', 'duplicate_name']
+            REJECTED: 'rejected'
         };
         
         console.log('TokenApproval: Component initialized');
@@ -40,13 +29,10 @@ class TokenApproval {
         try {
             console.log('✅ Initializing Token Approval System...');
             
-            // Load pending approvals
+            // Load pending approvals from database
             await this.loadPendingApprovals();
             
-            // Load auto-approval rules
-            await this.loadAutoApprovalRules();
-            
-            // Start monitoring new submissions
+            // Start monitoring for new tokens
             this.startApprovalMonitoring();
             
             // Set up event listeners
@@ -58,446 +44,339 @@ class TokenApproval {
             return true;
         } catch (error) {
             console.error('Failed to initialize Token Approval System:', error);
+            this.showAdminNotification('Failed to initialize Token Approval System', 'error');
             return false;
         }
     }
 
     /**
-     * Load Pending Approvals
+     * Load Pending Approvals from Database
      */
     async loadPendingApprovals() {
         try {
             const supabase = this.getSupabase();
             if (!supabase) {
-                console.warn('Supabase not available, using demo data');
-                this.loadDemoApprovals();
-                return;
+                throw new Error('Database connection not available');
             }
 
-            // Load from database
-            const { data: pendingTokens, error } = await supabase
-                .from('token_approvals')
+            // Get all tokens from token_cache that are not yet approved or blacklisted
+            const { data: allTokens, error: tokenError } = await supabase
+                .from('token_cache')
                 .select('*')
-                .eq('status', this.approvalStates.PENDING)
-                .order('submitted_at', { ascending: true });
+                .eq('cache_status', 'FRESH')
+                .order('market_cap_usd', { ascending: false });
 
-            if (error) {
-                console.warn('Could not load pending approvals from database:', error);
-                this.loadDemoApprovals();
-                return;
+            if (tokenError) {
+                throw tokenError;
             }
 
-            this.approvalQueue = pendingTokens || [];
+            // Get approved tokens
+            const { data: approvedTokens, error: approvedError } = await supabase
+                .from('token_approvals')
+                .select('token_address');
+
+            if (approvedError) {
+                console.warn('Could not load approved tokens:', approvedError);
+            }
+
+            // Get blacklisted tokens
+            const { data: blacklistedTokens, error: blacklistError } = await supabase
+                .from('token_blacklist')
+                .select('token_address')
+                .eq('is_active', true);
+
+            if (blacklistError) {
+                console.warn('Could not load blacklisted tokens:', blacklistError);
+            }
+
+            // Create sets for quick lookup
+            const approvedSet = new Set((approvedTokens || []).map(t => t.token_address));
+            const blacklistedSet = new Set((blacklistedTokens || []).map(t => t.token_address));
+
+            // Filter tokens that need approval
+            this.approvalQueue = (allTokens || [])
+                .filter(token => 
+                    !approvedSet.has(token.token_address) && 
+                    !blacklistedSet.has(token.token_address)
+                )
+                .map(token => ({
+                    id: token.id,
+                    tokenAddress: token.token_address,
+                    symbol: token.symbol,
+                    name: token.name,
+                    logoURI: token.logo_uri,
+                    marketCap: token.market_cap_usd,
+                    price: token.current_price,
+                    volume24h: token.volume_24h,
+                    priceChange24h: token.price_change_24h,
+                    priceChange1h: token.price_change_1h,
+                    dataSource: token.data_source,
+                    lastUpdated: token.last_updated,
+                    submittedAt: token.cache_created_at,
+                    status: this.approvalStates.PENDING,
+                    riskScore: this.calculateRiskScore(token),
+                    tags: this.generateTags(token)
+                }));
             
             // Update statistics
             this.updateApprovalStatistics();
             
-            console.log(`✅ Loaded ${this.approvalQueue.length} pending approvals`);
+            console.log(`✅ Loaded ${this.approvalQueue.length} tokens pending approval`);
             
         } catch (error) {
             console.error('Error loading pending approvals:', error);
-            this.loadDemoApprovals();
+            this.showAdminNotification('Failed to load pending approvals from database', 'error');
+            throw error;
         }
     }
 
     /**
-     * Load Demo Approvals (Fallback)
+     * Calculate Risk Score for Token
      */
-    loadDemoApprovals() {
-        this.approvalQueue = [
-            {
-                id: 1,
-                tokenAddress: 'ABC123def456ghi789jkl012mno345pqr678stu901',
-                symbol: 'NEWCOIN',
-                name: 'New Promising Token',
-                logoURI: null,
-                marketCap: 8500000,
-                price: 0.045,
-                volume24h: 2400000,
-                priceChange24h: 12.5,
-                age: 45,
-                liquidity: 0.65,
-                verificationStatus: 'unverified',
-                submittedAt: new Date(Date.now() - 7200000), // 2 hours ago
-                submittedBy: 'community',
-                riskScore: 0.25,
-                autoApprovalEligible: true,
-                tags: ['defi', 'utility'],
-                socialLinks: {
-                    website: 'https://newcoin.example.com',
-                    twitter: '@newcoin_token',
-                    telegram: 't.me/newcoin'
-                }
-            },
-            {
-                id: 2,
-                tokenAddress: 'DEF456ghi789jkl012mno345pqr678stu901vwx234',
-                symbol: 'RISING',
-                name: 'Rising Star Token',
-                logoURI: null,
-                marketCap: 12000000,
-                price: 1.23,
-                volume24h: 5600000,
-                priceChange24h: 18.3,
-                age: 67,
-                liquidity: 0.78,
-                verificationStatus: 'pending',
-                submittedAt: new Date(Date.now() - 3600000), // 1 hour ago
-                submittedBy: 'team',
-                riskScore: 0.15,
-                autoApprovalEligible: true,
-                tags: ['gaming', 'nft'],
-                socialLinks: {
-                    website: 'https://risingstar.example.com',
-                    twitter: '@risingstar_game'
-                }
-            },
-            {
-                id: 3,
-                tokenAddress: 'GHI789jkl012mno345pqr678stu901vwx234yzab567',
-                symbol: 'MEMECOIN',
-                name: 'Community Meme Token',
-                logoURI: null,
-                marketCap: 3200000,
-                price: 0.00000012,
-                volume24h: 890000,
-                priceChange24h: -5.2,
-                age: 15,
-                liquidity: 0.45,
-                verificationStatus: 'unverified',
-                submittedAt: new Date(Date.now() - 1800000), // 30 minutes ago
-                submittedBy: 'community',
-                riskScore: 0.65,
-                autoApprovalEligible: false,
-                tags: ['meme', 'community'],
-                riskFlags: ['low_liquidity', 'recent_token'],
-                socialLinks: {
-                    twitter: '@memecoin_fun',
-                    telegram: 't.me/memecoin_community'
-                }
-            }
-        ];
-
-        console.log('📊 Using demo approval data');
+    calculateRiskScore(token) {
+        let riskScore = 0;
+        
+        // Market cap risk
+        if (token.market_cap_usd < 1000000) riskScore += 0.3;
+        else if (token.market_cap_usd < 5000000) riskScore += 0.2;
+        
+        // Volume risk
+        if (token.volume_24h < 10000) riskScore += 0.2;
+        else if (token.volume_24h < 50000) riskScore += 0.1;
+        
+        // Price volatility risk
+        if (Math.abs(token.price_change_24h) > 50) riskScore += 0.3;
+        else if (Math.abs(token.price_change_24h) > 25) riskScore += 0.2;
+        
+        return Math.min(riskScore, 1.0);
     }
 
     /**
-     * Load Auto-Approval Rules
+     * Generate Tags for Token
      */
-    async loadAutoApprovalRules() {
-        try {
-            const supabase = this.getSupabase();
-            if (!supabase) {
-                this.adminState.approvalState.autoApprovalRules = { ...this.defaultAutoApprovalRules };
-                return;
-            }
-
-            // Load from database
-            const { data: rules, error } = await supabase
-                .from('auto_approval_rules')
-                .select('*')
-                .eq('is_active', true)
-                .single();
-
-            if (error || !rules) {
-                console.warn('Using default auto-approval rules');
-                this.adminState.approvalState.autoApprovalRules = { ...this.defaultAutoApprovalRules };
-                return;
-            }
-
-            this.adminState.approvalState.autoApprovalRules = {
-                ...this.defaultAutoApprovalRules,
-                ...rules.rules
-            };
-
-            console.log('✅ Auto-approval rules loaded');
-            
-        } catch (error) {
-            console.error('Error loading auto-approval rules:', error);
-            this.adminState.approvalState.autoApprovalRules = { ...this.defaultAutoApprovalRules };
-        }
+    generateTags(token) {
+        const tags = [];
+        
+        // Market cap based tags
+        if (token.market_cap_usd > 1000000000) tags.push('large-cap');
+        else if (token.market_cap_usd > 100000000) tags.push('mid-cap');
+        else if (token.market_cap_usd > 10000000) tags.push('small-cap');
+        else tags.push('micro-cap');
+        
+        // Volatility tags
+        if (Math.abs(token.price_change_24h) > 20) tags.push('volatile');
+        if (token.price_change_24h > 10) tags.push('trending-up');
+        if (token.price_change_24h < -10) tags.push('trending-down');
+        
+        // Source tags
+        if (token.data_source) tags.push(token.data_source);
+        
+        return tags;
     }
 
     /**
      * Start Approval Monitoring
      */
     startApprovalMonitoring() {
-        // Monitor for new submissions every 30 seconds
+        // Check for new tokens every 60 seconds
         this.updateInterval = setInterval(async () => {
             try {
-                await this.checkForNewSubmissions();
-                await this.processAutoApprovals();
+                await this.checkForNewTokens();
             } catch (error) {
                 console.error('Approval monitoring error:', error);
             }
-        }, 30000);
+        }, 60000);
 
         console.log('✅ Approval monitoring started');
     }
 
     /**
-     * Check for New Submissions
+     * Check for New Tokens
      */
-    async checkForNewSubmissions() {
+    async checkForNewTokens() {
         try {
-            // Simulate new submissions occasionally
-            if (Math.random() < 0.1) { // 10% chance
-                const newSubmission = this.generateRandomSubmission();
-                this.approvalQueue.push(newSubmission);
-                
-                // Check if eligible for auto-approval
-                if (this.isEligibleForAutoApproval(newSubmission)) {
-                    await this.processAutoApproval(newSubmission);
-                } else {
-                    console.log(`📥 New token submission: ${newSubmission.symbol}`);
-                    this.updateApprovalDisplay();
-                }
+            const previousCount = this.approvalQueue.length;
+            await this.loadPendingApprovals();
+            
+            const newCount = this.approvalQueue.length;
+            if (newCount > previousCount) {
+                const difference = newCount - previousCount;
+                console.log(`📥 ${difference} new token(s) added to approval queue`);
+                this.showAdminNotification(`${difference} new token(s) require approval`, 'info');
+                this.updateApprovalDisplay();
             }
         } catch (error) {
-            console.error('Error checking for new submissions:', error);
+            console.error('Error checking for new tokens:', error);
         }
     }
 
     /**
-     * Generate Random Submission (for demo)
-     */
-    generateRandomSubmission() {
-        const symbols = ['NEWTOKEN', 'CRYPTO', 'DEFI', 'CHAIN', 'COIN', 'TOKEN'];
-        const names = ['New Token', 'Crypto Project', 'DeFi Protocol', 'Chain Token', 'Utility Coin'];
-        
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)] + Math.floor(Math.random() * 1000);
-        const name = names[Math.floor(Math.random() * names.length)] + ' ' + Math.floor(Math.random() * 100);
-        
-        return {
-            id: Date.now(),
-            tokenAddress: this.generateRandomAddress(),
-            symbol,
-            name,
-            logoURI: null,
-            marketCap: Math.floor(Math.random() * 50000000) + 1000000,
-            price: Math.random() * 10,
-            volume24h: Math.floor(Math.random() * 5000000),
-            priceChange24h: (Math.random() - 0.5) * 40,
-            age: Math.floor(Math.random() * 200) + 10,
-            liquidity: Math.random() * 0.8 + 0.2,
-            verificationStatus: Math.random() > 0.5 ? 'unverified' : 'pending',
-            submittedAt: new Date(),
-            submittedBy: Math.random() > 0.5 ? 'community' : 'team',
-            riskScore: Math.random() * 0.8,
-            autoApprovalEligible: Math.random() > 0.3,
-            tags: ['defi', 'utility', 'gaming', 'nft', 'meme'].slice(0, Math.floor(Math.random() * 3) + 1)
-        };
-    }
-
-    /**
-     * Process Auto-Approvals
-     */
-    async processAutoApprovals() {
-        try {
-            const eligibleTokens = this.approvalQueue.filter(token => 
-                token.status === this.approvalStates.PENDING && 
-                this.isEligibleForAutoApproval(token)
-            );
-
-            for (const token of eligibleTokens.slice(0, 5)) { // Limit to 5 per batch
-                await this.processAutoApproval(token);
-            }
-
-        } catch (error) {
-            console.error('Error processing auto-approvals:', error);
-        }
-    }
-
-    /**
-     * Check if Token is Eligible for Auto-Approval
-     */
-    isEligibleForAutoApproval(token) {
-        const rules = this.adminState.approvalState.autoApprovalRules;
-        
-        // Check basic criteria
-        if (token.marketCap < rules.minMarketCap) return false;
-        if (token.age < rules.minAge) return false;
-        if (token.liquidity < rules.minLiquidity) return false;
-        if (rules.verificationRequired && token.verificationStatus === 'unverified') return false;
-        
-        // Check risk flags
-        if (token.riskFlags && token.riskFlags.some(flag => 
-            rules.requiresManualReview.includes(flag))) {
-            return false;
-        }
-        
-        // Check risk score
-        if (token.riskScore > 0.5) return false;
-        
-        return true;
-    }
-
-    /**
-     * Process Auto-Approval
-     */
-    async processAutoApproval(token) {
-        try {
-            console.log(`🤖 Auto-approving token: ${token.symbol}`);
-            
-            // Update token status
-            token.status = this.approvalStates.AUTO_APPROVED;
-            token.approvedAt = new Date();
-            token.approvedBy = 'auto_system';
-            
-            // Remove from pending queue
-            this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
-            
-            // Update statistics
-            this.adminState.approvalState.statistics.autoApprovedPercent++;
-            this.adminState.approvalState.statistics.pendingCount--;
-            
-            // Add to approved list
-            if (!this.adminState.approvalState.approved) {
-                this.adminState.approvalState.approved = [];
-            }
-            this.adminState.approvalState.approved.push(token);
-            
-            this.updateApprovalDisplay();
-            
-        } catch (error) {
-            console.error('Error processing auto-approval:', error);
-        }
-    }
-
-    /**
-     * Setup Event Listeners
-     */
-    setupEventListeners() {
-        // Approval actions
-        document.addEventListener('click', (e) => {
-            const tokenId = e.target.dataset.tokenId;
-            
-            if (e.target.onclick?.toString().includes('approveToken') && tokenId) {
-                this.approveToken(tokenId);
-            } else if (e.target.onclick?.toString().includes('rejectToken') && tokenId) {
-                this.rejectToken(tokenId);
-            } else if (e.target.onclick?.toString().includes('reviewToken') && tokenId) {
-                this.openTokenReview(tokenId);
-            }
-        });
-
-        // Batch operations
-        document.addEventListener('click', (e) => {
-            if (e.target.onclick?.toString().includes('batchApprove')) {
-                this.batchApprove();
-            } else if (e.target.onclick?.toString().includes('batchReject')) {
-                this.batchReject();
-            } else if (e.target.onclick?.toString().includes('selectAll')) {
-                this.selectAllTokens();
-            } else if (e.target.onclick?.toString().includes('clearSelection')) {
-                this.clearSelection();
-            } else if (e.target.onclick?.toString().includes('bulkAnalyze')) {
-                this.bulkAnalyze();
-            }
-        });
-
-        // Auto-approval rules
-        document.addEventListener('click', (e) => {
-            if (e.target.onclick?.toString().includes('saveAutoApprovalRules')) {
-                this.saveAutoApprovalRules();
-            } else if (e.target.onclick?.toString().includes('testAutoApprovalRules')) {
-                this.testAutoApprovalRules();
-            } else if (e.target.onclick?.toString().includes('resetAutoApprovalRules')) {
-                this.resetAutoApprovalRules();
-            }
-        });
-
-        // Checkbox events
-        document.addEventListener('change', (e) => {
-            if (e.target.classList.contains('approval-checkbox')) {
-                this.updateSelectedCount();
-            }
-        });
-
-        console.log('✅ Token approval event listeners set up');
-    }
-
-    /**
-     * Approve Token
+     * Approve Token - Write to Database
      */
     async approveToken(tokenId) {
         try {
             const token = this.approvalQueue.find(t => t.id == tokenId);
             if (!token) {
-                console.error('Token not found:', tokenId);
-                return;
+                throw new Error('Token not found in approval queue');
+            }
+
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
             }
 
             console.log(`✅ Approving token: ${token.symbol}`);
             
-            // Update token status
-            token.status = this.approvalStates.APPROVED;
-            token.approvedAt = new Date();
-            token.approvedBy = 'admin_manual';
+            // Start transaction
+            const now = new Date().toISOString();
+            
+            // Insert into token_approvals table
+            const { data: approval, error: approvalError } = await supabase
+                .from('token_approvals')
+                .insert({
+                    token_address: token.tokenAddress,
+                    token_symbol: token.symbol,
+                    token_name: token.name,
+                    approved_by: sessionStorage.getItem('adminWallet') || 'admin',
+                    approved_at: now,
+                    approval_notes: `Market Cap: $${token.marketCap.toLocaleString()}, Volume: $${token.volume24h.toLocaleString()}`,
+                    risk_score: token.riskScore,
+                    market_cap_at_approval: token.marketCap,
+                    created_at: now
+                })
+                .select()
+                .single();
+
+            if (approvalError) {
+                throw approvalError;
+            }
+
+            // Log to admin audit log
+            await this.logAdminAction('token_approval', {
+                action: 'approve_token',
+                token_address: token.tokenAddress,
+                token_symbol: token.symbol,
+                details: {
+                    market_cap: token.marketCap,
+                    risk_score: token.riskScore,
+                    approval_id: approval.id
+                }
+            });
             
             // Remove from pending queue
             this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
             
             // Update statistics
-            this.adminState.approvalState.statistics.pendingCount--;
-            this.adminState.approvalState.statistics.approvalRate = 
-                ((this.adminState.approvalState.statistics.approvalRate * 10) + 1) / 11; // Simple moving average
+            this.updateApprovalStatistics();
             
-            // Add to approved list
-            if (!this.adminState.approvalState.approved) {
-                this.adminState.approvalState.approved = [];
-            }
-            this.adminState.approvalState.approved.push(token);
-            
+            // Update UI
             this.updateApprovalDisplay();
+            
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
             
         } catch (error) {
             console.error('Error approving token:', error);
-            this.showAdminNotification('Failed to approve token', 'error');
+            this.showAdminNotification(`Failed to approve token: ${error.message}`, 'error');
         }
     }
 
     /**
-     * Reject Token
+     * Reject Token - Write to Blacklist
      */
     async rejectToken(tokenId) {
         try {
             const token = this.approvalQueue.find(t => t.id == tokenId);
             if (!token) {
-                console.error('Token not found:', tokenId);
-                return;
+                throw new Error('Token not found in approval queue');
             }
 
             const reason = prompt(`Enter rejection reason for ${token.symbol}:`);
             if (!reason) return;
 
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
             console.log(`❌ Rejecting token: ${token.symbol} - Reason: ${reason}`);
             
-            // Update token status
-            token.status = this.approvalStates.REJECTED;
-            token.rejectedAt = new Date();
-            token.rejectedBy = 'admin_manual';
-            token.rejectionReason = reason;
+            const now = new Date().toISOString();
+            
+            // Insert into token_blacklist table
+            const { data: blacklist, error: blacklistError } = await supabase
+                .from('token_blacklist')
+                .insert({
+                    token_address: token.tokenAddress,
+                    token_symbol: token.symbol,
+                    token_name: token.name,
+                    reason: reason,
+                    severity: token.riskScore > 0.7 ? 'high' : token.riskScore > 0.4 ? 'medium' : 'low',
+                    added_by: sessionStorage.getItem('adminWallet') || 'admin',
+                    is_active: true,
+                    created_at: now
+                })
+                .select()
+                .single();
+
+            if (blacklistError) {
+                throw blacklistError;
+            }
+
+            // Log to admin audit log
+            await this.logAdminAction('token_blacklist', {
+                action: 'blacklist_token',
+                token_address: token.tokenAddress,
+                token_symbol: token.symbol,
+                details: {
+                    reason: reason,
+                    risk_score: token.riskScore,
+                    blacklist_id: blacklist.id
+                }
+            });
             
             // Remove from pending queue
             this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
             
             // Update statistics
-            this.adminState.approvalState.statistics.pendingCount--;
+            this.updateApprovalStatistics();
             
-            // Add to rejected list
-            if (!this.adminState.approvalState.rejected) {
-                this.adminState.approvalState.rejected = [];
-            }
-            this.adminState.approvalState.rejected.push(token);
-            
+            // Update UI
             this.updateApprovalDisplay();
-            this.showAdminNotification(`Token ${token.symbol} rejected`, 'warning');
+            
+            this.showAdminNotification(`Token ${token.symbol} blacklisted`, 'warning');
             
         } catch (error) {
             console.error('Error rejecting token:', error);
-            this.showAdminNotification('Failed to reject token', 'error');
+            this.showAdminNotification(`Failed to blacklist token: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Log Admin Action to Audit Log
+     */
+    async logAdminAction(actionType, actionData) {
+        try {
+            const supabase = this.getSupabase();
+            if (!supabase) return;
+
+            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
+            
+            await supabase
+                .from('admin_audit_log')
+                .insert({
+                    admin_id: adminWallet,
+                    action_type: actionType,
+                    action_data: actionData,
+                    ip_address: 'web-client',
+                    user_agent: navigator.userAgent,
+                    created_at: new Date().toISOString()
+                });
+
+            console.log(`📝 Admin action logged: ${actionType}`);
+            
+        } catch (error) {
+            console.error('Error logging admin action:', error);
+            // Don't throw - logging failure shouldn't stop the main action
         }
     }
 
@@ -540,17 +419,16 @@ class TokenApproval {
                             <p><strong>Address:</strong> ${this.truncateAddress(token.tokenAddress)}</p>
                             <p><strong>Market Cap:</strong> $${this.formatNumber(token.marketCap)}</p>
                             <p><strong>Price:</strong> $${token.price.toFixed(6)}</p>
-                            <p><strong>Age:</strong> ${token.age} days</p>
+                            <p><strong>Data Source:</strong> ${token.dataSource}</p>
                         </div>
                         
                         <div>
-                            <h4>Risk Assessment</h4>
-                            <p><strong>Risk Score:</strong> ${(token.riskScore * 100).toFixed(1)}%</p>
-                            <p><strong>Liquidity:</strong> ${(token.liquidity * 100).toFixed(1)}%</p>
+                            <h4>Market Metrics</h4>
                             <p><strong>24h Volume:</strong> $${this.formatNumber(token.volume24h)}</p>
                             <p><strong>24h Change:</strong> ${token.priceChange24h.toFixed(2)}%</p>
-                            <p><strong>Verification:</strong> ${token.verificationStatus}</p>
-                            <p><strong>Auto-Eligible:</strong> ${token.autoApprovalEligible ? 'Yes' : 'No'}</p>
+                            <p><strong>1h Change:</strong> ${token.priceChange1h.toFixed(2)}%</p>
+                            <p><strong>Risk Score:</strong> ${(token.riskScore * 100).toFixed(1)}%</p>
+                            <p><strong>Last Updated:</strong> ${new Date(token.lastUpdated).toLocaleString()}</p>
                         </div>
                     </div>
                     
@@ -560,15 +438,6 @@ class TokenApproval {
                             ${token.tags ? token.tags.map(tag => `<span class="status-badge">${tag}</span>`).join('') : 'No tags'}
                         </div>
                     </div>
-                    
-                    ${token.riskFlags ? `
-                        <div>
-                            <h4>Risk Flags</h4>
-                            <div style="display: flex; gap: 0.5rem; margin: 0.5rem 0;">
-                                ${token.riskFlags.map(flag => `<span class="status-badge inactive">${flag}</span>`).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
                     
                     <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                         <button class="btn btn-success" onclick="window.TokenApproval.instance.approveToken('${token.id}'); this.closest('.modal').remove();">
@@ -589,211 +458,30 @@ class TokenApproval {
     }
 
     /**
-     * Batch Approve Selected Tokens
+     * Setup Event Listeners
      */
-    async batchApprove() {
-        try {
-            const selectedIds = Array.from(this.selectedTokens);
-            if (selectedIds.length === 0) {
-                this.showAdminNotification('No tokens selected', 'warning');
-                return;
-            }
-
-            if (!confirm(`✅ Approve ${selectedIds.length} selected tokens?`)) {
-                return;
-            }
-
-            console.log(`✅ Batch approving ${selectedIds.length} tokens...`);
+    setupEventListeners() {
+        // Approval actions
+        document.addEventListener('click', (e) => {
+            const tokenId = e.target.dataset.tokenId;
             
-            for (const tokenId of selectedIds) {
-                await this.approveToken(tokenId);
+            if (e.target.onclick?.toString().includes('approveToken') && tokenId) {
+                this.approveToken(tokenId);
+            } else if (e.target.onclick?.toString().includes('rejectToken') && tokenId) {
+                this.rejectToken(tokenId);
+            } else if (e.target.onclick?.toString().includes('reviewToken') && tokenId) {
+                this.openTokenReview(tokenId);
             }
-            
-            this.clearSelection();
-            this.showAdminNotification(`Approved ${selectedIds.length} tokens`, 'success');
-            
-        } catch (error) {
-            console.error('Error in batch approval:', error);
-            this.showAdminNotification('Batch approval failed', 'error');
-        }
-    }
-
-    /**
-     * Batch Reject Selected Tokens
-     */
-    async batchReject() {
-        try {
-            const selectedIds = Array.from(this.selectedTokens);
-            if (selectedIds.length === 0) {
-                this.showAdminNotification('No tokens selected', 'warning');
-                return;
-            }
-
-            const reason = prompt(`Enter rejection reason for ${selectedIds.length} tokens:`);
-            if (!reason) return;
-
-            if (!confirm(`❌ Reject ${selectedIds.length} selected tokens?`)) {
-                return;
-            }
-
-            console.log(`❌ Batch rejecting ${selectedIds.length} tokens...`);
-            
-            for (const tokenId of selectedIds) {
-                const token = this.approvalQueue.find(t => t.id == tokenId);
-                if (token) {
-                    token.rejectionReason = reason;
-                    await this.rejectToken(tokenId);
-                }
-            }
-            
-            this.clearSelection();
-            this.showAdminNotification(`Rejected ${selectedIds.length} tokens`, 'warning');
-            
-        } catch (error) {
-            console.error('Error in batch rejection:', error);
-            this.showAdminNotification('Batch rejection failed', 'error');
-        }
-    }
-
-    /**
-     * Select All Tokens
-     */
-    selectAllTokens() {
-        this.selectedTokens.clear();
-        
-        document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
-            checkbox.checked = true;
-            this.selectedTokens.add(checkbox.dataset.tokenId);
         });
-        
-        this.updateSelectedCount();
-        console.log('🗂️ Selected all tokens');
-    }
 
-    /**
-     * Clear Selection
-     */
-    clearSelection() {
-        this.selectedTokens.clear();
-        
-        document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
+        // Checkbox events
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('approval-checkbox')) {
+                this.updateSelectedCount();
+            }
         });
-        
-        this.updateSelectedCount();
-        console.log('🗑️ Cleared selection');
-    }
 
-    /**
-     * Bulk Analyze Tokens
-     */
-    async bulkAnalyze() {
-        try {
-            const selectedIds = Array.from(this.selectedTokens);
-            if (selectedIds.length === 0) {
-                this.showAdminNotification('No tokens selected', 'warning');
-                return;
-            }
-
-            console.log(`🔍 Running bulk analysis on ${selectedIds.length} tokens...`);
-            
-            for (const tokenId of selectedIds) {
-                const token = this.approvalQueue.find(t => t.id == tokenId);
-                if (token) {
-                    // Run analysis (simulated)
-                    token.analysisCompleted = true;
-                    token.analysisScore = Math.random() * 100;
-                    token.riskScore = Math.random() * 0.8;
-                }
-            }
-            
-            this.updateApprovalDisplay();
-            this.showAdminNotification(`Analysis completed for ${selectedIds.length} tokens`, 'success');
-            
-        } catch (error) {
-            console.error('Error in bulk analysis:', error);
-            this.showAdminNotification('Bulk analysis failed', 'error');
-        }
-    }
-
-    /**
-     * Save Auto-Approval Rules
-     */
-    async saveAutoApprovalRules() {
-        try {
-            console.log('💾 Saving auto-approval rules...');
-            
-            // Get values from form
-            const rules = {
-                minMarketCap: parseInt(document.getElementById('min-market-cap')?.value || '5') * 1000000,
-                minAge: parseInt(document.getElementById('min-age')?.value || '30'),
-                minLiquidity: parseFloat(document.getElementById('min-liquidity')?.value || '30') / 100,
-                verificationRequired: document.getElementById('verification-required')?.value === 'true'
-            };
-            
-            // Update state
-            this.adminState.approvalState.autoApprovalRules = {
-                ...this.adminState.approvalState.autoApprovalRules,
-                ...rules
-            };
-            
-            // Save to database (simulated)
-            const supabase = this.getSupabase();
-            if (supabase) {
-                // Save rules to database
-                console.log('Saving rules to database...');
-            }
-            
-            this.showAdminNotification('Auto-approval rules saved successfully', 'success');
-            
-        } catch (error) {
-            console.error('Error saving auto-approval rules:', error);
-            this.showAdminNotification('Failed to save rules', 'error');
-        }
-    }
-
-    /**
-     * Test Auto-Approval Rules
-     */
-    async testAutoApprovalRules() {
-        try {
-            console.log('🧪 Testing auto-approval rules...');
-            
-            let eligible = 0;
-            let ineligible = 0;
-            
-            for (const token of this.approvalQueue) {
-                if (this.isEligibleForAutoApproval(token)) {
-                    eligible++;
-                } else {
-                    ineligible++;
-                }
-            }
-            
-            const message = `Test Results: ${eligible} eligible, ${ineligible} ineligible for auto-approval`;
-            this.showAdminNotification(message, 'info');
-            
-        } catch (error) {
-            console.error('Error testing auto-approval rules:', error);
-            this.showAdminNotification('Rule testing failed', 'error');
-        }
-    }
-
-    /**
-     * Reset Auto-Approval Rules
-     */
-    resetAutoApprovalRules() {
-        if (!confirm('🔄 Reset all rules to default values?')) {
-            return;
-        }
-        
-        this.adminState.approvalState.autoApprovalRules = { ...this.defaultAutoApprovalRules };
-        
-        // Update form values
-        this.updateAutoApprovalRulesDisplay();
-        
-        this.showAdminNotification('Rules reset to defaults', 'warning');
-        console.log('🔄 Auto-approval rules reset to defaults');
+        console.log('✅ Token approval event listeners set up');
     }
 
     /**
@@ -802,17 +490,16 @@ class TokenApproval {
     updateApprovalStatistics() {
         this.adminState.approvalState.statistics.pendingCount = this.approvalQueue.length;
         
-        // Calculate approval rate
-        const totalProcessed = (this.adminState.approvalState.approved?.length || 0) + 
-                              (this.adminState.approvalState.rejected?.length || 0);
-        const approved = this.adminState.approvalState.approved?.length || 0;
-        
-        if (totalProcessed > 0) {
-            this.adminState.approvalState.statistics.approvalRate = (approved / totalProcessed) * 100;
+        // Update UI elements
+        const pendingElement = document.getElementById('pending-approvals');
+        if (pendingElement) {
+            pendingElement.textContent = this.approvalQueue.length;
         }
         
-        // Calculate average review time (simulated)
-        this.adminState.approvalState.statistics.avgReviewTime = 2.4 + (Math.random() - 0.5) * 1;
+        const pendingCountElement = document.getElementById('pending-count');
+        if (pendingCountElement) {
+            pendingCountElement.textContent = this.approvalQueue.length;
+        }
     }
 
     /**
@@ -821,52 +508,9 @@ class TokenApproval {
     updateApprovalDisplay() {
         this.updateApprovalStatistics();
         
-        // Update statistics display
-        if (window.updateApprovalStatistics) {
-            window.updateApprovalStatistics();
-        }
-        
         // Re-render approval queue
         if (window.renderApprovalQueue) {
             window.renderApprovalQueue();
-        }
-        
-        // Update pending count in dashboard
-        const pendingCountElement = document.getElementById('pending-count');
-        if (pendingCountElement) {
-            pendingCountElement.textContent = this.adminState.approvalState.statistics.pendingCount;
-        }
-    }
-
-    /**
-     * Update Auto-Approval Rules Display
-     */
-    updateAutoApprovalRulesDisplay() {
-        const rules = this.adminState.approvalState.autoApprovalRules;
-        
-        // Update sliders
-        const marketCapSlider = document.getElementById('min-market-cap');
-        if (marketCapSlider) {
-            marketCapSlider.value = rules.minMarketCap / 1000000;
-            marketCapSlider.dispatchEvent(new Event('input'));
-        }
-        
-        const ageSlider = document.getElementById('min-age');
-        if (ageSlider) {
-            ageSlider.value = rules.minAge;
-            ageSlider.dispatchEvent(new Event('input'));
-        }
-        
-        const liquiditySlider = document.getElementById('min-liquidity');
-        if (liquiditySlider) {
-            liquiditySlider.value = rules.minLiquidity * 100;
-            liquiditySlider.dispatchEvent(new Event('input'));
-        }
-        
-        // Update dropdown
-        const verificationSelect = document.getElementById('verification-required');
-        if (verificationSelect) {
-            verificationSelect.value = rules.verificationRequired.toString();
         }
     }
 
@@ -905,18 +549,6 @@ class TokenApproval {
         }
         
         return null;
-    }
-
-    /**
-     * Generate Random Address
-     */
-    generateRandomAddress() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let result = '';
-        for (let i = 0; i < 44; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
     }
 
     /**
@@ -971,10 +603,4 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
-console.log('✅ TokenApproval component loaded');
-console.log('✅ Features:');
-console.log('   📋 Pending approval queue management');
-console.log('   🔄 Batch approval operations');
-console.log('   🤖 Auto-approval rule system');
-console.log('   🔍 Detailed token review interface');
-console.log('   📊 Approval analytics and statistics');
+console.log('✅ TokenApproval component loaded with database integration');
