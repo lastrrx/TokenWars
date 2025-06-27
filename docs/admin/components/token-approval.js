@@ -246,7 +246,6 @@ class TokenApproval {
                     token_name: token.name,
                     approved_by: sessionStorage.getItem('adminWallet') || 'admin',
                     approved_at: now,
-                    approval_notes: `Market Cap: $${token.marketCap?.toLocaleString() || 'N/A'}, Volume: $${token.volume24h?.toLocaleString() || 'N/A'}`,
                     risk_score: token.riskScore,
                     market_cap_at_approval: token.marketCap,
                     created_at: now
