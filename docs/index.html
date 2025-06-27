@@ -3834,130 +3834,244 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 
-    <!-- Add this script block before the closing </body> tag in your index.html -->
-<script>
-// PERMANENT WALLET-SUPABASE INTEGRATION
-// This ensures wallet connections always integrate with the database
-console.log('🔧 Loading permanent wallet-Supabase integration...');
+<!-- FIXED PERMANENT INTEGRATION SCRIPT -->
+<!-- Place this at the very end of your index.html, just before </body> -->
+<!-- Make sure this comes AFTER all your other script tags -->
 
-// Wait for all services to be ready
-document.addEventListener('DOMContentLoaded', async function() {
-    // Wait a bit for all scripts to load
-    setTimeout(async function() {
-        await initializePermanentIntegration();
-    }, 1000);
+<script>
+// FIXED PERMANENT WALLET-SUPABASE INTEGRATION
+console.log('🔧 Loading FIXED permanent wallet-Supabase integration...');
+
+// Wait for everything to be fully loaded
+window.addEventListener('load', function() {
+    // Add extra delay to ensure all services are ready
+    setTimeout(initializeFixedIntegration, 2000);
 });
 
-async function initializePermanentIntegration() {
+async function initializeFixedIntegration() {
     try {
-        console.log('🚀 Initializing permanent wallet-database integration...');
+        console.log('🚀 Starting FIXED integration...');
         
-        // Wait for services to be available
-        if (!window.walletService || !window.supabaseClient) {
-            console.log('⏳ Waiting for services...');
-            setTimeout(initializePermanentIntegration, 1000);
+        // Wait for all required services
+        let attempts = 0;
+        while (attempts < 30) { // 30 seconds max wait
+            if (window.walletService && 
+                window.supabaseClient && 
+                window.selectWallet &&
+                window.closeWalletModal) {
+                console.log('✅ All required services found');
+                break;
+            }
+            console.log(`⏳ Waiting for services... attempt ${attempts + 1}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
+        
+        if (attempts >= 30) {
+            console.error('❌ Services not ready after 30 seconds');
             return;
         }
         
-        // Enhance selectWallet function permanently
-        if (window.selectWallet) {
-            const originalSelectWallet = window.selectWallet;
-            
-            window.selectWallet = async function(walletType) {
-                console.log(`🔗 Enhanced selectWallet for: ${walletType}`);
+        // 1. First, create the missing updateUIForWalletConnection function
+        if (!window.updateUIForWalletConnection) {
+            window.updateUIForWalletConnection = function(isConnected) {
+                console.log(`🎨 Updating UI for wallet connection: ${isConnected}`);
                 
                 try {
-                    // Connect wallet using existing logic
-                    let result;
+                    const connectBtn = document.getElementById('connectWalletBtn');
+                    const traderInfo = document.getElementById('traderInfo');
                     
-                    if (walletType === 'demo') {
-                        result = await window.walletService.connectDemoWallet();
-                    } else if (walletType === 'phantom') {
-                        const phantomResult = await window.walletService.connectPhantom();
-                        if (phantomResult.success) {
-                            await window.walletService.handleSuccessfulConnection('phantom', phantomResult);
-                            result = { success: true, publicKey: phantomResult.publicKey };
+                    if (connectBtn && traderInfo) {
+                        if (isConnected && window.connectedUser) {
+                            connectBtn.style.display = 'none';
+                            traderInfo.style.display = 'block';
+                            
+                            // Update trader info elements
+                            const navTraderName = document.getElementById('navTraderName');
+                            const navTraderAvatar = document.getElementById('navTraderAvatar');
+                            const navTraderBalance = document.getElementById('navTraderBalance');
+                            
+                            if (navTraderName) {
+                                navTraderName.textContent = window.connectedUser.username || 'Trader';
+                            }
+                            if (navTraderAvatar) {
+                                navTraderAvatar.textContent = window.connectedUser.avatar || getWalletIcon(window.connectedUser.walletType);
+                            }
+                            if (navTraderBalance) {
+                                const balanceText = window.walletService && window.walletService.formatBalance ? 
+                                    window.walletService.formatBalance() : 
+                                    (window.connectedUser.balance || '0.00');
+                                navTraderBalance.textContent = `${balanceText} SOL`;
+                            }
                         } else {
-                            result = phantomResult;
+                            connectBtn.style.display = 'block';
+                            traderInfo.style.display = 'none';
                         }
-                    } else if (walletType === 'solflare') {
-                        const solflareResult = await window.walletService.connectSolflare();
-                        if (solflareResult.success) {
-                            await window.walletService.handleSuccessfulConnection('solflare', solflareResult);
-                            result = { success: true, publicKey: solflareResult.publicKey };
-                        } else {
-                            result = solflareResult;
-                        }
-                    } else if (walletType === 'backpack') {
-                        const backpackResult = await window.walletService.connectBackpack();
-                        if (backpackResult.success) {
-                            await window.walletService.handleSuccessfulConnection('backpack', backpackResult);
-                            result = { success: true, publicKey: backpackResult.publicKey };
-                        } else {
-                            result = backpackResult;
-                        }
-                    } else {
-                        result = { success: false, error: `Wallet type ${walletType} not supported` };
                     }
                     
-                    if (!result.success) {
-                        alert(`Failed to connect ${walletType}: ${result.error}`);
-                        return;
-                    }
+                    // Update hero sections
+                    const heroDisconnected = document.getElementById('heroDisconnected');
+                    const heroConnected = document.getElementById('heroConnected');
                     
-                    // Close wallet modal
-                    window.closeWalletModal();
-                    
-                    // For real wallets, check database
-                    if (walletType !== 'demo') {
-                        await lookupUserInDatabase(result.publicKey, walletType);
-                    } else {
-                        // Demo wallet
-                        window.connectedUser = {
-                            walletAddress: result.publicKey,
-                            walletType: 'demo',
-                            isDemo: true,
-                            username: 'DemoUser' + Math.floor(Math.random() * 1000),
-                            avatar: '🎮',
-                            balance: 10.0
-                        };
-                        
-                        window.updateUIForWalletConnection(true);
-                        alert(`🎮 Demo wallet connected!\nAddress: ${result.publicKey}\nBalance: 10.0 SOL`);
-                        
-                        if (window.showPage) {
-                            setTimeout(() => window.showPage('competitions'), 1000);
+                    if (heroDisconnected && heroConnected) {
+                        if (isConnected && window.connectedUser) {
+                            heroDisconnected.style.display = 'none';
+                            heroConnected.style.display = 'block';
+                            
+                            const heroTraderNameText = document.getElementById('heroTraderNameText');
+                            if (heroTraderNameText) {
+                                heroTraderNameText.textContent = window.connectedUser.username || 'Trader';
+                            }
+                        } else {
+                            heroDisconnected.style.display = 'block';
+                            heroConnected.style.display = 'none';
                         }
                     }
+                    
+                    console.log('✅ UI updated successfully');
                     
                 } catch (error) {
-                    console.error(`❌ Error during ${walletType} connection:`, error);
-                    alert(`Connection error: ${error.message}`);
+                    console.error('❌ Error updating UI:', error);
                 }
             };
+            console.log('✅ Created updateUIForWalletConnection function');
         }
         
-        console.log('✅ Permanent integration initialized successfully');
+        // 2. Store the original selectWallet function
+        const originalSelectWallet = window.selectWallet;
+        
+        // 3. Create enhanced selectWallet with better error handling
+        window.selectWallet = async function(walletType) {
+            console.log(`🔗 ENHANCED selectWallet for: ${walletType}`);
+            
+            try {
+                // Step 1: Connect the wallet
+                let result;
+                
+                if (walletType === 'demo') {
+                    result = await window.walletService.connectDemoWallet();
+                } else if (walletType === 'phantom') {
+                    console.log('🔗 Connecting to Phantom...');
+                    const phantomResult = await window.walletService.connectPhantom();
+                    if (phantomResult.success) {
+                        await window.walletService.handleSuccessfulConnection('phantom', phantomResult);
+                        result = { success: true, publicKey: phantomResult.publicKey };
+                    } else {
+                        result = phantomResult;
+                    }
+                } else if (walletType === 'solflare') {
+                    console.log('🔗 Connecting to Solflare...');
+                    const solflareResult = await window.walletService.connectSolflare();
+                    if (solflareResult.success) {
+                        await window.walletService.handleSuccessfulConnection('solflare', solflareResult);
+                        result = { success: true, publicKey: solflareResult.publicKey };
+                    } else {
+                        result = solflareResult;
+                    }
+                } else if (walletType === 'backpack') {
+                    console.log('🔗 Connecting to Backpack...');
+                    const backpackResult = await window.walletService.connectBackpack();
+                    if (backpackResult.success) {
+                        await window.walletService.handleSuccessfulConnection('backpack', backpackResult);
+                        result = { success: true, publicKey: backpackResult.publicKey };
+                    } else {
+                        result = backpackResult;
+                    }
+                } else {
+                    throw new Error(`Wallet type ${walletType} not supported`);
+                }
+                
+                if (!result.success) {
+                    console.error(`❌ ${walletType} connection failed:`, result.error);
+                    alert(`Failed to connect ${walletType}: ${result.error}`);
+                    return;
+                }
+                
+                console.log(`✅ ${walletType} wallet connected successfully`);
+                
+                // Step 2: Close wallet modal
+                try {
+                    if (window.closeWalletModal) {
+                        window.closeWalletModal();
+                    }
+                } catch (modalError) {
+                    console.warn('Error closing modal:', modalError);
+                }
+                
+                // Step 3: Handle post-connection based on wallet type
+                if (walletType === 'demo') {
+                    handleDemoConnection(result.publicKey);
+                } else {
+                    // Small delay to let wallet connection settle
+                    setTimeout(() => {
+                        handleRealWalletConnection(result.publicKey, walletType);
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error during ${walletType} connection:`, error);
+                alert(`Connection error: ${error.message}`);
+            }
+        };
+        
+        console.log('✅ Enhanced selectWallet function created');
+        console.log('🎯 Integration ready - try connecting your wallet!');
         
     } catch (error) {
-        console.error('❌ Failed to initialize permanent integration:', error);
+        console.error('❌ Failed to initialize fixed integration:', error);
     }
 }
 
-// Database lookup function
-async function lookupUserInDatabase(walletAddress, walletType) {
+// Handle demo wallet connection
+function handleDemoConnection(publicKey) {
+    console.log('🎮 Handling demo wallet connection');
+    
+    window.connectedUser = {
+        walletAddress: publicKey,
+        walletType: 'demo',
+        isDemo: true,
+        username: 'DemoUser' + Math.floor(Math.random() * 1000),
+        avatar: '🎮',
+        balance: 10.0
+    };
+    
+    window.updateUIForWalletConnection(true);
+    
+    alert(`🎮 Demo wallet connected!\nAddress: ${publicKey}\nBalance: 10.0 SOL`);
+    
+    setTimeout(() => {
+        if (window.showPage) {
+            window.showPage('competitions');
+        }
+    }, 1000);
+}
+
+// Handle real wallet connection with database lookup
+async function handleRealWalletConnection(walletAddress, walletType) {
+    console.log(`🔍 Handling real wallet connection: ${walletType}`);
+    console.log(`📋 Wallet Address: ${walletAddress}`);
+    
     try {
-        if (!window.supabaseClient?.getSupabaseClient) {
-            handleNewUser(walletAddress, walletType);
+        // Check if Supabase is available
+        let supabase = null;
+        
+        if (window.supabaseClient && window.supabaseClient.getSupabaseClient) {
+            supabase = window.supabaseClient.getSupabaseClient();
+            console.log('✅ Supabase client obtained');
+        } else {
+            console.warn('⚠️ Supabase client not available');
+            createBasicUser(walletAddress, walletType);
             return;
         }
         
-        const supabase = window.supabaseClient.getSupabaseClient();
         if (!supabase) {
-            handleNewUser(walletAddress, walletType);
+            console.warn('⚠️ Supabase instance not available');
+            createBasicUser(walletAddress, walletType);
             return;
         }
         
+        // Look up existing user
+        console.log('🔍 Querying database for existing user...');
         const { data: existingUser, error } = await supabase
             .from('users')
             .select('*')
@@ -3965,34 +4079,37 @@ async function lookupUserInDatabase(walletAddress, walletType) {
             .single();
         
         if (error && error.code !== 'PGRST116') {
-            if (error.code === 'PGRST106') {
-                console.warn('⚠️ Users table does not exist');
-            }
-            handleNewUser(walletAddress, walletType);
+            console.error('❌ Database query error:', error);
+            createBasicUser(walletAddress, walletType);
             return;
         }
         
         if (existingUser) {
-            handleExistingUser(existingUser, walletType, supabase);
+            console.log('✅ Existing user found!', existingUser);
+            await loadExistingUser(existingUser, walletType, supabase);
         } else {
-            handleNewUser(walletAddress, walletType, supabase);
+            console.log('👤 New user detected');
+            await handleNewUser(walletAddress, walletType, supabase);
         }
         
     } catch (error) {
-        console.error('❌ Database lookup failed:', error);
-        handleNewUser(walletAddress, walletType);
+        console.error('❌ Database connection failed:', error);
+        createBasicUser(walletAddress, walletType);
     }
 }
 
-// Handle existing user
-async function handleExistingUser(userProfile, walletType, supabase) {
+// Load existing user from database
+async function loadExistingUser(userProfile, walletType, supabase) {
+    console.log('🎉 Loading existing user profile...');
+    
+    // Create connected user with database data
     window.connectedUser = {
         walletAddress: userProfile.wallet_address,
         username: userProfile.username,
         avatar: userProfile.avatar || getWalletIcon(walletType),
         walletType: walletType,
         isDemo: false,
-        balance: window.walletService.balance || 0,
+        balance: window.walletService ? window.walletService.balance : 0,
         dbProfile: userProfile,
         totalBets: userProfile.total_bets || 0,
         totalWinnings: userProfile.total_winnings || 0,
@@ -4000,7 +4117,7 @@ async function handleExistingUser(userProfile, walletType, supabase) {
         currentStreak: userProfile.current_streak || 0
     };
     
-    // Update last active
+    // Update last active time
     try {
         await supabase
             .from('users')
@@ -4010,10 +4127,15 @@ async function handleExistingUser(userProfile, walletType, supabase) {
         console.warn('Could not update last active time:', updateError);
     }
     
+    // Update UI
     window.updateUIForWalletConnection(true);
     
+    // Show welcome message
     setTimeout(() => {
-        alert(`🎉 Welcome back, ${userProfile.username}!\n\nProfile loaded from database:\n• Total Bets: ${userProfile.total_bets || 0}\n• Win Rate: ${(userProfile.win_rate || 0).toFixed(1)}%\n• Current Streak: ${userProfile.current_streak || 0}\n• Balance: ${window.walletService.formatBalance()} SOL`);
+        const balanceText = window.walletService && window.walletService.formatBalance ? 
+            window.walletService.formatBalance() : '0.00';
+            
+        alert(`🎉 Welcome back, ${userProfile.username}!\n\nProfile loaded from database:\n• Total Bets: ${userProfile.total_bets || 0}\n• Win Rate: ${(userProfile.win_rate || 0).toFixed(1)}%\n• Current Streak: ${userProfile.current_streak || 0}\n• Balance: ${balanceText} SOL`);
         
         if (window.showPage) {
             window.showPage('competitions');
@@ -4022,26 +4144,40 @@ async function handleExistingUser(userProfile, walletType, supabase) {
 }
 
 // Handle new user
-async function handleNewUser(walletAddress, walletType, supabase = null) {
+async function handleNewUser(walletAddress, walletType, supabase) {
+    console.log('👤 Handling new user...');
+    
+    // Create basic connected user
     window.connectedUser = {
         walletAddress: walletAddress,
         username: null,
         avatar: getWalletIcon(walletType),
         walletType: walletType,
         isDemo: false,
-        balance: window.walletService.balance || 0,
+        balance: window.walletService ? window.walletService.balance : 0,
         needsProfile: true
     };
     
+    // Update UI first
     window.updateUIForWalletConnection(true);
     
+    // Offer profile creation
     setTimeout(() => {
-        const balanceText = window.walletService ? window.walletService.formatBalance() : '0.00';
-        const createProfile = confirm(`🎉 ${walletType} wallet connected!\n\nAddress: ${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}\nBalance: ${balanceText} SOL\n\nWould you like to create a user profile?`);
+        const balanceText = window.walletService && window.walletService.formatBalance ? 
+            window.walletService.formatBalance() : '0.00';
+        const addressShort = `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}`;
         
-        if (createProfile && supabase) {
+        const createProfile = confirm(
+            `🎉 ${walletType} wallet connected!\n\n` +
+            `Address: ${addressShort}\n` +
+            `Balance: ${balanceText} SOL\n\n` +
+            `Would you like to create a user profile?`
+        );
+        
+        if (createProfile) {
             createUserProfile(walletAddress, walletType, supabase);
         } else {
+            // Skip profile creation
             window.connectedUser.username = `${walletType}User${Math.floor(Math.random() * 1000)}`;
             window.connectedUser.needsProfile = false;
             window.updateUIForWalletConnection(true);
@@ -4055,6 +4191,32 @@ async function handleNewUser(walletAddress, walletType, supabase = null) {
     }, 1000);
 }
 
+// Create basic user (fallback when database not available)
+function createBasicUser(walletAddress, walletType) {
+    console.log('⚠️ Creating basic user (no database)');
+    
+    window.connectedUser = {
+        walletAddress: walletAddress,
+        username: `${walletType}User${Math.floor(Math.random() * 1000)}`,
+        avatar: getWalletIcon(walletType),
+        walletType: walletType,
+        isDemo: false,
+        balance: window.walletService ? window.walletService.balance : 0
+    };
+    
+    window.updateUIForWalletConnection(true);
+    
+    const balanceText = window.walletService && window.walletService.formatBalance ? 
+        window.walletService.formatBalance() : '0.00';
+    const addressShort = `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}`;
+    
+    alert(`✅ ${walletType} wallet connected!\n\nAddress: ${addressShort}\nBalance: ${balanceText} SOL\n\nDatabase not available - using basic mode.`);
+    
+    if (window.showPage) {
+        setTimeout(() => window.showPage('competitions'), 1000);
+    }
+}
+
 // Create user profile
 async function createUserProfile(walletAddress, walletType, supabase) {
     try {
@@ -4064,6 +4226,8 @@ async function createUserProfile(walletAddress, walletType, supabase) {
             alert('Invalid username. Please use 3-20 characters.');
             return;
         }
+        
+        console.log(`👤 Creating profile: ${username}`);
         
         // Check availability
         const { data: existingUsername } = await supabase
@@ -4095,10 +4259,14 @@ async function createUserProfile(walletAddress, walletType, supabase) {
             .single();
         
         if (error) {
+            console.error('Profile creation failed:', error);
             alert(`Profile creation failed: ${error.message}`);
             return;
         }
         
+        console.log('✅ Profile created:', newUser);
+        
+        // Update connected user
         window.connectedUser.username = username;
         window.connectedUser.dbProfile = newUser;
         window.connectedUser.needsProfile = false;
@@ -4112,6 +4280,7 @@ async function createUserProfile(walletAddress, walletType, supabase) {
         }
         
     } catch (error) {
+        console.error('Profile creation error:', error);
         alert(`Profile creation failed: ${error.message}`);
     }
 }
@@ -4127,7 +4296,28 @@ function getWalletIcon(walletType) {
     return icons[walletType] || '💰';
 }
 
-console.log('✅ Permanent wallet-database integration loaded');
+// Manual integration for troubleshooting
+window.integrateCurrentWalletWithDatabase = async function() {
+    console.log('🔗 Manual integration triggered');
+    
+    if (!window.walletService || !window.walletService.publicKey) {
+        alert('No wallet connected. Please connect your wallet first.');
+        return;
+    }
+    
+    if (window.walletService.isDemo) {
+        alert('Demo wallet - no database integration needed.');
+        return;
+    }
+    
+    const walletAddress = window.walletService.publicKey;
+    const walletType = window.walletService.walletType;
+    
+    await handleRealWalletConnection(walletAddress, walletType);
+};
+
+console.log('✅ FIXED permanent integration script loaded');
+console.log('🎯 Ready for wallet connections with database integration!');
 </script>
     
 </body>
