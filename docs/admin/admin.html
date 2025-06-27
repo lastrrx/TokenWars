@@ -240,6 +240,14 @@
             box-shadow: var(--shadow-md);
         }
 
+        .production-badge.automated {
+            background: linear-gradient(135deg, var(--admin-info), #0891b2);
+        }
+
+        .production-badge.live-data {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+        }
+
         /* Metrics Grid */
         .metrics-grid {
             display: grid;
@@ -516,6 +524,230 @@
             border-color: rgba(239, 68, 68, 0.3);
         }
 
+        /* Status Indicators */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.healthy {
+            background: var(--admin-success);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .status-indicator.error {
+            background: var(--admin-danger);
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+
+        .status-indicator.warning {
+            background: var(--admin-warning);
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+        }
+
+        .status-indicator.unknown {
+            background: var(--admin-text-secondary);
+        }
+
+        /* Enhanced containers */
+        .activity-container {
+            background: var(--admin-card);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+        }
+
+        .activity-feed {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: var(--space-3) 0;
+            border-bottom: 1px solid var(--admin-border);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-message {
+            flex: 1;
+            font-size: 0.875rem;
+            color: var(--admin-text);
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--admin-text-muted);
+            margin-left: var(--space-4);
+        }
+
+        /* Cache container */
+        .cache-container {
+            background: var(--admin-card);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+        }
+
+        .cache-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .cache-stat {
+            text-align: center;
+            padding: var(--space-4);
+            background: var(--admin-bg);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--admin-border);
+        }
+
+        .cache-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--admin-text);
+            margin-bottom: var(--space-1);
+        }
+
+        .cache-stat-label {
+            font-size: 0.75rem;
+            color: var(--admin-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Blacklist container improvements */
+        .blacklist-container {
+            background: var(--admin-card);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .blacklist-items {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .blacklist-item {
+            padding: var(--space-5);
+            border-bottom: 1px solid var(--admin-border);
+            transition: all var(--transition-normal);
+        }
+
+        .blacklist-item:hover {
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .blacklist-token-info h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--admin-text);
+            margin-bottom: var(--space-2);
+        }
+
+        .blacklist-reason {
+            font-size: 0.875rem;
+            color: var(--admin-text-secondary);
+            margin-bottom: var(--space-2);
+        }
+
+        .blacklist-meta {
+            font-size: 0.75rem;
+            color: var(--admin-text-muted);
+            margin-bottom: var(--space-3);
+        }
+
+        .blacklist-actions {
+            display: flex;
+            gap: var(--space-2);
+            align-items: center;
+        }
+
+        /* Parameter controls for competition management */
+        .automation-parameters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+
+        .parameter-control {
+            background: var(--admin-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            transition: all var(--transition-normal);
+        }
+
+        .parameter-control:hover {
+            border-color: var(--admin-border-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .parameter-control label {
+            display: block;
+            margin-bottom: var(--space-4);
+            font-weight: 600;
+            color: var(--admin-text-secondary);
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .parameter-input {
+            width: 100%;
+            padding: var(--space-4);
+            background: var(--admin-surface);
+            border: 2px solid var(--admin-border);
+            border-radius: var(--radius-md);
+            color: var(--admin-text);
+            font-size: 1.125rem;
+            font-weight: 600;
+            text-align: center;
+            transition: all var(--transition-normal);
+            font-feature-settings: 'tnum';
+        }
+
+        .parameter-input:focus {
+            outline: none;
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            background: var(--admin-card);
+        }
+
+        .parameter-value {
+            margin-top: var(--space-4);
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .parameter-value > div:first-child {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--admin-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .parameter-value > div:last-child {
+            font-size: 0.8125rem;
+            color: var(--admin-text-muted);
+            font-weight: 500;
+        }
+
         /* Utility Classes */
         .hidden {
             display: none !important;
@@ -588,6 +820,10 @@
             
             .token-stats {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .automation-parameters {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -684,7 +920,9 @@
                 <li><a href="#dashboard" class="nav-item active">📊 Dashboard</a></li>
                 <li><a href="#token-approval" class="nav-item">✅ Token Approval</a></li>
                 <li><a href="#blacklist-management" class="nav-item">🚫 Blacklist Management</a></li>
+                <li><a href="#pair-optimization" class="nav-item">📈 Pair Analytics</a></li>
                 <li><a href="#competitions" class="nav-item">🏁 Competition Management</a></li>
+                <li><a href="#tokens" class="nav-item">🪙 Token Management</a></li>
                 <li><a href="#analytics" class="nav-item">📊 Analytics</a></li>
             </ul>
         </nav>
@@ -699,33 +937,60 @@
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <h3>💰 Total Volume</h3>
-                        <p class="metric-value">1,247 SOL</p>
+                        <p class="metric-value" id="total-volume">1,247 SOL</p>
                         <p class="metric-change positive">+12.5% from last week</p>
                     </div>
                     <div class="metric-card">
                         <h3>🏃 Active Competitions</h3>
-                        <p class="metric-value">8</p>
+                        <p class="metric-value" id="active-competitions">8</p>
                         <p class="metric-change positive">Real-time</p>
                     </div>
                     <div class="metric-card">
                         <h3>🪙 Total Tokens</h3>
-                        <p class="metric-value">342</p>
+                        <p class="metric-value" id="total-tokens">342</p>
                         <p class="metric-change neutral">Cached</p>
                     </div>
                     <div class="metric-card">
                         <h3>✅ Approved Tokens</h3>
-                        <p class="metric-value">156</p>
+                        <p class="metric-value" id="approved-tokens">156</p>
                         <p class="metric-change positive">+23 this week</p>
                     </div>
                     <div class="metric-card">
                         <h3>🚫 Blacklisted</h3>
-                        <p class="metric-value">47</p>
+                        <p class="metric-value" id="blacklisted-tokens">47</p>
                         <p class="metric-change neutral">Filtered</p>
                     </div>
                     <div class="metric-card">
                         <h3>🔗 Active Pairs</h3>
-                        <p class="metric-value">89</p>
+                        <p class="metric-value" id="active-pairs">89</p>
                         <p class="metric-change positive">Generated</p>
+                    </div>
+                </div>
+
+                <!-- Token Cache Information -->
+                <div class="cache-container">
+                    <h3>🔧 Token Cache Status</h3>
+                    <div class="cache-stats">
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" id="cache-size">0</div>
+                            <div class="cache-stat-label">Total Tokens</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" id="fresh-tokens">0</div>
+                            <div class="cache-stat-label">Fresh Tokens</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" id="stale-tokens">0</div>
+                            <div class="cache-stat-label">Stale Tokens</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" id="expired-tokens">0</div>
+                            <div class="cache-stat-label">Expired Tokens</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" id="last-cache-update">Never</div>
+                            <div class="cache-stat-label">Last Update</div>
+                        </div>
                     </div>
                 </div>
 
@@ -735,7 +1000,7 @@
                     <h3>⚡ Quick Actions</h3>
                     <div class="control-group">
                         <button class="btn btn-primary">🔄 Refresh Cache</button>
-                        <button class="btn btn-secondary">✅ Pending Approvals (12)</button>
+                        <button class="btn btn-secondary">✅ Pending Approvals (<span id="pending-count">12</span>)</button>
                         <button class="btn btn-warning">🚫 Review Blacklist</button>
                         <button class="btn btn-info">📈 View Analytics</button>
                     </div>
@@ -747,19 +1012,34 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
                         <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
                             <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-success); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>
-                            <span>Token Cache: Healthy</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
-                            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-success); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>
-                            <span>API Services: Online</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
-                            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-success); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>
                             <span>Database: Connected</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
                             <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-warning); box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);"></div>
                             <span>Background Jobs: 2 Running</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-container">
+                    <h3>📝 Recent Activity</h3>
+                    <div class="activity-feed" id="activity-feed">
+                        <div class="activity-item">
+                            <span class="activity-message">Admin Panel initialized with comprehensive live data</span>
+                            <span class="activity-time">Just now</span>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-message">Token cache refreshed successfully</span>
+                            <span class="activity-time">2 minutes ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-message">New competition created: SOL vs USDC</span>
+                            <span class="activity-time">15 minutes ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-message">Token pair analytics updated</span>
+                            <span class="activity-time">30 minutes ago</span>
                         </div>
                     </div>
                 </div>
@@ -775,23 +1055,23 @@
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <h3>⏳ Pending Approvals</h3>
-                            <p class="metric-value">12</p>
+                            <p class="metric-value" id="pending-approvals">12</p>
                             <p class="metric-change neutral">Awaiting review</p>
                         </div>
                         <div class="metric-card">
                             <h3>📈 Approval Rate</h3>
-                            <p class="metric-value">78%</p>
-                            <p class="metric-change positive">+5% this month</p>
-                        </div>
-                        <div class="metric-card">
-                            <h3>⏱️ Avg Review Time</h3>
-                            <p class="metric-value">2.4h</p>
-                            <p class="metric-change positive">-30min this week</p>
+                            <p class="metric-value" id="approval-rate">0%</p>
+                            <p class="metric-change positive">Calculated from cache vs approvals</p>
                         </div>
                         <div class="metric-card">
                             <h3>✅ Total Approved</h3>
-                            <p class="metric-value">156</p>
-                            <p class="metric-change positive">+23 this week</p>
+                            <p class="metric-value" id="total-approved">0</p>
+                            <p class="metric-change positive">From token_approvals</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>🪙 Cache Tokens</h3>
+                            <p class="metric-value" id="cache-tokens-count">0</p>
+                            <p class="metric-change neutral">In token_cache</p>
                         </div>
                     </div>
                 </div>
@@ -814,84 +1094,10 @@
                 <!-- Pending Approval Queue -->
                 <div class="production-section">
                     <h3>⏳ Pending Approval Queue</h3>
-                    
-                    <!-- Sample Token 1 -->
-                    <div class="token-card">
-                        <div class="token-header">
-                            <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
-                            <div class="token-logo" style="background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">B</div>
-                            <div class="token-info">
-                                <div class="token-symbol">BORG</div>
-                                <div class="token-name">SwissBorg</div>
-                                <div class="token-address">3dQTr7...MFv13Z</div>
-                            </div>
-                            <div class="status-badge pending">mid-cap</div>
-                        </div>
-                        
-                        <div class="token-stats">
-                            <div class="token-stat">
-                                <span class="token-stat-value">$209.4M</span>
-                                <span class="token-stat-label">Market Cap</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value">$0.213128</span>
-                                <span class="token-stat-label">Price</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value" style="color: var(--admin-success);">+9.05%</span>
-                                <span class="token-stat-label">24h Change</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value" style="color: var(--admin-success);">0.0%</span>
-                                <span class="token-stat-label">Risk Score</span>
-                            </div>
-                        </div>
-                        
-                        <div class="token-actions">
-                            <button class="btn btn-success">✅ Approve</button>
-                            <button class="btn btn-danger">❌ Reject</button>
-                            <button class="btn btn-info">🔍 Review</button>
-                            <button class="btn btn-secondary">🌐 CoinGecko</button>
-                        </div>
-                    </div>
-
-                    <!-- Sample Token 2 -->
-                    <div class="token-card">
-                        <div class="token-header">
-                            <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
-                            <div class="token-logo" style="background: linear-gradient(135deg, #06b6d4, #0891b2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">B</div>
-                            <div class="token-info">
-                                <div class="token-symbol">BAT</div>
-                                <div class="token-name">Basic Attention Token</div>
-                                <div class="token-address">EPjFWdd...UcqaGP</div>
-                            </div>
-                            <div class="status-badge pending">mid-cap</div>
-                        </div>
-                        
-                        <div class="token-stats">
-                            <div class="token-stat">
-                                <span class="token-stat-value">$182.7M</span>
-                                <span class="token-stat-label">Market Cap</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value">$0.195234</span>
-                                <span class="token-stat-label">Price</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value" style="color: var(--admin-danger);">-2.15%</span>
-                                <span class="token-stat-label">24h Change</span>
-                            </div>
-                            <div class="token-stat">
-                                <span class="token-stat-value" style="color: var(--admin-success);">1.2%</span>
-                                <span class="token-stat-label">Risk Score</span>
-                            </div>
-                        </div>
-                        
-                        <div class="token-actions">
-                            <button class="btn btn-success">✅ Approve</button>
-                            <button class="btn btn-danger">❌ Reject</button>
-                            <button class="btn btn-info">🔍 Review</button>
-                            <button class="btn btn-secondary">🌐 CoinGecko</button>
+                    <div id="approval-queue" style="display: grid; gap: var(--space-4);">
+                        <!-- Pending tokens will be populated here -->
+                        <div style="text-align: center; color: var(--admin-text-secondary); padding: var(--space-8);">
+                            Loading pending approvals...
                         </div>
                     </div>
                 </div>
@@ -899,98 +1105,128 @@
 
             <!-- Blacklist Management Section -->
             <section id="blacklist-management" class="admin-section hidden">
-                <h2>🚫 Blacklist Management & Analytics</h2>
+                <h2>🚫 Blacklist Management</h2>
                 
                 <!-- Blacklist Overview -->
                 <div class="production-section">
-                    <h3>📊 Blacklist Analytics</h3>
+                    <h3>📊 Blacklist Overview</h3>
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <h3>🚫 Total Blacklisted</h3>
-                            <p class="metric-value">47</p>
-                            <p class="metric-change neutral">Filtered tokens</p>
+                            <p class="metric-value" id="total-blacklisted">0</p>
+                            <p class="metric-change neutral">Manual entries</p>
                         </div>
                         <div class="metric-card">
-                            <h3>🤖 Auto-Detected</h3>
-                            <p class="metric-value">32</p>
-                            <p class="metric-change positive">68% accuracy</p>
+                            <h3>📅 Recent Additions</h3>
+                            <p class="metric-value" id="recent-blacklisted">0</p>
+                            <p class="metric-change neutral">Last 7 days</p>
                         </div>
                         <div class="metric-card">
-                            <h3>📈 Detection Accuracy</h3>
-                            <p class="metric-value">94%</p>
-                            <p class="metric-change positive">+2% this month</p>
+                            <h3>✅ Whitelist Requests</h3>
+                            <p class="metric-value" id="whitelist-requests">0</p>
+                            <p class="metric-change positive">Pending review</p>
                         </div>
                         <div class="metric-card">
-                            <h3>📋 Appeals Pending</h3>
-                            <p class="metric-value">3</p>
-                            <p class="metric-change neutral">Under review</p>
+                            <h3>📊 Effectiveness</h3>
+                            <p class="metric-value" id="blacklist-effectiveness">100%</p>
+                            <p class="metric-change positive">Blocking rate</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Whitelist Operations -->
                 <div class="production-section">
-                    <div class="production-badge">New Feature</div>
                     <h3>✅ Whitelist Operations</h3>
                     <p style="color: var(--admin-text-secondary); margin-bottom: var(--space-4);">Remove tokens from blacklist and optionally add to approval queue.</p>
                     <div class="control-group">
                         <button class="btn btn-success">✅ Bulk Whitelist Selected</button>
                         <button class="btn btn-info">🔄 Whitelist → Approval Queue</button>
                         <button class="btn btn-secondary">📤 Export Blacklist</button>
-                        <button class="btn btn-primary">🔍 Scan for New Threats</button>
                     </div>
                 </div>
 
-                <!-- Sample Blacklisted Tokens -->
+                <!-- Manual Blacklist -->
                 <div class="production-section">
-                    <h3>🚫 Manual Blacklist (20)</h3>
-                    
-                    <div class="token-card" style="border-left: 4px solid var(--admin-danger);">
-                        <div class="token-header">
-                            <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
-                            <div class="token-logo" style="background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">B</div>
-                            <div class="token-info">
-                                <div class="token-symbol">BUIDL</div>
-                                <div class="token-name">BlackRock USD Institutional Digital Liquidity Fund</div>
-                                <div class="token-address">3dQTr7...MFv13Z</div>
+                    <h3>🚫 Manual Blacklist</h3>
+                    <div class="blacklist-container">
+                        <div class="blacklist-items" id="manual-blacklist">
+                            <!-- Blacklisted tokens will be populated here -->
+                            <div style="text-align: center; color: var(--admin-text-secondary); padding: var(--space-8);">
+                                Loading blacklisted tokens...
                             </div>
-                            <div class="status-badge blocked">BLOCKED</div>
-                        </div>
-                        
-                        <div style="padding: var(--space-3); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
-                            <div style="font-size: 0.8125rem; color: var(--admin-text-secondary); margin-bottom: var(--space-1);"><strong>Reason:</strong> 0 volume</div>
-                            <div style="font-size: 0.75rem; color: var(--admin-text-muted);"><strong>Added:</strong> Jun 27, 2025, 09:41 PM | <strong>Confidence:</strong> N/A</div>
-                        </div>
-                        
-                        <div class="token-actions">
-                            <button class="btn btn-success">✅ Whitelist</button>
-                            <button class="btn btn-info">🔍 Review</button>
-                            <button class="btn btn-warning">⚠️ Update Severity</button>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="token-card" style="border-left: 4px solid var(--admin-danger);">
-                        <div class="token-header">
-                            <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
-                            <div class="token-logo" style="background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">D</div>
-                            <div class="token-info">
-                                <div class="token-symbol">DSOL</div>
-                                <div class="token-name">Drift Staked SOL</div>
-                                <div class="token-address">3dQTr7...MFv13Z</div>
-                            </div>
-                            <div class="status-badge blocked">BLOCKED</div>
+            <!-- Pair Analytics Section -->
+            <section id="pair-optimization" class="admin-section hidden">
+                <h2>📈 Token Pair Analytics</h2>
+                
+                <!-- Pair Overview -->
+                <div class="production-section">
+                    <h3>📊 Pair Performance Overview</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <h3>🔗 Total Pairs</h3>
+                            <p class="metric-value" id="total-pairs">0</p>
+                            <p class="metric-change positive">Generated</p>
                         </div>
-                        
-                        <div style="padding: var(--space-3); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-md); margin-bottom: var(--space-4);">
-                            <div style="font-size: 0.8125rem; color: var(--admin-text-secondary); margin-bottom: var(--space-1);"><strong>Reason:</strong> Wrapped/staked token</div>
-                            <div style="font-size: 0.75rem; color: var(--admin-text-muted);"><strong>Added:</strong> Jun 27, 2025, 09:41 PM | <strong>Confidence:</strong> N/A</div>
+                        <div class="metric-card">
+                            <h3>✅ Active Pairs</h3>
+                            <p class="metric-value" id="active-pairs-count">0</p>
+                            <p class="metric-change positive">Available</p>
                         </div>
-                        
-                        <div class="token-actions">
-                            <button class="btn btn-success">✅ Whitelist</button>
-                            <button class="btn btn-info">🔍 Review</button>
-                            <button class="btn btn-warning">⚠️ Update Severity</button>
+                        <div class="metric-card">
+                            <h3>📊 Avg Market Cap Diff</h3>
+                            <p class="metric-value" id="avg-market-cap-diff">0%</p>
+                            <p class="metric-change neutral">Compatibility</p>
                         </div>
+                        <div class="metric-card">
+                            <h3>🎯 Avg Compatibility</h3>
+                            <p class="metric-value" id="avg-compatibility">0%</p>
+                            <p class="metric-change positive">Quality Score</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last Update Info -->
+                <div class="production-section">
+                    <h3>🕒 Pair Generation Status</h3>
+                    <div style="display: flex; align-items: center; gap: var(--space-6); padding: var(--space-6); background: var(--admin-bg); border-radius: var(--radius-lg); border: 1px solid var(--admin-border);">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--admin-success); box-shadow: 0 0 16px rgba(16, 185, 129, 0.4); flex-shrink: 0;"></div>
+                        <div>
+                            <div><strong>Last Update:</strong> <span id="last-pair-update">Never</span></div>
+                            <div><strong>Next Update:</strong> <span id="next-pair-update">Every 5 minutes</span></div>
+                            <div><strong>Edge Function:</strong> manage-token-pairs (Automated)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pair Analytics Table -->
+                <div class="production-section">
+                    <h3>📋 Active Token Pairs</h3>
+                    <div style="background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm);">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🪙 Token A</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🪙 Token B</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📊 Market Cap Ratio</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🎯 Compatibility</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📈 Category</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🕒 Created</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📊 Usage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pairs-analytics-tbody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                        Loading pair analytics...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -1005,22 +1241,22 @@
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <h3>🏁 Total Competitions</h3>
-                            <p class="metric-value">47</p>
+                            <p class="metric-value" id="total-competitions-stat">47</p>
                             <p class="metric-change positive">All time</p>
                         </div>
                         <div class="metric-card">
                             <h3>🏃 Active Now</h3>
-                            <p class="metric-value">8</p>
+                            <p class="metric-value" id="active-competitions-stat">8</p>
                             <p class="metric-change positive">Live competitions</p>
                         </div>
                         <div class="metric-card">
                             <h3>👥 Total Participants</h3>
-                            <p class="metric-value">1,234</p>
+                            <p class="metric-value" id="total-participants-stat">1,234</p>
                             <p class="metric-change positive">+45 this week</p>
                         </div>
                         <div class="metric-card">
                             <h3>💰 Total Volume</h3>
-                            <p class="metric-value">1,247 SOL</p>
+                            <p class="metric-value" id="total-volume-stat">1,247 SOL</p>
                             <p class="metric-change positive">+12.5% growth</p>
                         </div>
                     </div>
@@ -1028,7 +1264,7 @@
 
                 <!-- Competition Automation -->
                 <div class="production-section">
-                    <div class="production-badge" style="background: linear-gradient(135deg, var(--admin-info), #0891b2);">Automated</div>
+                    <div class="production-badge automated">Automated</div>
                     <h3>🤖 Competition Automation</h3>
                     
                     <!-- Security Warning -->
@@ -1037,80 +1273,80 @@
                     </div>
                     
                     <!-- Automation Status -->
-                    <div style="display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-8); padding: var(--space-6); background: var(--admin-bg); border-radius: var(--radius-lg); border: 1px solid var(--admin-border); border-left: 4px solid var(--admin-danger); background: rgba(239, 68, 68, 0.05);">
+                    <div style="display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-8); padding: var(--space-6); background: var(--admin-bg); border-radius: var(--radius-lg); border: 1px solid var(--admin-border); border-left: 4px solid var(--admin-danger); background: rgba(239, 68, 68, 0.05);" id="automation-status">
                         <div style="width: 16px; height: 16px; border-radius: 50%; background: var(--admin-danger); box-shadow: 0 0 16px rgba(239, 68, 68, 0.4); flex-shrink: 0;"></div>
                         <div style="flex: 1;">
-                            <div><strong>Status:</strong> Stopped</div>
-                            <div><strong>Next Competition:</strong> Not scheduled</div>
-                            <div><strong>Competitions Today:</strong> 0</div>
+                            <div><strong>Status:</strong> <span id="automation-current-status">Stopped</span></div>
+                            <div><strong>Next Competition:</strong> <span id="next-competition-time">Not scheduled</span></div>
+                            <div><strong>Competitions Today:</strong> <span id="competitions-today">0</span></div>
                         </div>
                         <div style="display: flex; gap: var(--space-3); align-items: center;">
-                            <button class="btn btn-success">▶️ Start Automation</button>
-                            <button class="btn btn-danger" disabled style="opacity: 0.5;">⏹️ Stop Automation</button>
+                            <button class="btn btn-success" id="start-automation-btn">▶️ Start Automation</button>
+                            <button class="btn btn-danger" id="stop-automation-btn" disabled style="opacity: 0.5;">⏹️ Stop Automation</button>
                         </div>
                     </div>
 
                     <!-- Automation Parameters -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); margin-bottom: var(--space-8);">
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Competitions per Day</label>
-                            <input type="number" class="parameter-input" value="4" min="1" max="24" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">Every 6.0 hours</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">≈ 28 per week</div>
+                    <div class="automation-parameters">
+                        <div class="parameter-control">
+                            <label>Competitions per Day</label>
+                            <input type="number" class="parameter-input" id="competitions-per-day" min="1" max="24" value="4">
+                            <div class="parameter-value">
+                                <div>Every 6.0 hours</div>
+                                <div>≈ 28 per week</div>
                             </div>
                         </div>
                         
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Voting Period (minutes)</label>
-                            <input type="number" class="parameter-input" value="15" min="5" max="60" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">15 minutes</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">Standard voting</div>
+                        <div class="parameter-control">
+                            <label>Voting Period (days)</label>
+                            <input type="number" class="parameter-input" id="voting-period" min="0.1" max="2" step="0.1" value="0.25">
+                            <div class="parameter-value">
+                                <div>6 hours</div>
+                                <div>Standard voting</div>
                             </div>
                         </div>
                         
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Performance Period (hours)</label>
-                            <input type="number" class="parameter-input" value="24" min="1" max="48" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">24 hours</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">Multi-day competition</div>
+                        <div class="parameter-control">
+                            <label>Performance Period (days)</label>
+                            <input type="number" class="parameter-input" id="performance-period" min="1" max="30" value="1">
+                            <div class="parameter-value">
+                                <div>24 hours</div>
+                                <div>Single day competition</div>
                             </div>
                         </div>
                         
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Minimum Bet Amount (SOL)</label>
-                            <input type="number" class="parameter-input" value="0.1" min="0.01" max="10" step="0.01" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">0.1 SOL</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">≈ 18 USD</div>
+                        <div class="parameter-control">
+                            <label>Minimum Bet Amount (SOL)</label>
+                            <input type="number" class="parameter-input" id="min-bet-amount" min="0.01" max="10" step="0.01" value="0.1">
+                            <div class="parameter-value">
+                                <div>0.1 SOL</div>
+                                <div>≈ 18 USD</div>
                             </div>
                         </div>
                         
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Platform Fee (%)</label>
-                            <input type="number" class="parameter-input" value="15" min="1" max="30" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">15%</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">0.300 SOL per 2 SOL pool</div>
+                        <div class="parameter-control">
+                            <label>Platform Fee (%)</label>
+                            <input type="number" class="parameter-input" id="platform-fee" min="1" max="30" value="15">
+                            <div class="parameter-value">
+                                <div>15%</div>
+                                <div>0.300 SOL per 2 SOL pool</div>
                             </div>
                         </div>
                         
-                        <div class="parameter-control" style="background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); padding: var(--space-6);">
-                            <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--admin-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em;">Max Pool Size (SOL)</label>
-                            <input type="number" class="parameter-input" value="100" min="10" max="1000" style="width: 100%; padding: var(--space-4); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-md); color: var(--admin-text); font-size: 1.125rem; font-weight: 600; text-align: center;">
-                            <div style="margin-top: var(--space-4); text-align: center;">
-                                <div style="font-size: 1.125rem; font-weight: 700; color: var(--admin-primary); margin-bottom: var(--space-1);">100 SOL</div>
-                                <div style="font-size: 0.8125rem; color: var(--admin-text-muted); font-weight: 500;">≈ 1000 max participants</div>
+                        <div class="parameter-control">
+                            <label>Max Pool Size (SOL)</label>
+                            <input type="number" class="parameter-input" id="max-pool-size" min="10" max="1000" value="100">
+                            <div class="parameter-value">
+                                <div>100 SOL</div>
+                                <div>≈ 1000 max participants</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="control-group">
-                        <button class="btn btn-primary">💾 Save Settings</button>
-                        <button class="btn btn-secondary">🧪 Test Configuration</button>
-                        <button class="btn btn-warning">🔄 Reset to Defaults</button>
+                        <button class="btn btn-primary" onclick="saveAutomationSettings()">💾 Save Settings</button>
+                        <button class="btn btn-secondary" onclick="testAutomationSettings()">🧪 Test Configuration</button>
+                        <button class="btn btn-warning" onclick="resetAutomationSettings()">🔄 Reset to Defaults</button>
                     </div>
                 </div>
 
@@ -1118,10 +1354,105 @@
                 <div class="production-section">
                     <h3>🛠️ Manual Competition Controls</h3>
                     <div class="control-group">
-                        <button class="btn btn-primary">🚀 Create New Competition</button>
-                        <button class="btn btn-secondary">🔄 Refresh List</button>
-                        <button class="btn btn-info">📊 View Analytics</button>
-                        <button class="btn btn-success">📥 Download Competition Data</button>
+                        <button class="btn btn-primary" id="create-competition-btn">🚀 Create New Competition</button>
+                        <button class="btn btn-secondary" onclick="refreshCompetitionsList()">🔄 Refresh List</button>
+                        <button class="btn btn-info" onclick="viewCompetitionAnalytics()">📊 View Analytics</button>
+                        <button class="btn btn-success" onclick="downloadCompetitionData()">📥 Download Competition Data</button>
+                    </div>
+                </div>
+
+                <!-- Active Competitions -->
+                <div class="production-section">
+                    <h3>🏃 Active Competitions</h3>
+                    <div style="background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm);">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🆔 ID</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🪙 Tokens</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📊 Status</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">👥 Participants</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">💰 Pool Size</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">⏰ End Time</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🤖 Type</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🛠️ Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="competitions-tbody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                        Loading competitions...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Token Management Section -->
+            <section id="tokens" class="admin-section hidden">
+                <h2>🪙 Token Management System</h2>
+                
+                <!-- Token Statistics -->
+                <div class="production-section">
+                    <h3>📊 Token Statistics (from token_cache)</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <h3>🪙 Total Tokens</h3>
+                            <p class="metric-value" id="total-tokens-stat">0</p>
+                            <p class="metric-change neutral">In cache</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>✅ Fresh Tokens</h3>
+                            <p class="metric-value" id="fresh-tokens-stat">0</p>
+                            <p class="metric-change positive">Current data</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>⚠️ Stale Tokens</h3>
+                            <p class="metric-value" id="stale-tokens-stat">0</p>
+                            <p class="metric-change warning">Need refresh</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>❌ Expired Tokens</h3>
+                            <p class="metric-value" id="expired-tokens-stat">0</p>
+                            <p class="metric-change negative">Outdated</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Token Controls -->
+                <div class="production-section">
+                    <h3>🛠️ Token Management Controls</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-6);">
+                        <input type="text" id="token-search" placeholder="🔍 Search tokens by symbol, name, or address..." style="flex: 1; min-width: 300px; padding: var(--space-4) var(--space-5); background: var(--admin-surface); border: 2px solid var(--admin-border); border-radius: var(--radius-lg); color: var(--admin-text); transition: all var(--transition-normal); font-size: 1rem;">
+                        <button id="refresh-tokens-btn" class="btn btn-primary">🔄 Refresh Token Cache</button>
+                        <button class="btn btn-info" onclick="exportTokenList()">📤 Export Token List</button>
+                        <button class="btn btn-secondary" onclick="viewTokenAnalytics()">📊 Token Analytics</button>
+                    </div>
+                    
+                    <!-- Token Table -->
+                    <div style="background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm);" id="tokens-table">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🪙 Token</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">💰 Price</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📊 Market Cap</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">📈 24h Change</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🔄 Cache Status</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🕒 Last Updated</th>
+                                    <th style="background: var(--admin-bg); color: var(--admin-text-secondary); font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; padding: var(--space-4) var(--space-5); text-align: left; border-bottom: 1px solid var(--admin-border);">🛠️ Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tokens-tbody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                        Loading tokens from token_cache...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -1132,13 +1463,13 @@
                 
                 <!-- Analytics Overview -->
                 <div class="production-section">
-                    <div class="production-badge" style="background: linear-gradient(135deg, var(--admin-info), #0891b2);">Reports</div>
+                    <div class="production-badge">Reports</div>
                     <h3>📈 Platform Analytics</h3>
                     <div class="control-group">
-                        <button class="btn btn-primary">📊 Generate Competition Report</button>
-                        <button class="btn btn-secondary">💰 Platform Revenue Report</button>
-                        <button class="btn btn-info">👥 User Participation Report</button>
-                        <button class="btn btn-success">📈 Performance Analytics</button>
+                        <button class="btn btn-primary" onclick="generateCompetitionReport()">📊 Generate Competition Report</button>
+                        <button class="btn btn-secondary" onclick="generateRevenueReport()">💰 Platform Revenue Report</button>
+                        <button class="btn btn-info" onclick="generateParticipationReport()">👥 User Participation Report</button>
+                        <button class="btn btn-success" onclick="generateUserReport()">📈 Performance Analytics</button>
                     </div>
                 </div>
 
@@ -1204,6 +1535,9 @@
                 if (pinInput.value === '123456') {
                     authScreen.classList.add('hidden');
                     adminPanel.classList.remove('hidden');
+                    
+                    // Initialize demo data
+                    initializeDemoData();
                 } else {
                     alert('Invalid PIN. Try 123456 for demo.');
                 }
@@ -1226,12 +1560,223 @@
                 });
             });
 
+            // Enhanced parameter updating for competition management
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('parameter-input')) {
+                    updateParameterDisplay(e.target);
+                }
+            });
+
             console.log('✅ Demo functionality initialized');
         });
+
+        // Initialize demo data
+        function initializeDemoData() {
+            // Update cache information
+            updateElement('cache-size', '342');
+            updateElement('fresh-tokens', '298');
+            updateElement('stale-tokens', '32');
+            updateElement('expired-tokens', '12');
+            updateElement('last-cache-update', '2 minutes ago');
+
+            // Update approval statistics
+            updateElement('pending-approvals', '12');
+            updateElement('approval-rate', '78%');
+            updateElement('total-approved', '156');
+            updateElement('cache-tokens-count', '342');
+
+            // Populate sample pending tokens
+            populatePendingTokens();
+
+            // Populate blacklist
+            populateBlacklist();
+
+            console.log('✅ Demo data initialized');
+        }
+
+        // Populate pending tokens for approval
+        function populatePendingTokens() {
+            const approvalQueue = document.getElementById('approval-queue');
+            const tokens = [
+                {
+                    symbol: 'BORG',
+                    name: 'SwissBorg',
+                    address: '3dQTr7...MFv13Z',
+                    marketCap: '$209.4M',
+                    price: '$0.213',
+                    change24h: '+9.05%',
+                    volume24h: '$2.1M',
+                    logo: 'B'
+                },
+                {
+                    symbol: 'BAT',
+                    name: 'Basic Attention Token',
+                    address: 'EPjFWdd...UcqaGP',
+                    marketCap: '$182.7M',
+                    price: '$0.195',
+                    change24h: '-2.15%',
+                    volume24h: '$1.8M',
+                    logo: 'B'
+                }
+            ];
+
+            approvalQueue.innerHTML = tokens.map(token => `
+                <div class="token-card">
+                    <div class="token-header">
+                        <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">${token.logo}</div>
+                        <div class="token-info">
+                            <div class="token-symbol">${token.symbol}</div>
+                            <div class="token-name">${token.name}</div>
+                            <div class="token-address">${token.address}</div>
+                        </div>
+                        <div class="status-badge pending">mid-cap</div>
+                    </div>
+                    
+                    <div class="token-stats">
+                        <div class="token-stat">
+                            <span class="token-stat-value">${token.marketCap}</span>
+                            <span class="token-stat-label">Market Cap</span>
+                        </div>
+                        <div class="token-stat">
+                            <span class="token-stat-value">${token.price}</span>
+                            <span class="token-stat-label">Price</span>
+                        </div>
+                        <div class="token-stat">
+                            <span class="token-stat-value" style="color: ${token.change24h.includes('+') ? 'var(--admin-success)' : 'var(--admin-danger)'};">${token.change24h}</span>
+                            <span class="token-stat-label">24h Change</span>
+                        </div>
+                        <div class="token-stat">
+                            <span class="token-stat-value">${token.volume24h}</span>
+                            <span class="token-stat-label">24h Volume</span>
+                        </div>
+                    </div>
+                    
+                    <div class="token-actions">
+                        <button class="btn btn-success">✅ Approve</button>
+                        <button class="btn btn-danger">❌ Reject</button>
+                        <button class="btn btn-info">🔍 Review</button>
+                        <button class="btn btn-secondary">🌐 CoinGecko</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Populate blacklist
+        function populateBlacklist() {
+            const blacklistContainer = document.getElementById('manual-blacklist');
+            const blacklistedTokens = [
+                {
+                    symbol: 'BUIDL',
+                    name: 'BlackRock USD Institutional Digital Liquidity Fund',
+                    address: '3dQTr7...MFv13Z',
+                    reason: '0 volume',
+                    addedDate: 'Jun 27, 2025, 09:41 PM',
+                    confidence: 'N/A'
+                },
+                {
+                    symbol: 'DSOL',
+                    name: 'Drift Staked SOL',
+                    address: '3dQTr8...MFv14A',
+                    reason: 'Wrapped/staked token',
+                    addedDate: 'Jun 27, 2025, 09:41 PM',
+                    confidence: 'N/A'
+                }
+            ];
+
+            // Update total count
+            updateElement('total-blacklisted', blacklistedTokens.length.toString());
+
+            blacklistContainer.innerHTML = blacklistedTokens.map(token => `
+                <div class="blacklist-item">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4);">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3);">
+                                <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--admin-primary);">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">${token.symbol[0]}</div>
+                                <div>
+                                    <h5>${token.symbol}</h5>
+                                    <div style="font-size: 0.875rem; color: var(--admin-text-secondary); margin-bottom: var(--space-1);">${token.name}</div>
+                                    <div style="font-family: monospace; font-size: 0.75rem; color: var(--admin-text-muted); background: var(--admin-bg); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); display: inline-block;">${token.address}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="padding: var(--space-3); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-md); margin-bottom: var(--space-3);">
+                                <div class="blacklist-reason"><strong>Reason:</strong> ${token.reason}</div>
+                                <div class="blacklist-meta"><strong>Added:</strong> ${token.addedDate} | <strong>Confidence:</strong> ${token.confidence}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="blacklist-actions">
+                            <button class="btn btn-success">✅ Whitelist</button>
+                            <button class="btn btn-info">🔍 Review</button>
+                            <button class="btn btn-warning">⚠️ Update Severity</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Enhanced parameter display update for competition management
+        function updateParameterDisplay(input) {
+            const parameterId = input.id;
+            const value = parseFloat(input.value) || parseInt(input.value) || 0;
+            
+            const valueDisplay = input.parentElement.querySelector('.parameter-value');
+            if (!valueDisplay) return;
+            
+            let displayText = '';
+            let calculation = '';
+            
+            switch (parameterId) {
+                case 'competitions-per-day':
+                    const hoursInterval = 24 / value;
+                    displayText = `Every ${hoursInterval.toFixed(1)} hours`;
+                    calculation = `≈ ${Math.floor(value * 7)} per week`;
+                    break;
+                case 'voting-period':
+                    const hours = value * 24;
+                    displayText = `${hours} hours`;
+                    calculation = value >= 1 ? 'Multi-day voting' : hours >= 12 ? 'Extended voting' : 'Quick voting';
+                    break;
+                case 'performance-period':
+                    displayText = `${value} days`;
+                    calculation = value >= 7 ? 'Week-long competition' : value > 1 ? 'Multi-day competition' : 'Single day competition';
+                    break;
+                case 'min-bet-amount':
+                    displayText = `${value} SOL`;
+                    const usdEquiv = value * 180;
+                    calculation = `≈ ${usdEquiv.toFixed(0)} USD`;
+                    break;
+                case 'platform-fee':
+                    displayText = `${value}%`;
+                    const examplePool = 2;
+                    const platformCut = examplePool * (value / 100);
+                    calculation = `${platformCut.toFixed(3)} SOL per 2 SOL pool`;
+                    break;
+                case 'max-pool-size':
+                    displayText = `${value} SOL`;
+                    const maxParticipants = Math.floor(value / 0.1);
+                    calculation = `≈ ${maxParticipants} max participants`;
+                    break;
+            }
+            
+            valueDisplay.innerHTML = `
+                <div>${displayText}</div>
+                <div>${calculation}</div>
+            `;
+        }
 
         // Utility functions for demo
         function showNotification(message, type = 'info') {
             console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateElement(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
         }
 
         function updateMetric(id, value) {
@@ -1239,6 +1784,87 @@
             if (element) {
                 element.textContent = value;
             }
+        }
+
+        // Global functions for onclick handlers
+        function saveAutomationSettings() {
+            console.log('💾 Saving automation settings...');
+            showNotification('Automation settings saved successfully', 'success');
+        }
+
+        function testAutomationSettings() {
+            console.log('🧪 Testing automation configuration...');
+            showNotification('Configuration test passed', 'success');
+        }
+
+        function resetAutomationSettings() {
+            if (confirm('🔄 Reset automation settings to defaults?')) {
+                console.log('🔄 Resetting automation settings...');
+                
+                // Reset values
+                document.getElementById('competitions-per-day').value = 4;
+                document.getElementById('voting-period').value = 0.25;
+                document.getElementById('performance-period').value = 1;
+                document.getElementById('min-bet-amount').value = 0.1;
+                document.getElementById('platform-fee').value = 15;
+                document.getElementById('max-pool-size').value = 100;
+                
+                // Update displays
+                document.querySelectorAll('.parameter-input').forEach(input => {
+                    updateParameterDisplay(input);
+                });
+                
+                showNotification('Settings reset to defaults', 'info');
+            }
+        }
+
+        function refreshCompetitionsList() {
+            console.log('🔄 Refreshing competitions list...');
+            showNotification('Competitions list refreshed', 'info');
+        }
+
+        function viewCompetitionAnalytics() {
+            console.log('📊 Viewing competition analytics...');
+            // Switch to analytics tab
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            document.querySelector('[href="#analytics"]').classList.add('active');
+            document.querySelectorAll('.admin-section').forEach(section => section.classList.add('hidden'));
+            document.getElementById('analytics').classList.remove('hidden');
+        }
+
+        function downloadCompetitionData() {
+            console.log('📥 Downloading competition data...');
+            showNotification('Competition data download feature ready', 'info');
+        }
+
+        function exportTokenList() {
+            console.log('📤 Exporting token list...');
+            showNotification('Token list export feature ready', 'info');
+        }
+
+        function viewTokenAnalytics() {
+            console.log('📊 Viewing token analytics...');
+            viewCompetitionAnalytics();
+        }
+
+        function generateCompetitionReport() {
+            console.log('📊 Generating competition report...');
+            showNotification('Competition report generation started', 'info');
+        }
+
+        function generateRevenueReport() {
+            console.log('💰 Generating revenue report...');
+            showNotification('Revenue report generation started', 'info');
+        }
+
+        function generateParticipationReport() {
+            console.log('👥 Generating participation report...');
+            showNotification('Participation report generation started', 'info');
+        }
+
+        function generateUserReport() {
+            console.log('📈 Generating user report...');
+            showNotification('User report generation started', 'info');
         }
     </script>
 </body>
