@@ -2188,3 +2188,223 @@ body {
         padding: 0.5rem 1rem;
     }
 }
+
+/* ADD THIS TO THE END OF YOUR styles.css FILE */
+/* This fixes the wallet modal pointer-events and z-index issues */
+
+/* ===================================== */
+/* WALLET MODAL FIXES - ROOT CAUSE SOLUTION */
+/* ===================================== */
+
+/* Fix: Ensure wallet modal is always on top and interactive */
+.wallet-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(5px) !important;
+    z-index: 99999 !important; /* Higher than page-content */
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+    opacity: 1 !important;
+    pointer-events: auto !important; /* Override any pointer-events: none */
+    transition: opacity 0.3s ease !important;
+}
+
+/* Ensure modal shows when display is set to flex */
+.wallet-modal[style*="flex"] {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+/* Fix: Wallet modal content should always be interactive */
+.wallet-modal-content {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 2rem !important;
+    max-width: 600px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    box-shadow: var(--shadow-elevated) !important;
+    backdrop-filter: blur(20px) !important;
+    pointer-events: auto !important; /* Ensure content is clickable */
+    z-index: 100000 !important;
+}
+
+/* Fix: All wallet modal children should be interactive */
+.wallet-modal *,
+.wallet-modal-content *,
+.step-content *,
+.wallet-options *,
+.wallet-option *,
+.step-indicators * {
+    pointer-events: auto !important;
+}
+
+/* Fix: Wallet options should be clearly clickable */
+.wallet-option {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    padding: 1.5rem !important;
+    background: var(--surface-light) !important;
+    border: 2px solid transparent !important;
+    border-radius: var(--radius-lg) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 100001 !important;
+}
+
+.wallet-option:hover {
+    border-color: var(--gold) !important;
+    background: rgba(245, 158, 11, 0.1) !important;
+    transform: translateY(-2px) !important;
+}
+
+.wallet-option:active {
+    transform: translateY(0) !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* Fix: Demo wallet should be highlighted */
+.demo-wallet {
+    border: 2px solid var(--gold) !important;
+    background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.demo-wallet:hover {
+    background: rgba(245, 158, 11, 0.2) !important;
+    border-color: var(--gold) !important;
+}
+
+/* Fix: Modal close button should work */
+.modal-close {
+    position: absolute !important;
+    top: 1rem !important;
+    right: 1.5rem !important;
+    background: none !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    font-size: 2rem !important;
+    cursor: pointer !important;
+    transition: color 0.3s ease !important;
+    line-height: 1 !important;
+    pointer-events: auto !important;
+    z-index: 100002 !important;
+}
+
+.modal-close:hover {
+    color: var(--text-primary) !important;
+}
+
+/* Fix: Step indicators should be interactive */
+.step-indicator {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: var(--surface-light) !important;
+    border: 2px solid var(--border) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.3s ease !important;
+    pointer-events: auto !important;
+}
+
+.step-indicator.active {
+    background: var(--gold) !important;
+    border-color: var(--gold) !important;
+    color: var(--primary-dark) !important;
+    transform: scale(1.1) !important;
+}
+
+/* Fix: Ensure wallet modal appears above page routing system */
+.page-content {
+    /* Keep existing styles but ensure modal isn't affected */
+    position: relative;
+    z-index: 1; /* Lower than modal */
+}
+
+/* Fix: Override any global pointer-events rules for wallet elements */
+#walletModal,
+#walletModal *,
+[id^="walletModal"] *,
+.wallet-modal,
+.wallet-modal *,
+.wallet-modal-content,
+.wallet-modal-content *,
+.wallet-option,
+.wallet-option *,
+.step-content,
+.step-content *,
+.modal-close,
+.step-indicator,
+.wallet-options,
+.wallet-options * {
+    pointer-events: auto !important;
+}
+
+/* Fix: Ensure modal shows even when page content is hidden */
+body > .wallet-modal,
+html > .wallet-modal,
+.wallet-modal {
+    position: fixed !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+}
+
+/* Fix: Prevent any page transitions from affecting modal */
+.wallet-modal,
+.wallet-modal * {
+    animation: none !important;
+    transform: none !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* Fix: Wallet modal specific show state */
+.wallet-modal.show,
+.wallet-modal[style*="flex"],
+.wallet-modal[style*="block"] {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+}
+
+/* Fix: Ensure all interactive elements have proper cursor */
+.wallet-option,
+.modal-close,
+.step-indicator,
+.btn-primary,
+.btn-secondary,
+.btn-hero-primary,
+.wallet-connect-btn {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+/* Fix: Override any conflicting styles from page system */
+.wallet-modal {
+    display: none !important; /* Default hidden */
+}
+
+.wallet-modal.show,
+.wallet-modal[style*="display: flex"],
+.wallet-modal[style*="display:flex"] {
+    display: flex !important; /* Show when needed */
+}
+
+/* ===================================== */
+/* END WALLET MODAL FIXES */
+/* ===================================== */
