@@ -1,6 +1,6 @@
 /**
- * TokenApproval Component - Token Approval Workflow System
- * FIXED: Updated with correct database schema and column names
+ * TokenApproval Component - CLEAN ALGORITHM VERSION
+ * Updated with simplified logic: token_approvals = approved only, token_blacklist = rejected only
  */
 
 class TokenApproval {
@@ -11,15 +11,14 @@ class TokenApproval {
         this.selectedTokens = new Set();
         this.updateInterval = null;
         
-        // Approval workflow states
+        // Simplified approval states (no rejected status in approvals table)
         this.approvalStates = {
             PENDING: 'pending',
             REVIEWING: 'reviewing',
-            APPROVED: 'approved',
-            REJECTED: 'rejected'
+            APPROVED: 'approved'
         };
         
-        console.log('TokenApproval: Component initialized');
+        console.log('TokenApproval: Component initialized - CLEAN ALGORITHM');
     }
 
     /**
@@ -27,7 +26,7 @@ class TokenApproval {
      */
     async initialize() {
         try {
-            console.log('✅ Initializing Token Approval System...');
+            console.log('✅ Initializing Token Approval System (Clean Algorithm)...');
             
             // Load pending approvals from database
             await this.loadPendingApprovals();
@@ -50,7 +49,7 @@ class TokenApproval {
     }
 
     /**
-     * Load Pending Approvals from Database - LIVE DATA ONLY
+     * Load Pending Approvals - SIMPLIFIED LOGIC
      */
     async loadPendingApprovals() {
         try {
@@ -59,7 +58,7 @@ class TokenApproval {
                 throw new Error('Database connection not available');
             }
 
-            // Get all tokens from token_cache that are not yet approved or blacklisted
+            // Get all tokens from token_cache that are FRESH
             const { data: allTokens, error: tokenError } = await supabase
                 .from('token_cache')
                 .select('*')
@@ -77,11 +76,10 @@ class TokenApproval {
                 return;
             }
 
-            // Get approved tokens
+            // Get approved tokens (SIMPLIFIED: no status filter needed since table only contains approved)
             const { data: approvedTokens, error: approvedError } = await supabase
                 .from('token_approvals')
-                .select('token_address')
-                .eq('status', 'approved');
+                .select('token_address'); // No status filter - all records are approved
 
             if (approvedError) {
                 console.warn('Could not load approved tokens:', approvedError);
@@ -101,7 +99,7 @@ class TokenApproval {
             const approvedSet = new Set((approvedTokens || []).map(t => t.token_address));
             const blacklistedSet = new Set((blacklistedTokens || []).map(t => t.token_address));
 
-            // Filter tokens that need approval
+            // Filter tokens that need approval (CLEANER LOGIC)
             this.approvalQueue = allTokens
                 .filter(token => 
                     !approvedSet.has(token.token_address) && 
@@ -130,6 +128,8 @@ class TokenApproval {
             this.updateApprovalStatistics();
             
             console.log(`✅ Loaded ${this.approvalQueue.length} tokens pending approval`);
+            console.log(`   📊 Approved tokens: ${approvedSet.size}`);
+            console.log(`   🚫 Blacklisted tokens: ${blacklistedSet.size}`);
             
         } catch (error) {
             console.error('Error loading pending approvals:', error);
@@ -220,7 +220,7 @@ class TokenApproval {
     }
 
     /**
-     * Approve Token - FIXED: Write to Database with Correct Schema
+     * Approve Token - CLEAN ALGORITHM: Only insert into token_approvals
      */
     async approveToken(tokenId) {
         try {
@@ -239,72 +239,47 @@ class TokenApproval {
             const now = new Date().toISOString();
             const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            // Step 1: Check if token already exists in token_approvals table
+            // CLEAN APPROACH: Only check if already approved
             const { data: existingApproval, error: checkError } = await supabase
                 .from('token_approvals')
-                .select('id, status')
+                .select('id')
                 .eq('token_address', token.tokenAddress)
                 .single();
 
-            if (checkError && checkError.code !== 'PGRST116') {
-                throw checkError;
+            // If already approved, skip
+            if (!checkError && existingApproval) {
+                console.log(`⚠️ Token ${token.symbol} already approved`);
+                this.showAdminNotification(`Token ${token.symbol} already approved`, 'info');
+                
+                // Remove from pending queue
+                this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
+                this.updateApprovalStatistics();
+                this.updateApprovalDisplay();
+                return;
             }
 
-            let approvalResult;
+            // INSERT new approval record (SIMPLE: no status field, all records are approved)
+            const { data: newApproval, error: insertError } = await supabase
+                .from('token_approvals')
+                .insert({
+                    token_address: token.tokenAddress,
+                    token_symbol: token.symbol,
+                    token_name: token.name,
+                    // status: 'approved', // Optional: remove if you drop status column
+                    submitted_at: now,
+                    submitted_by: 'cache_discovery',
+                    reviewed_at: now,
+                    reviewed_by: adminWallet,
+                    market_cap: token.marketCap,
+                    risk_score: token.riskScore,
+                    auto_approval_eligible: false,
+                    created_at: now
+                })
+                .select()
+                .single();
 
-            if (existingApproval) {
-                // UPDATE existing record to approved status
-                console.log(`📝 Updating existing approval record for ${token.symbol}`);
-                
-                const { data: updatedApproval, error: updateError } = await supabase
-                    .from('token_approvals')
-                    .update({
-                        status: 'approved',
-                        reviewed_at: now,
-                        reviewed_by: adminWallet,
-                        token_symbol: token.symbol,
-                        token_name: token.name,
-                        market_cap: token.marketCap,
-                        risk_score: token.riskScore
-                    })
-                    .eq('token_address', token.tokenAddress)
-                    .select()
-                    .single();
-
-                if (updateError) {
-                    throw updateError;
-                }
-                
-                approvalResult = updatedApproval;
-                
-            } else {
-                // INSERT new approval record if it doesn't exist
-                console.log(`📝 Creating new approval record for ${token.symbol}`);
-                
-                const { data: newApproval, error: insertError } = await supabase
-                    .from('token_approvals')
-                    .insert({
-                        token_address: token.tokenAddress,
-                        token_symbol: token.symbol,
-                        token_name: token.name,
-                        status: 'approved',
-                        submitted_at: now,
-                        submitted_by: 'cache_discovery',
-                        reviewed_at: now,
-                        reviewed_by: adminWallet,
-                        market_cap: token.marketCap,
-                        risk_score: token.riskScore,
-                        auto_approval_eligible: false,
-                        created_at: now
-                    })
-                    .select()
-                    .single();
-
-                if (insertError) {
-                    throw insertError;
-                }
-                
-                approvalResult = newApproval;
+            if (insertError) {
+                throw insertError;
             }
 
             // Log to admin audit log
@@ -315,8 +290,7 @@ class TokenApproval {
                 details: {
                     market_cap: token.marketCap,
                     risk_score: token.riskScore,
-                    approval_id: approvalResult.id,
-                    approval_method: existingApproval ? 'update_existing' : 'create_new'
+                    approval_id: newApproval.id
                 }
             });
             
@@ -329,7 +303,7 @@ class TokenApproval {
             
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
             
-            console.log(`✅ Token ${token.symbol} approved successfully`);
+            console.log(`✅ Token ${token.symbol} approved and added to token_approvals`);
             
         } catch (error) {
             console.error('Error approving token:', error);
@@ -338,7 +312,7 @@ class TokenApproval {
     }
 
     /**
-     * Reject Token - Write to Blacklist with Proper Database Constraints
+     * Reject Token - CLEAN ALGORITHM: Only insert into token_blacklist, NOT token_approvals
      */
     async rejectToken(tokenId) {
         try {
@@ -363,57 +337,41 @@ class TokenApproval {
             const now = new Date().toISOString();
             const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            // Check if exists in token_approvals first and update to rejected
-            const { data: existingApproval, error: checkError } = await supabase
-                .from('token_approvals')
+            // CLEAN APPROACH: Check if already blacklisted
+            const { data: existingBlacklist, error: checkError } = await supabase
+                .from('token_blacklist')
                 .select('id')
                 .eq('token_address', token.tokenAddress)
+                .eq('is_active', true)
                 .single();
 
-            if (!checkError || existingApproval) {
-                // Update existing approval to rejected
-                await supabase
-                    .from('token_approvals')
-                    .update({
-                        status: 'rejected',
-                        reviewed_at: now,
-                        reviewed_by: adminWallet,
-                        rejection_reason: reason.trim()
-                    })
-                    .eq('token_address', token.tokenAddress);
-            } else {
-                // Create new rejection record
-                await supabase
-                    .from('token_approvals')
-                    .insert({
-                        token_address: token.tokenAddress,
-                        token_symbol: token.symbol,
-                        token_name: token.name,
-                        status: 'rejected',
-                        submitted_at: now,
-                        submitted_by: 'cache_discovery',
-                        reviewed_at: now,
-                        reviewed_by: adminWallet,
-                        rejection_reason: reason.trim(),
-                        created_at: now
-                    });
+            // If already blacklisted, skip
+            if (!checkError && existingBlacklist) {
+                console.log(`⚠️ Token ${token.symbol} already blacklisted`);
+                this.showAdminNotification(`Token ${token.symbol} already blacklisted`, 'info');
+                
+                // Remove from pending queue
+                this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
+                this.updateApprovalStatistics();
+                this.updateApprovalDisplay();
+                return;
             }
 
-            // Insert into token_blacklist table with proper constraints
+            // Insert ONLY into token_blacklist (NOT into token_approvals)
             const blacklistData = {
                 token_address: token.tokenAddress,
                 token_symbol: token.symbol,
                 token_name: token.name,
-                category: 'manual', // Required field - default to 'manual' for admin rejections
-                reason: reason.trim(), // Required field - admin provided reason
-                severity: null, // Optional field - set to null
+                category: 'manual', // Required field
+                reason: reason.trim(), // Required field
+                severity: null, // Optional field
                 added_by: adminWallet, // Required field
                 added_at: now,
                 is_active: true,
-                detection_algorithm: null, // Optional - null for manual rejections
-                confidence: null, // Optional - null for manual rejections
-                evidence: null, // Optional - null for manual rejections
-                appeal: null, // Optional - null initially
+                detection_algorithm: null, // Optional
+                confidence: null, // Optional
+                evidence: null, // Optional
+                appeal: null, // Optional
                 created_at: now
             };
 
@@ -449,6 +407,8 @@ class TokenApproval {
             this.updateApprovalDisplay();
             
             this.showAdminNotification(`Token ${token.symbol} blacklisted successfully`, 'warning');
+            
+            console.log(`❌ Token ${token.symbol} rejected and added to token_blacklist ONLY`);
             
         } catch (error) {
             console.error('Error rejecting token:', error);
@@ -801,4 +761,8 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
-console.log('✅ TokenApproval component loaded - FIXED database schema version');
+console.log('✅ TokenApproval component loaded - CLEAN ALGORITHM VERSION');
+console.log('🏁 Clean Logic:');
+console.log('   ✅ token_approvals = ONLY approved tokens');
+console.log('   🚫 token_blacklist = ONLY rejected tokens');
+console.log('   🧹 No overlap, no status filtering needed');
