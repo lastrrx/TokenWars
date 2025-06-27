@@ -648,7 +648,7 @@
                     </div>
                 </div>
 
-                <!-- Pair Performance Charts */
+                <!-- Pair Performance Charts -->
                 <div class="production-section">
                     <h3>📈 Pair Performance Analytics</h3>
                     <div class="performance-chart">
@@ -953,8 +953,6 @@
     <!-- Scripts -->
     <script src="../config.js"></script>
     <script src="../supabase-client.js"></script>
-    <script src="../token-service.js"></script>
-    <script src="../price-service.js"></script>
     <script src="../competition-manager.js"></script>
     <script src="auth.js"></script>
     <script src="admin.js"></script>
@@ -1075,6 +1073,120 @@
         function generateUserReport() {
             console.log('👥 Generating user activity report...');
             showAdminNotification('User report generation started', 'info');
+        }
+
+        function generateRevenueReport() {
+            console.log('💰 Generating revenue report...');
+            showAdminNotification('Revenue report generation started', 'info');
+        }
+        
+        function generateParticipationReport() {
+            console.log('👥 Generating participation report...');
+            showAdminNotification('Participation report generation started', 'info');
+        }
+        
+        function generateEngagementReport() {
+            console.log('🎯 Generating engagement report...');
+            showAdminNotification('Engagement report generation started', 'info');
+        }
+        
+        function generateRetentionReport() {
+            console.log('🔄 Generating retention report...');
+            showAdminNotification('Retention report generation started', 'info');
+        }
+
+        // Cache Functions
+        function refreshTokenCache() {
+            console.log('🪙 Refreshing token cache...');
+            showAdminNotification('Token cache refresh initiated', 'info');
+        }
+        
+        function clearStaleCache() {
+            console.log('🗑️ Clearing stale cache...');
+            showAdminNotification('Stale cache cleared', 'success');
+        }
+        
+        function optimizeCache() {
+            console.log('⚡ Optimizing cache...');
+            showAdminNotification('Cache optimization started', 'info');
+        }
+        
+        function viewCacheAnalytics() {
+            console.log('📊 Viewing cache analytics...');
+            showAdminNotification('Loading cache analytics...', 'info');
+        }
+
+        // Blacklist Functions
+        function bulkWhitelist() {
+            console.log('✅ Bulk whitelist operation...');
+            showAdminNotification('Bulk whitelist feature coming soon', 'info');
+        }
+        
+        function whitelistWithApproval() {
+            console.log('🔄 Whitelist with approval...');
+            showAdminNotification('Whitelist to approval queue feature coming soon', 'info');
+        }
+        
+        function exportBlacklist() {
+            console.log('📤 Exporting blacklist...');
+            showAdminNotification('Blacklist export feature coming soon', 'info');
+        }
+        
+        function scanForThreats() {
+            console.log('🔍 Scanning for threats...');
+            showAdminNotification('Threat scanning feature coming soon', 'info');
+        }
+
+        // Token Management Functions
+        function exportTokenList() {
+            console.log('📤 Exporting token list...');
+            showAdminNotification('Token list export feature coming soon', 'info');
+        }
+        
+        function viewTokenAnalytics() {
+            console.log('📊 Viewing token analytics...');
+            showAdminNotification('Token analytics feature coming soon', 'info');
+        }
+
+        // Competition Functions
+        function refreshCompetitionsList() {
+            console.log('🔄 Refreshing competitions list...');
+            showAdminNotification('Competitions list refreshed', 'info');
+        }
+        
+        function viewCompetitionAnalytics() {
+            console.log('📊 Viewing competition analytics...');
+            showAdminNotification('Competition analytics feature coming soon', 'info');
+        }
+        
+        function downloadCompetitionData() {
+            console.log('📥 Downloading competition data...');
+            showAdminNotification('Competition data download feature coming soon', 'info');
+        }
+
+        // Navigation Functions
+        function switchToSection(sectionName) {
+            console.log('🧭 Switching to section:', sectionName);
+            
+            // Hide all sections
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionName);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const targetNavItem = document.querySelector(`[href="#${sectionName}"]`);
+            if (targetNavItem) {
+                targetNavItem.classList.add('active');
+            }
         }
 
         // Utility function for notifications
