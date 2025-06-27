@@ -144,10 +144,6 @@ body {
     transform: translateY(-1px);
 }
 
-.logo::before {
-    display: none !important;
-}
-
 .nav-links {
     display: flex;
     gap: 2rem; /* Reduced from 2.5rem to 2rem for better spacing */
