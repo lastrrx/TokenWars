@@ -134,9 +134,9 @@ body {
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     transition: all 0.3s ease;
     cursor: pointer;
+    flex-shrink: 0; /* Prevents logo from shrinking */
 }
 
 .logo:hover {
@@ -145,21 +145,17 @@ body {
 }
 
 .logo::before {
-    content: '₿';
-    font-size: 1.5rem;
-    color: var(--gold);
-    transition: all 0.3s ease;
-}
-
-.logo:hover::before {
-    transform: rotate(10deg) scale(1.1);
+    display: none !important;
 }
 
 .nav-links {
     display: flex;
-    gap: 2.5rem;
+    gap: 2rem; /* Reduced from 2.5rem to 2rem for better spacing */
     list-style: none;
     align-items: center;
+    margin-left: 2rem; /* Controlled gap from logo */
+    flex: 1; /* Takes up available space */
+    justify-content: flex-start; /* Aligns items to start after logo gap */
 }
 
 .nav-link {
@@ -169,9 +165,10 @@ body {
     font-size: 0.95rem;
     transition: all 0.3s ease;
     position: relative;
-    padding: 0.5rem 0;
+    padding: 0.5rem 1rem; /* Added horizontal padding for better click targets */
     cursor: pointer;
     border-radius: var(--radius-sm);
+    white-space: nowrap; /* Prevents text wrapping */
 }
 
 .nav-link:hover {
@@ -1257,6 +1254,18 @@ body {
     .nav-links {
         display: none; /* Mobile menu implementation needed */
     }
+
+    @media (max-width: 768px) {
+    .nav-links {
+        margin-left: 1rem;
+        gap: 1rem;
+    }
+    
+    .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+}
     
     .hero-title {
         font-size: clamp(2rem, 10vw, 4rem);
