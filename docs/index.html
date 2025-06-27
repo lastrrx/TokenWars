@@ -1765,12 +1765,26 @@
         function setupWalletStateMonitoring() {
             console.log('👀 Setting up wallet state monitoring...');
             
-            // Monitor for changes every 2 seconds
-            setInterval(() => {
-                if (window.location.hash === '#competitions') {
-                    updateCompetitionsPageVisibility();
-                }
-            }, 2000);
+            // Use event-based monitoring instead of polling
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && window.location.hash === '#competitions') {
+        updateCompetitionsPageVisibility();
+    }
+});
+
+// Only check on hash change
+window.addEventListener('hashchange', function() {
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => updateCompetitionsPageVisibility(), 500);
+    }
+});
+
+// Initial check when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => updateCompetitionsPageVisibility(), 1000);
+    }
+});
             
             // Monitor DOM changes for wallet connection elements
             const traderInfo = document.getElementById('traderInfo');
