@@ -1,5 +1,7 @@
-// CompetitionManager - Competition Lifecycle Management
-// Automated creation DISABLED by default, controllable via admin panel
+/**
+ * CompetitionManager - Competition Lifecycle Management
+ * UPDATED: Automated creation DISABLED by default, controllable via admin panel
+ */
 
 class CompetitionManager {
     constructor() {
@@ -27,7 +29,8 @@ class CompetitionManager {
             activeDuration: 60 * 60 * 1000, // 1 hour
             twapWindow: 10 * 60 * 1000, // 10 minutes
             minParticipants: 1,
-            maxRetries: 3
+            maxRetries: 3,
+            failureCount: 0 // Track consecutive failures
         };
         
         // Service references
@@ -97,40 +100,62 @@ class CompetitionManager {
      * Enable automated competition creation
      */
     enableAutomatedCreation(config = {}) {
-        this.automationConfig.enabled = true;
-        
-        // Update config if provided
-        if (config.maxConcurrentCompetitions) {
-            this.automationConfig.maxConcurrentCompetitions = config.maxConcurrentCompetitions;
+        try {
+            this.automationConfig.enabled = true;
+            this.automationConfig.failureCount = 0; // Reset failure count
+            
+            // Update config if provided
+            if (config.maxConcurrentCompetitions) {
+                this.automationConfig.maxConcurrentCompetitions = config.maxConcurrentCompetitions;
+            }
+            if (config.autoCreateInterval) {
+                this.automationConfig.autoCreateInterval = config.autoCreateInterval * 60 * 60 * 1000; // Convert hours to ms
+            }
+            if (config.votingDuration) {
+                this.automationConfig.votingDuration = config.votingDuration * 60 * 1000; // Convert minutes to ms
+            }
+            if (config.activeDuration) {
+                this.automationConfig.activeDuration = config.activeDuration * 60 * 60 * 1000; // Convert hours to ms
+            }
+            
+            console.log('🤖 Automated competition creation ENABLED');
+            console.log('   📊 Config:', {
+                maxConcurrent: this.automationConfig.maxConcurrentCompetitions,
+                intervalHours: this.automationConfig.autoCreateInterval / (60 * 60 * 1000),
+                votingMinutes: this.automationConfig.votingDuration / (60 * 1000),
+                activeHours: this.automationConfig.activeDuration / (60 * 60 * 1000)
+            });
+            
+            // Show admin notification
+            if (window.showAdminNotification) {
+                window.showAdminNotification('Automated competition creation enabled', 'success');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to enable automated creation:', error);
+            return false;
         }
-        if (config.autoCreateInterval) {
-            this.automationConfig.autoCreateInterval = config.autoCreateInterval * 60 * 60 * 1000; // Convert hours to ms
-        }
-        if (config.votingDuration) {
-            this.automationConfig.votingDuration = config.votingDuration * 60 * 1000; // Convert minutes to ms
-        }
-        if (config.activeDuration) {
-            this.automationConfig.activeDuration = config.activeDuration * 60 * 60 * 1000; // Convert hours to ms
-        }
-        
-        console.log('🤖 Automated competition creation ENABLED');
-        console.log('   📊 Config:', {
-            maxConcurrent: this.automationConfig.maxConcurrentCompetitions,
-            intervalHours: this.automationConfig.autoCreateInterval / (60 * 60 * 1000),
-            votingMinutes: this.automationConfig.votingDuration / (60 * 1000),
-            activeHours: this.automationConfig.activeDuration / (60 * 60 * 1000)
-        });
-        
-        return true;
     }
 
     /**
      * Disable automated competition creation
      */
     disableAutomatedCreation() {
-        this.automationConfig.enabled = false;
-        console.log('🛑 Automated competition creation DISABLED');
-        return true;
+        try {
+            this.automationConfig.enabled = false;
+            console.log('🛑 Automated competition creation DISABLED');
+            
+            // Show admin notification
+            if (window.showAdminNotification) {
+                window.showAdminNotification('Automated competition creation disabled', 'warning');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to disable automated creation:', error);
+            return false;
+        }
     }
 
     /**
@@ -147,9 +172,41 @@ class CompetitionManager {
             },
             status: {
                 activeCompetitions: this.activeCompetitions.size,
-                lastCreated: this.lastCompetitionCreated
+                lastCreated: this.lastCompetitionCreated,
+                failureCount: this.automationConfig.failureCount
             }
         };
+    }
+
+    /**
+     * Update automation parameters
+     */
+    updateAutomationParameters(params) {
+        try {
+            if (params.maxConcurrentCompetitions !== undefined) {
+                this.automationConfig.maxConcurrentCompetitions = params.maxConcurrentCompetitions;
+            }
+            if (params.autoCreateInterval !== undefined) {
+                this.automationConfig.autoCreateInterval = params.autoCreateInterval * 60 * 60 * 1000;
+            }
+            if (params.votingDuration !== undefined) {
+                this.automationConfig.votingDuration = params.votingDuration * 60 * 1000;
+            }
+            if (params.activeDuration !== undefined) {
+                this.automationConfig.activeDuration = params.activeDuration * 60 * 60 * 1000;
+            }
+            
+            console.log('✅ Automation parameters updated:', params);
+            
+            if (window.showAdminNotification) {
+                window.showAdminNotification('Automation parameters updated', 'info');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to update automation parameters:', error);
+            return false;
+        }
     }
 
     // Initialize references to other services
@@ -338,9 +395,19 @@ class CompetitionManager {
             console.log(`   ⏰ Start: ${timing.startTime}`);
             console.log(`   🏁 End: ${timing.endTime}`);
             
+            if (window.showAdminNotification) {
+                window.showAdminNotification(
+                    `Manual competition created: ${tokenPair.token_a.symbol} vs ${tokenPair.token_b.symbol}`,
+                    'success'
+                );
+            }
+            
             return competition;
         } catch (error) {
             console.error('Failed to create manual competition:', error);
+            if (window.showAdminNotification) {
+                window.showAdminNotification(`Failed to create competition: ${error.message}`, 'error');
+            }
             throw error;
         }
     }
@@ -390,11 +457,18 @@ class CompetitionManager {
             await this.setupCompetitionAutomation(competition);
             this.activeCompetitions.set(competition.competition_id, competition);
             
+            // Reset failure count on successful creation
+            this.automationConfig.failureCount = 0;
+            
             console.log(`✅ Created automated competition: ${competition.competition_id}`);
             
             return competition;
         } catch (error) {
             console.error('Failed to create automated competition:', error);
+            
+            // Increment failure count
+            this.automationConfig.failureCount = (this.automationConfig.failureCount || 0) + 1;
+            
             throw error;
         }
     }
@@ -404,6 +478,13 @@ class CompetitionManager {
         try {
             if (!this.automationConfig.enabled) {
                 return; // Automation disabled
+            }
+            
+            // Check failure count - disable if too many failures
+            if (this.automationConfig.failureCount >= 5) {
+                console.log('🔴 Too many automated creation failures, disabling automation...');
+                this.disableAutomatedCreation();
+                return;
             }
             
             const activeCount = this.activeCompetitions.size;
@@ -427,9 +508,17 @@ class CompetitionManager {
             if (competition) {
                 this.lastCompetitionCreated = new Date().toISOString();
                 console.log(`✅ Auto-created competition: ${competition.competition_id}`);
+                
+                if (window.showAdminNotification) {
+                    window.showAdminNotification(
+                        `Automated competition created: ${competition.token_a_symbol} vs ${competition.token_b_symbol}`,
+                        'info'
+                    );
+                }
             }
         } catch (error) {
             console.error('Failed to auto-create competition:', error);
+            this.automationConfig.failureCount = (this.automationConfig.failureCount || 0) + 1;
         }
     }
 
@@ -776,6 +865,7 @@ class CompetitionManager {
 
     async resolveCompetition(competitionId) {
         console.log(`🏁 Resolving competition: ${competitionId}`);
+        this.cleanupCompetition(competitionId);
         return true;
     }
 
@@ -862,10 +952,12 @@ function getCompetitionManager() {
 window.CompetitionManager = CompetitionManager;
 window.getCompetitionManager = getCompetitionManager;
 
-console.log('✅ CompetitionManager class loaded - Automated creation DISABLED by default');
+console.log('✅ CompetitionManager class loaded - UPDATED VERSION');
 console.log('🏁 Features:');
 console.log('   🛑 Automated competition creation DISABLED by default');
 console.log('   🎯 Manual competition creation available');
-console.log('   🤖 Admin controls for enabling/disabling automation');
+console.log('   🤖 Enhanced admin controls for automation');
 console.log('   ⏰ Complete lifecycle management for existing competitions');
 console.log('   📊 Competition monitoring and phase transitions');
+console.log('   ⚠️ Automatic disabling after repeated failures');
+console.log('   🔔 Admin notifications for status changes');
