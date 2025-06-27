@@ -823,42 +823,71 @@ function updateApprovalStatistics() {
 }
 
 /**
- * Render Approval Queue
+ * Render Approval Queue - Database Integrated Version
+ * Add this function to admin.js to replace the existing renderApprovalQueue
  */
 function renderApprovalQueue() {
     try {
         const approvalQueueElement = document.getElementById('approval-queue');
         if (!approvalQueueElement) return;
         
-        const { pending } = AdminState.approvalState;
+        // Get the approval queue from TokenApproval component
+        const tokenApproval = AdminState.components.tokenApproval;
+        if (!tokenApproval || !tokenApproval.approvalQueue) {
+            approvalQueueElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #94a3b8;">Failed to load approval queue</div>';
+            return;
+        }
         
-        if (pending.length === 0) {
+        const { approvalQueue } = tokenApproval;
+        
+        if (approvalQueue.length === 0) {
             approvalQueueElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #94a3b8;">No tokens pending approval</div>';
             return;
         }
         
-        approvalQueueElement.innerHTML = pending.map(token => `
+        approvalQueueElement.innerHTML = approvalQueue.map(token => `
             <div class="approval-item" data-token-id="${token.id}">
                 <div class="approval-token-info">
                     <input type="checkbox" class="approval-checkbox" data-token-id="${token.id}">
-                    <img src="${generateTokenLogoFallback(token.symbol)}" 
-                         alt="${token.symbol}" class="approval-token-logo">
+                    ${token.logoURI ? 
+                        `<img src="${token.logoURI}" 
+                             alt="${token.symbol}" 
+                             class="approval-token-logo"
+                             onerror="this.src='${generateTokenLogoFallback(token.symbol)}'">` :
+                        `<img src="${generateTokenLogoFallback(token.symbol)}" 
+                             alt="${token.symbol}" 
+                             class="approval-token-logo">`
+                    }
                     <div>
                         <div style="font-weight: 600;">${token.symbol}</div>
                         <div style="font-size: 0.875rem; color: #94a3b8;">${token.name}</div>
                         <div style="font-size: 0.75rem; color: #94a3b8;">
-                            ${formatMarketCap(token.marketCap)} • ${token.age} days • ${(token.liquidity * 100).toFixed(1)}% liquidity
+                            ${formatMarketCap(token.marketCap)} • 
+                            Vol: ${formatNumber(token.volume24h)} • 
+                            ${token.priceChange24h >= 0 ? '+' : ''}${token.priceChange24h.toFixed(2)}%
                         </div>
+                        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">
+                            Risk: ${(token.riskScore * 100).toFixed(0)}% • 
+                            ${token.dataSource} • 
+                            ${formatRelativeTime(token.submittedAt)}
+                        </div>
+                        ${token.tags && token.tags.length > 0 ? `
+                            <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem;">
+                                ${token.tags.slice(0, 3).map(tag => 
+                                    `<span style="font-size: 0.625rem; padding: 0.125rem 0.375rem; background: rgba(139, 92, 246, 0.2); border-radius: 0.25rem; color: #a78bfa;">${tag}</span>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="approval-actions">
-                    <button class="btn btn-small btn-success" onclick="approveToken('${token.id}')">
+                    <button class="btn btn-small btn-success" onclick="window.TokenApproval.instance.approveToken('${token.id}')">
                         ✅ Approve
                     </button>
-                    <button class="btn btn-small btn-danger" onclick="rejectToken('${token.id}')">
+                    <button class="btn btn-small btn-danger" onclick="window.TokenApproval.instance.rejectToken('${token.id}')">
                         ❌ Reject
                     </button>
-                    <button class="btn btn-small btn-secondary" onclick="reviewToken('${token.id}')">
+                    <button class="btn btn-small btn-secondary" onclick="window.TokenApproval.instance.openTokenReview('${token.id}')">
                         🔍 Review
                     </button>
                 </div>
@@ -867,12 +896,35 @@ function renderApprovalQueue() {
         
         // Add checkbox event listeners
         document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateSelectedCount);
+            checkbox.addEventListener('change', () => {
+                if (tokenApproval.updateSelectedCount) {
+                    tokenApproval.updateSelectedCount();
+                }
+            });
         });
         
     } catch (error) {
         console.error('Error rendering approval queue:', error);
+        const approvalQueueElement = document.getElementById('approval-queue');
+        if (approvalQueueElement) {
+            approvalQueueElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ef4444;">Error loading approval queue</div>';
+        }
     }
+}
+
+/**
+ * Format Number with Abbreviations
+ */
+function formatNumber(num) {
+    if (!num) return '0';
+    if (num >= 1000000000) {
+        return '$' + (num / 1000000000).toFixed(1) + 'B';
+    } else if (num >= 1000000) {
+        return '$' + (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return '$' + (num / 1000).toFixed(1) + 'K';
+    }
+    return '$' + num.toFixed(0);
 }
 
 /**
