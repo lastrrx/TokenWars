@@ -3655,146 +3655,160 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ Competition structure fixed');
         }
         
-        function renderCompetitions() {
-            if (competitionsRendered) {
-                console.log('⚠️ Competitions already rendered, skipping');
-                return;
-            }
+  function renderCompetitions() {
+    if (competitionsRendered) {
+        console.log('⚠️ Competitions already rendered, skipping');
+        return;
+    }
+    
+    const activeGrid = document.getElementById('activeGrid');
+    if (!activeGrid) return;
+    
+    // Check if we have competition data
+    let competitionsData = [];
+    if (window.CompetitionState && window.CompetitionState.activeCompetitions) {
+        competitionsData = window.CompetitionState.activeCompetitions;
+    }
+    
+    if (competitionsData.length > 0) {
+        console.log(`🏆 Found ${competitionsData.length} competitions, deduplicating...`);
+        
+        // DEDUPLICATION LOGIC - Prevent duplicate competitions
+        const uniqueCompetitions = [];
+        const seen = new Set();
+        
+        competitionsData.forEach((comp, index) => {
+            // Create unique key based on token symbols (fallback if undefined)
+            const tokenA = comp.token_a_symbol || 'BONK';
+            const tokenB = comp.token_b_symbol || 'POPCAT';
+            const key = `${tokenA}-${tokenB}`;
             
-            const activeGrid = document.getElementById('activeGrid');
-            if (!activeGrid) return;
-            
-            // Check if we have competition data
-            let competitionsData = [];
-            if (window.CompetitionState && window.CompetitionState.activeCompetitions) {
-                competitionsData = window.CompetitionState.activeCompetitions;
-            }
-            
-            if (competitionsData.length > 0) {
-                console.log(`🏆 Rendering ${competitionsData.length} real competitions...`);
-                activeGrid.innerHTML = '';
-                
-                competitionsData.forEach((competition, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'competition-card enhanced';
-                    card.style.cssText = `
-                        background: linear-gradient(145deg, #1e293b 0%, #334155 100%);
-                        border: 1px solid #475569;
-                        border-radius: 1.25rem;
-                        padding: 1.5rem;
-                        position: relative;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        transition: all 0.3s ease;
-                        cursor: pointer;
-                        overflow: hidden;
-                    `;
-                    
-                    const tokenA = competition.token_a_symbol || 'BONK';
-                    const tokenB = competition.token_b_symbol || 'POPCAT';
-                    const participants = competition.participants || Math.floor(Math.random() * 200) + 50;
-                    const prizePool = competition.prize_pool || 2.0;
-                    
-                    card.innerHTML = `
-                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                            <h3 style="color: #f8fafc; font-size: 1.2rem; font-weight: 700; margin: 0;">${tokenA} vs ${tokenB}</h3>
-                            <div style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600;">
-                                🗳️ Voting Open
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: rgba(15, 23, 42, 0.3); border-radius: 0.75rem;">
-                            <div style="text-align: center;">
-                                <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #8b5cf6, #ec4899); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenA.charAt(0)}</div>
-                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenA}</div>
-                            </div>
-                            
-                            <div style="text-align: center;">
-                                <div style="font-size: 1.2rem; font-weight: 900; color: #8b5cf6; margin-bottom: 0.5rem;">VS</div>
-                                <div style="font-size: 0.75rem; color: #cbd5e1;">60% - 40%</div>
-                            </div>
-                            
-                            <div style="text-align: center;">
-                                <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #ec4899, #f59e0b); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenB.charAt(0)}</div>
-                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenB}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                            <div style="text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${participants}</div>
-                                <div style="font-size: 0.75rem; color: #cbd5e1;">Participants</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${prizePool} SOL</div>
-                                <div style="font-size: 0.75rem; color: #cbd5e1;">Prize Pool</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">0.1 SOL</div>
-                                <div style="font-size: 0.75rem; color: #cbd5e1;">Entry Fee</div>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>🔗</span>
-                            <span style="font-size: 0.85rem; color: #3b82f6;">Connect wallet to place predictions</span>
-                        </div>
-                        
-                        <button style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; padding: 0.75rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer;" 
-                                onclick="if(window.openWalletModal) window.openWalletModal();">
-                            Connect Wallet to Predict
-                        </button>
-                        
-                        <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #cbd5e1;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 4px #22c55e;"></div>
-                            Live Data
-                        </div>
-                    `;
-                    
-                    activeGrid.appendChild(card);
-                });
-                
-                // Update count
-                const activeCount = document.getElementById('activeCount');
-                if (activeCount) {
-                    activeCount.textContent = competitionsData.length;
-                }
-                
-                competitionsRendered = true;
-                console.log('✅ Real competitions rendered!');
-                
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueCompetitions.push(comp);
+                console.log(`✅ Added unique competition: ${key}`);
             } else {
-                console.log('📝 No real competitions, showing empty state...');
-                activeGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 1.5rem;">
-                        <div style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.7;">🏆</div>
-                        <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No Active Competitions</h3>
-                        <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">Check back soon for new token prediction battles!</p>
-                        <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 0.75rem; padding: 1rem; display: inline-block;">
-                            <span style="color: #8b5cf6;">💡 Tip:</span>
-                            <span style="color: #cbd5e1; margin-left: 0.5rem;">New competitions are added regularly</span>
-                        </div>
-                    </div>
-                `;
-                
-                const activeCount = document.getElementById('activeCount');
-                if (activeCount) {
-                    activeCount.textContent = '0';
-                }
-                
-                competitionsRendered = true;
+                console.log(`⚠️ Skipped duplicate competition: ${key}`);
             }
+        });
+        
+        console.log(`📊 Deduplicated: ${competitionsData.length} → ${uniqueCompetitions.length} competitions`);
+        
+        // Clear and render unique competitions only
+        activeGrid.innerHTML = '';
+        
+        uniqueCompetitions.forEach((competition, index) => {
+            const card = document.createElement('div');
+            card.className = 'competition-card enhanced';
+            card.style.cssText = `
+                background: linear-gradient(145deg, #1e293b 0%, #334155 100%);
+                border: 1px solid #475569;
+                border-radius: 1.25rem;
+                padding: 1.5rem;
+                position: relative;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+                cursor: pointer;
+                overflow: hidden;
+            `;
+            
+            const tokenA = competition.token_a_symbol || 'BONK';
+            const tokenB = competition.token_b_symbol || 'POPCAT';
+            const participants = competition.participants || Math.floor(Math.random() * 200) + 50;
+            const prizePool = competition.prize_pool || 2.0;
+            
+            card.innerHTML = `
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                    <h3 style="color: #f8fafc; font-size: 1.2rem; font-weight: 700; margin: 0;">${tokenA} vs ${tokenB}</h3>
+                    <div style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600;">
+                        🗳️ Voting Open
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: rgba(15, 23, 42, 0.3); border-radius: 0.75rem;">
+                    <div style="text-align: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #8b5cf6, #ec4899); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenA.charAt(0)}</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenA}</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #8b5cf6; margin-bottom: 0.5rem;">VS</div>
+                        <div style="font-size: 0.75rem; color: #cbd5e1;">60% - 40%</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 0.5rem; background: linear-gradient(135deg, #ec4899, #f59e0b); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">${tokenB.charAt(0)}</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${tokenB}</div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${participants}</div>
+                        <div style="font-size: 0.75rem; color: #cbd5e1;">Participants</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">${prizePool} SOL</div>
+                        <div style="font-size: 0.75rem; color: #cbd5e1;">Prize Pool</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">0.1 SOL</div>
+                        <div style="font-size: 0.75rem; color: #cbd5e1;">Entry Fee</div>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🔗</span>
+                    <span style="font-size: 0.85rem; color: #3b82f6;">Connect wallet to place predictions</span>
+                </div>
+                
+                <button style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; color: white; padding: 0.75rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer;" 
+                        onclick="if(window.openWalletModal) window.openWalletModal();">
+                    Connect Wallet to Predict
+                </button>
+                
+                <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #cbd5e1;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 4px #22c55e;"></div>
+                    Live Data
+                </div>
+            `;
+            
+            activeGrid.appendChild(card);
+        });
+        
+        // Update count with deduplicated number
+        const activeCount = document.getElementById('activeCount');
+        if (activeCount) {
+            activeCount.textContent = uniqueCompetitions.length;
         }
         
-        // Apply fixes in sequence
-        forceCompetitionsVisible();
-        fixCompetitionStructure();
+        competitionsRendered = true;
+        console.log(`✅ Rendered ${uniqueCompetitions.length} unique competition(s)!`);
         
-        // Wait for competition system to load, then render
-        setTimeout(() => {
-            renderCompetitions();
-        }, 2000);
+    } else {
+        console.log('📝 No real competitions, showing empty state...');
+        activeGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 1.5rem;">
+                <div style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.7;">🏆</div>
+                <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No Active Competitions</h3>
+                <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">Check back soon for new token prediction battles!</p>
+                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 0.75rem; padding: 1rem; display: inline-block;">
+                    <span style="color: #8b5cf6;">💡 Tip:</span>
+                    <span style="color: #cbd5e1; margin-left: 0.5rem;">New competitions are added regularly</span>
+                </div>
+            </div>
+        `;
+        
+        const activeCount = document.getElementById('activeCount');
+        if (activeCount) {
+            activeCount.textContent = '0';
+        }
+        
+        competitionsRendered = true;
+    }
+}
         
         // Set up continuous monitoring to prevent any override (less frequent to avoid duplicates)
         setInterval(() => {
