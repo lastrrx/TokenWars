@@ -175,7 +175,7 @@ function createCompetitionStructure() {
 }
 
 /**
- * Update Competition Page Visibility Based on Wallet Connection
+ * Update Competition Page Visibility - ALWAYS SHOW COMPETITIONS
  */
 function updateCompetitionPageVisibility() {
     console.log('👀 Updating competition page visibility...');
@@ -191,15 +191,10 @@ function updateCompetitionPageVisibility() {
     const isConnected = checkWalletConnection();
     console.log(`💼 Wallet connection status: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
     
-    if (isConnected) {
-        connectedView.style.display = 'block';
-        disconnectedView.style.display = 'none';
-        console.log('✅ Showing connected competitions view');
-    } else {
-        connectedView.style.display = 'none';
-        disconnectedView.style.display = 'block';
-        console.log('❌ Showing disconnected view - wallet not connected');
-    }
+    // ALWAYS show competitions - just hide disconnected view
+    connectedView.style.display = 'block';
+    disconnectedView.style.display = 'none';
+    console.log('✅ Always showing competitions view (wallet connection affects betting only)');
 }
 
 /**
@@ -719,25 +714,35 @@ function createCompetitionCard(competition) {
 }
 
 /**
- * Get Betting Buttons Based on Competition Status
+ * Get Betting Buttons Based on Competition Status and Wallet Connection
  */
 function getBettingButtons(competition, hasUserBet) {
+    const isConnected = checkWalletConnection();
+    
     if (hasUserBet) {
         return `<button class="bet-button" disabled>✅ Prediction Placed</button>`;
     }
     
     switch (competition.status) {
         case 'voting':
-            return `
-                <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_a')">
-                    <div class="bet-button-label">Predict</div>
-                    <div class="bet-button-token">${competition.tokenA.symbol}</div>
-                </button>
-                <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_b')">
-                    <div class="bet-button-label">Predict</div>
-                    <div class="bet-button-token">${competition.tokenB.symbol}</div>
-                </button>
-            `;
+            if (isConnected) {
+                return `
+                    <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_a')">
+                        <div class="bet-button-label">Predict</div>
+                        <div class="bet-button-token">${competition.tokenA.symbol}</div>
+                    </button>
+                    <button class="bet-button" onclick="event.stopPropagation(); placeBet('${competition.competitionId}', 'token_b')">
+                        <div class="bet-button-label">Predict</div>
+                        <div class="bet-button-token">${competition.tokenB.symbol}</div>
+                    </button>
+                `;
+            } else {
+                return `
+                    <button class="bet-button connect-wallet-required" onclick="event.stopPropagation(); openWalletModal()">
+                        <div class="bet-button-label">🔗 Connect to Predict</div>
+                    </button>
+                `;
+            }
         case 'running':
             return `<button class="bet-button" disabled>⚡ Running</button>`;
         case 'upcoming':
