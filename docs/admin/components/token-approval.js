@@ -1,6 +1,6 @@
 /**
- * TokenApproval Component - CLEAN ALGORITHM VERSION
- * Updated with simplified logic: token_approvals = approved only, token_blacklist = rejected only
+ * TokenApproval Component - LIVE DATA ONLY with Whitelist Integration
+ * Manual approval workflow only - NO auto-approval functionality
  */
 
 class TokenApproval {
@@ -10,15 +10,23 @@ class TokenApproval {
         this.approvalQueue = [];
         this.selectedTokens = new Set();
         this.updateInterval = null;
+        this.whitelistQueue = [];
         
-        // Simplified approval states (no rejected status in approvals table)
+        // Manual approval states only - NO auto-approval
         this.approvalStates = {
             PENDING: 'pending',
             REVIEWING: 'reviewing',
             APPROVED: 'approved'
         };
         
-        console.log('TokenApproval: Component initialized - CLEAN ALGORITHM');
+        // Whitelist integration states
+        this.whitelistStates = {
+            PENDING_REVIEW: 'pending_review',
+            APPROVED_FOR_WHITELIST: 'approved_for_whitelist',
+            REJECTED_WHITELIST: 'rejected_whitelist'
+        };
+        
+        console.log('TokenApproval: Component initialized - MANUAL ONLY with Whitelist');
     }
 
     /**
@@ -26,10 +34,13 @@ class TokenApproval {
      */
     async initialize() {
         try {
-            console.log('✅ Initializing Token Approval System (Clean Algorithm)...');
+            console.log('✅ Initializing Token Approval System - MANUAL ONLY...');
             
             // Load pending approvals from database
             await this.loadPendingApprovals();
+            
+            // Load whitelist queue
+            await this.loadWhitelistQueue();
             
             // Start monitoring for new tokens
             this.startApprovalMonitoring();
@@ -38,7 +49,7 @@ class TokenApproval {
             this.setupEventListeners();
             
             this.isInitialized = true;
-            console.log('✅ Token Approval System initialized successfully');
+            console.log('✅ Token Approval System initialized successfully - MANUAL WORKFLOW ONLY');
             
             return true;
         } catch (error) {
@@ -49,7 +60,7 @@ class TokenApproval {
     }
 
     /**
-     * Load Pending Approvals - SIMPLIFIED LOGIC
+     * Load Pending Approvals - LIVE DATA ONLY
      */
     async loadPendingApprovals() {
         try {
@@ -57,6 +68,8 @@ class TokenApproval {
             if (!supabase) {
                 throw new Error('Database connection not available');
             }
+
+            console.log('📊 Loading pending approvals from database...');
 
             // Get all tokens from token_cache that are FRESH
             const { data: allTokens, error: tokenError } = await supabase
@@ -76,10 +89,10 @@ class TokenApproval {
                 return;
             }
 
-            // Get approved tokens (SIMPLIFIED: no status filter needed since table only contains approved)
+            // Get approved tokens (all records in token_approvals are approved)
             const { data: approvedTokens, error: approvedError } = await supabase
                 .from('token_approvals')
-                .select('token_address'); // No status filter - all records are approved
+                .select('token_address');
 
             if (approvedError) {
                 console.warn('Could not load approved tokens:', approvedError);
@@ -99,7 +112,7 @@ class TokenApproval {
             const approvedSet = new Set((approvedTokens || []).map(t => t.token_address));
             const blacklistedSet = new Set((blacklistedTokens || []).map(t => t.token_address));
 
-            // Filter tokens that need approval (CLEANER LOGIC)
+            // Filter tokens that need approval
             this.approvalQueue = allTokens
                 .filter(token => 
                     !approvedSet.has(token.token_address) && 
@@ -136,6 +149,58 @@ class TokenApproval {
             this.showAdminNotification(`Failed to load pending approvals: ${error.message}`, 'error');
             this.approvalQueue = [];
             this.updateApprovalStatistics();
+            throw error;
+        }
+    }
+
+    /**
+     * Load Whitelist Queue - NEW FEATURE
+     */
+    async loadWhitelistQueue() {
+        try {
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            console.log('🔄 Loading whitelist queue from database...');
+
+            // Get tokens that are candidates for whitelisting
+            // These are blacklisted tokens that could potentially be moved back to approval queue
+            const { data: whitelistCandidates, error } = await supabase
+                .from('token_blacklist')
+                .select('*')
+                .eq('is_active', true)
+                .in('category', ['automatic', 'community']) // Manual blacklists typically shouldn't be auto-whitelisted
+                .order('added_at', { ascending: false });
+
+            if (error) {
+                console.warn('Could not load whitelist candidates:', error);
+                this.whitelistQueue = [];
+                return;
+            }
+
+            this.whitelistQueue = (whitelistCandidates || []).map(item => ({
+                id: item.id,
+                tokenAddress: item.token_address,
+                symbol: item.token_symbol,
+                name: item.token_name,
+                category: item.category,
+                reason: item.reason,
+                addedAt: item.added_at,
+                addedBy: item.added_by,
+                severity: item.severity,
+                confidence: item.confidence,
+                evidence: item.evidence,
+                appeal: item.appeal,
+                status: this.whitelistStates.PENDING_REVIEW
+            }));
+
+            console.log(`✅ Loaded ${this.whitelistQueue.length} tokens in whitelist queue`);
+            
+        } catch (error) {
+            console.error('Error loading whitelist queue:', error);
+            this.whitelistQueue = [];
         }
     }
 
@@ -220,7 +285,7 @@ class TokenApproval {
     }
 
     /**
-     * Approve Token - CLEAN ALGORITHM: Only insert into token_approvals
+     * Approve Token - MANUAL ONLY
      */
     async approveToken(tokenId) {
         try {
@@ -234,12 +299,12 @@ class TokenApproval {
                 throw new Error('Database connection not available');
             }
 
-            console.log(`✅ Approving token: ${token.symbol}`);
+            console.log(`✅ Manually approving token: ${token.symbol}`);
             
             const now = new Date().toISOString();
             const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            // CLEAN APPROACH: Only check if already approved
+            // Check if already approved
             const { data: existingApproval, error: checkError } = await supabase
                 .from('token_approvals')
                 .select('id')
@@ -258,21 +323,20 @@ class TokenApproval {
                 return;
             }
 
-            // INSERT new approval record (SIMPLE: no status field, all records are approved)
+            // INSERT new approval record
             const { data: newApproval, error: insertError } = await supabase
                 .from('token_approvals')
                 .insert({
                     token_address: token.tokenAddress,
                     token_symbol: token.symbol,
                     token_name: token.name,
-                    // status: 'approved', // Optional: remove if you drop status column
                     submitted_at: now,
-                    submitted_by: 'cache_discovery',
+                    submitted_by: 'manual_review',
                     reviewed_at: now,
                     reviewed_by: adminWallet,
                     market_cap: token.marketCap,
                     risk_score: token.riskScore,
-                    auto_approval_eligible: false,
+                    auto_approval_eligible: false, // MANUAL ONLY
                     created_at: now
                 })
                 .select()
@@ -284,13 +348,14 @@ class TokenApproval {
 
             // Log to admin audit log
             await this.logAdminAction('token_approval', {
-                action: 'approve_token',
+                action: 'approve_token_manual',
                 token_address: token.tokenAddress,
                 token_symbol: token.symbol,
                 details: {
                     market_cap: token.marketCap,
                     risk_score: token.riskScore,
-                    approval_id: newApproval.id
+                    approval_id: newApproval.id,
+                    approval_type: 'MANUAL'
                 }
             });
             
@@ -303,7 +368,7 @@ class TokenApproval {
             
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
             
-            console.log(`✅ Token ${token.symbol} approved and added to token_approvals`);
+            console.log(`✅ Token ${token.symbol} manually approved and added to token_approvals`);
             
         } catch (error) {
             console.error('Error approving token:', error);
@@ -312,7 +377,7 @@ class TokenApproval {
     }
 
     /**
-     * Reject Token - CLEAN ALGORITHM: Only insert into token_blacklist, NOT token_approvals
+     * Reject Token - MANUAL ONLY
      */
     async rejectToken(tokenId) {
         try {
@@ -321,7 +386,7 @@ class TokenApproval {
                 throw new Error('Token not found in approval queue');
             }
 
-            // Simple reason prompt
+            // Get rejection reason
             const reason = prompt(`Enter rejection reason for ${token.symbol}:`);
             if (!reason || reason.trim() === '') {
                 return; // User cancelled or entered empty reason
@@ -332,12 +397,12 @@ class TokenApproval {
                 throw new Error('Database connection not available');
             }
 
-            console.log(`❌ Rejecting token: ${token.symbol} - Reason: ${reason}`);
+            console.log(`❌ Manually rejecting token: ${token.symbol} - Reason: ${reason}`);
             
             const now = new Date().toISOString();
             const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            // CLEAN APPROACH: Check if already blacklisted
+            // Check if already blacklisted
             const { data: existingBlacklist, error: checkError } = await supabase
                 .from('token_blacklist')
                 .select('id')
@@ -357,21 +422,21 @@ class TokenApproval {
                 return;
             }
 
-            // Insert ONLY into token_blacklist (NOT into token_approvals)
+            // Insert ONLY into token_blacklist
             const blacklistData = {
                 token_address: token.tokenAddress,
                 token_symbol: token.symbol,
                 token_name: token.name,
-                category: 'manual', // Required field
-                reason: reason.trim(), // Required field
-                severity: null, // Optional field
-                added_by: adminWallet, // Required field
+                category: 'manual',
+                reason: reason.trim(),
+                severity: 'medium', // Default for manual rejections
+                added_by: adminWallet,
                 added_at: now,
                 is_active: true,
-                detection_algorithm: null, // Optional
-                confidence: null, // Optional
-                evidence: null, // Optional
-                appeal: null, // Optional
+                detection_algorithm: null,
+                confidence: null,
+                evidence: null,
+                appeal: null,
                 created_at: now
             };
 
@@ -388,14 +453,15 @@ class TokenApproval {
 
             // Log to admin audit log
             await this.logAdminAction('token_blacklist', {
-                action: 'blacklist_token',
+                action: 'blacklist_token_manual',
                 token_address: token.tokenAddress,
                 token_symbol: token.symbol,
                 details: {
                     reason: reason.trim(),
                     category: 'manual',
                     risk_score: token.riskScore,
-                    blacklist_id: blacklist.id
+                    blacklist_id: blacklist.id,
+                    rejection_type: 'MANUAL'
                 }
             });
             
@@ -408,13 +474,255 @@ class TokenApproval {
             
             this.showAdminNotification(`Token ${token.symbol} blacklisted successfully`, 'warning');
             
-            console.log(`❌ Token ${token.symbol} rejected and added to token_blacklist ONLY`);
+            console.log(`❌ Token ${token.symbol} manually rejected and added to token_blacklist ONLY`);
             
         } catch (error) {
             console.error('Error rejecting token:', error);
             this.showAdminNotification(`Failed to blacklist token: ${error.message}`, 'error');
         }
     }
+
+    // ===== WHITELIST FUNCTIONALITY - NEW FEATURES =====
+
+    /**
+     * Whitelist Token - Remove from blacklist and add to approval queue
+     */
+    async whitelistToken(blacklistId) {
+        try {
+            const blacklistItem = this.whitelistQueue.find(item => item.id == blacklistId);
+            if (!blacklistItem) {
+                throw new Error('Blacklist item not found');
+            }
+
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
+
+            if (!confirm(`🔄 Whitelist token ${blacklistItem.symbol}? This will remove it from blacklist and add to approval queue.`)) {
+                return;
+            }
+
+            console.log(`🔄 Whitelisting token: ${blacklistItem.symbol}`);
+            
+            const now = new Date().toISOString();
+
+            // Remove from blacklist (set is_active = false)
+            const { error: updateError } = await supabase
+                .from('token_blacklist')
+                .update({
+                    is_active: false,
+                    updated_at: now,
+                    appeal: {
+                        status: 'approved',
+                        approved_by: adminWallet,
+                        approved_at: now,
+                        reason: 'Manual whitelist by admin'
+                    }
+                })
+                .eq('id', blacklistItem.id);
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            // Log admin action
+            await this.logAdminAction('token_whitelist', {
+                action: 'whitelist_token',
+                token_address: blacklistItem.tokenAddress,
+                token_symbol: blacklistItem.symbol,
+                details: {
+                    original_blacklist_reason: blacklistItem.reason,
+                    original_category: blacklistItem.category,
+                    blacklist_id: blacklistItem.id,
+                    whitelist_reason: 'Manual admin whitelist'
+                }
+            });
+
+            // Remove from whitelist queue
+            this.whitelistQueue = this.whitelistQueue.filter(item => item.id !== blacklistItem.id);
+
+            // Reload approval queue to include whitelisted token
+            await this.loadPendingApprovals();
+            
+            this.showAdminNotification(`Token ${blacklistItem.symbol} whitelisted and moved to approval queue`, 'success');
+            
+            console.log(`✅ Token ${blacklistItem.symbol} whitelisted successfully`);
+            
+        } catch (error) {
+            console.error('Error whitelisting token:', error);
+            this.showAdminNotification(`Failed to whitelist token: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Bulk Whitelist Selected Tokens
+     */
+    async bulkWhitelist() {
+        try {
+            const selectedItems = Array.from(document.querySelectorAll('.whitelist-checkbox:checked'))
+                .map(checkbox => parseInt(checkbox.dataset.itemId));
+
+            if (selectedItems.length === 0) {
+                this.showAdminNotification('No tokens selected for whitelisting', 'warning');
+                return;
+            }
+
+            if (!confirm(`🔄 Whitelist ${selectedItems.length} selected tokens? They will be moved from blacklist to approval queue.`)) {
+                return;
+            }
+
+            console.log(`🔄 Starting bulk whitelist of ${selectedItems.length} tokens...`);
+            
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedItems) {
+                try {
+                    await this.whitelistToken(itemId);
+                    successCount++;
+                    
+                    // Small delay to prevent overwhelming the database
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (error) {
+                    console.error(`Failed to whitelist item ${itemId}:`, error);
+                    errorCount++;
+                }
+            }
+
+            // Show summary notification
+            if (errorCount === 0) {
+                this.showAdminNotification(`✅ Successfully whitelisted ${successCount} tokens`, 'success');
+            } else {
+                this.showAdminNotification(`⚠️ Whitelisted ${successCount}, failed ${errorCount} tokens`, 'warning');
+            }
+
+            // Reload both queues
+            await this.loadWhitelistQueue();
+            await this.loadPendingApprovals();
+            this.updateApprovalDisplay();
+            
+        } catch (error) {
+            console.error('Error in bulk whitelist:', error);
+            this.showAdminNotification('Bulk whitelist operation failed', 'error');
+        }
+    }
+
+    /**
+     * View Blacklisted Tokens for Whitelist Review
+     */
+    async viewBlacklistForWhitelist() {
+        try {
+            await this.loadWhitelistQueue();
+            this.showWhitelistReviewModal();
+            
+        } catch (error) {
+            console.error('Error loading blacklist for whitelist review:', error);
+            this.showAdminNotification('Failed to load blacklist for review', 'error');
+        }
+    }
+
+    /**
+     * Show Whitelist Review Modal
+     */
+    showWhitelistReviewModal() {
+        const modalHtml = `
+            <div class="modal" id="whitelist-review-modal">
+                <div class="modal-content" style="max-width: 1000px;">
+                    <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    <h3>🔄 Whitelist Review - Move from Blacklist to Approval Queue</h3>
+                    
+                    <div style="margin: 1rem 0;">
+                        <p>Review blacklisted tokens that could potentially be whitelisted and moved back to the approval queue.</p>
+                        <div class="cache-controls" style="margin: 1rem 0;">
+                            <button class="btn btn-success" onclick="window.TokenApproval.instance.bulkWhitelist()">
+                                ✅ Whitelist Selected
+                            </button>
+                            <button class="btn btn-secondary" onclick="this.selectAllWhitelist()">
+                                🗂️ Select All
+                            </button>
+                            <button class="btn btn-secondary" onclick="this.clearWhitelistSelection()">
+                                🗑️ Clear Selection
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        ${this.whitelistQueue.length === 0 ? 
+                            '<p>No tokens available for whitelisting.</p>' :
+                            `<table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" onchange="this.toggleAllWhitelist()"></th>
+                                        <th>Token</th>
+                                        <th>Category</th>
+                                        <th>Reason</th>
+                                        <th>Added</th>
+                                        <th>Severity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${this.whitelistQueue.map(item => `
+                                        <tr>
+                                            <td><input type="checkbox" class="whitelist-checkbox" data-item-id="${item.id}"></td>
+                                            <td>
+                                                <div><strong>${item.symbol}</strong></div>
+                                                <div style="font-size: 0.875rem; color: #94a3b8;">${item.name}</div>
+                                            </td>
+                                            <td><span class="status-badge ${item.category}">${item.category}</span></td>
+                                            <td style="max-width: 200px; word-wrap: break-word;">${item.reason}</td>
+                                            <td>${this.formatRelativeTime(item.addedAt)}</td>
+                                            <td><span class="status-badge ${item.severity || 'medium'}">${item.severity || 'medium'}</span></td>
+                                            <td>
+                                                <button class="btn btn-small btn-success" onclick="window.TokenApproval.instance.whitelistToken('${item.id}')">
+                                                    🔄 Whitelist
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>`
+                        }
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 1rem;">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Process Whitelist Queue
+     */
+    async processWhitelistQueue() {
+        try {
+            await this.loadWhitelistQueue();
+            
+            if (this.whitelistQueue.length === 0) {
+                this.showAdminNotification('No tokens in whitelist queue', 'info');
+                return;
+            }
+
+            this.showAdminNotification(`${this.whitelistQueue.length} tokens available for whitelist review`, 'info');
+            this.showWhitelistReviewModal();
+            
+        } catch (error) {
+            console.error('Error processing whitelist queue:', error);
+            this.showAdminNotification('Failed to process whitelist queue', 'error');
+        }
+    }
+
+    // ===== BATCH OPERATIONS =====
 
     /**
      * Batch Approve Selected Tokens
@@ -534,11 +842,11 @@ class TokenApproval {
                 .from('admin_audit_log')
                 .insert({
                     admin_id: adminWallet,
-                    action_type: actionType,
+                    action: actionType,
                     action_data: actionData,
                     ip_address: 'web-client',
                     user_agent: navigator.userAgent,
-                    created_at: new Date().toISOString()
+                    timestamp: new Date().toISOString()
                 });
 
             console.log(`📝 Admin action logged: ${actionType}`);
@@ -638,6 +946,17 @@ class TokenApproval {
             }
         });
 
+        // Whitelist functionality
+        document.addEventListener('click', (e) => {
+            if (e.target.onclick?.toString().includes('viewBlacklistForWhitelist')) {
+                this.viewBlacklistForWhitelist();
+            } else if (e.target.onclick?.toString().includes('processWhitelistQueue')) {
+                this.processWhitelistQueue();
+            } else if (e.target.onclick?.toString().includes('bulkWhitelist')) {
+                this.bulkWhitelist();
+            }
+        });
+
         console.log('✅ Token approval event listeners set up');
     }
 
@@ -732,6 +1051,21 @@ class TokenApproval {
     }
 
     /**
+     * Format Relative Time
+     */
+    formatRelativeTime(dateString) {
+        if (!dateString) return 'Unknown';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    /**
      * Show Admin Notification
      */
     showAdminNotification(message, type = 'info') {
@@ -761,8 +1095,11 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
-console.log('✅ TokenApproval component loaded - CLEAN ALGORITHM VERSION');
-console.log('🏁 Clean Logic:');
-console.log('   ✅ token_approvals = ONLY approved tokens');
-console.log('   🚫 token_blacklist = ONLY rejected tokens');
-console.log('   🧹 No overlap, no status filtering needed');
+console.log('✅ TokenApproval component loaded - MANUAL ONLY with Whitelist Integration');
+console.log('🏁 Features:');
+console.log('   ✅ Manual token approval workflow ONLY');
+console.log('   🚫 NO auto-approval functionality');
+console.log('   🔄 Whitelist integration (blacklist → approval queue)');
+console.log('   📊 Live database integration with token_approvals and token_blacklist');
+console.log('   🔍 Bulk operations for approval, rejection, and whitelisting');
+console.log('   📝 Complete admin action audit logging');
