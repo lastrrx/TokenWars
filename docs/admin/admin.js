@@ -246,7 +246,8 @@ async function initializeAdminPanel() {
 }
 
 /**
- * Initialize Phase 2 Components
+ * Initialize Phase 2 Components - Fixed version with singleton instances
+ * Replace the existing initializePhase2Components function in admin.js
  */
 async function initializePhase2Components() {
     try {
@@ -255,35 +256,38 @@ async function initializePhase2Components() {
         // Initialize Cache Monitor
         if (window.CacheMonitor) {
             AdminState.components.cacheMonitor = new window.CacheMonitor(AdminState);
+            window.CacheMonitor.instance = AdminState.components.cacheMonitor; // Set singleton
             await AdminState.components.cacheMonitor.initialize();
         }
         
         // Initialize Token Approval
         if (window.TokenApproval) {
             AdminState.components.tokenApproval = new window.TokenApproval(AdminState);
+            window.TokenApproval.instance = AdminState.components.tokenApproval; // Set singleton
             await AdminState.components.tokenApproval.initialize();
         }
         
         // Initialize Blacklist Manager
         if (window.BlacklistManager) {
             AdminState.components.blacklistManager = new window.BlacklistManager(AdminState);
+            window.BlacklistManager.instance = AdminState.components.blacklistManager; // Set singleton
             await AdminState.components.blacklistManager.initialize();
         }
         
         // Initialize Pair Optimizer
         if (window.PairOptimizer) {
             AdminState.components.pairOptimizer = new window.PairOptimizer(AdminState);
+            window.PairOptimizer.instance = AdminState.components.pairOptimizer; // Set singleton
             await AdminState.components.pairOptimizer.initialize();
         }
         
-        console.log('✅ Phase 2 components initialized');
+        console.log('✅ Phase 2 components initialized with singleton instances');
         return true;
     } catch (error) {
         console.error('Failed to initialize Phase 2 components:', error);
         return false;
     }
 }
-
 /**
  * Initialize Phase 2 Monitoring
  */
