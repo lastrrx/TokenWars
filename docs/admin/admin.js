@@ -1919,6 +1919,489 @@ function showAdminNotification(message, type = 'info') {
     }, 5000);
 }
 
+/**
+ * Competition Creation Functions - Add to admin.js
+ * Phase 4: Database-integrated competition creation
+ */
+
+// ===== COMPETITION CREATION FUNCTIONS =====
+
+/**
+ * Load Token Pairs for Competition Creation
+ */
+async function loadTokenPairsForCompetition() {
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Database connection not available');
+        }
+
+        // Get active token pairs from database
+        const { data: pairs, error } = await supabase
+            .from('token_pairs')
+            .select('*')
+            .eq('is_active', true)
+            .order('compatibility_score', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            throw error;
+        }
+
+        if (!pairs || pairs.length === 0) {
+            showAdminNotification('No token pairs available. Please generate pairs first.', 'warning');
+            return [];
+        }
+
+        console.log(`✅ Loaded ${pairs.length} token pairs for competition creation`);
+        return pairs;
+
+    } catch (error) {
+        console.error('Error loading token pairs:', error);
+        showAdminNotification('Failed to load token pairs', 'error');
+        return [];
+    }
+}
+
+/**
+ * Show Competition Creation Modal
+ */
+async function showCompetitionCreationModal() {
+    try {
+        // Load available token pairs
+        const pairs = await loadTokenPairsForCompetition();
+        if (pairs.length === 0) return;
+
+        const modalHtml = `
+            <div class="modal" id="competition-creation-modal">
+                <div class="modal-content" style="max-width: 600px;">
+                    <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    <h3>🏁 Create New Competition</h3>
+                    
+                    <form id="competition-creation-form" onsubmit="createCompetition(event); return false;">
+                        <div class="form-group">
+                            <label for="token-pair-select">Select Token Pair</label>
+                            <select id="token-pair-select" class="form-control" required>
+                                <option value="">-- Select a token pair --</option>
+                                ${pairs.map(pair => `
+                                    <option value="${pair.id}" 
+                                            data-token-a="${pair.token_a_address}"
+                                            data-token-b="${pair.token_b_address}">
+                                        ${pair.token_a_symbol} vs ${pair.token_b_symbol} 
+                                        (Score: ${(pair.compatibility_score * 100).toFixed(0)}%)
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bet-amount">Bet Amount (SOL)</label>
+                                <input type="number" 
+                                       id="bet-amount" 
+                                       class="form-control" 
+                                       min="0.01" 
+                                       step="0.01" 
+                                       value="0.1" 
+                                       required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="platform-fee">Platform Fee (%)</label>
+                                <input type="number" 
+                                       id="platform-fee" 
+                                       class="form-control" 
+                                       min="0" 
+                                       max="50" 
+                                       value="15" 
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="voting-duration">Voting Duration (minutes)</label>
+                                <input type="number" 
+                                       id="voting-duration" 
+                                       class="form-control" 
+                                       min="5" 
+                                       max="60" 
+                                       value="15" 
+                                       required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="performance-duration">Performance Period (hours)</label>
+                                <input type="number" 
+                                       id="performance-duration" 
+                                       class="form-control" 
+                                       min="1" 
+                                       max="72" 
+                                       value="24" 
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="competition-type">Competition Type</label>
+                            <select id="competition-type" class="form-control" required>
+                                <option value="standard">Standard Competition</option>
+                                <option value="turbo">Turbo (Fast-track)</option>
+                                <option value="marathon">Marathon (Extended)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="competition-description">Description (Optional)</label>
+                            <textarea id="competition-description" 
+                                      class="form-control" 
+                                      rows="3" 
+                                      placeholder="Add any special notes about this competition..."></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" class="btn btn-success">
+                                🚀 Create Competition
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove();">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+    } catch (error) {
+        console.error('Error showing competition creation modal:', error);
+        showAdminNotification('Failed to open competition creation form', 'error');
+    }
+}
+
+/**
+ * Create Competition - Write to Database
+ */
+async function createCompetition(event) {
+    event.preventDefault();
+    
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Database connection not available');
+        }
+
+        // Get form values
+        const form = event.target;
+        const pairSelect = form.querySelector('#token-pair-select');
+        const selectedOption = pairSelect.options[pairSelect.selectedIndex];
+        
+        const competitionData = {
+            token_pair_id: pairSelect.value,
+            token_a: selectedOption.dataset.tokenA,
+            token_b: selectedOption.dataset.tokenB,
+            bet_amount: parseFloat(form.querySelector('#bet-amount').value),
+            platform_fee_percentage: parseInt(form.querySelector('#platform-fee').value),
+            status: 'SETUP',
+            competition_type: form.querySelector('#competition-type').value,
+            description: form.querySelector('#competition-description').value || null,
+            created_by: sessionStorage.getItem('adminWallet') || 'admin',
+            created_at: new Date().toISOString()
+        };
+
+        // Calculate timing
+        const votingDurationMinutes = parseInt(form.querySelector('#voting-duration').value);
+        const performanceDurationHours = parseInt(form.querySelector('#performance-duration').value);
+        
+        const now = new Date();
+        const votingStart = new Date(now.getTime() + 5 * 60 * 1000); // Start in 5 minutes
+        const votingEnd = new Date(votingStart.getTime() + votingDurationMinutes * 60 * 1000);
+        const performanceEnd = new Date(votingEnd.getTime() + performanceDurationHours * 60 * 60 * 1000);
+
+        competitionData.start_time = votingStart.toISOString();
+        competitionData.voting_end_time = votingEnd.toISOString();
+        competitionData.end_time = performanceEnd.toISOString();
+
+        console.log('Creating competition with data:', competitionData);
+
+        // Insert into database
+        const { data: competition, error } = await supabase
+            .from('competitions')
+            .insert(competitionData)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        // Log to admin audit log
+        await logAdminAction('competition_creation', {
+            action: 'create_competition',
+            competition_id: competition.id,
+            token_pair_id: competition.token_pair_id,
+            bet_amount: competition.bet_amount,
+            competition_type: competition.competition_type
+        });
+
+        // Close modal
+        document.getElementById('competition-creation-modal')?.remove();
+
+        // Update competitions display if on competitions page
+        if (AdminState.currentSection === 'competitions') {
+            await loadCompetitionsData();
+            renderCompetitionsTable();
+        }
+
+        showAdminNotification('Competition created successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Error creating competition:', error);
+        showAdminNotification(`Failed to create competition: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Update Competition Status
+ */
+async function updateCompetitionStatus(competitionId, newStatus) {
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Database connection not available');
+        }
+
+        const { error } = await supabase
+            .from('competitions')
+            .update({ 
+                status: newStatus,
+                last_updated: new Date().toISOString()
+            })
+            .eq('id', competitionId);
+
+        if (error) {
+            throw error;
+        }
+
+        // Log action
+        await logAdminAction('competition_update', {
+            action: 'update_status',
+            competition_id: competitionId,
+            new_status: newStatus
+        });
+
+        console.log(`✅ Competition ${competitionId} status updated to ${newStatus}`);
+        
+    } catch (error) {
+        console.error('Error updating competition status:', error);
+        throw error;
+    }
+}
+
+/**
+ * Render Competitions Table
+ */
+async function renderCompetitionsTable() {
+    try {
+        const tbody = document.getElementById('competitions-tbody');
+        if (!tbody) return;
+
+        const supabase = getSupabase();
+        if (!supabase) {
+            tbody.innerHTML = '<tr><td colspan="8">Database connection not available</td></tr>';
+            return;
+        }
+
+        // Get competitions with token pair details
+        const { data: competitions, error } = await supabase
+            .from('competitions')
+            .select(`
+                *,
+                token_pairs (
+                    token_a_symbol,
+                    token_b_symbol
+                )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            throw error;
+        }
+
+        if (!competitions || competitions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8">No competitions found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = competitions.map(comp => {
+            const statusBadgeClass = {
+                'SETUP': 'setup',
+                'VOTING': 'voting',
+                'ACTIVE': 'active',
+                'CLOSED': 'closed',
+                'RESOLVED': 'resolved'
+            }[comp.status] || 'inactive';
+
+            const typeBadgeClass = comp.competition_type === 'standard' ? 'auto' : 'manual';
+
+            return `
+                <tr>
+                    <td>${comp.id.substring(0, 8)}...</td>
+                    <td>
+                        ${comp.token_pairs?.token_a_symbol || 'Unknown'} vs 
+                        ${comp.token_pairs?.token_b_symbol || 'Unknown'}
+                    </td>
+                    <td><span class="status-badge ${statusBadgeClass}">${comp.status}</span></td>
+                    <td>${comp.total_participants || 0}</td>
+                    <td>${comp.bet_amount} SOL</td>
+                    <td>${formatRelativeTime(comp.end_time)}</td>
+                    <td><span class="type-badge ${typeBadgeClass}">${comp.competition_type}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            ${comp.status === 'SETUP' ? `
+                                <button class="btn btn-small btn-success" 
+                                        onclick="startCompetition('${comp.id}')">
+                                    ▶️ Start
+                                </button>
+                            ` : ''}
+                            ${comp.status === 'ACTIVE' ? `
+                                <button class="btn btn-small btn-warning" 
+                                        onclick="pauseCompetition('${comp.id}')">
+                                    ⏸️ Pause
+                                </button>
+                            ` : ''}
+                            ${comp.status === 'CLOSED' ? `
+                                <button class="btn btn-small btn-primary" 
+                                        onclick="resolveCompetition('${comp.id}')">
+                                    ✅ Resolve
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-small btn-secondary" 
+                                    onclick="viewCompetitionDetails('${comp.id}')">
+                                👁️ View
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Update statistics
+        updateCompetitionStatistics(competitions);
+        
+    } catch (error) {
+        console.error('Error rendering competitions table:', error);
+        const tbody = document.getElementById('competitions-tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8">Error loading competitions</td></tr>';
+        }
+    }
+}
+
+/**
+ * Update Competition Statistics
+ */
+function updateCompetitionStatistics(competitions) {
+    const stats = {
+        total: competitions.length,
+        active: competitions.filter(c => c.status === 'ACTIVE').length,
+        totalVolume: competitions.reduce((sum, c) => sum + (c.bet_amount * (c.total_participants || 0)), 0),
+        totalParticipants: competitions.reduce((sum, c) => sum + (c.total_participants || 0), 0)
+    };
+
+    updateElement('total-competitions-stat', stats.total);
+    updateElement('active-competitions-stat', stats.active);
+    updateElement('total-participants-stat', stats.totalParticipants);
+    updateElement('total-volume-stat', `${stats.totalVolume.toFixed(2)} SOL`);
+}
+
+/**
+ * Competition Action Functions
+ */
+async function startCompetition(competitionId) {
+    try {
+        if (!confirm('Start this competition? It will move to VOTING phase.')) return;
+        
+        await updateCompetitionStatus(competitionId, 'VOTING');
+        await renderCompetitionsTable();
+        showAdminNotification('Competition started - now in VOTING phase', 'success');
+        
+    } catch (error) {
+        showAdminNotification('Failed to start competition', 'error');
+    }
+}
+
+async function pauseCompetition(competitionId) {
+    try {
+        if (!confirm('Pause this competition?')) return;
+        
+        await updateCompetitionStatus(competitionId, 'PAUSED');
+        await renderCompetitionsTable();
+        showAdminNotification('Competition paused', 'warning');
+        
+    } catch (error) {
+        showAdminNotification('Failed to pause competition', 'error');
+    }
+}
+
+async function resolveCompetition(competitionId) {
+    try {
+        if (!confirm('Resolve this competition? Winners will be determined based on price performance.')) return;
+        
+        // In a real implementation, this would calculate winners based on price data
+        await updateCompetitionStatus(competitionId, 'RESOLVED');
+        await renderCompetitionsTable();
+        showAdminNotification('Competition resolved successfully', 'success');
+        
+    } catch (error) {
+        showAdminNotification('Failed to resolve competition', 'error');
+    }
+}
+
+async function viewCompetitionDetails(competitionId) {
+    // This would show a detailed modal with competition information
+    showAdminNotification('Competition details view - coming soon', 'info');
+}
+
+// ===== ADD EVENT LISTENER FOR CREATE COMPETITION BUTTON =====
+
+// Add this to setupAdminEventListeners() function
+function setupCompetitionEventListeners() {
+    // Create competition button
+    const createCompBtn = document.getElementById('create-competition-btn');
+    if (createCompBtn) {
+        createCompBtn.addEventListener('click', showCompetitionCreationModal);
+    }
+}
+
+// ===== LOG ADMIN ACTION HELPER =====
+async function logAdminAction(actionType, actionData) {
+    try {
+        const supabase = getSupabase();
+        if (!supabase) return;
+
+        const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
+        
+        await supabase
+            .from('admin_audit_log')
+            .insert({
+                admin_id: adminWallet,
+                action_type: actionType,
+                action_data: actionData,
+                ip_address: 'web-client',
+                user_agent: navigator.userAgent,
+                created_at: new Date().toISOString()
+            });
+
+        console.log(`📝 Admin action logged: ${actionType}`);
+        
+    } catch (error) {
+        console.error('Error logging admin action:', error);
+    }
+}
+
 // Placeholder and fallback functions
 async function loadBasicDashboard() {
     console.log('Loading basic dashboard (fallback mode)...');
