@@ -6073,276 +6073,227 @@ console.log('🔧 Available functions:', {
 });
 </script>
 
-    <!-- WALLET MODAL DISPLAY FIX - Add RIGHT BEFORE </body> tag -->
+<!-- FORCEFUL MODAL DISPLAY FIX - Add this script -->
 <script>
-console.log('🔧 Loading wallet modal display fix...');
+console.log('💪 Loading forceful wallet modal fix...');
 
-// Force override wallet modal functions with display fixes
-window.openWalletModal = function() {
-    console.log('🔗 Opening wallet modal with display fix...');
+// Override with maximum CSS specificity
+function forceShowModal() {
+    const modal = document.getElementById('walletModal');
+    if (!modal) {
+        console.error('❌ Modal not found');
+        return false;
+    }
     
-    try {
-        // Find the modal
-        const modal = document.getElementById('walletModal');
-        if (!modal) {
-            console.error('❌ Wallet modal not found');
-            alert('Wallet modal not found. Please refresh the page.');
-            return;
+    console.log('💪 Forcing modal to show with maximum specificity...');
+    
+    // Remove any existing style attribute
+    modal.removeAttribute('style');
+    
+    // Add CSS class with !important
+    const style = document.createElement('style');
+    style.textContent = `
+        #walletModal.force-show {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            z-index: 99999 !important;
+            justify-content: center !important;
+            align-items: center !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
         
-        console.log('✅ Found wallet modal, forcing display...');
-        
-        // Force show the modal with important styles
-        modal.style.display = 'flex !important';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        modal.style.zIndex = '9999';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        
-        // Prevent body scrolling
-        document.body.style.overflow = 'hidden';
-        
-        // Show step 1 content
-        goToStepFixed(1);
-        
-        console.log('✅ Wallet modal should now be visible');
-        
-    } catch (error) {
-        console.error('❌ Error opening wallet modal:', error);
-        alert('Error opening wallet modal: ' + error.message);
+        #walletModal.force-show .wallet-modal-content {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Add the force-show class
+    modal.classList.add('force-show');
+    
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Modal forced to show');
+    return true;
+}
+
+function forceHideModal() {
+    const modal = document.getElementById('walletModal');
+    if (modal) {
+        modal.classList.remove('force-show');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Override the openWalletModal function
+window.openWalletModal = function() {
+    console.log('🔗 Opening wallet modal (forceful version)...');
+    
+    if (forceShowModal()) {
+        // Show step 1
+        showStep(1);
+        console.log('✅ Wallet modal should now be visible!');
+    } else {
+        alert('Could not open wallet modal. Please refresh the page.');
     }
 };
 
 window.closeWalletModal = function() {
     console.log('🔐 Closing wallet modal...');
-    
-    try {
-        const modal = document.getElementById('walletModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-        console.log('✅ Wallet modal closed');
-    } catch (error) {
-        console.error('❌ Error closing wallet modal:', error);
-    }
+    forceHideModal();
 };
 
-function goToStepFixed(stepNumber) {
-    console.log(`📋 Going to step ${stepNumber} with fixes...`);
+function showStep(stepNumber) {
+    console.log(`📋 Showing step ${stepNumber}...`);
     
-    try {
-        // Hide all step contents
-        document.querySelectorAll('.step-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        // Show target step
-        let targetStepId = `step${stepNumber}Content`;
-        if (stepNumber === 2.5) {
-            targetStepId = 'step2_5Content';
-        }
-        
-        const targetStep = document.getElementById(targetStepId);
-        if (targetStep) {
-            targetStep.classList.add('active');
-            console.log(`✅ Step ${stepNumber} activated`);
-        } else {
-            console.error(`❌ Step ${stepNumber} content not found`);
-        }
-        
-        // Update step indicators
-        for (let i = 1; i <= 4; i++) {
-            const indicator = document.getElementById(`step${i}Indicator`);
-            if (indicator) {
-                if (i <= stepNumber) {
-                    indicator.classList.add('active');
-                } else {
-                    indicator.classList.remove('active');
-                }
+    // Hide all step contents
+    document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Show target step
+    const targetStep = document.getElementById(`step${stepNumber}Content`);
+    if (targetStep) {
+        targetStep.classList.add('active');
+        console.log(`✅ Step ${stepNumber} activated`);
+    }
+    
+    // Update step indicators
+    for (let i = 1; i <= 4; i++) {
+        const indicator = document.getElementById(`step${i}Indicator`);
+        if (indicator) {
+            if (i <= stepNumber) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
             }
         }
-        
-    } catch (error) {
-        console.error('❌ Error going to step:', error);
     }
 }
 
-window.goToStep = goToStepFixed;
+window.goToStep = showStep;
 
 window.selectWallet = function(walletType) {
     console.log(`🔗 Wallet selected: ${walletType}`);
     
-    try {
-        // Update wallet name display
-        const walletNameElement = document.getElementById('selectedWalletName');
-        if (walletNameElement) {
-            const walletNames = {
-                phantom: 'Phantom',
-                solflare: 'Solflare', 
-                backpack: 'Backpack',
-                demo: 'Demo Mode'
+    // Update connecting step
+    showStep(2);
+    
+    // Simulate connection
+    setTimeout(() => {
+        if (walletType === 'demo') {
+            // Create demo user and close modal
+            const demoUser = {
+                username: 'DemoTrader' + Math.floor(Math.random() * 1000),
+                avatar: '🎮',
+                walletAddress: 'DEMO' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                balance: 10.0,
+                isDemo: true
             };
-            walletNameElement.textContent = walletNames[walletType] || walletType;
+            
+            window.connectedUser = demoUser;
+            
+            forceHideModal();
+            alert('Demo wallet connected! You have 10 SOL to test with.');
+            
+            // Update UI
+            updateConnectedUI(demoUser);
+            
+        } else {
+            alert(`${walletType} wallet not implemented yet. Try Demo Mode.`);
+            showStep(1);
         }
-        
-        // Go to connecting step
-        goToStepFixed(2);
-        
-        // Simulate connection for demo
-        setTimeout(() => {
-            if (walletType === 'demo') {
-                // Create demo user
-                const demoUser = {
-                    username: 'DemoTrader' + Math.floor(Math.random() * 1000),
-                    avatar: '🎮',
-                    walletAddress: 'DEMO' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    balance: 10.0,
-                    isDemo: true
-                };
-                
-                // Store user globally
-                window.connectedUser = demoUser;
-                window.currentUser = demoUser;
-                
-                // Update UI
-                updateUIForConnectedUser(demoUser);
-                
-                // Close modal and show success
-                closeWalletModal();
-                alert('Demo wallet connected successfully! You now have 10 SOL to test with.');
-                
-                // Navigate to competitions
-                if (typeof showPage === 'function') {
-                    showPage('competitions');
-                }
-            } else {
-                alert(`${walletType} wallet connection not implemented yet. Please try Demo Mode.`);
-                goToStepFixed(1);
-            }
-        }, 2000);
-        
-    } catch (error) {
-        console.error('❌ Error selecting wallet:', error);
-        alert('Error selecting wallet: ' + error.message);
-    }
+    }, 2000);
 };
 
-function updateUIForConnectedUser(user) {
-    console.log('👤 Updating UI for connected user:', user);
+function updateConnectedUI(user) {
+    // Hide connect button
+    const connectBtn = document.getElementById('connectWalletBtn');
+    if (connectBtn) connectBtn.style.display = 'none';
     
-    try {
-        // Update navigation
-        const connectBtn = document.getElementById('connectWalletBtn');
-        const traderInfo = document.getElementById('traderInfo');
-        
-        if (connectBtn && traderInfo) {
-            connectBtn.style.display = 'none';
-            traderInfo.style.display = 'block';
-            
-            // Update trader info elements
-            const navTraderName = document.getElementById('navTraderName');
-            const navTraderAvatar = document.getElementById('navTraderAvatar');
-            const navTraderBalance = document.getElementById('navTraderBalance');
-            
-            if (navTraderName) navTraderName.textContent = user.username;
-            if (navTraderAvatar) navTraderAvatar.textContent = user.avatar;
-            if (navTraderBalance) navTraderBalance.textContent = `${user.balance.toFixed(2)} SOL`;
-        }
-        
-        // Update hero section
-        const heroDisconnected = document.getElementById('heroDisconnected');
-        const heroConnected = document.getElementById('heroConnected');
-        const heroTraderNameText = document.getElementById('heroTraderNameText');
-        
-        if (heroDisconnected && heroConnected) {
-            heroDisconnected.style.display = 'none';
-            heroConnected.style.display = 'block';
-            
-            if (heroTraderNameText) {
-                heroTraderNameText.textContent = user.username;
-            }
-        }
-        
-        console.log('✅ UI updated for connected user');
-        
-    } catch (error) {
-        console.error('❌ Error updating UI:', error);
-    }
+    // Show trader info
+    const traderInfo = document.getElementById('traderInfo');
+    if (traderInfo) traderInfo.style.display = 'block';
+    
+    // Update trader details
+    const navTraderName = document.getElementById('navTraderName');
+    const navTraderAvatar = document.getElementById('navTraderAvatar');
+    const navTraderBalance = document.getElementById('navTraderBalance');
+    
+    if (navTraderName) navTraderName.textContent = user.username;
+    if (navTraderAvatar) navTraderAvatar.textContent = user.avatar;
+    if (navTraderBalance) navTraderBalance.textContent = `${user.balance} SOL`;
+    
+    // Update hero sections
+    const heroDisconnected = document.getElementById('heroDisconnected');
+    const heroConnected = document.getElementById('heroConnected');
+    
+    if (heroDisconnected) heroDisconnected.style.display = 'none';
+    if (heroConnected) heroConnected.style.display = 'block';
 }
 
 window.disconnectWallet = function() {
-    console.log('🔌 Disconnecting wallet...');
-    
-    try {
-        const confirmed = confirm('Are you sure you want to disconnect your wallet?');
-        if (!confirmed) return;
-        
-        // Clear user data
+    if (confirm('Disconnect wallet?')) {
         window.connectedUser = null;
-        window.currentUser = null;
         
-        // Update navigation
+        // Show connect button
         const connectBtn = document.getElementById('connectWalletBtn');
+        if (connectBtn) connectBtn.style.display = 'block';
+        
+        // Hide trader info
         const traderInfo = document.getElementById('traderInfo');
+        if (traderInfo) traderInfo.style.display = 'none';
         
-        if (connectBtn && traderInfo) {
-            connectBtn.style.display = 'block';
-            traderInfo.style.display = 'none';
-        }
-        
-        // Update hero section
+        // Update hero sections
         const heroDisconnected = document.getElementById('heroDisconnected');
         const heroConnected = document.getElementById('heroConnected');
         
-        if (heroDisconnected && heroConnected) {
-            heroDisconnected.style.display = 'block';
-            heroConnected.style.display = 'none';
-        }
+        if (heroDisconnected) heroDisconnected.style.display = 'block';
+        if (heroConnected) heroConnected.style.display = 'none';
         
-        alert('Wallet disconnected successfully!');
-        
-        // Navigate to home
-        if (typeof showPage === 'function') {
-            showPage('home');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error disconnecting wallet:', error);
+        alert('Wallet disconnected!');
     }
 };
 
-// Set up event listeners when DOM is ready
+// Set up click handlers when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Setting up wallet modal event listeners...');
+    console.log('🚀 Setting up forceful wallet modal handlers...');
     
-    try {
-        // Set up all connect wallet buttons
-        document.querySelectorAll('button, a').forEach(element => {
-            const text = element.textContent || element.innerText || '';
-            if (text.toLowerCase().includes('connect wallet')) {
-                console.log('🔧 Setting up connect wallet button');
+    // Find and fix all connect wallet buttons
+    setTimeout(() => {
+        const buttons = document.querySelectorAll('button, a');
+        buttons.forEach(button => {
+            const text = (button.textContent || '').toLowerCase();
+            if (text.includes('connect wallet')) {
+                console.log('🔧 Found connect wallet button, setting up handler');
                 
-                // Remove any existing onclick
-                element.removeAttribute('onclick');
+                // Remove existing handlers
+                button.removeAttribute('onclick');
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
                 
-                // Add click handler
-                element.addEventListener('click', function(e) {
+                // Add new handler
+                newButton.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('🔗 Connect wallet button clicked');
+                    console.log('🔗 Connect wallet button clicked!');
                     openWalletModal();
                     return false;
                 });
             }
         });
         
-        // Set up modal close on background click
+        // Set up modal close handlers
         const modal = document.getElementById('walletModal');
         if (modal) {
             modal.addEventListener('click', function(e) {
@@ -6352,49 +6303,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Set up ESC key to close
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('walletModal');
-                if (modal && modal.style.display === 'flex') {
-                    closeWalletModal();
-                }
-            }
-        });
-        
-        console.log('✅ Wallet modal event listeners set up');
-        
-    } catch (error) {
-        console.error('❌ Error setting up event listeners:', error);
-    }
+        console.log('✅ Forceful handlers set up');
+    }, 500);
 });
 
-// Also set up immediately if DOM is already loaded
-if (document.readyState !== 'loading') {
-    console.log('🚀 DOM already loaded, setting up immediately...');
-    setTimeout(() => {
-        // Force setup of connect wallet buttons
-        const buttons = document.querySelectorAll('[onclick*="openWalletModal"], .btn-hero-primary, .btn-primary');
-        buttons.forEach(button => {
-            const text = button.textContent || button.innerText || '';
-            if (text.toLowerCase().includes('connect wallet') || text.toLowerCase().includes('connect')) {
-                button.removeAttribute('onclick');
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    openWalletModal();
-                });
-            }
-        });
-    }, 100);
-}
-
-console.log('✅ Wallet modal display fix loaded');
-console.log('🔧 Functions available:', {
-    openWalletModal: typeof openWalletModal,
-    closeWalletModal: typeof closeWalletModal,
-    selectWallet: typeof selectWallet,
-    disconnectWallet: typeof disconnectWallet
-});
+console.log('💪 Forceful wallet modal fix loaded');
 </script>
     
 </body>
