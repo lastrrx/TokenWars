@@ -1651,6 +1651,149 @@ function setupAdminEventListeners() {
     console.log('✅ Admin event listeners set up');
 }
 
+/**
+ * Competition Analytics Function - Add to admin.js
+ * Shows analytics modal for competition performance
+ */
+
+async function viewCompetitionAnalytics() {
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Database connection not available');
+        }
+
+        // Get competition analytics data
+        const { data: competitions, error } = await supabase
+            .from('competitions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        // Calculate analytics
+        const analytics = {
+            totalCompetitions: competitions.length,
+            statusBreakdown: {
+                SETUP: competitions.filter(c => c.status === 'SETUP').length,
+                VOTING: competitions.filter(c => c.status === 'VOTING').length,
+                ACTIVE: competitions.filter(c => c.status === 'ACTIVE').length,
+                CLOSED: competitions.filter(c => c.status === 'CLOSED').length,
+                RESOLVED: competitions.filter(c => c.status === 'RESOLVED').length
+            },
+            typeBreakdown: {
+                standard: competitions.filter(c => c.competition_type === 'standard').length,
+                turbo: competitions.filter(c => c.competition_type === 'turbo').length,
+                marathon: competitions.filter(c => c.competition_type === 'marathon').length
+            },
+            financials: {
+                totalVolume: competitions.reduce((sum, c) => sum + (c.bet_amount * (c.total_participants || 0)), 0),
+                totalFees: competitions.reduce((sum, c) => sum + (c.bet_amount * (c.total_participants || 0) * c.platform_fee_percentage / 100), 0),
+                avgBetAmount: competitions.reduce((sum, c) => sum + c.bet_amount, 0) / competitions.length || 0,
+                avgParticipants: competitions.reduce((sum, c) => sum + (c.total_participants || 0), 0) / competitions.length || 0
+            }
+        };
+
+        // Show analytics modal
+        const modalHtml = `
+            <div class="modal" id="competition-analytics-modal">
+                <div class="modal-content" style="max-width: 800px;">
+                    <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    <h3>📊 Competition Analytics Dashboard</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1.5rem 0;">
+                        <div class="phase2-section">
+                            <h4>📈 Status Breakdown</h4>
+                            <div class="performance-metrics">
+                                <div class="metric-item">
+                                    <div class="value">${analytics.statusBreakdown.SETUP}</div>
+                                    <div class="label">Setup</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="value">${analytics.statusBreakdown.VOTING}</div>
+                                    <div class="label">Voting</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="value">${analytics.statusBreakdown.ACTIVE}</div>
+                                    <div class="label">Active</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="value">${analytics.statusBreakdown.RESOLVED}</div>
+                                    <div class="label">Resolved</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="phase2-section">
+                            <h4>🎯 Type Distribution</h4>
+                            <div class="performance-metrics">
+                                <div class="metric-item">
+                                    <div class="value">${analytics.typeBreakdown.standard}</div>
+                                    <div class="label">Standard</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="value">${analytics.typeBreakdown.turbo}</div>
+                                    <div class="label">Turbo</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="value">${analytics.typeBreakdown.marathon}</div>
+                                    <div class="label">Marathon</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="phase2-section">
+                        <h4>💰 Financial Overview</h4>
+                        <div class="performance-metrics">
+                            <div class="metric-item">
+                                <div class="value">${analytics.financials.totalVolume.toFixed(2)} SOL</div>
+                                <div class="label">Total Volume</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="value">${analytics.financials.totalFees.toFixed(2)} SOL</div>
+                                <div class="label">Platform Fees</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="value">${analytics.financials.avgBetAmount.toFixed(2)} SOL</div>
+                                <div class="label">Avg Bet Amount</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="value">${analytics.financials.avgParticipants.toFixed(0)}</div>
+                                <div class="label">Avg Participants</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="exportCompetitionData()">
+                            📤 Export Data
+                        </button>
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+    } catch (error) {
+        console.error('Error loading competition analytics:', error);
+        showAdminNotification('Failed to load analytics', 'error');
+    }
+}
+
+/**
+ * Export Competition Data
+ */
+function exportCompetitionData() {
+    showAdminNotification('Export feature coming soon', 'info');
+    // In a real implementation, this would export data to CSV/JSON
+}
+
 // Real-time monitoring setup and other Phase 1 functions preserved
 async function setupRealTimeMonitoring() {
     try {
