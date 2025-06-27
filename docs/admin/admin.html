@@ -964,7 +964,12 @@
                     </div>
                 </div>
                 
-                <div id="auth-error" class="auth-error hidden"></div>
+                <div id="auth-error" class="auth-error hidden">
+                    <div id="error-message"></div>
+                    <button id="retry-initialization" class="btn btn-primary hidden" style="margin-top: 1rem;">
+                        🔄 Retry Initialization
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1538,17 +1543,116 @@
         </main>
     </div>
 
-    <!-- Import the corrected admin.js file -->
-    <script src="admin(1).js"></script>
+    <!-- Import the corrected admin.js file with error handling -->
+    <script>
+        // Debug script loading
+        console.log('📜 Attempting to load admin.js...');
+        
+        // Add error event listener to track script loading issues
+        window.addEventListener('error', (e) => {
+            if (e.filename && e.filename.includes('admin')) {
+                console.error('❌ Admin script error:', e);
+            }
+        });
+    </script>
+    <script src="admin.js" 
+            onerror="console.error('❌ Failed to load admin.js from initial script tag')"
+            onload="console.log('✅ admin.js loaded via initial script tag')">
+    </script>
 
     <!-- Production Authentication JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 TokenWars Professional Admin Panel - PRODUCTION VERSION');
+            console.log('📍 Current location:', window.location.href);
+            console.log('📂 Base path:', window.location.pathname);
             
-            // Real authentication system
-            setupProductionAuthentication();
+            try {
+                // Wait for admin.js to load
+                await waitForAdminScriptLoad();
+                
+                // Real authentication system
+                setupProductionAuthentication();
+                
+                console.log('✅ Admin panel setup complete');
+            } catch (error) {
+                console.error('❌ Admin panel setup failed:', error);
+                
+                // Show error in UI
+                const authError = document.getElementById('auth-error');
+                if (authError) {
+                    authError.innerHTML = `
+                        <div>⚠️ Admin panel setup failed</div>
+                        <div style="font-size: 0.875rem; margin-top: 0.5rem;">
+                            ${error.message}
+                        </div>
+                        <button onclick="window.location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
+                            🔄 Reload Page
+                        </button>
+                    `;
+                    authError.classList.remove('hidden');
+                }
+            }
         });
+
+        async function waitForAdminScriptLoad() {
+            let attempts = 0;
+            while (!window.initializeAdminPanel && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+                if (attempts % 10 === 0) {
+                    console.log(`⏳ Waiting for admin script... attempt ${attempts}/50`);
+                }
+            }
+            
+            if (!window.initializeAdminPanel) {
+                console.error('❌ Admin script failed to load after 5 seconds');
+                console.log('Available window functions:', Object.keys(window).filter(key => key.includes('admin') || key.includes('Admin')));
+                
+                // Try different script paths as fallback
+                const scriptPaths = [
+                    './admin.js',
+                    'admin.js', 
+                    '/admin/admin.js',
+                    './admin.js',
+                    'admin.js'
+                ];
+                
+                for (const path of scriptPaths) {
+                    try {
+                        console.log(`🔄 Trying to load script from: ${path}`);
+                        await loadScriptWithPath(path);
+                        
+                        if (window.initializeAdminPanel) {
+                            console.log(`✅ Admin script loaded successfully from: ${path}`);
+                            return;
+                        }
+                    } catch (error) {
+                        console.log(`❌ Failed to load from ${path}:`, error.message);
+                    }
+                }
+                
+                throw new Error('Admin script not loaded after trying multiple paths. Please check that admin.js file exists and is accessible.');
+            }
+            
+            console.log('✅ Admin script loaded successfully');
+        }
+
+        function loadScriptWithPath(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    console.log(`📜 Script loaded: ${src}`);
+                    resolve();
+                };
+                script.onerror = () => reject(new Error(`Failed to load ${src}`));
+                document.head.appendChild(script);
+                
+                // Timeout after 3 seconds
+                setTimeout(() => reject(new Error(`Timeout loading ${src}`)), 3000);
+            });
+        }
 
         function setupProductionAuthentication() {
             const connectBtn = document.getElementById('connect-admin-wallet');
@@ -1562,6 +1666,42 @@
             const logoutBtn = document.getElementById('logout');
 
             let connectedWallet = null;
+
+            // Add loading indicator
+            function showInitializationProgress() {
+                const progressDiv = document.createElement('div');
+                progressDiv.id = 'init-progress';
+                progressDiv.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: var(--admin-card);
+                    padding: 2rem;
+                    border-radius: 1rem;
+                    border: 1px solid var(--admin-border);
+                    z-index: 6000;
+                    text-align: center;
+                    min-width: 300px;
+                `;
+                progressDiv.innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <div class="loading-spinner" style="margin: 0 auto;"></div>
+                    </div>
+                    <div>Initializing Admin Panel...</div>
+                    <div style="font-size: 0.875rem; color: var(--admin-text-secondary); margin-top: 0.5rem;">
+                        Loading live data from database
+                    </div>
+                `;
+                document.body.appendChild(progressDiv);
+            }
+
+            function hideInitializationProgress() {
+                const progressDiv = document.getElementById('init-progress');
+                if (progressDiv) {
+                    progressDiv.remove();
+                }
+            }
 
             // Connect wallet
             connectBtn.addEventListener('click', async () => {
@@ -1685,10 +1825,36 @@
                     adminPanel.classList.remove('hidden');
                     
                     hideLoadingState();
+                    showInitializationProgress();
                     
                     // Initialize admin panel with real data
                     console.log('🎛️ Initializing admin panel...');
-                    await initializeAdminPanel();
+                    
+                    // Check if initializeAdminPanel is available
+                    if (typeof window.initializeAdminPanel === 'function') {
+                        try {
+                            await window.initializeAdminPanel();
+                            hideInitializationProgress();
+                            console.log('✅ Admin panel initialized successfully');
+                        } catch (initError) {
+                            hideInitializationProgress();
+                            console.error('❌ Admin panel initialization failed:', initError);
+                            showAuthError('Admin panel initialization failed: ' + initError.message);
+                            
+                            // Show admin panel anyway with basic functionality
+                            authScreen.classList.add('hidden');
+                            adminPanel.classList.remove('hidden');
+                        }
+                    } else {
+                        hideInitializationProgress();
+                        console.error('❌ initializeAdminPanel function not found');
+                        console.log('Available functions:', Object.keys(window).filter(key => key.toLowerCase().includes('admin')));
+                        showAuthError('Admin panel initialization function not found. Some features may not work.');
+                        
+                        // Show admin panel anyway with basic functionality
+                        authScreen.classList.add('hidden');
+                        adminPanel.classList.remove('hidden');
+                    }
                     
                 } catch (error) {
                     hideLoadingState();
@@ -1736,12 +1902,42 @@
             }
 
             function showAuthError(message) {
-                authError.textContent = message;
+                const authError = document.getElementById('auth-error');
+                const errorMessage = document.getElementById('error-message');
+                const retryBtn = document.getElementById('retry-initialization');
+                
+                errorMessage.textContent = message;
                 authError.classList.remove('hidden');
+                
+                // Show retry button for initialization errors
+                if (message.includes('initialization')) {
+                    retryBtn.classList.remove('hidden');
+                    retryBtn.onclick = async () => {
+                        retryBtn.classList.add('hidden');
+                        hideAuthError();
+                        showInitializationProgress();
+                        
+                        try {
+                            if (typeof window.initializeAdminPanel === 'function') {
+                                await window.initializeAdminPanel();
+                                hideInitializationProgress();
+                                console.log('✅ Admin panel initialized on retry');
+                            } else {
+                                throw new Error('initializeAdminPanel function still not available');
+                            }
+                        } catch (error) {
+                            hideInitializationProgress();
+                            showAuthError('Retry failed: ' + error.message);
+                        }
+                    };
+                }
             }
 
             function hideAuthError() {
+                const authError = document.getElementById('auth-error');
+                const retryBtn = document.getElementById('retry-initialization');
                 authError.classList.add('hidden');
+                retryBtn.classList.add('hidden');
             }
 
             function showLoadingState() {
