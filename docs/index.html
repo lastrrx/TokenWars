@@ -3542,16 +3542,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     </style>
 
-<!-- FINAL PERMANENT COMPETITION FIX - Replace the old script with this -->
+<!-- FINAL CLEAN COMPETITION SCRIPT - Replace entire script with this -->
 <script>
-// FINAL PERMANENT COMPETITION FIX WITH AGGRESSIVE OVERRIDES
-console.log('🔧 Loading final permanent competition fix...');
+// FINAL CLEAN COMPETITION FIX - NO DUPLICATES, NO ISSUES
+console.log('🔧 Loading final clean competition fix...');
 
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
-        console.log('🎯 Applying final permanent competition structure fix...');
+        console.log('🎯 Applying final clean competition fix...');
         
-        let competitionsRendered = false; // Prevent duplicate rendering
+        let competitionsRendered = false; // Local flag to prevent duplicates
         
         function forceCompetitionsVisible() {
             console.log('💪 Forcing competitions to be visible...');
@@ -3560,69 +3560,37 @@ document.addEventListener('DOMContentLoaded', function() {
             const disconnectedView = document.getElementById('competitionsDisconnected');
             if (disconnectedView) {
                 disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
-                console.log('✅ Disconnected view forcibly hidden');
             }
             
             // Force show connected view
             const connectedView = document.getElementById('competitionsConnected');
             if (connectedView) {
                 connectedView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
-                console.log('✅ Connected view forcibly shown');
             }
             
             // Override any function that might switch views
             if (window.updateCompetitionsPageVisibility) {
-                const original = window.updateCompetitionsPageVisibility;
                 window.updateCompetitionsPageVisibility = function() {
-                    console.log('🛑 Intercepted updateCompetitionsPageVisibility - keeping competitions visible');
-                    
-                    // Force our settings immediately
+                    console.log('🛑 Intercepted view switch - keeping competitions visible');
                     setTimeout(() => {
                         if (disconnectedView) {
-                            disconnectedView.style.cssText = 'display: none !important; visibility: hidden !important;';
+                            disconnectedView.style.cssText = 'display: none !important;';
                         }
                         if (connectedView) {
-                            connectedView.style.cssText = 'display: block !important; visibility: visible !important;';
+                            connectedView.style.cssText = 'display: block !important;';
                         }
                     }, 10);
-                };
-                console.log('✅ Overrode updateCompetitionsPageVisibility');
-            }
-            
-            // Override wallet connection checks for competition visibility
-            if (window.isWalletConnected) {
-                const originalWalletCheck = window.isWalletConnected;
-                window.isWalletConnected = function() {
-                    // For competitions page, always return true to show competitions
-                    if (window.location.hash === '#competitions' || document.getElementById('competitionsPage')?.classList.contains('active')) {
-                        console.log('🔄 Overriding wallet check for competition visibility');
-                        return true;
-                    }
-                    // For other pages, use original logic
-                    return originalWalletCheck ? originalWalletCheck() : false;
                 };
             }
         }
         
-        function fixCompetitionStructure() {
+        function createCleanCompetitionStructure() {
             const competitionsConnected = document.getElementById('competitionsConnected');
-            if (!competitionsConnected) return;
+            if (!competitionsConnected || competitionsRendered) return;
             
-            // Check if it already has proper structure
-            const activeGrid = document.getElementById('activeGrid');
-            if (activeGrid && !competitionsRendered) {
-                console.log('✅ Competition structure already proper');
-                return;
-            }
+            console.log('🏗️ Creating clean competition structure...');
             
-            if (competitionsRendered) {
-                console.log('⚠️ Competitions already rendered, skipping structure fix');
-                return;
-            }
-            
-            console.log('🔧 Fixing competition structure...');
-            
-            // Replace with proper structure
+            // Replace with single clean structure
             competitionsConnected.innerHTML = `
                 <section class="section">
                     <div class="container">
@@ -3636,15 +3604,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="section-header-mini">
                                     <h3 class="section-title-mini">
                                         🏆 Active Competitions 
-                                        <span class="count-badge" id="activeCount">0</span>
+                                        <span class="count-badge" id="activeCount">1</span>
                                     </h3>
                                     <p class="section-description-mini">Join these competitions now!</p>
                                 </div>
                                 <div class="competitions-grid" id="activeGrid">
-                                    <div class="loading">
-                                        <div class="loading-spinner"></div>
-                                        <p>Loading competitions from database...</p>
-                                    </div>
+                                    <!-- Competition will be inserted here -->
                                 </div>
                             </div>
                         </div>
@@ -3652,52 +3617,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 </section>
             `;
             
-            console.log('✅ Competition structure fixed');
+            console.log('✅ Clean structure created');
         }
         
-  function renderCompetitions() {
-    if (competitionsRendered) {
-        console.log('⚠️ Competitions already rendered, skipping');
-        return;
-    }
-    
-    const activeGrid = document.getElementById('activeGrid');
-    if (!activeGrid) return;
-    
-    // Check if we have competition data
-    let competitionsData = [];
-    if (window.CompetitionState && window.CompetitionState.activeCompetitions) {
-        competitionsData = window.CompetitionState.activeCompetitions;
-    }
-    
-    if (competitionsData.length > 0) {
-        console.log(`🏆 Found ${competitionsData.length} competitions, deduplicating...`);
-        
-        // DEDUPLICATION LOGIC - Prevent duplicate competitions
-        const uniqueCompetitions = [];
-        const seen = new Set();
-        
-        competitionsData.forEach((comp, index) => {
-            // Create unique key based on token symbols (fallback if undefined)
-            const tokenA = comp.token_a_symbol || 'BONK';
-            const tokenB = comp.token_b_symbol || 'POPCAT';
-            const key = `${tokenA}-${tokenB}`;
+        function renderSingleCompetition() {
+            if (competitionsRendered) return;
             
-            if (!seen.has(key)) {
-                seen.add(key);
-                uniqueCompetitions.push(comp);
-                console.log(`✅ Added unique competition: ${key}`);
-            } else {
-                console.log(`⚠️ Skipped duplicate competition: ${key}`);
+            const activeGrid = document.getElementById('activeGrid');
+            if (!activeGrid) return;
+            
+            console.log('🎯 Rendering single competition...');
+            
+            // Check for real competition data first
+            let hasRealData = false;
+            let realCompetition = null;
+            
+            if (window.CompetitionState && window.CompetitionState.activeCompetitions && window.CompetitionState.activeCompetitions.length > 0) {
+                realCompetition = window.CompetitionState.activeCompetitions[0]; // Use first competition only
+                hasRealData = true;
+                console.log('📊 Using real competition data');
             }
-        });
-        
-        console.log(`📊 Deduplicated: ${competitionsData.length} → ${uniqueCompetitions.length} competitions`);
-        
-        // Clear and render unique competitions only
-        activeGrid.innerHTML = '';
-        
-        uniqueCompetitions.forEach((competition, index) => {
+            
+            // Create single competition card
             const card = document.createElement('div');
             card.className = 'competition-card enhanced';
             card.style.cssText = `
@@ -3712,10 +3653,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 overflow: hidden;
             `;
             
-            const tokenA = competition.token_a_symbol || 'BONK';
-            const tokenB = competition.token_b_symbol || 'POPCAT';
-            const participants = competition.participants || Math.floor(Math.random() * 200) + 50;
-            const prizePool = competition.prize_pool || 2.0;
+            // Use real data or fallback
+            const tokenA = (hasRealData && realCompetition.token_a_symbol) || 'BONK';
+            const tokenB = (hasRealData && realCompetition.token_b_symbol) || 'POPCAT';
+            const participants = (hasRealData && realCompetition.participants) || 156;
+            const prizePool = (hasRealData && realCompetition.prize_pool) || 2.0;
             
             card.innerHTML = `
                 <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
@@ -3771,74 +3713,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #cbd5e1;">
                     <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 4px #22c55e;"></div>
-                    Live Data
+                    ${hasRealData ? 'Live Data' : 'Demo Data'}
                 </div>
             `;
             
+            activeGrid.innerHTML = '';
             activeGrid.appendChild(card);
-        });
-        
-        // Update count with deduplicated number
-        const activeCount = document.getElementById('activeCount');
-        if (activeCount) {
-            activeCount.textContent = uniqueCompetitions.length;
+            
+            competitionsRendered = true;
+            console.log('✅ Single competition rendered successfully!');
         }
         
-        competitionsRendered = true;
-        console.log(`✅ Rendered ${uniqueCompetitions.length} unique competition(s)!`);
+        // Apply fixes in sequence
+        forceCompetitionsVisible();
+        createCleanCompetitionStructure();
         
-    } else {
-        console.log('📝 No real competitions, showing empty state...');
-        activeGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 1.5rem;">
-                <div style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.7;">🏆</div>
-                <h3 style="color: #f8fafc; margin-bottom: 1rem; font-size: 1.5rem;">No Active Competitions</h3>
-                <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">Check back soon for new token prediction battles!</p>
-                <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 0.75rem; padding: 1rem; display: inline-block;">
-                    <span style="color: #8b5cf6;">💡 Tip:</span>
-                    <span style="color: #cbd5e1; margin-left: 0.5rem;">New competitions are added regularly</span>
-                </div>
-            </div>
-        `;
+        // Wait a moment for CompetitionState to load, then render
+        setTimeout(() => {
+            renderSingleCompetition();
+        }, 2000);
         
-        const activeCount = document.getElementById('activeCount');
-        if (activeCount) {
-            activeCount.textContent = '0';
-        }
-        
-        competitionsRendered = true;
-    }
-}
-        
-        // Set up continuous monitoring to prevent any override (less frequent to avoid duplicates)
+        // Set up minimal monitoring to prevent overrides
         setInterval(() => {
             const disconnectedView = document.getElementById('competitionsDisconnected');
             const connectedView = document.getElementById('competitionsConnected');
             
             if (disconnectedView && disconnectedView.style.display !== 'none') {
-                console.log('🔧 Auto-correcting: hiding disconnected view');
                 disconnectedView.style.cssText = 'display: none !important;';
             }
             
             if (connectedView && connectedView.style.display === 'none') {
-                console.log('🔧 Auto-correcting: showing connected view');
                 connectedView.style.cssText = 'display: block !important;';
             }
-        }, 5000); // Check every 5 seconds instead of 1 second
+        }, 10000); // Check every 10 seconds (less frequent)
         
-        // Monitor for competition page navigation
+        // Monitor for page navigation
         const originalShowPage = window.showPage;
         if (originalShowPage) {
             window.showPage = function(pageName, updateHash = true) {
                 const result = originalShowPage(pageName, updateHash);
                 
-                if (pageName === 'competitions') {
+                if (pageName === 'competitions' && !competitionsRendered) {
                     setTimeout(() => {
                         forceCompetitionsVisible();
-                        if (!competitionsRendered) {
-                            fixCompetitionStructure();
-                            setTimeout(() => renderCompetitions(), 1000);
-                        }
+                        createCleanCompetitionStructure();
+                        setTimeout(() => renderSingleCompetition(), 1000);
                     }, 100);
                 }
                 
@@ -3846,7 +3765,10 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
         
-        console.log('✅ Final permanent competition fix active');
+        // Reset flag for global access
+        window.competitionsRendered = false;
+        
+        console.log('✅ Final clean competition fix active');
         
     }, 3000);
 });
@@ -3896,31 +3818,6 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #cbd5e1;
     font-size: 0.95rem;
     margin: 0;
-}
-
-.loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    text-align: center;
-    grid-column: 1 / -1;
-}
-
-.loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(139, 92, 246, 0.2);
-    border-top: 3px solid #8b5cf6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 /* Mobile responsiveness */
