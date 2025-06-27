@@ -1,6 +1,6 @@
 /**
  * TokenApproval Component - Token Approval Workflow System
- * Updated with proper database constraints and no fallbacks
+ * FIXED: Updated with correct database schema and column names
  */
 
 class TokenApproval {
@@ -80,7 +80,8 @@ class TokenApproval {
             // Get approved tokens
             const { data: approvedTokens, error: approvedError } = await supabase
                 .from('token_approvals')
-                .select('token_address');
+                .select('token_address')
+                .eq('status', 'approved');
 
             if (approvedError) {
                 console.warn('Could not load approved tokens:', approvedError);
@@ -219,7 +220,7 @@ class TokenApproval {
     }
 
     /**
-     * Approve Token - Write to Database
+     * Approve Token - FIXED: Write to Database with Correct Schema
      */
     async approveToken(tokenId) {
         try {
@@ -236,25 +237,74 @@ class TokenApproval {
             console.log(`✅ Approving token: ${token.symbol}`);
             
             const now = new Date().toISOString();
+            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            // Insert into token_approvals table
-            const { data: approval, error: approvalError } = await supabase
+            // Step 1: Check if token already exists in token_approvals table
+            const { data: existingApproval, error: checkError } = await supabase
                 .from('token_approvals')
-                .insert({
-                    token_address: token.tokenAddress,
-                    token_symbol: token.symbol,
-                    token_name: token.name,
-                    approved_by: sessionStorage.getItem('adminWallet') || 'admin',
-                    approved_at: now,
-                    risk_score: token.riskScore,
-                    market_cap_at_approval: token.marketCap,
-                    created_at: now
-                })
-                .select()
+                .select('id, status')
+                .eq('token_address', token.tokenAddress)
                 .single();
 
-            if (approvalError) {
-                throw approvalError;
+            if (checkError && checkError.code !== 'PGRST116') {
+                throw checkError;
+            }
+
+            let approvalResult;
+
+            if (existingApproval) {
+                // UPDATE existing record to approved status
+                console.log(`📝 Updating existing approval record for ${token.symbol}`);
+                
+                const { data: updatedApproval, error: updateError } = await supabase
+                    .from('token_approvals')
+                    .update({
+                        status: 'approved',
+                        reviewed_at: now,
+                        reviewed_by: adminWallet,
+                        token_symbol: token.symbol,
+                        token_name: token.name,
+                        market_cap: token.marketCap,
+                        risk_score: token.riskScore
+                    })
+                    .eq('token_address', token.tokenAddress)
+                    .select()
+                    .single();
+
+                if (updateError) {
+                    throw updateError;
+                }
+                
+                approvalResult = updatedApproval;
+                
+            } else {
+                // INSERT new approval record if it doesn't exist
+                console.log(`📝 Creating new approval record for ${token.symbol}`);
+                
+                const { data: newApproval, error: insertError } = await supabase
+                    .from('token_approvals')
+                    .insert({
+                        token_address: token.tokenAddress,
+                        token_symbol: token.symbol,
+                        token_name: token.name,
+                        status: 'approved',
+                        submitted_at: now,
+                        submitted_by: 'cache_discovery',
+                        reviewed_at: now,
+                        reviewed_by: adminWallet,
+                        market_cap: token.marketCap,
+                        risk_score: token.riskScore,
+                        auto_approval_eligible: false,
+                        created_at: now
+                    })
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    throw insertError;
+                }
+                
+                approvalResult = newApproval;
             }
 
             // Log to admin audit log
@@ -265,7 +315,8 @@ class TokenApproval {
                 details: {
                     market_cap: token.marketCap,
                     risk_score: token.riskScore,
-                    approval_id: approval.id
+                    approval_id: approvalResult.id,
+                    approval_method: existingApproval ? 'update_existing' : 'create_new'
                 }
             });
             
@@ -277,6 +328,8 @@ class TokenApproval {
             this.updateApprovalDisplay();
             
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
+            
+            console.log(`✅ Token ${token.symbol} approved successfully`);
             
         } catch (error) {
             console.error('Error approving token:', error);
@@ -308,7 +361,44 @@ class TokenApproval {
             console.log(`❌ Rejecting token: ${token.symbol} - Reason: ${reason}`);
             
             const now = new Date().toISOString();
+            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
+            // Check if exists in token_approvals first and update to rejected
+            const { data: existingApproval, error: checkError } = await supabase
+                .from('token_approvals')
+                .select('id')
+                .eq('token_address', token.tokenAddress)
+                .single();
+
+            if (!checkError || existingApproval) {
+                // Update existing approval to rejected
+                await supabase
+                    .from('token_approvals')
+                    .update({
+                        status: 'rejected',
+                        reviewed_at: now,
+                        reviewed_by: adminWallet,
+                        rejection_reason: reason.trim()
+                    })
+                    .eq('token_address', token.tokenAddress);
+            } else {
+                // Create new rejection record
+                await supabase
+                    .from('token_approvals')
+                    .insert({
+                        token_address: token.tokenAddress,
+                        token_symbol: token.symbol,
+                        token_name: token.name,
+                        status: 'rejected',
+                        submitted_at: now,
+                        submitted_by: 'cache_discovery',
+                        reviewed_at: now,
+                        reviewed_by: adminWallet,
+                        rejection_reason: reason.trim(),
+                        created_at: now
+                    });
+            }
+
             // Insert into token_blacklist table with proper constraints
             const blacklistData = {
                 token_address: token.tokenAddress,
@@ -317,7 +407,7 @@ class TokenApproval {
                 category: 'manual', // Required field - default to 'manual' for admin rejections
                 reason: reason.trim(), // Required field - admin provided reason
                 severity: null, // Optional field - set to null
-                added_by: sessionStorage.getItem('adminWallet') || 'admin', // Required field
+                added_by: adminWallet, // Required field
                 added_at: now,
                 is_active: true,
                 detection_algorithm: null, // Optional - null for manual rejections
@@ -363,6 +453,110 @@ class TokenApproval {
         } catch (error) {
             console.error('Error rejecting token:', error);
             this.showAdminNotification(`Failed to blacklist token: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Batch Approve Selected Tokens
+     */
+    async batchApprove() {
+        const selectedTokens = Array.from(this.selectedTokens);
+        if (selectedTokens.length === 0) {
+            this.showAdminNotification('No tokens selected for approval', 'warning');
+            return;
+        }
+
+        if (!confirm(`✅ Approve ${selectedTokens.length} selected tokens?`)) {
+            return;
+        }
+
+        console.log(`🔄 Starting batch approval of ${selectedTokens.length} tokens...`);
+        
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const tokenId of selectedTokens) {
+            try {
+                await this.approveToken(tokenId);
+                successCount++;
+                
+                // Small delay to prevent overwhelming the database
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+            } catch (error) {
+                console.error(`Failed to approve token ${tokenId}:`, error);
+                errorCount++;
+            }
+        }
+
+        // Clear selection
+        this.selectedTokens.clear();
+        this.updateSelectedCount();
+
+        // Show summary notification
+        if (errorCount === 0) {
+            this.showAdminNotification(`✅ Successfully approved ${successCount} tokens`, 'success');
+        } else {
+            this.showAdminNotification(`⚠️ Approved ${successCount}, failed ${errorCount} tokens`, 'warning');
+        }
+    }
+
+    /**
+     * Batch Reject Selected Tokens
+     */
+    async batchReject() {
+        const selectedTokens = Array.from(this.selectedTokens);
+        if (selectedTokens.length === 0) {
+            this.showAdminNotification('No tokens selected for rejection', 'warning');
+            return;
+        }
+
+        const reason = prompt(`Enter rejection reason for ${selectedTokens.length} selected tokens:`);
+        if (!reason || reason.trim() === '') {
+            return;
+        }
+
+        if (!confirm(`❌ Reject ${selectedTokens.length} selected tokens?`)) {
+            return;
+        }
+
+        console.log(`🔄 Starting batch rejection of ${selectedTokens.length} tokens...`);
+        
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const tokenId of selectedTokens) {
+            try {
+                const token = this.approvalQueue.find(t => t.id == tokenId);
+                if (token) {
+                    // Simulate the prompt response for batch operation
+                    const originalPrompt = window.prompt;
+                    window.prompt = () => reason;
+                    
+                    await this.rejectToken(tokenId);
+                    successCount++;
+                    
+                    // Restore original prompt
+                    window.prompt = originalPrompt;
+                    
+                    // Small delay
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch (error) {
+                console.error(`Failed to reject token ${tokenId}:`, error);
+                errorCount++;
+            }
+        }
+
+        // Clear selection
+        this.selectedTokens.clear();
+        this.updateSelectedCount();
+
+        // Show summary notification
+        if (errorCount === 0) {
+            this.showAdminNotification(`✅ Successfully rejected ${successCount} tokens`, 'success');
+        } else {
+            this.showAdminNotification(`⚠️ Rejected ${successCount}, failed ${errorCount} tokens`, 'warning');
         }
     }
 
@@ -607,4 +801,4 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
-console.log('✅ TokenApproval component loaded - LIVE DATA ONLY version');
+console.log('✅ TokenApproval component loaded - FIXED database schema version');
