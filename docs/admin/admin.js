@@ -1812,6 +1812,115 @@ function updateCompetitionPreview() {
     }
 }
 
+// Update cache information on dashboard
+async function updateCacheInformation() {
+    try {
+        const tokens = AdminState.tokens || [];
+        const freshTokens = tokens.filter(t => t.cache_status === 'FRESH').length;
+        const staleTokens = tokens.filter(t => t.cache_status === 'STALE').length;
+        const expiredTokens = tokens.filter(t => t.cache_status === 'EXPIRED').length;
+        
+        updateElement('cache-size', tokens.length);
+        updateElement('fresh-tokens', freshTokens);
+        updateElement('stale-tokens', staleTokens);
+        updateElement('expired-tokens', expiredTokens);
+        
+        // Get last update from most recent token
+        const lastUpdate = tokens.length > 0 ? 
+            Math.max(...tokens.map(t => new Date(t.last_updated || t.cache_created_at).getTime())) : null;
+        
+        if (lastUpdate) {
+            updateElement('last-cache-update', formatRelativeTime(new Date(lastUpdate).toISOString()));
+        }
+    } catch (error) {
+        console.error('Error updating cache information:', error);
+    }
+}
+
+// Calculate approval rate correctly
+async function calculateApprovalRate() {
+    try {
+        const supabase = getSupabase();
+        
+        // Get total tokens from token_cache
+        const { data: cacheTokens, error: cacheError } = await supabase
+            .from('token_cache')
+            .select('token_address');
+        
+        // Get approved tokens from token_approvals
+        const { data: approvedTokens, error: approvalError } = await supabase
+            .from('token_approvals')
+            .select('token_address')
+            .not('reviewed_at', 'is', null);
+        
+        if (!cacheError && !approvalError && cacheTokens && approvedTokens) {
+            const totalCached = cacheTokens.length;
+            const totalApproved = approvedTokens.length;
+            const approvalRate = totalCached > 0 ? (totalApproved / totalCached * 100).toFixed(1) : 0;
+            
+            updateElement('cache-tokens-count', totalCached);
+            updateElement('total-approved', totalApproved);
+            updateElement('approval-rate', `${approvalRate}%`);
+        }
+    } catch (error) {
+        console.error('Error calculating approval rate:', error);
+  
+
+// Load tokens from token_cache for token management
+async function loadTokensFromCache() {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: tokens, error } = await supabase
+            .from('token_cache')
+            .select('*')
+            .order('market_cap_usd', { ascending: false });
+        
+        if (error) throw error;
+        
+        AdminState.tokens = tokens || [];
+        
+        // Update statistics
+        const freshCount = tokens.filter(t => t.cache_status === 'FRESH').length;
+        const staleCount = tokens.filter(t => t.cache_status === 'STALE').length;
+        const expiredCount = tokens.filter(t => t.cache_status === 'EXPIRED').length;
+        
+        updateElement('total-tokens-stat', tokens.length);
+        updateElement('fresh-tokens-stat', freshCount);
+        updateElement('stale-tokens-stat', staleCount);
+        updateElement('expired-tokens-stat', expiredCount);
+        
+        // Update cache information on dashboard
+        await updateCacheInformation();
+        
+        return tokens;
+    } catch (error) {
+        console.error('Error loading tokens from cache:', error);
+        return [];
+    }
+}
+
+// Enhanced parameter validation for competition management
+function validateCompetitionParameters() {
+    const votingPeriod = parseFloat(document.getElementById('voting-period')?.value || 0);
+    const performancePeriod = parseFloat(document.getElementById('performance-period')?.value || 0);
+    
+    const errors = [];
+    
+    if (votingPeriod < 0.1 || votingPeriod > 2) {
+        errors.push('Voting period must be 0.1-2 days');
+    }
+    
+    if (performancePeriod < 1 || performancePeriod > 30) {
+        errors.push('Performance period must be 1-30 days');
+    }
+    
+    return {
+        valid: errors.length === 0,
+        errors: errors
+    };
+}
+
 /**
  * Get Start Delay in Milliseconds
  */
