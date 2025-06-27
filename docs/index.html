@@ -182,25 +182,81 @@
 
                 <!-- FIXED: Connected User View - Complete Structure -->
                 <div id="competitionsConnected" style="display: none;">
-                    <section class="section">
-                        <div class="container">
-                            <div class="section-header">
-                                <h2 class="section-title">COMPETITIONS</h2>
-                                <p class="section-description">Predict token performance and earn SOL rewards</p>
-                                <div class="section-filters">
-                                    <select id="competition-phase" class="filter-select">
-                                        <option value="all">All Phases</option>
-                                        <option value="entry-open">Entry Open (3 days)</option>
-                                        <option value="running">Running (7 days)</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
-                                    <select id="sort-by" class="filter-select">
-                                        <option value="phase">By Phase</option>
-                                        <option value="pool-size">Pool Size</option>
-                                        <option value="participants">Participants</option>
-                                        <option value="time-remaining">Time Remaining</option>
-                                    </select>
-                                </div>
+                               <section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">COMPETITIONS</h2>
+            <p class="section-description">Predict token performance and earn SOL rewards</p>
+            <div class="section-filters">
+                <select id="competition-phase" class="filter-select">
+                    <option value="all">All Phases</option>
+                    <option value="entry-open">Entry Open (3 days)</option>
+                    <option value="running">Running (7 days)</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <select id="sort-by" class="filter-select">
+                    <option value="phase">By Phase</option>
+                    <option value="pool-size">Pool Size</option>
+                    <option value="participants">Participants</option>
+                    <option value="time-remaining">Time Remaining</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Competition Status Sections -->
+        <div class="competitions-container">
+            
+            <!-- Active Competitions Section (Main Display) -->
+            <div class="competition-section" id="activeSection">
+                <div class="section-header-mini">
+                    <h3 class="section-title-mini">
+                        🏆 Active Competitions 
+                        <span class="count-badge" id="activeCount">0</span>
+                    </h3>
+                    <p class="section-description-mini">Join these competitions now!</p>
+                </div>
+                <div class="competitions-grid" id="activeGrid">
+                    <!-- Real competitions will be inserted here by competition.js -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading competitions from database...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Competition Stats Summary -->
+        <div class="competition-stats-summary" style="margin-top: 3rem;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalCompetitions">0</div>
+                        <div class="stat-label">Active Competitions</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalParticipants">0</div>
+                        <div class="stat-label">Total Participants</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="totalPrizePool">0.0 SOL</div>
+                        <div class="stat-label">Total Prize Pool</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="avgParticipants">0</div>
+                        <div class="stat-label">Avg Participants</div>
+                    </div>
+                </div>
                             </div>
                             
                             <!-- Competition Status Sections -->
