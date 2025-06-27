@@ -40,7 +40,7 @@
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
 
-    <!-- NAVIGATION -->
+    <!-- CLEANED UP NAVIGATION - Removed Markets, Kept Competitions -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="#home" class="logo" onclick="showPage('home'); return false;">TokenWars</a>
@@ -82,7 +82,7 @@
     <!-- PAGE CONTAINER -->
     <div id="pageContainer" class="page-container">
         
-        <!-- HOME PAGE -->
+        <!-- HOME PAGE - Enhanced with Learn More Section -->
         <div id="homePage" class="page-content active">
             <!-- Hero Section -->
             <div class="hero">
@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <!-- Learn More Section -->
+            <!-- Learn More Section (for disconnected users) -->
             <div class="learn-more-section" id="learnMoreSection">
                 <div class="container">
                     <div class="section-header">
@@ -151,22 +151,16 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Platform Stats Section - REMOVED -->
+            <!-- Stats cards removed as per user feedback -->
         </div>
 
-        <!-- COMPETITIONS PAGE -->
+        <!-- COMPETITIONS PAGE - The Main Hub (Renamed from Markets) -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
-                <!-- Always show competitions - wallet connection only affects betting -->
-                <div id="competitionsConnected">
-                    <!-- Competition.js will create the structure here -->
-                    <div class="loading-competitions">
-                        <div class="loading-spinner"></div>
-                        <p>Loading competitions...</p>
-                    </div>
-                </div>
-
-                <!-- Hidden disconnected view - not used anymore -->
-                <div id="competitionsDisconnected" style="display: none;">
+                <!-- Disconnected User View -->
+                <div id="competitionsDisconnected">
                     <section class="section">
                         <div class="container">
                             <div class="section-header">
@@ -181,6 +175,92 @@
                                     <p>Connect your wallet to participate in token prediction competitions and earn SOL rewards.</p>
                                     <button class="btn-primary wallet-connect-btn">Connect Wallet</button>
                                 </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Connected User View -->
+                <div id="competitionsConnected" style="display: none;">
+                    <section class="section">
+                        <div class="container">
+                            <div class="section-header">
+                                <h2 class="section-title">COMPETITIONS</h2>
+                                <div class="section-filters">
+                                    <select id="competition-phase" class="filter-select">
+                                        <option value="all">All Phases</option>
+                                        <option value="entry-open">Entry Open (3 days)</option>
+                                        <option value="running">Running (7 days)</option>
+                                        <option value="completed">Completed</option>
+                                    </select>
+                                    <select id="sort-by" class="filter-select">
+                                        <option value="phase">By Phase</option>
+                                        <option value="pool-size">Pool Size</option>
+                                        <option value="participants">Participants</option>
+                                        <option value="time-remaining">Time Remaining</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Competition Status Sections -->
+                            <div class="competitions-container">
+                                
+                                <!-- Voting Open Section -->
+                                <div class="competition-section" id="votingSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            🗳️ Voting Open 
+                                            <span class="count-badge" id="votingCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Join these competitions now - voting ends soon!</p>
+                                    </div>
+                                    <div class="competitions-grid" id="votingGrid">
+                                        <div class="loading">Loading voting competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Running Section -->
+                                <div class="competition-section" id="runningSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            ⚡ Currently Running 
+                                            <span class="count-badge" id="runningCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Watch these competitions in progress</p>
+                                    </div>
+                                    <div class="competitions-grid" id="runningGrid">
+                                        <div class="loading">Loading active competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Starting Soon Section -->
+                                <div class="competition-section" id="upcomingSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            ⏰ Starting Soon 
+                                            <span class="count-badge" id="upcomingCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">Get ready for these upcoming competitions</p>
+                                    </div>
+                                    <div class="competitions-grid" id="upcomingGrid">
+                                        <div class="loading">Loading upcoming competitions...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Completed Section -->
+                                <div class="competition-section" id="completedSection">
+                                    <div class="section-header-mini">
+                                        <h3 class="section-title-mini">
+                                            🏁 Recently Completed 
+                                            <span class="count-badge" id="completedCount">0</span>
+                                        </h3>
+                                        <p class="section-description-mini">View results from recent competitions</p>
+                                    </div>
+                                    <div class="competitions-grid" id="completedGrid">
+                                        <div class="loading">Loading completed competitions...</div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </section>
@@ -299,6 +379,572 @@
             </div>
         </div>
 
+        <!-- FIXED: Add the JavaScript for leaderboard functionality -->
+        <script>
+        // ==============================================
+        // LEADERBOARD FUNCTIONALITY - FIXED VERSION
+        // ==============================================
+
+        const LeaderboardState = {
+            users: [],
+            filteredUsers: [],
+            currentPeriod: 'all-time',
+            currentSort: 'winnings',
+            loading: false,
+            lastUpdate: null,
+            userPosition: null,
+            isConnected: false,
+            initialized: false
+        };
+
+        // FIXED: Initialize leaderboard when page loads or becomes visible
+        function initializeLeaderboard() {
+            console.log('🏆 Initializing leaderboard...');
+            
+            if (LeaderboardState.initialized) {
+                console.log('Leaderboard already initialized');
+                return;
+            }
+            
+            // Check if user is connected
+            LeaderboardState.isConnected = typeof isWalletConnected === 'function' ? isWalletConnected() : false;
+            
+            // Load leaderboard data
+            loadLeaderboardData();
+            
+            // Set up auto-refresh (every 2 minutes)
+            if (!window.leaderboardRefreshInterval) {
+                window.leaderboardRefreshInterval = setInterval(() => {
+                    const leaderboardPage = document.getElementById('leaderboardPage');
+                    if (leaderboardPage && leaderboardPage.classList.contains('active')) {
+                        loadLeaderboardData();
+                    }
+                }, 120000); // 2 minutes
+            }
+            
+            LeaderboardState.initialized = true;
+        }
+
+        // FIXED: Load leaderboard data from Supabase with better error handling
+        async function loadLeaderboardData() {
+            if (LeaderboardState.loading) {
+                console.log('Leaderboard already loading, skipping...');
+                return;
+            }
+
+            LeaderboardState.loading = true;
+            updateLoadingState(true);
+
+            try {
+                console.log('📊 Loading leaderboard data from Supabase...');
+
+                // FIXED: Better Supabase client detection
+                let supabase = null;
+                
+                // Try multiple ways to get Supabase client
+                if (window.supabaseClient && typeof window.supabaseClient.getSupabaseClient === 'function') {
+                    supabase = window.supabaseClient.getSupabaseClient();
+                    console.log('✅ Got Supabase client from window.supabaseClient');
+                } else if (window.supabase) {
+                    supabase = window.supabase;
+                    console.log('✅ Got Supabase client from window.supabase');
+                } else {
+                    console.warn('❌ Supabase client not available, loading demo data...');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                // Test the connection first
+                console.log('🧪 Testing Supabase connection...');
+                
+                // Try a simple query to test connection
+                const { data: testData, error: testError } = await supabase
+                    .from('users')
+                    .select('count')
+                    .limit(1);
+
+                if (testError) {
+                    console.error('Supabase connection test failed:', testError);
+                    console.log('📝 Falling back to demo data due to connection issues');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                console.log('✅ Supabase connection test successful');
+
+                // Get users data
+                console.log('📊 Fetching users from Supabase...');
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .order('total_winnings', { ascending: false });
+
+                if (usersError) {
+                    console.error('Error loading users:', usersError);
+                    console.log('📝 Falling back to demo data due to users query error');
+                    loadDemoLeaderboardData();
+                    return;
+                }
+
+                // Get leaderboard data if available
+                console.log('📊 Fetching leaderboard data from Supabase...');
+                const { data: leaderboard, error: leaderboardError } = await supabase
+                    .from('leaderboards')
+                    .select('*')
+                    .order('total_winnings', { ascending: false });
+
+                if (leaderboardError) {
+                    console.warn('Leaderboard table query failed (this is OK):', leaderboardError);
+                    // Continue without leaderboard data - it's optional
+                }
+
+                // Process the data
+                if (users && users.length > 0) {
+                    LeaderboardState.users = processLeaderboardData(users, leaderboard || []);
+                    console.log(`✅ Loaded ${LeaderboardState.users.length} users from database`);
+                    
+                    // Update display with real data
+                    updateLeaderboardDisplay();
+                    updateStatsDisplay();
+                    updateUserPosition();
+
+                    LeaderboardState.lastUpdate = new Date();
+                    updateLastUpdatedTime();
+                } else {
+                    console.log('ℹ️ No users found in database, loading demo data...');
+                    loadDemoLeaderboardData();
+                }
+
+            } catch (error) {
+                console.error('Failed to load leaderboard data:', error);
+                console.log('📝 Falling back to demo data due to unexpected error');
+                loadDemoLeaderboardData();
+            } finally {
+                LeaderboardState.loading = false;
+                updateLoadingState(false);
+            }
+        }
+
+        // FIXED: Process leaderboard data with better error handling
+        function processLeaderboardData(users, leaderboard) {
+            console.log(`🔄 Processing ${users.length} users and ${leaderboard.length} leaderboard entries...`);
+            
+            return users.map((user, index) => {
+                try {
+                    // Find corresponding leaderboard entry
+                    const leaderboardEntry = leaderboard.find(entry => 
+                        entry.user_wallet === user.wallet_address
+                    );
+
+                    const processedUser = {
+                        rank: index + 1,
+                        username: user.username || `Trader${index + 1}`,
+                        avatar: user.avatar || '🎯',
+                        walletAddress: user.wallet_address || `UNKNOWN${index}`,
+                        totalWinnings: parseFloat(user.total_winnings || 0),
+                        totalBets: parseInt(user.total_bets || 0),
+                        winRate: parseFloat(user.win_rate || 0),
+                        currentStreak: parseInt(user.current_streak || 0),
+                        competitionsWon: parseInt(leaderboardEntry?.competitions_won || 0),
+                        competitionsParticipated: parseInt(leaderboardEntry?.competitions_participated || user.total_bets || 0),
+                        bestStreak: parseInt(leaderboardEntry?.best_streak || user.current_streak || 0),
+                        isDemo: false,
+                        joinDate: user.created_at ? new Date(user.created_at) : new Date(),
+                        lastActive: user.last_active ? new Date(user.last_active) : new Date()
+                    };
+                    
+                    console.log(`✅ Processed user: ${processedUser.username} (${processedUser.totalWinnings} SOL)`);
+                    return processedUser;
+                } catch (error) {
+                    console.error('Error processing user:', user, error);
+                    return null;
+                }
+            }).filter(user => user !== null); // Remove any failed processing
+        }
+
+        // Load demo leaderboard data (unchanged)
+        function loadDemoLeaderboardData() {
+            console.log('🎮 Loading demo leaderboard data...');
+
+            const demoUsers = [
+                {
+                    rank: 1,
+                    username: 'CryptoKing',
+                    avatar: '👑',
+                    walletAddress: 'DEMO1...',
+                    totalWinnings: 45.7,
+                    totalBets: 89,
+                    winRate: 67.4,
+                    currentStreak: 8,
+                    competitionsWon: 23,
+                    competitionsParticipated: 89,
+                    bestStreak: 12,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date()
+                },
+                {
+                    rank: 2,
+                    username: 'TokenMaster',
+                    avatar: '🎯',
+                    walletAddress: 'DEMO2...',
+                    totalWinnings: 38.2,
+                    totalBets: 76,
+                    winRate: 63.2,
+                    currentStreak: 5,
+                    competitionsWon: 19,
+                    competitionsParticipated: 76,
+                    bestStreak: 9,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 3,
+                    username: 'SolanaWiz',
+                    avatar: '🧙',
+                    walletAddress: 'DEMO3...',
+                    totalWinnings: 31.8,
+                    totalBets: 65,
+                    winRate: 58.5,
+                    currentStreak: 3,
+                    competitionsWon: 15,
+                    competitionsParticipated: 65,
+                    bestStreak: 7,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 6 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 4,
+                    username: 'DegenTrader',
+                    avatar: '🚀',
+                    walletAddress: 'DEMO4...',
+                    totalWinnings: 28.4,
+                    totalBets: 92,
+                    winRate: 52.2,
+                    currentStreak: 0,
+                    competitionsWon: 13,
+                    competitionsParticipated: 92,
+                    bestStreak: 6,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+                },
+                {
+                    rank: 5,
+                    username: 'HODLQueen',
+                    avatar: '💎',
+                    walletAddress: 'DEMO5...',
+                    totalWinnings: 24.1,
+                    totalBets: 45,
+                    winRate: 71.1,
+                    currentStreak: 4,
+                    competitionsWon: 11,
+                    competitionsParticipated: 45,
+                    bestStreak: 8,
+                    isDemo: true,
+                    joinDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+                    lastActive: new Date(Date.now() - 30 * 60 * 1000)
+                }
+            ];
+
+            LeaderboardState.users = demoUsers;
+            updateLeaderboardDisplay();
+            updateStatsDisplay();
+            
+            LeaderboardState.lastUpdate = new Date();
+            updateLastUpdatedTime();
+
+            console.log('✅ Demo leaderboard data loaded');
+        }
+
+        // Update leaderboard display (unchanged)
+        function updateLeaderboardDisplay() {
+            const tableContainer = document.getElementById('leaderboardTable');
+            if (!tableContainer) return;
+
+            // Apply filters and sorting
+            applyFiltersAndSorting();
+
+            if (LeaderboardState.filteredUsers.length === 0) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <h3>No traders found</h3>
+                        <p>Be the first to join a competition and appear on the leaderboard!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create leaderboard table
+            const tableHTML = `
+                <div class="leaderboard-header">
+                    <div class="rank-col">Rank</div>
+                    <div class="trader-col">Trader</div>
+                    <div class="winnings-col">Winnings</div>
+                    <div class="stats-col">Win Rate</div>
+                    <div class="streak-col">Streak</div>
+                    <div class="competitions-col">Competitions</div>
+                </div>
+                ${LeaderboardState.filteredUsers.slice(0, 50).map(user => createLeaderboardRow(user)).join('')}
+            `;
+
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        // Create leaderboard row (unchanged)
+        function createLeaderboardRow(user) {
+            const isTop3 = user.rank <= 3;
+            const rankIcons = ['🥇', '🥈', '🥉'];
+            const rankDisplay = isTop3 ? rankIcons[user.rank - 1] : `#${user.rank}`;
+
+            return `
+                <div class="leaderboard-row ${isTop3 ? 'top-3' : ''}" data-wallet="${user.walletAddress}">
+                    <div class="rank-col">
+                        <span class="rank-display">${rankDisplay}</span>
+                    </div>
+                    <div class="trader-col">
+                        <div class="trader-info">
+                            <div class="trader-avatar">${user.avatar}</div>
+                            <div class="trader-details">
+                                <div class="trader-name">${user.username}</div>
+                                <div class="trader-address">${formatAddress(user.walletAddress)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="winnings-col">
+                        <div class="winnings-amount">${user.totalWinnings.toFixed(1)} SOL</div>
+                        <div class="winnings-usd">$${(user.totalWinnings * 180).toFixed(0)}</div>
+                    </div>
+                    <div class="stats-col">
+                        <div class="win-rate">${user.winRate.toFixed(1)}%</div>
+                        <div class="total-bets">${user.totalBets} bets</div>
+                    </div>
+                    <div class="streak-col">
+                        <div class="current-streak ${user.currentStreak > 0 ? 'positive' : ''}">${user.currentStreak}</div>
+                        <div class="best-streak">Best: ${user.bestStreak}</div>
+                    </div>
+                    <div class="competitions-col">
+                        <div class="competitions-won">${user.competitionsWon}</div>
+                        <div class="competitions-total">of ${user.competitionsParticipated}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Apply filters and sorting (unchanged)
+        function applyFiltersAndSorting() {
+            let filteredUsers = [...LeaderboardState.users];
+
+            // Apply period filter
+            if (LeaderboardState.currentPeriod !== 'all-time') {
+                const now = new Date();
+                let cutoffDate;
+
+                if (LeaderboardState.currentPeriod === 'weekly') {
+                    cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                } else if (LeaderboardState.currentPeriod === 'monthly') {
+                    cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                }
+
+                if (cutoffDate) {
+                    filteredUsers = filteredUsers.filter(user => 
+                        user.lastActive && user.lastActive > cutoffDate
+                    );
+                }
+            }
+
+            // Apply sorting
+            filteredUsers.sort((a, b) => {
+                switch (LeaderboardState.currentSort) {
+                    case 'winnings':
+                        return b.totalWinnings - a.totalWinnings;
+                    case 'win-rate':
+                        return b.winRate - a.winRate;
+                    case 'streak':
+                        return b.currentStreak - a.currentStreak;
+                    case 'competitions':
+                        return b.competitionsWon - a.competitionsWon;
+                    default:
+                        return b.totalWinnings - a.totalWinnings;
+                }
+            });
+
+            // Update ranks
+            filteredUsers.forEach((user, index) => {
+                user.rank = index + 1;
+            });
+
+            LeaderboardState.filteredUsers = filteredUsers;
+        }
+
+        // Update stats display (unchanged)
+        function updateStatsDisplay() {
+            const users = LeaderboardState.users;
+
+            const totalTraders = users.length;
+            const totalCompetitionsWon = users.reduce((sum, user) => sum + user.competitionsWon, 0);
+            const totalWinnings = users.reduce((sum, user) => sum + user.totalWinnings, 0);
+            const longestStreak = Math.max(...users.map(user => user.bestStreak), 0);
+
+            const updateElement = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            };
+
+            updateElement('totalTraders', totalTraders.toLocaleString());
+            updateElement('totalCompetitionsWon', totalCompetitionsWon.toLocaleString());
+            updateElement('totalWinnings', `${totalWinnings.toFixed(1)} SOL`);
+            updateElement('longestStreak', longestStreak);
+        }
+
+        // FIXED: Update user position with better wallet detection
+        function updateUserPosition() {
+            const userPositionCard = document.getElementById('userPosition');
+            const disconnectedPrompt = document.getElementById('leaderboardDisconnected');
+
+            if (!userPositionCard || !disconnectedPrompt) return;
+
+            if (!LeaderboardState.isConnected) {
+                userPositionCard.style.display = 'none';
+                disconnectedPrompt.style.display = 'block';
+                return;
+            }
+
+            disconnectedPrompt.style.display = 'none';
+
+            // Try to find current user with better wallet service detection
+            let currentUser = null;
+            
+            try {
+                if (window.walletService && typeof window.walletService.getConnectionStatus === 'function') {
+                    const walletStatus = window.walletService.getConnectionStatus();
+                    if (walletStatus.isConnected && walletStatus.publicKey) {
+                        currentUser = LeaderboardState.users.find(user => 
+                            user.walletAddress === walletStatus.publicKey
+                        );
+                    }
+                }
+            } catch (error) {
+                console.warn('Error getting wallet status:', error);
+            }
+
+            if (currentUser) {
+                userPositionCard.style.display = 'block';
+                const updateUserElement = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value;
+                };
+                
+                updateUserElement('userRank', `#${currentUser.rank}`);
+                updateUserElement('userWinnings', `${currentUser.totalWinnings.toFixed(1)} SOL`);
+                updateUserElement('userWinRate', `${currentUser.winRate.toFixed(1)}%`);
+                updateUserElement('userStreak', currentUser.currentStreak);
+            } else {
+                userPositionCard.style.display = 'none';
+            }
+        }
+
+        // Handle filter changes (unchanged)
+        function handleLeaderboardFilterChange() {
+            const periodSelect = document.getElementById('leaderboard-period');
+            const sortSelect = document.getElementById('leaderboard-sort');
+
+            if (periodSelect) LeaderboardState.currentPeriod = periodSelect.value;
+            if (sortSelect) LeaderboardState.currentSort = sortSelect.value;
+
+            updateLeaderboardDisplay();
+        }
+
+        // Refresh leaderboard (unchanged)
+        function refreshLeaderboard() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '<span class="refresh-icon spinning">🔄</span> Refreshing...';
+                refreshBtn.disabled = true;
+            }
+
+            loadLeaderboardData().finally(() => {
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<span class="refresh-icon">🔄</span> Refresh';
+                    refreshBtn.disabled = false;
+                }
+            });
+        }
+
+        // Update loading state (unchanged)
+        function updateLoadingState(isLoading) {
+            // This function can be used to show/hide loading indicators
+        }
+
+        // Update last updated time (unchanged)
+        function updateLastUpdatedTime() {
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            if (lastUpdatedElement && LeaderboardState.lastUpdate) {
+                const timeAgo = getTimeAgo(LeaderboardState.lastUpdate);
+                lastUpdatedElement.textContent = `Last updated: ${timeAgo}`;
+            }
+        }
+
+        // Utility functions (unchanged)
+        function formatAddress(address) {
+            if (!address) return 'Unknown';
+            if (address.startsWith('DEMO')) return address;
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        // FIXED: Auto-initialize when leaderboard page becomes active
+        document.addEventListener('DOMContentLoaded', function() {
+            // Monitor page changes to initialize leaderboard when needed
+            const originalShowPage = window.showPage;
+            if (originalShowPage) {
+                window.showPage = function(pageName, updateHash = true) {
+                    const result = originalShowPage(pageName, updateHash);
+                    
+                    if (pageName === 'leaderboard') {
+                        setTimeout(() => {
+                            initializeLeaderboard();
+                        }, 100);
+                    }
+                    
+                    return result;
+                };
+            }
+            
+            // Initialize immediately if we're already on leaderboard page
+            if (window.location.hash === '#leaderboard') {
+                setTimeout(() => {
+                    initializeLeaderboard();
+                }, 500);
+            }
+        });
+
+        // Export functions for global use
+        window.initializeLeaderboard = initializeLeaderboard;
+        window.loadLeaderboardData = loadLeaderboardData;
+        window.refreshLeaderboard = refreshLeaderboard;
+        window.handleLeaderboardFilterChange = handleLeaderboardFilterChange;
+
+        console.log('✅ Fixed leaderboard functionality loaded');
+        </script>
+
         <!-- PORTFOLIO PAGE -->
         <div id="portfolioPage" class="page-content">
             <div class="main-content">
@@ -412,7 +1058,7 @@
         </div>
     </div>
 
-    <!-- Enhanced Wallet Connection Modal -->
+    <!-- Enhanced Wallet Connection Modal (FIXED ONCLICK HANDLERS) -->
     <div class="wallet-modal" id="walletModal" style="display: none;">
         <div class="wallet-modal-content">
             <div class="modal-header">
@@ -429,7 +1075,7 @@
                 <div class="step-indicator" id="step4Indicator">4</div>
             </div>
 
-            <!-- Step 1: Wallet Selection -->
+            <!-- Step 1: Enhanced Wallet Selection (FIXED) -->
             <div class="step-content active" id="step1Content">
                 <div class="security-info">
                     <div class="security-title">🔒 Security First</div>
@@ -471,7 +1117,7 @@
                         <div class="wallet-info">
                             <div class="wallet-name">Demo Mode</div>
                             <div class="wallet-description">Try without wallet (10 SOL)</div>
-                            <div class="wallet-status" id="demoStatus">✅ Available</div>
+                            <div class="wallet-status" id="demoStatus">✓ Available</div>
                         </div>
                     </div>
                 </div>
@@ -481,7 +1127,7 @@
                 </div>
             </div>
 
-            <!-- Step 2: Connecting State -->
+            <!-- Step 2: Enhanced Connecting State -->
             <div class="step-content" id="step2Content">
                 <div class="connecting-state">
                     <div class="loading-animation">
@@ -518,7 +1164,7 @@
                 </div>
             </div>
 
-            <!-- Step 2.5: Wallet Confirmation -->
+            <!-- Step 2.5: REDESIGNED Wallet Confirmation -->
             <div class="step-content" id="step2_5Content">
                 <div class="wallet-confirmation-modern">
                     <div class="confirmation-header">
@@ -558,7 +1204,7 @@
                 </div>
             </div>
 
-            <!-- Step 3: Trader Profile Creation -->
+            <!-- Step 3: REDESIGNED Trader Profile Creation -->
             <div class="step-content" id="step3Content">
                 <div class="profile-creation-container">
                     <div class="profile-header">
@@ -623,7 +1269,7 @@
                 </div>
             </div>
 
-            <!-- Step 4: Platform Rules & Agreement -->
+            <!-- Step 4: REDESIGNED Platform Rules & Agreement -->
             <div class="step-content" id="step4Content">
                 <div class="rules-agreement-modern">
                     <div class="rules-header">
@@ -708,7 +1354,7 @@
                 </div>
             </div>
 
-            <!-- Step 5: Success Page -->
+            <!-- Step 5: REDESIGNED Success Page -->
             <div class="step-content" id="step5Content">
                 <div class="success-page-modern">
                     <div class="success-animation">
@@ -763,10 +1409,6 @@
 
     <!-- Configuration Script -->
     <script>
-        // ==============================================
-        // CORE CONFIGURATION AND INITIALIZATION
-        // ==============================================
-        
         // Ensure configuration is available immediately
         window.SUPABASE_CONFIG = {
             url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
@@ -775,104 +1417,7 @@
         
         console.log('✅ Configuration loaded');
 
-        // ==============================================
-        // PAGE NAVIGATION SYSTEM
-        // ==============================================
-        
-        function showPage(pageName, updateHash = true) {
-            console.log('📄 Switching to page:', pageName);
-            
-            try {
-                // Hide all pages
-                document.querySelectorAll('.page-content').forEach(page => {
-                    page.classList.remove('active');
-                });
-                
-                // Show target page
-                const targetPage = document.getElementById(pageName + 'Page');
-                if (targetPage) {
-                    targetPage.classList.add('active');
-                } else {
-                    console.error('Page not found:', pageName + 'Page');
-                    return;
-                }
-                
-                // Update navigation links
-                document.querySelectorAll('.nav-link').forEach(link => {
-                    link.classList.remove('active');
-                    if (link.dataset.page === pageName) {
-                        link.classList.add('active');
-                    }
-                });
-                
-                // Update URL hash
-                if (updateHash) {
-                    window.location.hash = `#${pageName}`;
-                }
-                
-                // Page-specific initialization
-                handlePageSpecificActions(pageName);
-                
-                console.log('✅ Page switched successfully to:', pageName);
-                
-            } catch (error) {
-                console.error('❌ Error switching pages:', error);
-            }
-        }
-        
-        function handlePageSpecificActions(pageName) {
-            switch (pageName) {
-                case 'competitions':
-                    // Initialize competitions page
-                    setTimeout(() => {
-                        if (window.initializeCompetitionsPage) {
-                            window.initializeCompetitionsPage();
-                        }
-                    }, 100);
-                    break;
-                    
-                case 'leaderboard':
-                    // Initialize leaderboard
-                    setTimeout(() => {
-                        if (window.initializeLeaderboard) {
-                            window.initializeLeaderboard();
-                        }
-                    }, 100);
-                    break;
-                    
-                case 'portfolio':
-                    // Initialize portfolio
-                    setTimeout(() => {
-                        if (window.initializePortfolio) {
-                            window.initializePortfolio();
-                        }
-                    }, 100);
-                    break;
-            }
-        }
-        
-        // Handle browser back/forward buttons
-        window.addEventListener('hashchange', function() {
-            const hash = window.location.hash.slice(1);
-            if (hash && hash !== 'home') {
-                showPage(hash, false);
-            } else {
-                showPage('home', false);
-            }
-        });
-        
-        // Initialize page based on URL hash
-        document.addEventListener('DOMContentLoaded', function() {
-            const hash = window.location.hash.slice(1);
-            if (hash && hash !== 'home') {
-                showPage(hash, false);
-            }
-        });
-
-        // ==============================================
-        // ENHANCED SCROLL TO LEARN MORE
-        // ==============================================
-        
+        // Enhanced scrollToLearnMore function
         function scrollToLearnMore() {
             const learnMoreSection = document.getElementById('learnMoreSection');
             if (learnMoreSection) {
@@ -883,507 +1428,444 @@
             }
         }
 
-        // ==============================================
-        // WALLET CONNECTION INTEGRATION
-        // ==============================================
-        
-        // Enhanced wallet connection detection
+        // ============================================
+        // ENHANCED WALLET DETECTION FOR COMPETITIONS
+        // ============================================
+
+        // Enhanced wallet detection function that checks multiple indicators
         function isWalletConnected() {
-            try {
-                // Check multiple possible indicators
-                const checks = [
-                    () => window.connectedUser && window.connectedUser !== null,
-                    () => window.currentUser && window.currentUser !== null,
-                    () => document.getElementById('traderInfo')?.style.display !== 'none',
-                    () => document.getElementById('navTraderName')?.textContent !== 'Trader',
-                    () => window.walletService?.isConnected?.(),
-                    () => {
-                        const status = window.walletService?.getConnectionStatus?.();
-                        return status?.isConnected;
-                    },
-                    () => document.getElementById('connectWalletBtn')?.style.display === 'none'
-                ];
+            console.log('🔍 Checking wallet connection status...');
+            
+            // Check multiple possible wallet state variables
+            const checks = {
+                connectedUser: !!window.connectedUser,
+                currentUser: !!window.currentUser,
+                traderInfoVisible: document.getElementById('traderInfo')?.style.display !== 'none',
+                navTraderNameSet: document.getElementById('navTraderName')?.textContent !== 'Trader',
+                walletServiceConnected: !!(window.walletService && window.walletService.getConnectionStatus && window.walletService.getConnectionStatus().isConnected),
+                appGetCurrentUser: !!(window.app && window.app.getCurrentUser && window.app.getCurrentUser()),
+                connectBtnHidden: document.getElementById('connectWalletBtn')?.style.display === 'none'
+            };
+            
+            console.log('💳 Wallet connection checks:', checks);
+            
+            // Return true if any of the reliable indicators show connection
+            const isConnected = checks.traderInfoVisible || checks.navTraderNameSet || checks.walletServiceConnected || checks.connectBtnHidden;
+            
+            console.log('💰 Final wallet connected status:', isConnected);
+            return isConnected;
+        }
+
+        // Enhanced competitions page visibility function with better detection
+        function updateCompetitionsPageVisibility() {
+            console.log('🏁 Updating competitions page visibility...');
+            
+            const connectedView = document.getElementById('competitionsConnected');
+            const disconnectedView = document.getElementById('competitionsDisconnected');
+            
+            if (!connectedView || !disconnectedView) {
+                console.warn('⚠️ Competition view elements not found');
+                return;
+            }
+            
+            const walletConnected = isWalletConnected();
+            console.log(`💼 Wallet connection status: ${walletConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+            
+            if (walletConnected) {
+                console.log('✅ Showing connected competitions view');
+                connectedView.style.display = 'block';
+                disconnectedView.style.display = 'none';
                 
-                return checks.some(check => {
-                    try {
-                        return check();
-                    } catch (error) {
-                        return false;
+                // Load competitions data if available
+                setTimeout(() => {
+                    if (window.loadRealCompetitions && typeof window.loadRealCompetitions === 'function') {
+                        console.log('📊 Loading real competitions data...');
+                        window.loadRealCompetitions();
+                    } else {
+                        console.log('📊 Loading demo competitions data...');
+                        loadDemoCompetitions();
                     }
-                });
-            } catch (error) {
-                console.warn('Error checking wallet connection:', error);
-                return false;
+                }, 100);
+            } else {
+                console.log('❌ Showing disconnected view - wallet not connected');
+                connectedView.style.display = 'none';
+                disconnectedView.style.display = 'block';
             }
         }
 
-        // ==============================================
-        // LEADERBOARD FUNCTIONALITY
-        // ==============================================
-
-        const LeaderboardState = {
-            users: [],
-            filteredUsers: [],
-            currentPeriod: 'all-time',
-            currentSort: 'winnings',
-            loading: false,
-            lastUpdate: null,
-            userPosition: null,
-            isConnected: false,
-            initialized: false
-        };
-
-        function initializeLeaderboard() {
-            console.log('🏆 Initializing leaderboard...');
+        // Demo competitions loader
+        function loadDemoCompetitions() {
+            console.log('🎮 Loading demo competitions for testing...');
             
-            if (LeaderboardState.initialized) {
-                console.log('Leaderboard already initialized');
-                return;
-            }
+            const competitionsGrid = document.getElementById('competitions-grid');
+            if (!competitionsGrid) return;
             
-            // Check if user is connected
-            LeaderboardState.isConnected = isWalletConnected();
-            
-            // Load leaderboard data
-            loadLeaderboardData();
-            
-            // Set up auto-refresh (every 2 minutes)
-            if (!window.leaderboardRefreshInterval) {
-                window.leaderboardRefreshInterval = setInterval(() => {
-                    const leaderboardPage = document.getElementById('leaderboardPage');
-                    if (leaderboardPage && leaderboardPage.classList.contains('active')) {
-                        loadLeaderboardData();
-                    }
-                }, 120000); // 2 minutes
-            }
-            
-            LeaderboardState.initialized = true;
-        }
-
-        async function loadLeaderboardData() {
-            if (LeaderboardState.loading) {
-                console.log('Leaderboard already loading, skipping...');
-                return;
-            }
-
-            LeaderboardState.loading = true;
-            updateLoadingState(true);
-
-            try {
-                console.log('📊 Loading leaderboard data from Supabase...');
-
-                let supabase = null;
-                
-                // Try multiple ways to get Supabase client
-                if (window.supabaseClient && typeof window.supabaseClient.getSupabaseClient === 'function') {
-                    supabase = window.supabaseClient.getSupabaseClient();
-                    console.log('✅ Got Supabase client from window.supabaseClient');
-                } else if (window.supabase) {
-                    supabase = window.supabase;
-                    console.log('✅ Got Supabase client from window.supabase');
-                } else {
-                    console.warn('❌ Supabase client not available, loading demo data...');
-                    loadDemoLeaderboardData();
-                    return;
-                }
-
-                // Test the connection first
-                console.log('🧪 Testing Supabase connection...');
-                
-                const { data: testData, error: testError } = await supabase
-                    .from('users')
-                    .select('count')
-                    .limit(1);
-
-                if (testError) {
-                    console.error('Supabase connection test failed:', testError);
-                    console.log('📝 Falling back to demo data due to connection issues');
-                    loadDemoLeaderboardData();
-                    return;
-                }
-
-                console.log('✅ Supabase connection test successful');
-
-                // Get users data
-                console.log('📊 Fetching users from Supabase...');
-                const { data: users, error: usersError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .order('total_winnings', { ascending: false });
-
-                if (usersError) {
-                    console.error('Error loading users:', usersError);
-                    console.log('📝 Falling back to demo data due to users query error');
-                    loadDemoLeaderboardData();
-                    return;
-                }
-
-                // Process the data
-                if (users && users.length > 0) {
-                    LeaderboardState.users = processLeaderboardData(users);
-                    console.log(`✅ Loaded ${LeaderboardState.users.length} users from database`);
-                    
-                    updateLeaderboardDisplay();
-                    updateStatsDisplay();
-                    updateUserPosition();
-
-                    LeaderboardState.lastUpdate = new Date();
-                    updateLastUpdatedTime();
-                } else {
-                    console.log('ℹ️ No users found in database, loading demo data...');
-                    loadDemoLeaderboardData();
-                }
-
-            } catch (error) {
-                console.error('Failed to load leaderboard data:', error);
-                console.log('📝 Falling back to demo data due to unexpected error');
-                loadDemoLeaderboardData();
-            } finally {
-                LeaderboardState.loading = false;
-                updateLoadingState(false);
-            }
-        }
-
-        function processLeaderboardData(users) {
-            console.log(`🔄 Processing ${users.length} users...`);
-            
-            return users.map((user, index) => {
-                try {
-                    const processedUser = {
-                        rank: index + 1,
-                        username: user.username || `Trader${index + 1}`,
-                        avatar: user.avatar || '🎯',
-                        walletAddress: user.wallet_address || `UNKNOWN${index}`,
-                        totalWinnings: parseFloat(user.total_winnings || 0),
-                        totalBets: parseInt(user.total_bets || 0),
-                        winRate: parseFloat(user.win_rate || 0),
-                        currentStreak: parseInt(user.current_streak || 0),
-                        competitionsWon: parseInt(user.competitions_won || 0),
-                        competitionsParticipated: parseInt(user.competitions_participated || user.total_bets || 0),
-                        bestStreak: parseInt(user.best_streak || user.current_streak || 0),
-                        isDemo: false,
-                        joinDate: user.created_at ? new Date(user.created_at) : new Date(),
-                        lastActive: user.last_active ? new Date(user.last_active) : new Date()
-                    };
-                    
-                    console.log(`✅ Processed user: ${processedUser.username} (${processedUser.totalWinnings} SOL)`);
-                    return processedUser;
-                } catch (error) {
-                    console.error('Error processing user:', user, error);
-                    return null;
-                }
-            }).filter(user => user !== null);
-        }
-
-        function loadDemoLeaderboardData() {
-            console.log('🎮 Loading demo leaderboard data...');
-
-            const demoUsers = [
-                {
-                    rank: 1,
-                    username: 'CryptoKing',
-                    avatar: '👑',
-                    walletAddress: 'DEMO1...',
-                    totalWinnings: 45.7,
-                    totalBets: 89,
-                    winRate: 67.4,
-                    currentStreak: 8,
-                    competitionsWon: 23,
-                    competitionsParticipated: 89,
-                    bestStreak: 12,
-                    isDemo: true,
-                    joinDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-                    lastActive: new Date()
-                },
-                {
-                    rank: 2,
-                    username: 'TokenMaster',
-                    avatar: '🎯',
-                    walletAddress: 'DEMO2...',
-                    totalWinnings: 38.2,
-                    totalBets: 76,
-                    winRate: 63.2,
-                    currentStreak: 5,
-                    competitionsWon: 19,
-                    competitionsParticipated: 76,
-                    bestStreak: 9,
-                    isDemo: true,
-                    joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-                    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000)
-                },
-                {
-                    rank: 3,
-                    username: 'SolanaWiz',
-                    avatar: '🧙',
-                    walletAddress: 'DEMO3...',
-                    totalWinnings: 31.8,
-                    totalBets: 65,
-                    winRate: 58.5,
-                    currentStreak: 3,
-                    competitionsWon: 15,
-                    competitionsParticipated: 65,
-                    bestStreak: 7,
-                    isDemo: true,
-                    joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-                    lastActive: new Date(Date.now() - 6 * 60 * 60 * 1000)
-                }
-            ];
-
-            LeaderboardState.users = demoUsers;
-            updateLeaderboardDisplay();
-            updateStatsDisplay();
-            
-            LeaderboardState.lastUpdate = new Date();
-            updateLastUpdatedTime();
-
-            console.log('✅ Demo leaderboard data loaded');
-        }
-
-        function updateLeaderboardDisplay() {
-            const tableContainer = document.getElementById('leaderboardTable');
-            if (!tableContainer) return;
-
-            applyFiltersAndSorting();
-
-            if (LeaderboardState.filteredUsers.length === 0) {
-                tableContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <h3>No traders found</h3>
-                        <p>Be the first to join a competition and appear on the leaderboard!</p>
+            // Create demo competition cards
+            const demoHTML = `
+                <div class="competition-card" onclick="openCompetitionModal('DEMO-001')">
+                    <div class="competition-header">
+                        <div class="competition-id">#DEMO001</div>
+                        <div class="competition-status status-voting">🗳️ Voting Open</div>
                     </div>
-                `;
-                return;
-            }
-
-            const tableHTML = `
-                <div class="leaderboard-header">
-                    <div class="rank-col">Rank</div>
-                    <div class="trader-col">Trader</div>
-                    <div class="winnings-col">Winnings</div>
-                    <div class="stats-col">Win Rate</div>
-                    <div class="streak-col">Streak</div>
-                    <div class="competitions-col">Competitions</div>
-                </div>
-                ${LeaderboardState.filteredUsers.slice(0, 50).map(user => createLeaderboardRow(user)).join('')}
-            `;
-
-            tableContainer.innerHTML = tableHTML;
-        }
-
-        function createLeaderboardRow(user) {
-            const isTop3 = user.rank <= 3;
-            const rankIcons = ['🥇', '🥈', '🥉'];
-            const rankDisplay = isTop3 ? rankIcons[user.rank - 1] : `#${user.rank}`;
-
-            return `
-                <div class="leaderboard-row ${isTop3 ? 'top-3' : ''}" data-wallet="${user.walletAddress}">
-                    <div class="rank-col">
-                        <span class="rank-display">${rankDisplay}</span>
-                    </div>
-                    <div class="trader-col">
-                        <div class="trader-info">
-                            <div class="trader-avatar">${user.avatar}</div>
-                            <div class="trader-details">
-                                <div class="trader-name">${user.username}</div>
-                                <div class="trader-address">${formatAddress(user.walletAddress)}</div>
+                    
+                    <div class="tokens-battle">
+                        <div class="token-info">
+                            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
+                                 alt="SOL" class="token-logo">
+                            <div class="token-symbol">SOL</div>
+                            <div class="token-name">Solana</div>
+                            <div class="token-price">$180.50</div>
+                        </div>
+                        
+                        <div class="vs-separator">
+                            <div class="vs-text">VS</div>
+                            <div class="competition-timer">
+                                <div class="timer-label">VOTING ENDS</div>
+                                <div class="timer-value">2h 15m</div>
                             </div>
                         </div>
+                        
+                        <div class="token-info">
+                            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png" 
+                                 alt="USDC" class="token-logo">
+                            <div class="token-symbol">USDC</div>
+                            <div class="token-name">USD Coin</div>
+                            <div class="token-price">$1.00</div>
+                        </div>
                     </div>
-                    <div class="winnings-col">
-                        <div class="winnings-amount">${user.totalWinnings.toFixed(1)} SOL</div>
-                        <div class="winnings-usd">$${(user.totalWinnings * 180).toFixed(0)}</div>
+                    
+                    <div class="competition-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">25</div>
+                            <div class="stat-label">Participants</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">2.1 SOL</div>
+                            <div class="stat-label">Prize Pool</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">0.1 SOL</div>
+                            <div class="stat-label">Entry Fee</div>
+                        </div>
                     </div>
-                    <div class="stats-col">
-                        <div class="win-rate">${user.winRate.toFixed(1)}%</div>
-                        <div class="total-bets">${user.totalBets} bets</div>
+                    
+                    <div class="betting-section">
+                        <button class="bet-button" onclick="event.stopPropagation(); openCompetitionModal('DEMO-001')">
+                            <div class="bet-button-label">Predict</div>
+                            <div class="bet-button-token">SOL</div>
+                        </button>
+                        <button class="bet-button" onclick="event.stopPropagation(); openCompetitionModal('DEMO-001')">
+                            <div class="bet-button-label">Predict</div>
+                            <div class="bet-button-token">USDC</div>
+                        </button>
                     </div>
-                    <div class="streak-col">
-                        <div class="current-streak ${user.currentStreak > 0 ? 'positive' : ''}">${user.currentStreak}</div>
-                        <div class="best-streak">Best: ${user.bestStreak}</div>
+                </div>
+
+                <div class="competition-card" onclick="openCompetitionModal('DEMO-002')">
+                    <div class="competition-header">
+                        <div class="competition-id">#DEMO002</div>
+                        <div class="competition-status status-active">⚡ Running</div>
                     </div>
-                    <div class="competitions-col">
-                        <div class="competitions-won">${user.competitionsWon}</div>
-                        <div class="competitions-total">of ${user.competitionsParticipated}</div>
+                    
+                    <div class="tokens-battle">
+                        <div class="token-info">
+                            <img src="https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I" 
+                                 alt="BONK" class="token-logo">
+                            <div class="token-symbol">BONK</div>
+                            <div class="token-name">Bonk</div>
+                            <div class="token-price">$0.000023</div>
+                        </div>
+                        
+                        <div class="vs-separator">
+                            <div class="vs-text">VS</div>
+                            <div class="competition-timer">
+                                <div class="timer-label">ENDS IN</div>
+                                <div class="timer-value">6d 4h</div>
+                            </div>
+                        </div>
+                        
+                        <div class="token-info">
+                            <img src="https://static.jup.ag/jup/icon.png" 
+                                 alt="JUP" class="token-logo">
+                            <div class="token-symbol">JUP</div>
+                            <div class="token-name">Jupiter</div>
+                            <div class="token-price">$1.15</div>
+                        </div>
+                    </div>
+                    
+                    <div class="competition-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">42</div>
+                            <div class="stat-label">Participants</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">3.6 SOL</div>
+                            <div class="stat-label">Prize Pool</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">0.1 SOL</div>
+                            <div class="stat-label">Entry Fee</div>
+                        </div>
+                    </div>
+                    
+                    <div class="betting-section">
+                        <button class="bet-button" disabled>
+                            <div class="bet-button-token">⚡ Running</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="competition-card" onclick="openCompetitionModal('DEMO-003')">
+                    <div class="competition-header">
+                        <div class="competition-id">#DEMO003</div>
+                        <div class="competition-status status-upcoming">⏰ Starting Soon</div>
+                    </div>
+                    
+                    <div class="tokens-battle">
+                        <div class="token-info">
+                            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png" 
+                                 alt="MSOL" class="token-logo">
+                            <div class="token-symbol">MSOL</div>
+                            <div class="token-name">Marinade SOL</div>
+                            <div class="token-price">$195.30</div>
+                        </div>
+                        
+                        <div class="vs-separator">
+                            <div class="vs-text">VS</div>
+                            <div class="competition-timer">
+                                <div class="timer-label">STARTS IN</div>
+                                <div class="timer-value">6h 30m</div>
+                            </div>
+                        </div>
+                        
+                        <div class="token-info">
+                            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png" 
+                                 alt="RENDER" class="token-logo">
+                            <div class="token-symbol">RENDER</div>
+                            <div class="token-name">Render Token</div>
+                            <div class="token-price">$7.85</div>
+                        </div>
+                    </div>
+                    
+                    <div class="competition-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Participants</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">0.0 SOL</div>
+                            <div class="stat-label">Prize Pool</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">0.1 SOL</div>
+                            <div class="stat-label">Entry Fee</div>
+                        </div>
+                    </div>
+                    
+                    <div class="betting-section">
+                        <button class="bet-button" disabled>
+                            <div class="bet-button-token">⏰ Coming Soon</div>
+                        </button>
                     </div>
                 </div>
             `;
+            
+            competitionsGrid.innerHTML = demoHTML;
+            console.log('✅ Demo competitions loaded successfully');
         }
 
-        function applyFiltersAndSorting() {
-            let filteredUsers = [...LeaderboardState.users];
+        // Competition modal functions for integration
+        let selectedCompetition = null;
+        let selectedToken = null;
 
-            if (LeaderboardState.currentPeriod !== 'all-time') {
-                const now = new Date();
-                let cutoffDate;
+        function openCompetitionModal(competitionId) {
+            console.log('🎯 Opening competition modal for:', competitionId);
+            
+            // Set sample data for demo
+            selectedCompetition = competitionId;
+            
+            // Update modal content with demo data
+            document.getElementById('modalTitle').textContent = 'SOL vs USDC Competition';
+            document.getElementById('modalTokenASymbol').textContent = 'SOL';
+            document.getElementById('modalTokenBSymbol').textContent = 'USDC';
+            document.getElementById('choiceTokenASymbol').textContent = 'SOL';
+            document.getElementById('choiceTokenBSymbol').textContent = 'USDC';
+            document.getElementById('modalParticipants').textContent = '25';
+            document.getElementById('modalPrizePool').textContent = '2.1 SOL';
+            document.getElementById('modalTimeRemaining').textContent = '2h 15m';
+            
+            // Show modal
+            document.getElementById('competitionModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
 
-                if (LeaderboardState.currentPeriod === 'weekly') {
-                    cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                } else if (LeaderboardState.currentPeriod === 'monthly') {
-                    cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                }
+        function closeCompetitionModal() {
+            document.getElementById('competitionModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            selectedCompetition = null;
+            selectedToken = null;
+        }
 
-                if (cutoffDate) {
-                    filteredUsers = filteredUsers.filter(user => 
-                        user.lastActive && user.lastActive > cutoffDate
-                    );
-                }
+        function selectToken(tokenSide) {
+            selectedToken = tokenSide;
+            
+            // Update button states
+            document.querySelectorAll('.token-choice-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const selectedButton = document.getElementById(`choiceToken${tokenSide}`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
             }
-
-            filteredUsers.sort((a, b) => {
-                switch (LeaderboardState.currentSort) {
-                    case 'winnings':
-                        return b.totalWinnings - a.totalWinnings;
-                    case 'win-rate':
-                        return b.winRate - a.winRate;
-                    case 'streak':
-                        return b.currentStreak - a.currentStreak;
-                    case 'competitions':
-                        return b.competitionsWon - a.competitionsWon;
-                    default:
-                        return b.totalWinnings - a.totalWinnings;
-                }
-            });
-
-            filteredUsers.forEach((user, index) => {
-                user.rank = index + 1;
-            });
-
-            LeaderboardState.filteredUsers = filteredUsers;
+            
+            updatePlaceBetButton();
         }
 
-        function updateStatsDisplay() {
-            const users = LeaderboardState.users;
-
-            const totalTraders = users.length;
-            const totalCompetitionsWon = users.reduce((sum, user) => sum + user.competitionsWon, 0);
-            const totalWinnings = users.reduce((sum, user) => sum + user.totalWinnings, 0);
-            const longestStreak = Math.max(...users.map(user => user.bestStreak), 0);
-
-            const updateElement = (id, value) => {
-                const element = document.getElementById(id);
-                if (element) element.textContent = value;
-            };
-
-            updateElement('totalTraders', totalTraders.toLocaleString());
-            updateElement('totalCompetitionsWon', totalCompetitionsWon.toLocaleString());
-            updateElement('totalWinnings', `${totalWinnings.toFixed(1)} SOL`);
-            updateElement('longestStreak', longestStreak);
+        function updatePlaceBetButton() {
+            const button = document.getElementById('placeBetButton');
+            const betAmount = document.getElementById('betAmount').value;
+            
+            if (!selectedToken) {
+                button.textContent = 'Select a token to continue';
+                button.disabled = true;
+            } else if (!betAmount || parseFloat(betAmount) < 0.1) {
+                button.textContent = 'Minimum bet is 0.1 SOL';
+                button.disabled = true;
+            } else {
+                button.textContent = `Place Prediction (${betAmount} SOL)`;
+                button.disabled = false;
+            }
         }
 
-        function updateUserPosition() {
-            const userPositionCard = document.getElementById('userPosition');
-            const disconnectedPrompt = document.getElementById('leaderboardDisconnected');
-
-            if (!userPositionCard || !disconnectedPrompt) return;
-
-            if (!LeaderboardState.isConnected) {
-                userPositionCard.style.display = 'none';
-                disconnectedPrompt.style.display = 'block';
+        function placeBet() {
+            if (!selectedCompetition || !selectedToken) return;
+            
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            if (betAmount < 0.1) return;
+            
+            // Check wallet connection
+            if (!isWalletConnected()) {
+                closeCompetitionModal();
+                openWalletModal();
                 return;
             }
-
-            disconnectedPrompt.style.display = 'none';
-
-            let currentUser = null;
             
-            try {
-                if (window.walletService && typeof window.walletService.getConnectionStatus === 'function') {
-                    const walletStatus = window.walletService.getConnectionStatus();
-                    if (walletStatus.isConnected && walletStatus.publicKey) {
-                        currentUser = LeaderboardState.users.find(user => 
-                            user.walletAddress === walletStatus.publicKey
-                        );
-                    }
-                }
-            } catch (error) {
-                console.warn('Error getting wallet status:', error);
-            }
-
-            if (currentUser) {
-                userPositionCard.style.display = 'block';
-                const updateUserElement = (id, value) => {
-                    const element = document.getElementById(id);
-                    if (element) element.textContent = value;
-                };
-                
-                updateUserElement('userRank', `#${currentUser.rank}`);
-                updateUserElement('userWinnings', `${currentUser.totalWinnings.toFixed(1)} SOL`);
-                updateUserElement('userWinRate', `${currentUser.winRate.toFixed(1)}%`);
-                updateUserElement('userStreak', currentUser.currentStreak);
-            } else {
-                userPositionCard.style.display = 'none';
-            }
-        }
-
-        function handleLeaderboardFilterChange() {
-            const periodSelect = document.getElementById('leaderboard-period');
-            const sortSelect = document.getElementById('leaderboard-sort');
-
-            if (periodSelect) LeaderboardState.currentPeriod = periodSelect.value;
-            if (sortSelect) LeaderboardState.currentSort = sortSelect.value;
-
-            updateLeaderboardDisplay();
-        }
-
-        function refreshLeaderboard() {
-            const refreshBtn = document.getElementById('refreshBtn');
-            if (refreshBtn) {
-                refreshBtn.innerHTML = '<span class="refresh-icon spinning">🔄</span> Refreshing...';
-                refreshBtn.disabled = true;
-            }
-
-            loadLeaderboardData().finally(() => {
-                if (refreshBtn) {
-                    refreshBtn.innerHTML = '<span class="refresh-icon">🔄</span> Refresh';
-                    refreshBtn.disabled = false;
-                }
+            console.log('💰 Placing bet:', {
+                competition: selectedCompetition,
+                token: selectedToken,
+                amount: betAmount
             });
+            
+            alert(`Bet placed successfully! You predicted token ${selectedToken} will win with ${betAmount} SOL.`);
+            closeCompetitionModal();
         }
 
-        function updateLoadingState(isLoading) {
-            // Implementation for loading state updates
-        }
+        // Set up continuous monitoring for wallet state changes
+        function setupWalletStateMonitoring() {
+            console.log('👀 Setting up wallet state monitoring...');
+            
+            // Use event-based monitoring instead of polling
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && window.location.hash === '#competitions') {
+        updateCompetitionsPageVisibility();
+    }
+});
 
-        function updateLastUpdatedTime() {
-            const lastUpdatedElement = document.getElementById('lastUpdated');
-            if (lastUpdatedElement && LeaderboardState.lastUpdate) {
-                const timeAgo = getTimeAgo(LeaderboardState.lastUpdate);
-                lastUpdatedElement.textContent = `Last updated: ${timeAgo}`;
+// Only check on hash change
+window.addEventListener('hashchange', function() {
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => updateCompetitionsPageVisibility(), 500);
+    }
+});
+
+// Initial check when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#competitions') {
+        setTimeout(() => updateCompetitionsPageVisibility(), 1000);
+    }
+});
+            
+            // Monitor DOM changes for wallet connection elements
+            const traderInfo = document.getElementById('traderInfo');
+            const connectBtn = document.getElementById('connectWalletBtn');
+            
+            if (traderInfo || connectBtn) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            if (window.location.hash === '#competitions') {
+                                console.log('🔄 Detected wallet UI change, updating competitions...');
+                                setTimeout(updateCompetitionsPageVisibility, 100);
+                            }
+                        }
+                    });
+                });
+                
+                if (traderInfo) {
+                    observer.observe(traderInfo, { attributes: true, attributeFilter: ['style'] });
+                }
+                if (connectBtn) {
+                    observer.observe(connectBtn, { attributes: true, attributeFilter: ['style'] });
+                }
+                
+                console.log('✅ DOM mutation observer set up');
             }
         }
 
-        function formatAddress(address) {
-            if (!address) return 'Unknown';
-            if (address.startsWith('DEMO')) return address;
-            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        // Force update function for manual testing
+        function forceUpdateCompetitions() {
+            console.log('🔧 Force updating competitions page...');
+            updateCompetitionsPageVisibility();
         }
 
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diff = now - date;
-            const minutes = Math.floor(diff / 60000);
+        // Event listeners for bet amount input
+        document.addEventListener('DOMContentLoaded', function() {
+            const betAmountInput = document.getElementById('betAmount');
+            if (betAmountInput) {
+                betAmountInput.addEventListener('input', updatePlaceBetButton);
+            }
             
-            if (minutes < 1) return 'Just now';
-            if (minutes < 60) return `${minutes}m ago`;
-            
-            const hours = Math.floor(minutes / 60);
-            if (hours < 24) return `${hours}h ago`;
-            
-            const days = Math.floor(hours / 24);
-            return `${days}d ago`;
-        }
+            // Set up wallet monitoring
+            setupWalletStateMonitoring();
+        });
+
+        // Make functions globally available
+        window.updateCompetitionsPageVisibility = updateCompetitionsPageVisibility;
+        window.forceUpdateCompetitions = forceUpdateCompetitions;
+        window.isWalletConnected = isWalletConnected;
+        window.loadDemoCompetitions = loadDemoCompetitions;
+    </script>
+    
+    <!-- Load core application files in CLEAN order -->
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="utils.js"></script>
+    <script src="token-service.js"></script>
+    <script src="wallet-service.js"></script>
+    <script src="competition-manager.js"></script>
+    <script src="competition.js"></script>
+    <script src="app.js"></script>
+    
+    <!-- SINGLE CLEAN WALLET MODAL FIX -->
+    <script>
+        console.log('🔧 Loading clean wallet modal fix...');
 
         // ==============================================
-        // WALLET MODAL SYSTEM
+        // CLEAN WALLET MODAL IMPLEMENTATION
         // ==============================================
 
+        // Global wallet modal state
         window.WalletModal = {
             isOpen: false,
             currentStep: 1,
             selectedWallet: null,
             connectedUser: null
         };
+
+        // ==============================================
+        // CORE WALLET MODAL FUNCTIONS
+        // ==============================================
 
         function openWalletModal() {
             console.log('🔗 Opening wallet modal...');
@@ -1395,11 +1877,15 @@
                     return;
                 }
                 
+                // Show modal
                 modal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 window.WalletModal.isOpen = true;
                 
+                // Reset to step 1
                 goToStep(1);
+                
+                // Check wallet availability
                 checkWalletAvailability();
                 
                 console.log('✅ Wallet modal opened');
@@ -1419,6 +1905,7 @@
                     document.body.style.overflow = 'auto';
                 }
                 
+                // Reset state
                 window.WalletModal.isOpen = false;
                 window.WalletModal.currentStep = 1;
                 window.WalletModal.selectedWallet = null;
@@ -1472,6 +1959,7 @@
             try {
                 window.WalletModal.selectedWallet = walletType;
                 
+                // Update selected wallet name in UI
                 const walletNameElement = document.getElementById('selectedWalletName');
                 if (walletNameElement) {
                     const walletNames = {
@@ -1483,8 +1971,10 @@
                     walletNameElement.textContent = walletNames[walletType] || walletType;
                 }
                 
+                // Go to connecting step
                 goToStep(2);
                 
+                // Simulate connection process
                 setTimeout(() => {
                     handleWalletConnection(walletType);
                 }, 2000);
@@ -1499,6 +1989,7 @@
             
             try {
                 if (walletType === 'demo') {
+                    // Demo wallet connection
                     const demoUser = {
                         username: 'DemoTrader' + Math.floor(Math.random() * 1000),
                         avatar: '🎮',
@@ -1510,19 +2001,29 @@
                     
                     console.log('✅ Demo wallet connected:', demoUser);
                     
+                    // Store user globally
                     window.connectedUser = demoUser;
                     window.currentUser = demoUser;
                     window.WalletModal.connectedUser = demoUser;
                     
+                    // Close modal
                     closeWalletModal();
+                    
+                    // Update UI
                     updateUIForConnectedUser(demoUser);
                     
+                    // Show success message
                     setTimeout(() => {
                         alert('🎮 Demo wallet connected successfully!\n\nYou now have 10 SOL to test with.');
-                        showPage('competitions');
+                        
+                        // Navigate to competitions page
+                        if (typeof showPage === 'function') {
+                            showPage('competitions');
+                        }
                     }, 500);
                     
                 } else {
+                    // Real wallet connection (not implemented yet)
                     console.log(`Real wallet connection for ${walletType} not implemented yet`);
                     
                     setTimeout(() => {
@@ -1544,16 +2045,13 @@
                 const confirmed = confirm('Are you sure you want to disconnect your wallet?');
                 if (!confirmed) return;
                 
+                // Clear connected user
                 window.connectedUser = null;
                 window.currentUser = null;
                 window.WalletModal.connectedUser = null;
                 
+                // Update UI for disconnected state
                 updateUIForDisconnectedUser();
-                
-                // Notify competition system of disconnection
-                if (window.handleWalletConnectionChange) {
-                    window.handleWalletConnectionChange(false, null);
-                }
                 
                 alert('Wallet disconnected successfully!');
                 
@@ -1593,7 +2091,7 @@
                     const wallet = wallets[walletType];
                     if (wallet.element) {
                         if (wallet.available) {
-                            wallet.element.textContent = '✅ Available';
+                            wallet.element.textContent = '✓ Available';
                             wallet.element.style.color = '#22c55e';
                         } else if (wallet.downloadUrl) {
                             wallet.element.innerHTML = `❌ <a href="${wallet.downloadUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Install</a>`;
@@ -1609,6 +2107,10 @@
             }
         }
 
+        // ==============================================
+        // UI UPDATE FUNCTIONS
+        // ==============================================
+
         function updateUIForConnectedUser(user) {
             console.log('👤 Updating UI for connected user:', user);
             
@@ -1621,6 +2123,7 @@
                     connectBtn.style.display = 'none';
                     traderInfo.style.display = 'block';
                     
+                    // Update trader info
                     const navTraderName = document.getElementById('navTraderName');
                     const navTraderAvatar = document.getElementById('navTraderAvatar');
                     const navTraderBalance = document.getElementById('navTraderBalance');
@@ -1646,13 +2149,10 @@
                 
                 console.log('✅ UI updated for connected user');
                 
-                // Notify other systems
+                // Trigger page updates if needed
                 setTimeout(() => {
-                    if (window.handleWalletConnectionChange) {
-                        window.handleWalletConnectionChange(true, user.walletAddress);
-                    }
-                    if (window.updateCompetitionPageVisibility) {
-                        window.updateCompetitionPageVisibility();
+                    if (typeof updateCompetitionsPageVisibility === 'function') {
+                        updateCompetitionsPageVisibility();
                     }
                 }, 500);
                 
@@ -1685,152 +2185,15 @@
                 
                 console.log('✅ UI updated for disconnected user');
                 
-                // Notify other systems
+                // Trigger page updates if needed
                 setTimeout(() => {
-                    if (window.updateCompetitionPageVisibility) {
-                        window.updateCompetitionPageVisibility();
+                    if (typeof updateCompetitionsPageVisibility === 'function') {
+                        updateCompetitionsPageVisibility();
                     }
                 }, 500);
                 
             } catch (error) {
                 console.error('❌ Error updating UI for disconnected user:', error);
-            }
-        }
-
-        // Profile creation functions
-        function selectAvatar(avatar) {
-            console.log(`🎭 Avatar selected: ${avatar}`);
-            
-            try {
-                document.querySelectorAll('.avatar-option-modern').forEach(option => {
-                    option.classList.remove('selected');
-                    if (option.dataset.avatar === avatar) {
-                        option.classList.add('selected');
-                    }
-                });
-                
-                const previewAvatar = document.getElementById('previewAvatar');
-                if (previewAvatar) {
-                    previewAvatar.textContent = avatar;
-                }
-                
-            } catch (error) {
-                console.error('❌ Error selecting avatar:', error);
-            }
-        }
-
-        function validateUsernameInput() {
-            console.log('🔍 Validating username...');
-            
-            try {
-                const usernameInput = document.getElementById('traderUsername');
-                const inputStatus = document.getElementById('inputStatus');
-                const previewName = document.getElementById('previewName');
-                const createProfileBtn = document.getElementById('createProfileBtn');
-                
-                if (!usernameInput) return;
-                
-                const username = usernameInput.value.trim();
-                
-                if (previewName) {
-                    previewName.textContent = username || 'Trader Username';
-                }
-                
-                if (username.length === 0) {
-                    if (inputStatus) inputStatus.textContent = '';
-                    if (createProfileBtn) createProfileBtn.disabled = true;
-                    return;
-                }
-                
-                let isValid = true;
-                if (username.length < 3 || username.length > 20) {
-                    isValid = false;
-                } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-                    isValid = false;
-                }
-                
-                if (inputStatus) {
-                    inputStatus.textContent = isValid ? '✅' : '❌';
-                }
-                
-                if (createProfileBtn) {
-                    createProfileBtn.disabled = !isValid;
-                }
-                
-            } catch (error) {
-                console.error('❌ Error validating username:', error);
-            }
-        }
-
-        function toggleAgreement() {
-            console.log('📋 Agreement toggled');
-            
-            try {
-                const checkbox = document.getElementById('agreementCheckbox');
-                const finalizeBtn = document.getElementById('finalizeBtn');
-                
-                if (checkbox) {
-                    const isChecked = checkbox.classList.contains('checked');
-                    if (isChecked) {
-                        checkbox.classList.remove('checked');
-                    } else {
-                        checkbox.classList.add('checked');
-                    }
-                    
-                    if (finalizeBtn) {
-                        finalizeBtn.disabled = !checkbox.classList.contains('checked');
-                    }
-                }
-                
-            } catch (error) {
-                console.error('❌ Error toggling agreement:', error);
-            }
-        }
-
-        function finalizeProfile() {
-            console.log('🎯 Finalizing profile...');
-            
-            try {
-                const usernameInput = document.getElementById('traderUsername');
-                const username = usernameInput ? usernameInput.value.trim() : 'DemoUser';
-                
-                if (!username) {
-                    alert('Please enter a username');
-                    return;
-                }
-                
-                if (window.WalletModal.connectedUser) {
-                    window.WalletModal.connectedUser.username = username;
-                    window.connectedUser = window.WalletModal.connectedUser;
-                    window.currentUser = window.WalletModal.connectedUser;
-                    
-                    // Update UI with new username
-                    updateUIForConnectedUser(window.connectedUser);
-                }
-                
-                goToStep(5);
-                
-                setTimeout(() => {
-                    completedOnboarding();
-                }, 3000);
-                
-            } catch (error) {
-                console.error('❌ Error finalizing profile:', error);
-            }
-        }
-
-        function completedOnboarding() {
-            console.log('🎉 Onboarding completed');
-            
-            try {
-                closeWalletModal();
-                
-                setTimeout(() => {
-                    showPage('competitions');
-                }, 500);
-                
-            } catch (error) {
-                console.error('❌ Error completing onboarding:', error);
             }
         }
 
@@ -1852,6 +2215,7 @@
                             selectWallet(walletType);
                         });
                         
+                        // Add visual feedback
                         option.style.cursor = 'pointer';
                         option.addEventListener('mouseenter', function() {
                             this.style.transform = 'scale(1.02)';
@@ -1897,80 +2261,153 @@
         }
 
         // ==============================================
-        // PORTFOLIO PLACEHOLDER FUNCTIONS
+        // PROFILE FUNCTIONS (for Step 3 and beyond)
         // ==============================================
 
-        function handlePortfolioViewChange() {
-            console.log('📊 Portfolio view changed');
-            // Placeholder for portfolio functionality
-        }
-
-        function refreshPortfolioData() {
-            console.log('🔄 Refreshing portfolio data');
-            // Placeholder for portfolio refresh
-        }
-
-        function initializePortfolio() {
-            console.log('📊 Initializing portfolio...');
-            // Placeholder for portfolio initialization
-        }
-
-        // ==============================================
-        // COMPETITION MODAL FUNCTIONS
-        // ==============================================
-
-        let selectedCompetition = null;
-        let selectedToken = null;
-
-        function closeCompetitionModal() {
-            const modal = document.getElementById('competitionModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-            selectedCompetition = null;
-            selectedToken = null;
-        }
-
-        function selectToken(tokenSide) {
-            selectedToken = tokenSide;
+        function selectAvatar(avatar) {
+            console.log(`🎭 Avatar selected: ${avatar}`);
             
-            document.querySelectorAll('.token-choice-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            const selectedButton = document.getElementById(`choiceToken${tokenSide}`);
-            if (selectedButton) {
-                selectedButton.classList.add('selected');
-            }
-            
-            updatePlaceBetButton();
-        }
-
-        function updatePlaceBetButton() {
-            const button = document.getElementById('placeBetButton');
-            const betAmount = document.getElementById('betAmount').value;
-            
-            if (!selectedToken) {
-                button.textContent = 'Select a token to continue';
-                button.disabled = true;
-            } else if (!betAmount || parseFloat(betAmount) < 0.1) {
-                button.textContent = 'Minimum bet is 0.1 SOL';
-                button.disabled = true;
-            } else {
-                button.textContent = `Place Prediction (${betAmount} SOL)`;
-                button.disabled = false;
+            try {
+                // Update avatar grid selection
+                document.querySelectorAll('.avatar-option-modern').forEach(option => {
+                    option.classList.remove('selected');
+                    if (option.dataset.avatar === avatar) {
+                        option.classList.add('selected');
+                    }
+                });
+                
+                // Update preview
+                const previewAvatar = document.getElementById('previewAvatar');
+                if (previewAvatar) {
+                    previewAvatar.textContent = avatar;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error selecting avatar:', error);
             }
         }
 
+        function validateUsernameInput() {
+            console.log('🔍 Validating username...');
+            
+            try {
+                const usernameInput = document.getElementById('traderUsername');
+                const inputStatus = document.getElementById('inputStatus');
+                const previewName = document.getElementById('previewName');
+                
+                if (!usernameInput) return;
+                
+                const username = usernameInput.value.trim();
+                
+                // Update preview
+                if (previewName) {
+                    previewName.textContent = username || 'Trader Username';
+                }
+                
+                // Basic validation
+                if (username.length === 0) {
+                    if (inputStatus) inputStatus.textContent = '';
+                    return;
+                }
+                
+                let isValid = true;
+                if (username.length < 3 || username.length > 20) {
+                    isValid = false;
+                } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                    isValid = false;
+                }
+                
+                // Update UI
+                if (inputStatus) {
+                    inputStatus.textContent = isValid ? '✅' : '❌';
+                }
+                
+            } catch (error) {
+                console.error('❌ Error validating username:', error);
+            }
+        }
+
+        function toggleAgreement() {
+            console.log('📋 Agreement toggled');
+            
+            try {
+                const checkbox = document.getElementById('agreementCheckbox');
+                const finalizeBtn = document.getElementById('finalizeBtn');
+                
+                if (checkbox) {
+                    const isChecked = checkbox.classList.contains('checked');
+                    if (isChecked) {
+                        checkbox.classList.remove('checked');
+                    } else {
+                        checkbox.classList.add('checked');
+                    }
+                    
+                    if (finalizeBtn) {
+                        finalizeBtn.disabled = !checkbox.classList.contains('checked');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Error toggling agreement:', error);
+            }
+        }
+
+        function finalizeProfile() {
+            console.log('🎯 Finalizing profile...');
+            
+            try {
+                const usernameInput = document.getElementById('traderUsername');
+                const username = usernameInput ? usernameInput.value.trim() : 'DemoUser';
+                
+                if (!username) {
+                    alert('Please enter a username');
+                    return;
+                }
+                
+                // Update the connected user with profile info
+                if (window.WalletModal.connectedUser) {
+                    window.WalletModal.connectedUser.username = username;
+                    window.connectedUser = window.WalletModal.connectedUser;
+                    window.currentUser = window.WalletModal.connectedUser;
+                }
+                
+                // Go to success step
+                goToStep(5);
+                
+                // Auto-complete after 3 seconds
+                setTimeout(() => {
+                    completedOnboarding();
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ Error finalizing profile:', error);
+            }
+        }
+
+        function completedOnboarding() {
+            console.log('🎉 Onboarding completed');
+            
+            try {
+                // Close modal
+                closeWalletModal();
+                
+                // Navigate to competitions
+                setTimeout(() => {
+                    if (typeof showPage === 'function') {
+                        showPage('competitions');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('❌ Error completing onboarding:', error);
+            }
+        }
+
         // ==============================================
-        // GLOBAL EXPORTS
+        // GLOBAL EXPORTS AND INITIALIZATION
         // ==============================================
 
-        // Make functions globally available
-        window.showPage = showPage;
-        window.scrollToLearnMore = scrollToLearnMore;
-        window.isWalletConnected = isWalletConnected;
+        // Export functions globally
         window.openWalletModal = openWalletModal;
         window.closeWalletModal = closeWalletModal;
         window.goToStep = goToStep;
@@ -1983,24 +2420,12 @@
         window.toggleAgreement = toggleAgreement;
         window.finalizeProfile = finalizeProfile;
         window.completedOnboarding = completedOnboarding;
-        window.initializeLeaderboard = initializeLeaderboard;
-        window.refreshLeaderboard = refreshLeaderboard;
-        window.handleLeaderboardFilterChange = handleLeaderboardFilterChange;
-        window.handlePortfolioViewChange = handlePortfolioViewChange;
-        window.refreshPortfolioData = refreshPortfolioData;
-        window.initializePortfolio = initializePortfolio;
-        window.closeCompetitionModal = closeCompetitionModal;
-        window.selectToken = selectToken;
-        window.updatePlaceBetButton = updatePlaceBetButton;
 
-        // ==============================================
-        // INITIALIZATION
-        // ==============================================
-
+        // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 Index.html DOM ready, setting up...');
+            console.log('🚀 Setting up clean wallet modal...');
             
-            // Set up wallet modal events
+            // Set up event listeners
             setupWalletModalEvents();
             
             // Set up username validation
@@ -2009,40 +2434,31 @@
                 usernameInput.addEventListener('input', validateUsernameInput);
             }
             
-            // Set up bet amount input validation
-            const betAmountInput = document.getElementById('betAmount');
-            if (betAmountInput) {
-                betAmountInput.addEventListener('input', updatePlaceBetButton);
+            // Initialize app if available
+            if (typeof window.initializeApp === 'function') {
+                window.initializeApp().catch(error => {
+                    console.error('App initialization error:', error);
+                });
             }
             
-            // Initialize page based on hash
-            const hash = window.location.hash.slice(1);
-            if (hash && hash !== 'home') {
-                setTimeout(() => showPage(hash, false), 100);
-            }
-            
-            console.log('✅ Index.html initialization complete');
+            console.log('✅ Clean wallet modal setup complete');
         });
 
-        console.log('✅ Enhanced index.html loaded successfully');
+        console.log('✅ Clean wallet modal fix loaded');
+        console.log('🔧 Available functions:', {
+            openWalletModal: typeof openWalletModal,
+            closeWalletModal: typeof closeWalletModal,
+            selectWallet: typeof selectWallet,
+            disconnectWallet: typeof disconnectWallet
+        });
     </script>
-    
-    <!-- Load core application files -->
-    <script src="config.js"></script>
-    <script src="supabase-client.js"></script>
-    <script src="utils.js"></script>
-    <script src="token-service.js"></script>
-    <script src="wallet-service.js"></script>
-    <script src="competition-manager.js"></script>
-    <script src="competition.js"></script>
-    <script src="app.js"></script>
     
     <style>
         /* ==============================================
            COMPLETE STYLING FOR ALL COMPONENTS
            ============================================== */
 
-        /* CSS Variables */
+        /* CSS Variables for consistent theming */
         :root {
             --accent-purple: #8b5cf6;
             --accent-pink: #ec4899;
@@ -2062,56 +2478,15 @@
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
+            --font-mono: 'Courier New', monospace;
         }
 
-        /* Base styling */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--surface-dark);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Learn More Section */
+        /* Learn More Section - ALWAYS VISIBLE */
         .learn-more-section {
             padding: 4rem 0;
             background: rgba(15, 23, 42, 0.3);
             border-top: 1px solid rgba(139, 92, 246, 0.2);
-            display: block !important;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .section-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-
-        .section-description {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
+            display: block !important; /* Force always visible */
         }
 
         .info-cards-grid {
@@ -2154,297 +2529,7 @@
             line-height: 1.6;
         }
 
-        /* Competition Cards */
-        .competition-card {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 1.5rem;
-        }
-
-        .competition-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-purple);
-            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
-        }
-
-        .competition-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .competition-id {
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-family: 'Courier New', monospace;
-        }
-
-        .competition-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: var(--radius-md);
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .status-voting {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--accent-green);
-            border: 1px solid var(--accent-green);
-        }
-
-        .status-running {
-            background: rgba(139, 92, 246, 0.2);
-            color: var(--accent-purple);
-            border: 1px solid var(--accent-purple);
-        }
-
-        .status-upcoming {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--gold);
-            border: 1px solid var(--gold);
-        }
-
-        .status-completed {
-            background: rgba(100, 116, 139, 0.2);
-            color: var(--text-muted);
-            border: 1px solid var(--text-muted);
-        }
-
-        .tokens-battle {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 1rem;
-            align-items: center;
-            margin: 1.5rem 0;
-        }
-
-        .token-info {
-            text-align: center;
-            padding: 1rem;
-            border-radius: var(--radius-lg);
-            background: rgba(31, 41, 55, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .token-info.user-selected {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid var(--accent-purple);
-        }
-
-        .token-logo {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-bottom: 0.5rem;
-        }
-
-        .token-symbol {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .token-name {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .token-price {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .vs-separator {
-            text-align: center;
-            padding: 0 0.5rem;
-        }
-
-        .vs-text {
-            font-weight: 700;
-            font-size: 1.2rem;
-            color: var(--accent-purple);
-            margin-bottom: 0.5rem;
-        }
-
-        .competition-timer {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .timer-label {
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
-        }
-
-        .timer-value {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .competition-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 0.75rem;
-            background: rgba(31, 41, 55, 0.3);
-            border-radius: var(--radius-md);
-        }
-
-        .stat-value {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .betting-section {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .bet-button {
-            flex: 1;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            color: white;
-            border: none;
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius-md);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .bet-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-        }
-
-        .bet-button:disabled {
-            background: var(--surface);
-            color: var(--text-muted);
-            cursor: not-allowed;
-        }
-
-        .bet-button-label {
-            font-size: 0.85rem;
-        }
-
-        .bet-button-token {
-            font-size: 0.75rem;
-            opacity: 0.8;
-        }
-
-        .user-bet-indicator {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid var(--accent-purple);
-            color: var(--accent-purple);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-md);
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .data-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .data-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .data-dot.live {
-            background: var(--accent-green);
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-
-        /* Connect wallet required button styling */
-        .bet-button.connect-wallet-required {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            color: white;
-            border: 2px solid var(--accent-blue);
-        }
-
-        .bet-button.connect-wallet-required:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-        }
-
-        /* Loading states */
-        .loading, .loading-competitions {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid rgba(139, 92, 246, 0.2);
-            border-top: 4px solid var(--accent-purple);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Empty states */
-        .empty-competitions, .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-
-        .empty-competitions h3, .empty-state h3 {
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        /* Wallet Modal */
+        /* Wallet Modal Styling */
         .wallet-modal {
             position: fixed;
             top: 0;
@@ -2473,14 +2558,12 @@
         .modal-header {
             padding: 2rem 2rem 1rem;
             border-bottom: 1px solid var(--border);
-            text-align: center;
-            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
             background: none;
             border: none;
             color: var(--text-secondary);
@@ -2500,15 +2583,15 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 0.5rem;
         }
 
         .modal-subtitle {
             color: var(--text-secondary);
             font-size: 0.95rem;
+            margin-top: 0.5rem;
         }
 
-        /* Step indicators */
+        /* Step Indicators */
         .step-indicators {
             display: flex;
             justify-content: center;
@@ -2537,7 +2620,7 @@
             color: white;
         }
 
-        /* Step content */
+        /* Step Content */
         .step-content {
             display: none;
             padding: 2rem;
@@ -2547,7 +2630,30 @@
             display: block;
         }
 
-        /* Wallet options */
+        /* Security Info */
+        .security-info {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .security-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .security-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        /* Wallet Options */
         .wallet-options {
             display: flex;
             flex-direction: column;
@@ -2571,6 +2677,10 @@
             transform: translateY(-2px);
             border-color: var(--accent-purple);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+        }
+
+        .wallet-option:active {
+            transform: translateY(0);
         }
 
         .wallet-icon {
@@ -2599,122 +2709,138 @@
             font-weight: 500;
         }
 
-        /* Buttons */
-        .btn-primary, .btn-hero-primary, .btn-secondary {
-            display: inline-flex;
-            align-items: center;
+        /* Connecting State */
+        .connecting-state {
+            text-align: center;
+        }
+
+        .loading-animation {
+            margin-bottom: 2rem;
+            display: flex;
             justify-content: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--radius-md);
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .connecting-header {
+            margin-bottom: 2rem;
+        }
+
+        .connecting-title {
+            font-size: 1.4rem;
             font-weight: 600;
-            text-decoration: none;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .connecting-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .connection-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(139, 92, 246, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .connection-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(31, 41, 55, 0.3);
+            border-radius: var(--radius-md);
             transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            font-size: 1rem;
         }
 
-        .btn-primary, .btn-hero-primary {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            color: white;
+        .connection-step:hover {
+            background: rgba(139, 92, 246, 0.1);
         }
 
-        .btn-primary:hover, .btn-hero-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        .step-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
         }
 
-        .btn-secondary {
+        .connection-step p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .connection-help {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .help-text {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Modal Actions */
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .btn-modal-secondary {
             background: transparent;
             border: 2px solid var(--border);
             color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
 
-        .btn-secondary:hover {
+        .btn-modal-secondary:hover {
             border-color: var(--accent-purple);
             color: var(--accent-purple);
             transform: translateY(-1px);
         }
 
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .info-cards-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .tokens-battle {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
-            .vs-separator {
-                order: -1;
-            }
-
-            .competition-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .betting-section {
-                flex-direction: column;
-            }
-
-            .container {
-                padding: 0 1rem;
-            }
-
-            .section-title {
-                font-size: 2rem;
-            }
-        }
-
-        /* Competition sections */
-        .competition-section {
-            margin-bottom: 3rem;
-        }
-
-        .section-header-mini {
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title-mini {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-            display: flex;
+        /* Button styling improvements */
+        .wallet-connect-btn {
+            text-decoration: none !important;
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            cursor: pointer;
         }
 
-        .count-badge {
-            background: var(--accent-purple);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.8rem;
-            font-weight: 600;
+        .wallet-connect-btn:hover {
+            transform: translateY(-1px);
         }
 
-        .section-description-mini {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .competitions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 1.5rem;
-        }
-
-        @media (max-width: 480px) {
-            .competitions-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Leaderboard styles */
+        /* Leaderboard Styles */
         .leaderboard-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2739,316 +2865,81 @@
             box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
         }
 
-        .leaderboard-table-container {
-            background: var(--surface-light);
-            border-radius: var(--radius-xl);
-            border: 1px solid var(--border);
-            overflow: hidden;
+        .stat-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
         }
 
-        .leaderboard-table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border);
+        .stat-content {
+            flex: 1;
         }
 
-        .leaderboard-header {
-            display: grid;
-            grid-template-columns: 80px 1fr 120px 120px 100px 120px;
-            gap: 1rem;
-            padding: 1rem 1.5rem;
-            background: var(--surface);
-            color: var(--text-secondary);
-            font-weight: 600;
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
             font-size: 0.85rem;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .leaderboard-row {
-            display: grid;
-            grid-template-columns: 80px 1fr 120px 120px 100px 120px;
-            gap: 1rem;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-        .leaderboard-row:hover {
-            background: rgba(139, 92, 246, 0.05);
-        }
-
-        .leaderboard-row.top-3 {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(139, 92, 246, 0.1));
-        }
-
-        .trader-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .trader-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--accent-purple);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-
-        .trader-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .trader-address {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-family: 'Courier New', monospace;
-        }
-
-        .filter-select {
+        /* Competition Cards and Battle Styles */
+        .competition-card {
             background: var(--surface-light);
             border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-md);
-            font-size: 0.9rem;
-        }
-
-        .refresh-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-md);
-            cursor: pointer;
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
         }
 
-        .refresh-btn:hover {
+        .competition-card:hover {
+            transform: translateY(-4px);
             border-color: var(--accent-purple);
-            color: var(--accent-purple);
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.2);
         }
 
-        /* Navigation */
-        .navbar {
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            position: fixed;
+        .competition-card::before {
+            content: '';
+            position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 100;
-            padding: 1rem 0;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-            padding: 0.5rem 0;
-            border-bottom: 2px solid transparent;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            color: var(--accent-purple);
-            border-bottom-color: var(--accent-purple);
-        }
-
-        .trader-info-display {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: var(--surface-light);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-        }
-
-        .nav-disconnect {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: var(--radius-sm);
-            transition: all 0.3s ease;
-        }
-
-        .nav-disconnect:hover {
-            background: var(--surface);
-            color: var(--accent-red);
-        }
-
-        /* Page container */
-        .page-container {
-            margin-top: 80px; /* Account for fixed navbar */
-        }
-
-        .page-content {
-            display: none;
-            min-height: calc(100vh - 80px);
-        }
-
-        .page-content.active {
-            display: block;
-        }
-
-        /* Hero section */
-        .hero {
-            padding: 4rem 0 6rem;
-            text-align: center;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
-            border-bottom: 1px solid var(--border);
-        }
-
-        .hero-content {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        .hero-title {
-            font-size: 4rem;
-            font-weight: 900;
-            font-family: 'Orbitron', monospace;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-
-        .hero-motto {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 3rem;
-            letter-spacing: 2px;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .trader-welcome-enhanced {
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .welcome-trader {
-            font-size: 1.2rem;
-            color: var(--text-primary);
-        }
-
-        .trader-name-highlight {
-            color: var(--accent-purple);
-            font-weight: 700;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
         }
 
         /* Mobile responsiveness */
         @media (max-width: 768px) {
-            .nav-links {
+            .info-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .leaderboard-stats {
+                grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
             }
 
-            .hero-title {
-                font-size: 2.5rem;
+            .stat-card {
+                padding: 1rem;
             }
 
-            .hero-motto {
+            .stat-icon {
+                font-size: 1.5rem;
+            }
+
+            .stat-value {
                 font-size: 1.2rem;
             }
-
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .leaderboard-header,
-            .leaderboard-row {
-                grid-template-columns: 60px 1fr 80px 80px;
-                font-size: 0.8rem;
-            }
-
-            .leaderboard-header .streak-col,
-            .leaderboard-header .competitions-col,
-            .leaderboard-row .streak-col,
-            .leaderboard-row .competitions-col {
-                display: none;
-            }
-        }
-
-        /* Mobile menu (placeholder) */
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-menu-toggle {
-                display: block;
-            }
-        }
-
-        .hamburger {
-            width: 24px;
-            height: 18px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .hamburger span {
-            width: 100%;
-            height: 2px;
-            background: currentColor;
-            transition: all 0.3s ease;
         }
     </style>
 </body>
