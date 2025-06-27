@@ -1,6 +1,6 @@
 /**
  * TokenApproval Component - Token Approval Workflow System
- * Updated with real database integration - no demo fallbacks
+ * Updated with proper database constraints and no fallbacks
  */
 
 class TokenApproval {
@@ -50,7 +50,7 @@ class TokenApproval {
     }
 
     /**
-     * Load Pending Approvals from Database
+     * Load Pending Approvals from Database - LIVE DATA ONLY
      */
     async loadPendingApprovals() {
         try {
@@ -68,6 +68,13 @@ class TokenApproval {
 
             if (tokenError) {
                 throw tokenError;
+            }
+
+            if (!allTokens || allTokens.length === 0) {
+                console.log('No tokens found in cache for approval');
+                this.approvalQueue = [];
+                this.updateApprovalStatistics();
+                return;
             }
 
             // Get approved tokens
@@ -94,7 +101,7 @@ class TokenApproval {
             const blacklistedSet = new Set((blacklistedTokens || []).map(t => t.token_address));
 
             // Filter tokens that need approval
-            this.approvalQueue = (allTokens || [])
+            this.approvalQueue = allTokens
                 .filter(token => 
                     !approvedSet.has(token.token_address) && 
                     !blacklistedSet.has(token.token_address)
@@ -125,8 +132,9 @@ class TokenApproval {
             
         } catch (error) {
             console.error('Error loading pending approvals:', error);
-            this.showAdminNotification('Failed to load pending approvals from database', 'error');
-            throw error;
+            this.showAdminNotification(`Failed to load pending approvals: ${error.message}`, 'error');
+            this.approvalQueue = [];
+            this.updateApprovalStatistics();
         }
     }
 
@@ -145,8 +153,8 @@ class TokenApproval {
         else if (token.volume_24h < 50000) riskScore += 0.1;
         
         // Price volatility risk
-        if (Math.abs(token.price_change_24h) > 50) riskScore += 0.3;
-        else if (Math.abs(token.price_change_24h) > 25) riskScore += 0.2;
+        if (Math.abs(token.price_change_24h || 0) > 50) riskScore += 0.3;
+        else if (Math.abs(token.price_change_24h || 0) > 25) riskScore += 0.2;
         
         return Math.min(riskScore, 1.0);
     }
@@ -164,12 +172,12 @@ class TokenApproval {
         else tags.push('micro-cap');
         
         // Volatility tags
-        if (Math.abs(token.price_change_24h) > 20) tags.push('volatile');
-        if (token.price_change_24h > 10) tags.push('trending-up');
-        if (token.price_change_24h < -10) tags.push('trending-down');
+        if (Math.abs(token.price_change_24h || 0) > 20) tags.push('volatile');
+        if ((token.price_change_24h || 0) > 10) tags.push('trending-up');
+        if ((token.price_change_24h || 0) < -10) tags.push('trending-down');
         
         // Source tags
-        if (token.data_source) tags.push(token.data_source);
+        if (token.data_source) tags.push(token.data_source.toLowerCase());
         
         return tags;
     }
@@ -227,7 +235,6 @@ class TokenApproval {
 
             console.log(`✅ Approving token: ${token.symbol}`);
             
-            // Start transaction
             const now = new Date().toISOString();
             
             // Insert into token_approvals table
@@ -239,7 +246,7 @@ class TokenApproval {
                     token_name: token.name,
                     approved_by: sessionStorage.getItem('adminWallet') || 'admin',
                     approved_at: now,
-                    approval_notes: `Market Cap: $${token.marketCap.toLocaleString()}, Volume: $${token.volume24h.toLocaleString()}`,
+                    approval_notes: `Market Cap: $${token.marketCap?.toLocaleString() || 'N/A'}, Volume: $${token.volume24h?.toLocaleString() || 'N/A'}`,
                     risk_score: token.riskScore,
                     market_cap_at_approval: token.marketCap,
                     created_at: now
@@ -266,10 +273,8 @@ class TokenApproval {
             // Remove from pending queue
             this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
             
-            // Update statistics
+            // Update statistics and UI
             this.updateApprovalStatistics();
-            
-            // Update UI
             this.updateApprovalDisplay();
             
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
@@ -281,7 +286,7 @@ class TokenApproval {
     }
 
     /**
-     * Reject Token - Write to Blacklist
+     * Reject Token - Write to Blacklist with Proper Database Constraints
      */
     async rejectToken(tokenId) {
         try {
@@ -290,8 +295,11 @@ class TokenApproval {
                 throw new Error('Token not found in approval queue');
             }
 
+            // Simple reason prompt
             const reason = prompt(`Enter rejection reason for ${token.symbol}:`);
-            if (!reason) return;
+            if (!reason || reason.trim() === '') {
+                return; // User cancelled or entered empty reason
+            }
 
             const supabase = this.getSupabase();
             if (!supabase) {
@@ -302,23 +310,32 @@ class TokenApproval {
             
             const now = new Date().toISOString();
             
-            // Insert into token_blacklist table
+            // Insert into token_blacklist table with proper constraints
+            const blacklistData = {
+                token_address: token.tokenAddress,
+                token_symbol: token.symbol,
+                token_name: token.name,
+                category: 'manual', // Required field - default to 'manual' for admin rejections
+                reason: reason.trim(), // Required field - admin provided reason
+                severity: null, // Optional field - set to null
+                added_by: sessionStorage.getItem('adminWallet') || 'admin', // Required field
+                added_at: now,
+                is_active: true,
+                detection_algorithm: null, // Optional - null for manual rejections
+                confidence: null, // Optional - null for manual rejections
+                evidence: null, // Optional - null for manual rejections
+                appeal: null, // Optional - null initially
+                created_at: now
+            };
+
             const { data: blacklist, error: blacklistError } = await supabase
                 .from('token_blacklist')
-                .insert({
-                    token_address: token.tokenAddress,
-                    token_symbol: token.symbol,
-                    token_name: token.name,
-                    reason: reason,
-                    severity: token.riskScore > 0.7 ? 'high' : token.riskScore > 0.4 ? 'medium' : 'low',
-                    added_by: sessionStorage.getItem('adminWallet') || 'admin',
-                    is_active: true,
-                    created_at: now
-                })
+                .insert(blacklistData)
                 .select()
                 .single();
 
             if (blacklistError) {
+                console.error('Blacklist insertion error:', blacklistError);
                 throw blacklistError;
             }
 
@@ -328,7 +345,8 @@ class TokenApproval {
                 token_address: token.tokenAddress,
                 token_symbol: token.symbol,
                 details: {
-                    reason: reason,
+                    reason: reason.trim(),
+                    category: 'manual',
                     risk_score: token.riskScore,
                     blacklist_id: blacklist.id
                 }
@@ -337,13 +355,11 @@ class TokenApproval {
             // Remove from pending queue
             this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
             
-            // Update statistics
+            // Update statistics and UI
             this.updateApprovalStatistics();
-            
-            // Update UI
             this.updateApprovalDisplay();
             
-            this.showAdminNotification(`Token ${token.symbol} blacklisted`, 'warning');
+            this.showAdminNotification(`Token ${token.symbol} blacklisted successfully`, 'warning');
             
         } catch (error) {
             console.error('Error rejecting token:', error);
@@ -392,8 +408,6 @@ class TokenApproval {
             }
 
             console.log(`🔍 Opening detailed review for: ${token.symbol}`);
-            
-            // Create detailed review modal
             this.showTokenReviewModal(token);
             
         } catch (error) {
@@ -414,28 +428,31 @@ class TokenApproval {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
                         <div>
                             <h4>Basic Information</h4>
-                            <p><strong>Name:</strong> ${token.name}</p>
+                            <p><strong>Name:</strong> ${token.name || 'N/A'}</p>
                             <p><strong>Symbol:</strong> ${token.symbol}</p>
                             <p><strong>Address:</strong> ${this.truncateAddress(token.tokenAddress)}</p>
-                            <p><strong>Market Cap:</strong> $${this.formatNumber(token.marketCap)}</p>
-                            <p><strong>Price:</strong> $${token.price.toFixed(6)}</p>
-                            <p><strong>Data Source:</strong> ${token.dataSource}</p>
+                            <p><strong>Market Cap:</strong> ${token.marketCap ? '$' + this.formatNumber(token.marketCap) : 'N/A'}</p>
+                            <p><strong>Price:</strong> ${token.price ? '$' + token.price.toFixed(6) : 'N/A'}</p>
+                            <p><strong>Data Source:</strong> ${token.dataSource || 'N/A'}</p>
                         </div>
                         
                         <div>
                             <h4>Market Metrics</h4>
-                            <p><strong>24h Volume:</strong> $${this.formatNumber(token.volume24h)}</p>
-                            <p><strong>24h Change:</strong> ${token.priceChange24h.toFixed(2)}%</p>
-                            <p><strong>1h Change:</strong> ${token.priceChange1h.toFixed(2)}%</p>
+                            <p><strong>24h Volume:</strong> ${token.volume24h ? '$' + this.formatNumber(token.volume24h) : 'N/A'}</p>
+                            <p><strong>24h Change:</strong> ${token.priceChange24h !== null ? token.priceChange24h.toFixed(2) + '%' : 'N/A'}</p>
+                            <p><strong>1h Change:</strong> ${token.priceChange1h !== null ? token.priceChange1h.toFixed(2) + '%' : 'N/A'}</p>
                             <p><strong>Risk Score:</strong> ${(token.riskScore * 100).toFixed(1)}%</p>
-                            <p><strong>Last Updated:</strong> ${new Date(token.lastUpdated).toLocaleString()}</p>
+                            <p><strong>Last Updated:</strong> ${token.lastUpdated ? new Date(token.lastUpdated).toLocaleString() : 'N/A'}</p>
                         </div>
                     </div>
                     
                     <div>
                         <h4>Tags</h4>
                         <div style="display: flex; gap: 0.5rem; margin: 0.5rem 0;">
-                            ${token.tags ? token.tags.map(tag => `<span class="status-badge">${tag}</span>`).join('') : 'No tags'}
+                            ${token.tags && token.tags.length > 0 ? 
+                                token.tags.map(tag => `<span class="status-badge">${tag}</span>`).join('') : 
+                                '<span style="color: #94a3b8;">No tags</span>'
+                            }
                         </div>
                     </div>
                     
@@ -461,20 +478,7 @@ class TokenApproval {
      * Setup Event Listeners
      */
     setupEventListeners() {
-        // Approval actions
-        document.addEventListener('click', (e) => {
-            const tokenId = e.target.dataset.tokenId;
-            
-            if (e.target.onclick?.toString().includes('approveToken') && tokenId) {
-                this.approveToken(tokenId);
-            } else if (e.target.onclick?.toString().includes('rejectToken') && tokenId) {
-                this.rejectToken(tokenId);
-            } else if (e.target.onclick?.toString().includes('reviewToken') && tokenId) {
-                this.openTokenReview(tokenId);
-            }
-        });
-
-        // Checkbox events
+        // Checkbox events for batch selection
         document.addEventListener('change', (e) => {
             if (e.target.classList.contains('approval-checkbox')) {
                 this.updateSelectedCount();
@@ -555,7 +559,7 @@ class TokenApproval {
      * Truncate Address
      */
     truncateAddress(address) {
-        if (!address) return '';
+        if (!address) return 'N/A';
         return `${address.slice(0, 6)}...${address.slice(-6)}`;
     }
 
@@ -563,6 +567,7 @@ class TokenApproval {
      * Format Number
      */
     formatNumber(num) {
+        if (!num) return '0';
         if (num >= 1000000000) {
             return (num / 1000000000).toFixed(1) + 'B';
         } else if (num >= 1000000) {
@@ -603,4 +608,4 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
-console.log('✅ TokenApproval component loaded with database integration');
+console.log('✅ TokenApproval component loaded - LIVE DATA ONLY version');
