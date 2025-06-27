@@ -304,10 +304,10 @@ async function loadUserBets() {
 }
 
 /**
- * FIXED: Update Competition Display with Enhanced UI
+ * FIXED: Update Competition Display - ALWAYS SHOW COMPETITIONS
  */
 function updateCompetitionsDisplay() {
-    console.log('🎨 Updating competitions display...');
+    console.log('🎨 Updating competitions display (ALWAYS SHOW VERSION)...');
     
     // Show loading state
     if (CompetitionState.loading) {
@@ -315,7 +315,7 @@ function updateCompetitionsDisplay() {
         return;
     }
     
-    // FIXED: Use existing HTML structure instead of missing elements
+    // FIXED: Always show competitions, regardless of wallet status
     const connectedView = document.getElementById('competitionsConnected');
     const disconnectedView = document.getElementById('competitionsDisconnected');
     
@@ -324,40 +324,46 @@ function updateCompetitionsDisplay() {
         return;
     }
     
-    // Check wallet connection status
-    let isWalletConnected = false;
-    try {
-        if (window.connectedUser) {
-            isWalletConnected = true;
-        } else {
-            const traderInfo = document.getElementById('traderInfo');
-            const connectBtn = document.getElementById('connectWalletBtn');
-            isWalletConnected = (traderInfo?.style.display !== 'none') || 
-                              (connectBtn?.style.display === 'none');
+    // CHANGED: Always show connected view with competitions
+    console.log('✅ Always showing competitions (wallet-independent)');
+    connectedView.style.display = 'block';
+    disconnectedView.style.display = 'none';
+    
+    // Show competitions in the activeGrid
+    const activeGrid = document.getElementById('activeGrid');
+    if (activeGrid && CompetitionState.activeCompetitions.length > 0) {
+        // Check wallet status for bet button states
+        let isWalletConnected = false;
+        try {
+            if (window.connectedUser) {
+                isWalletConnected = true;
+            } else {
+                const traderInfo = document.getElementById('traderInfo');
+                const connectBtn = document.getElementById('connectWalletBtn');
+                isWalletConnected = (traderInfo?.style.display !== 'none') || 
+                                  (connectBtn?.style.display === 'none');
+            }
+        } catch (error) {
+            console.warn('Error checking wallet connection:', error);
         }
-    } catch (error) {
-        console.warn('Error checking wallet connection:', error);
+        
+        console.log(`💳 Wallet connected: ${isWalletConnected}`);
+        
+        // Generate competition cards with wallet-aware buttons
+        const competitionsHTML = CompetitionState.activeCompetitions
+            .map(competition => createEnhancedCompetitionCard(competition, isWalletConnected))
+            .join('');
+        activeGrid.innerHTML = competitionsHTML;
+        
+        console.log(`🏆 Displayed ${CompetitionState.activeCompetitions.length} competitions`);
+    } else if (activeGrid) {
+        activeGrid.innerHTML = createEmptyState('active');
     }
     
-    if (isWalletConnected) {
-        // Show connected view with competitions
-        connectedView.style.display = 'block';
-        disconnectedView.style.display = 'none';
-        
-        // FIXED: Use existing activeGrid instead of missing grids
-        const activeGrid = document.getElementById('activeGrid');
-        if (activeGrid && CompetitionState.activeCompetitions.length > 0) {
-            const competitionsHTML = CompetitionState.activeCompetitions
-                .map(competition => createEnhancedCompetitionCard(competition))
-                .join('');
-            activeGrid.innerHTML = competitionsHTML;
-        } else if (activeGrid) {
-            activeGrid.innerHTML = createEmptyState('active');
-        }
-    } else {
-        // Show disconnected view
-        connectedView.style.display = 'none';
-        disconnectedView.style.display = 'block';
+    // Update competition count
+    const activeCount = document.getElementById('activeCount');
+    if (activeCount) {
+        activeCount.textContent = CompetitionState.activeCompetitions.length;
     }
     
     // Set up card interactions
@@ -366,7 +372,7 @@ function updateCompetitionsDisplay() {
     // Start or update timers
     startCompetitionTimers();
     
-    console.log('✅ Competition display updated successfully');
+    console.log('✅ Competition display updated successfully (ALWAYS VISIBLE)');
 }
 
 /**
@@ -433,9 +439,9 @@ function updateSection(sectionName, competitions) {
 }
 
 /**
- * Create Enhanced Competition Card with Real Data
+ * FIXED: Create Enhanced Competition Card with Wallet-Aware Buttons
  */
-function createEnhancedCompetitionCard(competition) {
+function createEnhancedCompetitionCard(competition, isWalletConnected = false) {
     const userBet = CompetitionState.userBets.get(competition.competitionId);
     const hasUserBet = !!userBet;
     const userPrediction = userBet?.chosen_token;
@@ -457,6 +463,29 @@ function createEnhancedCompetitionCard(competition) {
         completed: '🏁'
     };
     
+    // FIXED: Determine button text based on wallet and competition status
+    let actionButtonText = 'View Details';
+    let buttonDisabled = false;
+    let buttonClass = 'action-button enhanced-action';
+    
+    if (competition.status === 'voting') {
+        if (!isWalletConnected) {
+            actionButtonText = 'Connect Wallet to Predict';
+            buttonClass += ' wallet-required';
+        } else if (hasUserBet) {
+            actionButtonText = 'View Your Prediction';
+        } else {
+            actionButtonText = 'Place Prediction';
+        }
+    } else if (competition.status === 'running') {
+        actionButtonText = 'View Live Competition';
+    } else if (competition.status === 'upcoming') {
+        actionButtonText = 'Voting Not Started';
+        buttonDisabled = true;
+    } else {
+        actionButtonText = 'View Results';
+    }
+    
     return `
         <div class="competition-card enhanced-card" 
              data-competition-id="${competition.competitionId}"
@@ -467,6 +496,14 @@ function createEnhancedCompetitionCard(competition) {
             <div class="card-status ${competition.status}">
                 ${statusIcons[competition.status]} ${statusLabels[competition.status]}
             </div>
+            
+            <!-- Wallet Connection Notice for Disconnected Users -->
+            ${!isWalletConnected && competition.status === 'voting' ? `
+                <div class="wallet-notice">
+                    <span class="wallet-icon">🔗</span>
+                    <span class="wallet-text">Connect wallet to place predictions</span>
+                </div>
+            ` : ''}
             
             <!-- User Bet Indicator -->
             ${hasUserBet ? `
@@ -560,11 +597,11 @@ function createEnhancedCompetitionCard(competition) {
                 </div>
             </div>
             
-            <!-- Action Button -->
-            <button class="action-button enhanced-action" 
-                    onclick="handleCompetitionAction('${competition.competitionId}', '${competition.status}', event)"
-                    ${competition.status === 'upcoming' ? 'disabled' : ''}>
-                ${getActionButtonText(competition.status, hasUserBet)}
+            <!-- Action Button (Wallet-Aware) -->
+            <button class="${buttonClass}" 
+                    onclick="handleCompetitionAction('${competition.competitionId}', '${competition.status}', ${isWalletConnected}, event)"
+                    ${buttonDisabled ? 'disabled' : ''}>
+                ${actionButtonText}
             </button>
             
             <!-- Real Data Indicator -->
@@ -707,57 +744,32 @@ function createEnhancedModalContent(competition, userBet) {
 }
 
 /**
- * FIXED: Handle Competition Action (Betting) with better wallet detection
+ * FIXED: Handle Competition Action with Wallet Awareness
  */
-async function handleCompetitionAction(competitionId, status, event) {
+async function handleCompetitionAction(competitionId, status, isWalletConnected, event) {
     event.stopPropagation();
     
-    console.log(`🎯 Competition action: ${competitionId}, status: ${status}`);
+    console.log(`🎯 Competition action: ${competitionId}, status: ${status}, wallet: ${isWalletConnected}`);
     
-    if (status === 'voting') {
-        // FIXED: Check wallet connection with multiple methods
-        let isWalletConnected = false;
-        
-        try {
-            if (window.connectedUser) {
-                isWalletConnected = true;
-            } else if (CompetitionState.walletService?.isConnected) {
-                isWalletConnected = CompetitionState.walletService.isConnected();
-            } else {
-                // Check UI indicators as fallback
-                const traderInfo = document.getElementById('traderInfo');
-                const connectBtn = document.getElementById('connectWalletBtn');
-                isWalletConnected = (traderInfo?.style.display !== 'none') || 
-                                  (connectBtn?.style.display === 'none');
-            }
-        } catch (error) {
-            console.warn('Error checking wallet connection:', error);
-            isWalletConnected = false;
+    if (status === 'voting' && !isWalletConnected) {
+        // Show wallet connection modal for disconnected users
+        showNotification('Connect your wallet to place predictions', 'info');
+        if (window.openWalletModal) {
+            window.openWalletModal();
         }
-        
-        if (!isWalletConnected) {
-            showNotification('Please connect your wallet to place predictions', 'warning');
-            // Trigger wallet connection modal
-            if (window.openWalletModal) {
-                window.openWalletModal();
-            }
-            return;
-        }
-        
+        return;
+    }
+    
+    if (status === 'voting' && isWalletConnected) {
         // Check if user already has a bet
         const userBet = CompetitionState.userBets.get(competitionId);
         if (userBet) {
             showNotification('You have already placed a prediction for this competition', 'info');
-            openEnhancedCompetitionModal(competitionId);
-            return;
         }
-        
-        // Open detailed modal for betting
-        openEnhancedCompetitionModal(competitionId);
-    } else {
-        // Open modal for viewing details
-        openEnhancedCompetitionModal(competitionId);
     }
+    
+    // Open detailed modal for all users (wallet connected or not)
+    openEnhancedCompetitionModal(competitionId);
 }
 
 /**
@@ -1440,3 +1452,45 @@ console.log('   ✅ Demo mode fallback for development');
 console.log('   🔧 FIXED: Element targeting for existing HTML structure');
 console.log('   🔧 FIXED: Wallet detection with multiple fallback methods');
 console.log('   🔧 FIXED: Competition display regardless of wallet status');
+console.log('   🎯 NEW: ALWAYS SHOW COMPETITIONS - disconnected users see all data');
+console.log('   🎯 NEW: Wallet-aware buttons and notices');
+
+// Add CSS for wallet notices and enhanced buttons
+const additionalCSS = `
+.wallet-notice {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #3b82f6;
+}
+
+.wallet-icon {
+    font-size: 1rem;
+}
+
+.wallet-text {
+    font-weight: 500;
+}
+
+.wallet-required {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(59, 130, 246, 0.6)) !important;
+}
+
+.wallet-required:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(59, 130, 246, 0.7)) !important;
+}
+`;
+
+// Add the CSS to the page if not already added
+if (!document.getElementById('competition-wallet-styles')) {
+    const style = document.createElement('style');
+    style.id = 'competition-wallet-styles';
+    style.textContent = additionalCSS;
+    document.head.appendChild(style);
+}
