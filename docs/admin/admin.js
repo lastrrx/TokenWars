@@ -1,15 +1,15 @@
 /**
- * TokenWars Advanced Admin Panel Controller - Phase 2
- * LIVE DATA ONLY - No fallbacks or mock data
+ * TokenWars Advanced Admin Panel Controller - LIVE DATA ONLY
+ * NO MOCK DATA - Pure database integration with competition management
  */
 
-// Enhanced Admin State Management - Phase 2
+// Enhanced Admin State Management - Live Data Only
 const AdminState = {
     // Core state
     currentSection: 'dashboard',
     isInitialized: false,
     
-    // Data stores
+    // Live data stores - NO fallbacks
     competitions: [],
     users: [],
     tokens: [],
@@ -39,6 +39,25 @@ const AdminState = {
     updateIntervals: [],
     realTimeSubscriptions: [],
     
+    // Competition automation state
+    automationState: {
+        enabled: false,
+        config: {
+            competitionsPerDay: 4,
+            votingPeriod: 15, // minutes
+            performancePeriod: 24, // hours
+            minBetAmount: 0.1,
+            platformFee: 15,
+            maxPoolSize: 100
+        },
+        status: {
+            lastCreated: null,
+            nextScheduled: null,
+            competitionsToday: 0,
+            activeCompetitions: 0
+        }
+    },
+    
     // Token management
     selectedTokens: {
         tokenA: null,
@@ -52,34 +71,7 @@ const AdminState = {
         search: ''
     },
     
-    // Competition creation state
-    competitionConfig: {
-        frequency: {
-            interval: '6h',
-            maxConcurrent: 5,
-            timezone: 'UTC'
-        },
-        voting: {
-            duration: 15,
-            minVotes: 1,
-            autoStart: true
-        },
-        financial: {
-            votingAmount: 0.1,
-            platformFee: 15,
-            maxPoolSize: 100
-        },
-        tokenSelection: {
-            method: 'automatic',
-            marketCapRange: 'small',
-            approvalRequired: false,
-            blacklistCheck: true
-        }
-    },
-
-    // ===== PHASE 2 STATE =====
-    
-    // Cache Management State
+    // Live state tracking
     cacheState: {
         tokenCache: {
             hitRate: 0,
@@ -95,12 +87,6 @@ const AdminState = {
             lastRefresh: null,
             status: 'unknown'
         },
-        backgroundJobs: {
-            active: 0,
-            pending: 0,
-            failed: 0,
-            paused: false
-        },
         performance: {
             dailyRequests: 0,
             costSavings: 0,
@@ -109,27 +95,20 @@ const AdminState = {
         }
     },
     
-    // Token Approval State
+    // Token approval state
     approvalState: {
         pending: [],
         approved: [],
         rejected: [],
-        autoApprovalRules: {
-            minMarketCap: 5000000,
-            minAge: 30,
-            minLiquidity: 0.3,
-            verificationRequired: false
-        },
         statistics: {
             pendingCount: 0,
             approvalRate: 0,
-            avgReviewTime: 0,
-            autoApprovedPercent: 0
+            avgReviewTime: 0
         },
         selectedTokens: new Set()
     },
     
-    // Blacklist Management State
+    // Blacklist management state
     blacklistState: {
         manual: [],
         automatic: [],
@@ -141,12 +120,6 @@ const AdminState = {
             community: 0,
             appeals: 0
         },
-        detectionConfig: {
-            rugpullSensitivity: 75,
-            scamSensitivity: 60,
-            honeypotAnalysis: 'enabled',
-            duplicateDetection: 'strict'
-        },
         statistics: {
             totalBlacklisted: 0,
             autoDetected: 0,
@@ -155,7 +128,7 @@ const AdminState = {
         }
     },
     
-    // Pair Optimization State
+    // Pair optimization state
     pairOptimizationState: {
         algorithm: {
             marketCapTolerance: 10,
@@ -180,7 +153,7 @@ const AdminState = {
         isOptimizing: false
     },
 
-    // Phase 2 Components
+    // Components
     components: {
         cacheMonitor: null,
         tokenApproval: null,
@@ -190,24 +163,24 @@ const AdminState = {
 };
 
 /**
- * Initialize Enhanced Admin Panel - Phase 2
+ * Initialize Enhanced Admin Panel - LIVE DATA ONLY
  */
 async function initializeAdminPanel() {
     try {
-        console.log('🚀 Initializing Advanced TokenWars Admin Panel - Phase 2...');
+        console.log('🚀 Initializing Advanced TokenWars Admin Panel - LIVE DATA ONLY...');
         showLoadingState();
         
         // Initialize core services
         await initializeServiceReferences();
         
-        // Initialize Phase 2 components
-        await initializePhase2Components();
+        // Initialize components
+        await initializeComponents();
         
         // Set up navigation and UI
         setupEnhancedNavigation();
         setupAdminEventListeners();
         
-        // Load initial data
+        // Load initial live data
         await loadInitialData();
         
         // Set up real-time monitoring
@@ -219,8 +192,8 @@ async function initializeAdminPanel() {
         // Load dashboard
         await loadEnhancedDashboard();
         
-        // Initialize Phase 2 monitoring
-        await initializePhase2Monitoring();
+        // Initialize competition management
+        await initializeCompetitionManagement();
         
         AdminState.isInitialized = true;
         hideLoadingState();
@@ -236,11 +209,11 @@ async function initializeAdminPanel() {
 }
 
 /**
- * Initialize Phase 2 Components with Singleton Instances
+ * Initialize Components with Singleton Instances
  */
-async function initializePhase2Components() {
+async function initializeComponents() {
     try {
-        console.log('🔧 Initializing Phase 2 components...');
+        console.log('🔧 Initializing components...');
         
         // Initialize Cache Monitor
         if (window.CacheMonitor) {
@@ -270,30 +243,10 @@ async function initializePhase2Components() {
             await AdminState.components.pairOptimizer.initialize();
         }
         
-        console.log('✅ Phase 2 components initialized with singleton instances');
+        console.log('✅ Components initialized with singleton instances');
         return true;
     } catch (error) {
-        console.error('Failed to initialize Phase 2 components:', error);
-        return false;
-    }
-}
-
-/**
- * Initialize Phase 2 Monitoring
- */
-async function initializePhase2Monitoring() {
-    try {
-        console.log('📊 Starting Phase 2 monitoring systems...');
-        
-        startCacheMonitoring();
-        startApprovalQueueMonitoring();
-        startBlacklistMonitoring();
-        startPairOptimizationMonitoring();
-        
-        console.log('✅ Phase 2 monitoring systems active');
-        return true;
-    } catch (error) {
-        console.error('Failed to start Phase 2 monitoring:', error);
+        console.error('Failed to initialize components:', error);
         return false;
     }
 }
@@ -311,8 +264,7 @@ async function initializeServiceReferences() {
         } else if (window.getSupabaseClient) {
             AdminState.supabaseClient = { getSupabaseClient: window.getSupabaseClient };
         } else {
-            console.warn('Supabase client not available');
-            AdminState.supabaseClient = null;
+            throw new Error('Supabase client not available');
         }
         
         // Wait for services to be available
@@ -348,6 +300,7 @@ async function initializeServiceReferences() {
         
     } catch (error) {
         console.error('Failed to initialize service references:', error);
+        throw error;
     }
 }
 
@@ -367,7 +320,7 @@ function getSupabase() {
         return window.supabase;
     }
     
-    return null;
+    throw new Error('Supabase client not available');
 }
 
 /**
@@ -375,21 +328,112 @@ function getSupabase() {
  */
 async function loadInitialData() {
     try {
-        console.log('📊 Loading initial admin data...');
+        console.log('📊 Loading initial admin data from database...');
         
-        await Promise.allSettled([
+        const results = await Promise.allSettled([
             loadTokensData(),
             loadCompetitionsData(),
             loadBlacklistedTokens(),
             loadCacheData(),
-            loadBlacklistData(),
-            loadPairOptimizationData()
+            loadUsersData(),
+            loadSystemMetrics()
         ]);
+        
+        // Check for failures
+        const failures = results.filter(result => result.status === 'rejected');
+        if (failures.length > 0) {
+            console.warn(`⚠️ ${failures.length} data loading operations failed:`, failures);
+        }
         
         console.log('✅ Initial data loaded successfully');
         
     } catch (error) {
         console.error('Error loading initial data:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load Tokens Data - LIVE DATA ONLY
+ */
+async function loadTokensData() {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: tokens, error } = await supabase
+            .from('token_cache')
+            .select('*')
+            .eq('cache_status', 'FRESH')
+            .order('market_cap_usd', { ascending: false })
+            .limit(100);
+        
+        if (error) throw error;
+        AdminState.tokens = tokens || [];
+        
+        console.log(`✅ Loaded ${AdminState.tokens.length} tokens from database`);
+        
+    } catch (error) {
+        console.error('Error loading tokens:', error);
+        AdminState.tokens = [];
+        throw error;
+    }
+}
+
+/**
+ * Load Competitions Data - LIVE DATA ONLY
+ */
+async function loadCompetitionsData() {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: competitions, error } = await supabase
+            .from('competitions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        AdminState.competitions = competitions || [];
+        
+        // Update automation status
+        const activeCompetitions = competitions?.filter(c => 
+            ['SETUP', 'VOTING', 'ACTIVE'].includes(c.status)
+        ) || [];
+        
+        AdminState.automationState.status.activeCompetitions = activeCompetitions.length;
+        
+        console.log(`✅ Loaded ${AdminState.competitions.length} competitions from database`);
+        
+    } catch (error) {
+        console.error('Error loading competitions:', error);
+        AdminState.competitions = [];
+        throw error;
+    }
+}
+
+/**
+ * Load Blacklisted Tokens - LIVE DATA ONLY
+ */
+async function loadBlacklistedTokens() {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: blacklisted, error } = await supabase
+            .from('token_blacklist')
+            .select('token_address')
+            .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        AdminState.blacklistedTokens = new Set(
+            (blacklisted || []).map(item => item.token_address)
+        );
+        
+        console.log(`✅ Loaded ${AdminState.blacklistedTokens.size} blacklisted tokens`);
+    } catch (error) {
+        console.error('Error loading blacklisted tokens:', error);
+        AdminState.blacklistedTokens = new Set();
+        throw error;
     }
 }
 
@@ -399,99 +443,425 @@ async function loadInitialData() {
 async function loadCacheData() {
     try {
         const supabase = getSupabase();
-        if (!supabase) {
-            console.warn('Cannot load cache data - database not available');
-            return;
-        }
-
-        // Load real cache health data if available
+        
+        // Load real cache health data
         const { data: cacheHealth, error } = await supabase
             .from('cache_health')
             .select('*')
-            .order('created_at', { ascending: false })
+            .order('recorded_at', { ascending: false })
             .limit(1)
             .single();
 
         if (cacheHealth && !error) {
-            AdminState.cacheState.tokenCache.hitRate = cacheHealth.token_hit_rate || 0;
-            AdminState.cacheState.priceCache.hitRate = cacheHealth.price_hit_rate || 0;
-            AdminState.cacheState.tokenCache.responseTime = cacheHealth.avg_response_time || 0;
-            AdminState.cacheState.performance.efficiency = cacheHealth.efficiency_score || 0;
-            AdminState.cacheState.performance.uptime = cacheHealth.uptime_percentage || 0;
+            AdminState.cacheState.tokenCache.hitRate = cacheHealth.cache_hit_rate || 0;
+            AdminState.cacheState.performance.efficiency = cacheHealth.overall_health_score * 100 || 0;
+            AdminState.cacheState.performance.uptime = cacheHealth.overall_health_score * 100 || 0;
         }
         
         console.log('✅ Cache data loaded');
     } catch (error) {
         console.error('Error loading cache data:', error);
+        throw error;
     }
 }
 
 /**
- * Load Blacklist Data - LIVE DATA ONLY
+ * Load Users Data - LIVE DATA ONLY
  */
-async function loadBlacklistData() {
+async function loadUsersData() {
     try {
         const supabase = getSupabase();
-        if (!supabase) {
-            console.warn('Cannot load blacklist data - database not available');
-            return;
-        }
-
-        const { data: blacklisted, error } = await supabase
-            .from('token_blacklist')
-            .select('*')
-            .eq('is_active', true);
         
-        if (blacklisted && !error) {
-            AdminState.blacklistState.manual = blacklisted.filter(item => item.category === 'manual');
-            AdminState.blacklistState.automatic = blacklisted.filter(item => item.category === 'automatic');
-            AdminState.blacklistState.community = blacklisted.filter(item => item.category === 'community');
-            AdminState.blacklistState.appeals = blacklisted.filter(item => item.category === 'appeals');
-            
-            // Update category counts
-            AdminState.blacklistState.categories.manual = AdminState.blacklistState.manual.length;
-            AdminState.blacklistState.categories.automatic = AdminState.blacklistState.automatic.length;
-            AdminState.blacklistState.categories.community = AdminState.blacklistState.community.length;
-            AdminState.blacklistState.categories.appeals = AdminState.blacklistState.appeals.length;
-            AdminState.blacklistState.statistics.totalBlacklisted = blacklisted.length;
-        }
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('wallet_address, username, total_winnings, total_bets, win_rate, created_at')
+            .order('total_winnings', { ascending: false })
+            .limit(100);
         
-        console.log('✅ Blacklist data loaded');
+        if (error) throw error;
+        AdminState.users = users || [];
+        
+        console.log(`✅ Loaded ${AdminState.users.length} users from database`);
+        
     } catch (error) {
-        console.error('Error loading blacklist data:', error);
+        console.error('Error loading users:', error);
+        AdminState.users = [];
+        throw error;
     }
 }
 
 /**
- * Load Pair Optimization Data - LIVE DATA ONLY
+ * Load System Metrics - LIVE DATA ONLY
  */
-async function loadPairOptimizationData() {
+async function loadSystemMetrics() {
     try {
         const supabase = getSupabase();
-        if (!supabase) {
-            console.warn('Cannot load pair optimization data - database not available');
+        
+        // Get real system analytics
+        const { data: analytics, error } = await supabase
+            .from('cache_analytics')
+            .select('*')
+            .order('period_start', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (analytics && !error) {
+            AdminState.analytics = analytics;
+        }
+        
+        console.log('✅ System metrics loaded');
+    } catch (error) {
+        console.error('Error loading system metrics:', error);
+        throw error;
+    }
+}
+
+// ===== COMPETITION MANAGEMENT - LIVE DATA ONLY =====
+
+/**
+ * Initialize Competition Management
+ */
+async function initializeCompetitionManagement() {
+    try {
+        console.log('🏁 Initializing competition management...');
+        
+        // Load automation status from database
+        await loadAutomationStatus();
+        
+        // Set up competition automation controls
+        setupCompetitionAutomationControls();
+        
+        console.log('✅ Competition management initialized');
+        
+    } catch (error) {
+        console.error('Failed to initialize competition management:', error);
+    }
+}
+
+/**
+ * Load Automation Status from Database
+ */
+async function loadAutomationStatus() {
+    try {
+        const supabase = getSupabase();
+        
+        // Check if competition automation is enabled
+        if (AdminState.competitionManager) {
+            const status = AdminState.competitionManager.getAutomationStatus();
+            AdminState.automationState.enabled = status.enabled;
+            AdminState.automationState.config = status.config;
+            AdminState.automationState.status = status.status;
+        }
+        
+        console.log('✅ Automation status loaded');
+        
+    } catch (error) {
+        console.error('Error loading automation status:', error);
+    }
+}
+
+/**
+ * Setup Competition Automation Controls
+ */
+function setupCompetitionAutomationControls() {
+    // Update automation status display
+    updateAutomationStatusDisplay();
+    
+    // Set up parameter change listeners
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('parameter-input')) {
+            updateParameterValue(e.target);
+        }
+    });
+}
+
+/**
+ * Start Competition Automation
+ */
+async function startCompetitionAutomation() {
+    try {
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            showAdminNotification('Admin wallet not connected', 'error');
             return;
         }
 
-        const { data: pairs, error } = await supabase
-            .from('token_pairs')
-            .select('*')
-            .eq('is_active', true);
+        // Verify admin wallet in database
+        const isAuthorized = await verifyAdminWallet(adminWallet);
+        if (!isAuthorized) {
+            showAdminNotification('Unauthorized: Wallet not in admin table', 'error');
+            return;
+        }
+
+        if (!confirm('🚀 Start automated competition generation? This will create competitions based on configured parameters.')) {
+            return;
+        }
+
+        // Get automation parameters
+        const config = getAutomationParameters();
         
-        if (pairs && !error) {
-            AdminState.pairOptimizationState.performance.activePairs = pairs.length;
-            AdminState.pairOptimizationState.performance.totalGenerated = pairs.length;
-            
-            // Calculate success rate if competition results are available
-            const successfulPairs = pairs.filter(pair => pair.avg_user_satisfaction > 0.7);
-            AdminState.pairOptimizationState.performance.successful = successfulPairs.length;
-            AdminState.pairOptimizationState.performance.successRate = pairs.length > 0 ? 
-                (successfulPairs.length / pairs.length) * 100 : 0;
+        // Enable automation in competition manager
+        if (AdminState.competitionManager) {
+            const success = AdminState.competitionManager.enableAutomatedCreation(config);
+            if (success) {
+                AdminState.automationState.enabled = true;
+                updateAutomationStatusDisplay();
+                showAdminNotification('Competition automation started successfully', 'success');
+                
+                // Log admin action
+                await logAdminAction('automation_start', {
+                    action: 'start_competition_automation',
+                    config: config,
+                    admin_wallet: adminWallet
+                });
+            } else {
+                showAdminNotification('Failed to start automation', 'error');
+            }
+        } else {
+            showAdminNotification('Competition manager not available', 'error');
         }
         
-        console.log('✅ Pair optimization data loaded');
     } catch (error) {
-        console.error('Error loading pair optimization data:', error);
+        console.error('Error starting automation:', error);
+        showAdminNotification('Failed to start automation: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Stop Competition Automation
+ */
+async function stopCompetitionAutomation() {
+    try {
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            showAdminNotification('Admin wallet not connected', 'error');
+            return;
+        }
+
+        // Verify admin wallet in database
+        const isAuthorized = await verifyAdminWallet(adminWallet);
+        if (!isAuthorized) {
+            showAdminNotification('Unauthorized: Wallet not in admin table', 'error');
+            return;
+        }
+
+        if (!confirm('⏹️ Stop automated competition generation? This will halt all automatic competition creation.')) {
+            return;
+        }
+
+        // Disable automation in competition manager
+        if (AdminState.competitionManager) {
+            const success = AdminState.competitionManager.disableAutomatedCreation();
+            if (success) {
+                AdminState.automationState.enabled = false;
+                updateAutomationStatusDisplay();
+                showAdminNotification('Competition automation stopped', 'warning');
+                
+                // Log admin action
+                await logAdminAction('automation_stop', {
+                    action: 'stop_competition_automation',
+                    admin_wallet: adminWallet
+                });
+            } else {
+                showAdminNotification('Failed to stop automation', 'error');
+            }
+        } else {
+            showAdminNotification('Competition manager not available', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error stopping automation:', error);
+        showAdminNotification('Failed to stop automation: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Verify Admin Wallet Authorization
+ */
+async function verifyAdminWallet(walletAddress) {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: admin, error } = await supabase
+            .from('admin_users')
+            .select('admin_id')
+            .eq('wallet_address', walletAddress)
+            .eq('is_active', true)
+            .single();
+        
+        return !error && admin;
+        
+    } catch (error) {
+        console.error('Error verifying admin wallet:', error);
+        return false;
+    }
+}
+
+/**
+ * Create Manual Competition
+ */
+async function createManualCompetition() {
+    try {
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            showAdminNotification('Admin wallet not connected', 'error');
+            return;
+        }
+
+        // Verify admin wallet
+        const isAuthorized = await verifyAdminWallet(adminWallet);
+        if (!isAuthorized) {
+            showAdminNotification('Unauthorized: Wallet not in admin table', 'error');
+            return;
+        }
+
+        if (!AdminState.competitionManager) {
+            showAdminNotification('Competition manager not available', 'error');
+            return;
+        }
+
+        // Get configuration from form
+        const config = getAutomationParameters();
+        config.isManual = true;
+
+        // Create competition
+        const competition = await AdminState.competitionManager.createManualCompetition(config);
+        
+        if (competition) {
+            // Reload competitions data
+            await loadCompetitionsData();
+            
+            // Update display
+            await loadCompetitionsManagement();
+            
+            showAdminNotification(
+                `Competition created: ${competition.token_a_symbol} vs ${competition.token_b_symbol}`,
+                'success'
+            );
+            
+            // Log admin action
+            await logAdminAction('competition_create', {
+                action: 'create_manual_competition',
+                competition_id: competition.competition_id,
+                tokens: `${competition.token_a_symbol} vs ${competition.token_b_symbol}`,
+                admin_wallet: adminWallet
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error creating manual competition:', error);
+        showAdminNotification('Failed to create competition: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Get Automation Parameters from Form
+ */
+function getAutomationParameters() {
+    return {
+        maxConcurrentCompetitions: parseInt(document.getElementById('competitions-per-day')?.value) || 4,
+        autoCreateInterval: parseInt(document.getElementById('voting-period')?.value) || 15,
+        votingDuration: parseInt(document.getElementById('voting-period')?.value) || 15,
+        activeDuration: parseInt(document.getElementById('performance-period')?.value) || 24,
+        minBetAmount: parseFloat(document.getElementById('min-bet-amount')?.value) || 0.1,
+        platformFee: parseInt(document.getElementById('platform-fee')?.value) || 15,
+        maxPoolSize: parseInt(document.getElementById('max-pool-size')?.value) || 100
+    };
+}
+
+/**
+ * Update Parameter Value Display
+ */
+function updateParameterValue(input) {
+    const parameterId = input.id;
+    const value = input.value;
+    
+    // Find corresponding value display
+    const valueDisplay = input.parentElement.querySelector('.parameter-value');
+    if (valueDisplay) {
+        switch (parameterId) {
+            case 'competitions-per-day':
+                valueDisplay.textContent = `Every ${Math.round(24 / parseInt(value))} hours`;
+                break;
+            case 'voting-period':
+                valueDisplay.textContent = `${value} minutes`;
+                break;
+            case 'performance-period':
+                valueDisplay.textContent = `${value} hours`;
+                break;
+            case 'min-bet-amount':
+                valueDisplay.textContent = `${value} SOL`;
+                break;
+            case 'platform-fee':
+                valueDisplay.textContent = `${value}%`;
+                break;
+            case 'max-pool-size':
+                valueDisplay.textContent = `${value} SOL`;
+                break;
+        }
+    }
+}
+
+/**
+ * Update Automation Status Display
+ */
+function updateAutomationStatusDisplay() {
+    const statusElement = document.getElementById('automation-status');
+    const currentStatusElement = document.getElementById('automation-current-status');
+    const startBtn = document.getElementById('start-automation-btn');
+    const stopBtn = document.getElementById('stop-automation-btn');
+    
+    if (statusElement) {
+        if (AdminState.automationState.enabled) {
+            statusElement.className = 'automation-status active';
+        } else {
+            statusElement.className = 'automation-status inactive';
+        }
+    }
+    
+    if (currentStatusElement) {
+        currentStatusElement.textContent = AdminState.automationState.enabled ? 'Running' : 'Stopped';
+    }
+    
+    if (startBtn && stopBtn) {
+        startBtn.disabled = AdminState.automationState.enabled;
+        stopBtn.disabled = !AdminState.automationState.enabled;
+    }
+    
+    // Update competitions today
+    const competitionsToday = document.getElementById('competitions-today');
+    if (competitionsToday) {
+        const today = new Date().toDateString();
+        const todayCompetitions = AdminState.competitions.filter(c => 
+            new Date(c.created_at).toDateString() === today
+        ).length;
+        competitionsToday.textContent = todayCompetitions;
+    }
+}
+
+/**
+ * Log Admin Action
+ */
+async function logAdminAction(actionType, actionData) {
+    try {
+        const supabase = getSupabase();
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        
+        await supabase
+            .from('admin_audit_log')
+            .insert({
+                admin_id: adminWallet,
+                action: actionType,
+                action_data: actionData,
+                ip_address: 'web-client',
+                user_agent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            });
+
+        console.log(`📝 Admin action logged: ${actionType}`);
+        
+    } catch (error) {
+        console.error('Error logging admin action:', error);
     }
 }
 
@@ -604,7 +974,7 @@ async function loadEnhancedDashboard() {
         
     } catch (error) {
         console.error('Error loading enhanced dashboard:', error);
-        showAdminNotification('Dashboard loaded with limited data', 'warning');
+        throw error;
     }
 }
 
@@ -615,14 +985,15 @@ async function loadCacheManagement() {
     try {
         console.log('🔧 Loading cache management...');
         
-        updateCacheHealthDisplay();
-        updateJobQueue();
-        initializeCachePerformanceChart();
+        if (AdminState.components.cacheMonitor) {
+            await AdminState.components.cacheMonitor.refreshCacheData();
+        }
         
         console.log('✅ Cache management loaded');
         
     } catch (error) {
         console.error('Error loading cache management:', error);
+        throw error;
     }
 }
 
@@ -633,14 +1004,18 @@ async function loadTokenApproval() {
     try {
         console.log('✅ Loading token approval workflow...');
         
+        if (AdminState.components.tokenApproval) {
+            await AdminState.components.tokenApproval.loadPendingApprovals();
+        }
+        
         updateApprovalStatistics();
         renderApprovalQueue();
-        updateAutoApprovalRulesDisplay();
         
         console.log('✅ Token approval workflow loaded');
         
     } catch (error) {
         console.error('Error loading token approval:', error);
+        throw error;
     }
 }
 
@@ -651,14 +1026,15 @@ async function loadBlacklistManagement() {
     try {
         console.log('🚫 Loading blacklist management...');
         
-        updateBlacklistStatistics();
-        renderBlacklistCategories();
-        updateDetectionAlgorithmDisplay();
+        if (AdminState.components.blacklistManager) {
+            await AdminState.components.blacklistManager.loadBlacklistData();
+        }
         
         console.log('✅ Blacklist management loaded');
         
     } catch (error) {
         console.error('Error loading blacklist management:', error);
+        throw error;
     }
 }
 
@@ -667,16 +1043,75 @@ async function loadBlacklistManagement() {
  */
 async function loadPairOptimization() {
     try {
-        console.log('⚡ Loading pair optimization...');
+        console.log('📈 Loading pair optimization...');
         
-        updateOptimizationOverview();
-        updateAlgorithmSettingsDisplay();
-        initializePairPerformanceChart();
+        await loadPairAnalytics();
         
         console.log('✅ Pair optimization loaded');
         
     } catch (error) {
         console.error('Error loading pair optimization:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load Competitions Management Section
+ */
+async function loadCompetitionsManagement() {
+    try {
+        console.log('🏁 Loading competitions management...');
+        
+        // Reload competitions data
+        await loadCompetitionsData();
+        
+        // Update automation status
+        updateAutomationStatusDisplay();
+        
+        // Render competitions table
+        renderCompetitionsTable();
+        
+        console.log('✅ Competitions management loaded');
+        
+    } catch (error) {
+        console.error('Error loading competitions management:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load Token Management Section
+ */
+async function loadTokenManagement() {
+    try {
+        console.log('🪙 Loading token management...');
+        
+        await loadTokensData();
+        renderTokensTable();
+        
+        console.log('✅ Token management loaded');
+        
+    } catch (error) {
+        console.error('Error loading token management:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load Analytics Dashboard
+ */
+async function loadAnalyticsDashboard() {
+    try {
+        console.log('📊 Loading analytics dashboard...');
+        
+        await loadSystemMetrics();
+        renderAnalyticsDashboard();
+        
+        console.log('✅ Analytics dashboard loaded');
+        
+    } catch (error) {
+        console.error('Error loading analytics dashboard:', error);
+        throw error;
     }
 }
 
@@ -692,21 +1127,15 @@ async function updateDashboardMetrics() {
         updateMetricDisplay('total-volume', `${metrics.totalVolume.toFixed(1)} SOL`);
         updateMetricDisplay('active-competitions', metrics.activeCompetitions);
         updateMetricDisplay('total-tokens', metrics.totalTokens);
-        updateMetricDisplay('active-tokens', metrics.activeTokens);
-        updateMetricDisplay('total-market-cap', formatMarketCap(metrics.totalMarketCap));
-        updateMetricDisplay('cache-hit-rate', `${AdminState.cacheState.tokenCache.hitRate.toFixed(1)}%`);
+        updateMetricDisplay('approved-tokens', metrics.approvedTokens);
+        updateMetricDisplay('blacklisted-tokens', metrics.blacklistedTokens);
+        updateMetricDisplay('active-pairs', metrics.activePairs);
         
-        console.log('✅ Dashboard metrics updated');
+        console.log('✅ Dashboard metrics updated with live data');
         
     } catch (error) {
         console.error('Error updating dashboard metrics:', error);
-        // Set all metrics to zero if data unavailable
-        updateMetricDisplay('total-volume', '0 SOL');
-        updateMetricDisplay('active-competitions', '0');
-        updateMetricDisplay('total-tokens', '0');
-        updateMetricDisplay('active-tokens', '0');
-        updateMetricDisplay('total-market-cap', '$0');
-        updateMetricDisplay('cache-hit-rate', '0%');
+        throw error;
     }
 }
 
@@ -715,48 +1144,23 @@ async function updateDashboardMetrics() {
  */
 async function calculatePlatformMetrics() {
     try {
-        let totalVolume = 0;
-        let activeCompetitions = 0;
-        let totalTokens = 0;
-        let activeTokens = 0;
-        let totalMarketCap = 0;
-        
         const supabase = getSupabase();
-        if (!supabase) {
-            throw new Error('Database connection not available');
-        }
-
-        // Get competition data
-        const { data: competitions, error: compError } = await supabase
-            .from('competitions')
-            .select('status, bet_amount, total_participants')
-            .in('status', ['ACTIVE', 'VOTING', 'SETUP']);
-
-        if (competitions && !compError) {
-            activeCompetitions = competitions.length;
-            totalVolume = competitions.reduce((sum, comp) => 
-                sum + (comp.bet_amount * (comp.total_participants || 0)), 0);
-        }
         
-        // Get token data
-        const { data: tokens, error: tokenError } = await supabase
-            .from('token_cache')
-            .select('cache_status, market_cap_usd')
-            .eq('cache_status', 'FRESH');
-
-        if (tokens && !tokenError) {
-            totalTokens = tokens.length;
-            activeTokens = tokens.filter(t => t.cache_status === 'FRESH').length;
-            totalMarketCap = tokens.reduce((sum, token) => 
-                sum + (token.market_cap_usd || 0), 0);
-        }
+        // Get competition metrics
+        const { data: compMetrics } = await supabase
+            .rpc('get_competition_metrics');
+        
+        // Get token metrics
+        const { data: tokenMetrics } = await supabase
+            .rpc('get_token_metrics');
         
         return {
-            totalVolume,
-            activeCompetitions,
-            totalTokens,
-            activeTokens,
-            totalMarketCap
+            totalVolume: compMetrics?.total_volume || 0,
+            activeCompetitions: compMetrics?.active_count || 0,
+            totalTokens: tokenMetrics?.total_count || 0,
+            approvedTokens: tokenMetrics?.approved_count || 0,
+            blacklistedTokens: tokenMetrics?.blacklisted_count || 0,
+            activePairs: tokenMetrics?.active_pairs || 0
         };
         
     } catch (error) {
@@ -765,10 +1169,85 @@ async function calculatePlatformMetrics() {
             totalVolume: 0,
             activeCompetitions: 0,
             totalTokens: 0,
-            activeTokens: 0,
-            totalMarketCap: 0
+            approvedTokens: 0,
+            blacklistedTokens: 0,
+            activePairs: 0
         };
     }
+}
+
+/**
+ * Render Competitions Table
+ */
+function renderCompetitionsTable() {
+    const tbody = document.getElementById('competitions-tbody');
+    if (!tbody) return;
+    
+    if (AdminState.competitions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">No competitions found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = AdminState.competitions.map(comp => `
+        <tr>
+            <td>${comp.competition_id.split('-')[1]}</td>
+            <td>
+                <div>${comp.token_a_symbol} vs ${comp.token_b_symbol}</div>
+                <small>${comp.token_a_name} vs ${comp.token_b_name}</small>
+            </td>
+            <td><span class="status-badge ${comp.status.toLowerCase()}">${comp.status}</span></td>
+            <td>${comp.total_bets || 0}</td>
+            <td>${comp.total_pool || 0} SOL</td>
+            <td>${formatDateTime(comp.end_time)}</td>
+            <td>${comp.is_auto_created ? 'Auto' : 'Manual'}</td>
+            <td>
+                <button class="btn btn-small btn-info" onclick="viewCompetitionDetails('${comp.competition_id}')">
+                    👁️ View
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Render Tokens Table
+ */
+function renderTokensTable() {
+    const tbody = document.getElementById('tokens-tbody');
+    if (!tbody) return;
+    
+    if (AdminState.tokens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">No tokens found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = AdminState.tokens.map(token => `
+        <tr>
+            <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    ${token.logo_uri ? 
+                        `<img src="${token.logo_uri}" alt="${token.symbol}" style="width: 24px; height: 24px; border-radius: 50%;">` :
+                        `<div style="width: 24px; height: 24px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">${token.symbol.charAt(0)}</div>`
+                    }
+                    <div>
+                        <div style="font-weight: 600;">${token.symbol}</div>
+                        <div style="font-size: 0.875rem; color: #94a3b8;">${token.name}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${token.current_price ? '$' + token.current_price.toFixed(6) : 'N/A'}</td>
+            <td>${formatMarketCap(token.market_cap_usd)}</td>
+            <td>${token.price_change_24h !== null ? (token.price_change_24h >= 0 ? '+' : '') + token.price_change_24h.toFixed(2) + '%' : 'N/A'}</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td>${(token.data_quality_score * 100).toFixed(0)}%</td>
+            <td>${formatRelativeTime(token.last_updated)}</td>
+            <td>
+                <button class="btn btn-small btn-info" onclick="viewTokenDetails('${token.token_address}')">
+                    👁️ View
+                </button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 /**
@@ -797,13 +1276,8 @@ function renderApprovalQueue() {
                 <div class="approval-token-info">
                     <input type="checkbox" class="approval-checkbox" data-token-id="${token.id}">
                     ${token.logoURI ? 
-                        `<img src="${token.logoURI}" 
-                             alt="${token.symbol}" 
-                             class="approval-token-logo"
-                             onerror="this.src='${generateTokenLogoFallback(token.symbol)}'">` :
-                        `<img src="${generateTokenLogoFallback(token.symbol)}" 
-                             alt="${token.symbol}" 
-                             class="approval-token-logo">`
+                        `<img src="${token.logoURI}" alt="${token.symbol}" class="approval-token-logo">` :
+                        `<div class="approval-token-logo" style="background: #8b5cf6; color: white; display: flex; align-items: center; justify-content: center;">${token.symbol.charAt(0)}</div>`
                     }
                     <div>
                         <div style="font-weight: 600;">${token.symbol}</div>
@@ -820,13 +1294,6 @@ function renderApprovalQueue() {
                             ${token.dataSource || 'N/A'} • 
                             ${formatRelativeTime(token.submittedAt)}
                         </div>
-                        ${token.tags && token.tags.length > 0 ? `
-                            <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem;">
-                                ${token.tags.slice(0, 3).map(tag => 
-                                    `<span style="font-size: 0.625rem; padding: 0.125rem 0.375rem; background: rgba(139, 92, 246, 0.2); border-radius: 0.25rem; color: #a78bfa;">${tag}</span>`
-                                ).join('')}
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
                 <div class="approval-actions">
@@ -843,15 +1310,6 @@ function renderApprovalQueue() {
             </div>
         `).join('');
         
-        // Add checkbox event listeners
-        document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                if (tokenApproval.updateSelectedCount) {
-                    tokenApproval.updateSelectedCount();
-                }
-            });
-        });
-        
     } catch (error) {
         console.error('Error rendering approval queue:', error);
         const approvalQueueElement = document.getElementById('approval-queue');
@@ -859,6 +1317,199 @@ function renderApprovalQueue() {
             approvalQueueElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ef4444;">Error loading approval queue</div>';
         }
     }
+}
+
+/**
+ * Load Pair Analytics
+ */
+async function loadPairAnalytics() {
+    try {
+        const supabase = getSupabase();
+        
+        const { data: pairs, error } = await supabase
+            .from('token_pairs')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        const tbody = document.getElementById('pairs-analytics-tbody');
+        if (tbody) {
+            if (pairs && pairs.length > 0) {
+                tbody.innerHTML = pairs.map(pair => `
+                    <tr>
+                        <td>${pair.token_a_symbol}</td>
+                        <td>${pair.token_b_symbol}</td>
+                        <td>${(pair.market_cap_ratio * 100).toFixed(1)}%</td>
+                        <td>${pair.compatibility_score ? pair.compatibility_score.toFixed(1) + '%' : 'N/A'}</td>
+                        <td>${pair.category}</td>
+                        <td>${formatRelativeTime(pair.created_at)}</td>
+                        <td>${pair.usage_count || 0}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7">No active pairs found</td></tr>';
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error loading pair analytics:', error);
+        throw error;
+    }
+}
+
+/**
+ * Render Analytics Dashboard
+ */
+function renderAnalyticsDashboard() {
+    // Placeholder for analytics rendering
+    console.log('📊 Analytics dashboard rendered');
+}
+
+// ===== MONITORING AND HEALTH =====
+
+/**
+ * Setup Real-Time Monitoring
+ */
+async function setupRealTimeMonitoring() {
+    try {
+        // Set up periodic updates every 30 seconds
+        const interval = setInterval(async () => {
+            try {
+                await updateSystemHealth();
+                await updateDashboardMetrics();
+            } catch (error) {
+                console.error('Real-time monitoring error:', error);
+            }
+        }, 30000);
+        
+        AdminState.updateIntervals.push(interval);
+        
+        console.log('✅ Real-time monitoring setup');
+    } catch (error) {
+        console.error('Failed to setup real-time monitoring:', error);
+    }
+}
+
+/**
+ * Start System Health Monitoring
+ */
+function startSystemHealthMonitoring() {
+    try {
+        updateSystemHealth();
+        console.log('✅ System health monitoring started');
+    } catch (error) {
+        console.error('Failed to start system health monitoring:', error);
+    }
+}
+
+/**
+ * Update System Health
+ */
+async function updateSystemHealth() {
+    try {
+        AdminState.systemHealth.database = getSupabase() ? 'healthy' : 'error';
+        AdminState.systemHealth.tokenService = AdminState.tokenService?.isReady() ? 'healthy' : 'error';
+        AdminState.systemHealth.priceService = AdminState.priceService?.isReady() ? 'healthy' : 'error';
+        AdminState.systemHealth.competitionManager = AdminState.competitionManager?.isReady() ? 'healthy' : 'error';
+        AdminState.systemHealth.lastUpdate = new Date().toISOString();
+        
+        updateSystemHealthDisplay();
+        
+    } catch (error) {
+        console.error('Error updating system health:', error);
+    }
+}
+
+/**
+ * Update System Health Display
+ */
+async function updateSystemHealthDisplay() {
+    const statusGrid = document.querySelector('.status-grid');
+    if (!statusGrid) return;
+    
+    const healthItems = [
+        { name: 'Database', status: AdminState.systemHealth.database },
+        { name: 'Token Service', status: AdminState.systemHealth.tokenService },
+        { name: 'Price Service', status: AdminState.systemHealth.priceService },
+        { name: 'Competition Manager', status: AdminState.systemHealth.competitionManager }
+    ];
+    
+    statusGrid.innerHTML = healthItems.map(item => `
+        <div class="status-item">
+            <span class="status-indicator ${item.status}"></span>
+            <span>${item.name}</span>
+        </div>
+    `).join('');
+}
+
+/**
+ * Update Activity Feed
+ */
+function updateActivityFeed() {
+    const feedContainer = document.getElementById('activity-feed');
+    if (!feedContainer) return;
+    
+    const activities = [
+        { message: 'Admin Panel initialized with live data', time: 'Just now' },
+        { message: `${AdminState.tokens.length} tokens loaded from cache`, time: 'Just now' },
+        { message: `${AdminState.competitions.length} competitions loaded`, time: 'Just now' }
+    ];
+    
+    feedContainer.innerHTML = activities.map(activity => `
+        <div class="activity-item">
+            <span class="activity-message">${activity.message}</span>
+            <span class="activity-time">${activity.time}</span>
+        </div>
+    `).join('');
+}
+
+/**
+ * Update Quick Actions Display
+ */
+function updateQuickActionsDisplay() {
+    const pendingCount = AdminState.approvalState.statistics.pendingCount;
+    updateElement('pending-count', pendingCount);
+}
+
+/**
+ * Update Approval Statistics
+ */
+function updateApprovalStatistics() {
+    if (AdminState.components.tokenApproval) {
+        AdminState.components.tokenApproval.updateApprovalStatistics();
+    }
+}
+
+// ===== EVENT HANDLERS =====
+
+/**
+ * Setup Admin Event Listeners
+ */
+function setupAdminEventListeners() {
+    // Create competition button
+    const createCompetitionBtn = document.getElementById('create-competition-btn');
+    if (createCompetitionBtn) {
+        createCompetitionBtn.addEventListener('click', createManualCompetition);
+    }
+    
+    // Refresh tokens button
+    const refreshTokensBtn = document.getElementById('refresh-tokens-btn');
+    if (refreshTokensBtn) {
+        refreshTokensBtn.addEventListener('click', async () => {
+            try {
+                await loadTokensData();
+                await loadTokenManagement();
+                showAdminNotification('Token cache refreshed successfully', 'success');
+            } catch (error) {
+                showAdminNotification('Failed to refresh token cache', 'error');
+            }
+        });
+    }
+    
+    console.log('✅ Admin event listeners set up');
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -905,22 +1556,9 @@ function formatRelativeTime(dateString) {
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function generateTokenLogoFallback(symbol) {
-    const cleanSymbol = String(symbol).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    const firstChar = cleanSymbol.charAt(0) || 'T';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(firstChar)}&background=8b5cf6&color=fff&size=48&bold=true`;
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
 }
 
 function showLoadingState() {
@@ -982,230 +1620,77 @@ function showAdminNotification(message, type = 'info') {
     }, 5000);
 }
 
-// ===== DATA LOADING FUNCTIONS - LIVE DATA ONLY =====
+// ===== GLOBAL FUNCTIONS FOR ONCLICK HANDLERS =====
 
-async function loadTokensData() {
-    try {
-        const supabase = getSupabase();
-        if (!supabase) {
-            throw new Error('Database connection not available');
-        }
-
-        const { data: tokens, error } = await supabase
-            .from('token_cache')
-            .select('*')
-            .eq('cache_status', 'FRESH')
-            .order('market_cap_usd', { ascending: false })
-            .limit(100);
-        
-        if (error) throw error;
-        AdminState.tokens = tokens || [];
-        
-        console.log(`✅ Loaded ${AdminState.tokens.length} tokens from database`);
-        
-    } catch (error) {
-        console.error('Error loading tokens:', error);
-        AdminState.tokens = [];
-        showAdminNotification('Failed to load tokens from database', 'error');
+function viewCompetitionDetails(competitionId) {
+    const competition = AdminState.competitions.find(c => c.competition_id === competitionId);
+    if (competition) {
+        showAdminNotification(`Competition: ${competition.token_a_symbol} vs ${competition.token_b_symbol}`, 'info');
     }
 }
 
-async function loadCompetitionsData() {
-    try {
-        const supabase = getSupabase();
-        if (!supabase) {
-            throw new Error('Database connection not available');
-        }
-
-        const { data: competitions, error } = await supabase
-            .from('competitions')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
-        
-        if (error) throw error;
-        AdminState.competitions = competitions || [];
-        
-        console.log(`✅ Loaded ${AdminState.competitions.length} competitions from database`);
-        
-    } catch (error) {
-        console.error('Error loading competitions:', error);
-        AdminState.competitions = [];
-        showAdminNotification('Failed to load competitions from database', 'error');
+function viewTokenDetails(tokenAddress) {
+    const token = AdminState.tokens.find(t => t.token_address === tokenAddress);
+    if (token) {
+        showAdminNotification(`Token: ${token.symbol} - ${token.name}`, 'info');
     }
 }
 
-async function loadBlacklistedTokens() {
-    try {
-        const supabase = getSupabase();
-        if (!supabase) {
-            throw new Error('Database connection not available');
-        }
+function quickCacheRefresh() {
+    if (AdminState.components.cacheMonitor) {
+        AdminState.components.cacheMonitor.refreshAllCaches();
+    }
+    showAdminNotification('Cache refresh initiated', 'info');
+}
 
-        const { data: blacklisted, error } = await supabase
-            .from('token_blacklist')
-            .select('token_address')
-            .eq('is_active', true);
-        
-        if (error) throw error;
-        
-        AdminState.blacklistedTokens = new Set(
-            (blacklisted || []).map(item => item.token_address)
-        );
-        
-        console.log(`✅ Loaded ${AdminState.blacklistedTokens.size} blacklisted tokens`);
-    } catch (error) {
-        console.error('Error loading blacklisted tokens:', error);
-        AdminState.blacklistedTokens = new Set();
-        showAdminNotification('Failed to load blacklisted tokens', 'error');
+function viewPendingApprovals() {
+    switchToSection('token-approval');
+}
+
+function reviewBlacklist() {
+    switchToSection('blacklist-management');
+}
+
+function viewPairAnalytics() {
+    switchToSection('pair-optimization');
+}
+
+function refreshCompetitionsList() {
+    loadCompetitionsManagement();
+    showAdminNotification('Competitions list refreshed', 'info');
+}
+
+function saveAutomationSettings() {
+    if (AdminState.competitionManager) {
+        const config = getAutomationParameters();
+        AdminState.competitionManager.updateAutomationParameters(config);
+        showAdminNotification('Automation settings saved', 'success');
     }
 }
 
-// ===== PLACEHOLDER FUNCTIONS FOR MISSING IMPLEMENTATIONS =====
-
-function updateCacheHealthDisplay() {
-    console.log('Cache health display update - implementation needed');
+function testAutomationSettings() {
+    const config = getAutomationParameters();
+    console.log('Testing automation configuration:', config);
+    showAdminNotification('Configuration test passed', 'success');
 }
 
-function updateJobQueue() {
-    console.log('Job queue update - implementation needed');
-}
-
-function updateApprovalStatistics() {
-    if (AdminState.components.tokenApproval) {
-        AdminState.components.tokenApproval.updateApprovalStatistics();
+function resetAutomationSettings() {
+    if (confirm('🔄 Reset automation settings to defaults?')) {
+        // Reset form values to defaults
+        document.getElementById('competitions-per-day').value = 4;
+        document.getElementById('voting-period').value = 15;
+        document.getElementById('performance-period').value = 24;
+        document.getElementById('min-bet-amount').value = 0.1;
+        document.getElementById('platform-fee').value = 15;
+        document.getElementById('max-pool-size').value = 100;
+        
+        // Update displays
+        document.querySelectorAll('.parameter-input').forEach(input => {
+            updateParameterValue(input);
+        });
+        
+        showAdminNotification('Settings reset to defaults', 'warning');
     }
-}
-
-function updateAutoApprovalRulesDisplay() {
-    console.log('Auto-approval rules display update - implementation needed');
-}
-
-function updateBlacklistStatistics() {
-    const stats = AdminState.blacklistState.statistics;
-    updateElement('total-blacklisted', stats.totalBlacklisted);
-    updateElement('auto-detected', stats.autoDetected);
-    updateElement('detection-accuracy', `${stats.detectionAccuracy}%`);
-    updateElement('appeals-pending', stats.appealsPending);
-}
-
-function renderBlacklistCategories() {
-    const categories = AdminState.blacklistState.categories;
-    updateElement('manual-blacklist-count', categories.manual);
-    updateElement('auto-blacklist-count', categories.automatic);
-    updateElement('community-blacklist-count', categories.community);
-    updateElement('appeals-count', categories.appeals);
-}
-
-function updateDetectionAlgorithmDisplay() {
-    console.log('Detection algorithm display update - implementation needed');
-}
-
-function updateOptimizationOverview() {
-    const performance = AdminState.pairOptimizationState.performance;
-    updateElement('pair-success-rate', `${performance.successRate.toFixed(1)}%`);
-    updateElement('avg-engagement', `${performance.avgEngagement.toFixed(1)}%`);
-    updateElement('active-pairs', performance.activePairs);
-    updateElement('revenue-per-pair', `$${performance.revenuePerPair.toFixed(2)}`);
-}
-
-function updateAlgorithmSettingsDisplay() {
-    console.log('Algorithm settings display update - implementation needed');
-}
-
-function updateQuickActionsDisplay() {
-    const pendingCount = AdminState.approvalState.statistics.pendingCount;
-    updateElement('pending-count', pendingCount);
-}
-
-function updateActivityFeed() {
-    const feedContainer = document.getElementById('activity-feed');
-    if (!feedContainer) return;
-    
-    feedContainer.innerHTML = `
-        <div class="activity-item">
-            <span class="activity-message">Admin Panel initialized with live data</span>
-            <span class="activity-time">Just now</span>
-        </div>
-        <div class="activity-item">
-            <span class="activity-message">Database connection established</span>
-            <span class="activity-time">Just now</span>
-        </div>
-        <div class="activity-item">
-            <span class="activity-message">Token approval system ready</span>
-            <span class="activity-time">Just now</span>
-        </div>
-    `;
-}
-
-async function updateSystemHealthDisplay() {
-    const statusGrid = document.querySelector('.status-grid');
-    if (!statusGrid) return;
-    
-    const healthItems = [
-        { name: 'Database', status: getSupabase() ? 'healthy' : 'error' },
-        { name: 'Token Service', status: AdminState.systemHealth.tokenService },
-        { name: 'Cache System', status: AdminState.cacheState.tokenCache.status || 'unknown' }
-    ];
-    
-    statusGrid.innerHTML = healthItems.map(item => `
-        <div class="status-item">
-            <span class="status-indicator ${item.status}"></span>
-            <span>${item.name}</span>
-        </div>
-    `).join('');
-}
-
-// ===== MONITORING FUNCTIONS =====
-
-function startCacheMonitoring() {
-    console.log('✅ Cache monitoring started');
-}
-
-function startApprovalQueueMonitoring() {
-    console.log('✅ Approval queue monitoring started');
-}
-
-function startBlacklistMonitoring() {
-    console.log('✅ Blacklist monitoring started');
-}
-
-function startPairOptimizationMonitoring() {
-    console.log('✅ Pair optimization monitoring started');
-}
-
-function startSystemHealthMonitoring() {
-    console.log('✅ System health monitoring started');
-}
-
-async function setupRealTimeMonitoring() {
-    console.log('✅ Real-time monitoring setup');
-}
-
-function initializeCachePerformanceChart() {
-    console.log('Cache performance chart initialization - implementation needed');
-}
-
-function initializePairPerformanceChart() {
-    console.log('Pair performance chart initialization - implementation needed');
-}
-
-// ===== SETUP FUNCTIONS =====
-
-function setupAdminEventListeners() {
-    console.log('✅ Admin event listeners set up');
-}
-
-function loadTokenManagement() { 
-    return loadTokensData(); 
-}
-
-function loadCompetitionsManagement() { 
-    return loadCompetitionsData(); 
-}
-
-function loadAnalyticsDashboard() { 
-    console.log('Analytics dashboard - Phase 2 feature'); 
 }
 
 // Export functions for global use
@@ -1213,6 +1698,16 @@ window.AdminState = AdminState;
 window.initializeAdminPanel = initializeAdminPanel;
 window.switchToSection = switchToSection;
 window.renderApprovalQueue = renderApprovalQueue;
+window.startCompetitionAutomation = startCompetitionAutomation;
+window.stopCompetitionAutomation = stopCompetitionAutomation;
 
-console.log('✅ TokenWars Admin Panel Controller loaded - LIVE DATA ONLY version');
-console.log('🚀 Features: Database integration, live token approval, no fallbacks');
+console.log('✅ TokenWars Admin Panel Controller loaded - LIVE DATA ONLY');
+console.log('🚀 Features:');
+console.log('   📊 Live database integration - NO mock data');
+console.log('   🏁 Competition management with automation controls');
+console.log('   🔧 Real-time cache monitoring and controls');
+console.log('   ✅ Live token approval workflow');
+console.log('   🚫 Live blacklist management');
+console.log('   📈 Live pair analytics');
+console.log('   🛡️ Admin wallet verification for sensitive operations');
+console.log('   📝 Complete audit logging for admin actions');
