@@ -1,27 +1,73 @@
 /**
- * CacheMonitor Component - Advanced Cache Management Interface
- * Provides real-time cache monitoring, manual controls, and analytics
+ * CacheMonitor Component - LIVE DATA ONLY
+ * Real-time cache monitoring with database integration - NO mock data
  */
 
 class CacheMonitor {
     constructor(adminState) {
         this.adminState = adminState;
         this.isInitialized = false;
-        this.updateInterval = null;
-        this.charts = {};
-        this.operationQueue = [];
-        this.isOperationInProgress = false;
+        this.monitoringInterval = null;
+        this.cacheRefreshInterval = null;
+        this.performanceChart = null;
         
-        // Cache operation types
-        this.operationTypes = {
-            REFRESH_TOKEN: 'refresh_token',
-            REFRESH_PRICE: 'refresh_price',
-            INVALIDATE_SELECTIVE: 'invalidate_selective',
-            INVALIDATE_ALL: 'invalidate_all',
-            OPTIMIZE: 'optimize'
+        // Live monitoring state - NO fallbacks
+        this.monitoringState = {
+            tokenCache: {
+                status: 'unknown',
+                hitRate: 0,
+                responseTime: 0,
+                size: 0,
+                freshCount: 0,
+                staleCount: 0,
+                expiredCount: 0,
+                lastRefresh: null,
+                healthScore: 0
+            },
+            priceCache: {
+                status: 'unknown',
+                hitRate: 0,
+                responseTime: 0,
+                size: 0,
+                freshCount: 0,
+                staleCount: 0,
+                expiredCount: 0,
+                lastRefresh: null,
+                healthScore: 0
+            },
+            apiRateLimits: {
+                coingecko: {
+                    requestsMade: 0,
+                    requestsLimit: 50,
+                    isLimited: false,
+                    successRate: 100,
+                    avgResponseTime: 0
+                },
+                jupiter: {
+                    requestsMade: 0,
+                    requestsLimit: 100,
+                    isLimited: false,
+                    successRate: 100,
+                    avgResponseTime: 0
+                }
+            },
+            backgroundJobs: {
+                active: 0,
+                pending: 0,
+                failed: 0,
+                completed: 0,
+                paused: false
+            },
+            systemHealth: {
+                overallScore: 0,
+                cacheEfficiency: 0,
+                apiHealth: 0,
+                dataFreshness: 0,
+                lastCheck: null
+            }
         };
         
-        console.log('CacheMonitor: Component initialized');
+        console.log('CacheMonitor: Component initialized - LIVE DATA ONLY');
     }
 
     /**
@@ -29,13 +75,13 @@ class CacheMonitor {
      */
     async initialize() {
         try {
-            console.log('🔧 Initializing Cache Monitor...');
+            console.log('🔧 Initializing Cache Monitor - LIVE DATA ONLY...');
             
-            // Load cache health data
-            await this.loadCacheHealthData();
+            // Load live cache data
+            await this.loadCacheData();
             
             // Start real-time monitoring
-            this.startRealTimeMonitoring();
+            this.startCacheMonitoring();
             
             // Set up event listeners
             this.setupEventListeners();
@@ -46,133 +92,558 @@ class CacheMonitor {
             return true;
         } catch (error) {
             console.error('Failed to initialize Cache Monitor:', error);
+            this.showAdminNotification('Failed to initialize Cache Monitor', 'error');
             return false;
         }
     }
 
     /**
-     * Load Cache Health Data
+     * Load Live Cache Data from Database
+     */
+    async loadCacheData() {
+        try {
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            console.log('📊 Loading live cache data from database...');
+            
+            // Load cache health data
+            await this.loadCacheHealthData();
+            
+            // Load cache analytics
+            await this.loadCacheAnalytics();
+            
+            // Load API rate limits
+            await this.loadApiRateLimits();
+            
+            // Load background jobs status
+            await this.loadBackgroundJobsStatus();
+            
+            // Calculate system health
+            this.calculateSystemHealth();
+            
+            console.log('✅ Live cache data loaded successfully');
+            
+        } catch (error) {
+            console.error('Error loading cache data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load Cache Health Data from Database
      */
     async loadCacheHealthData() {
         try {
             const supabase = this.getSupabase();
-            if (!supabase) {
-                console.warn('Supabase not available, using simulated data');
-                this.simulateCacheData();
-                return;
+            
+            // Get latest cache health record
+            const { data: cacheHealth, error: healthError } = await supabase
+                .from('cache_health')
+                .select('*')
+                .order('recorded_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (healthError && healthError.code !== 'PGRST116') {
+                throw healthError;
             }
 
-            // Load cache health from database
-            const cacheHealth = await this.adminState.supabaseClient.getCacheHealthStatus();
-            
-            if (cacheHealth.available) {
-                this.adminState.cacheState.tokenCache = {
-                    ...this.adminState.cacheState.tokenCache,
-                    hitRate: this.calculateHitRate(cacheHealth.tokenCache),
-                    lastRefresh: cacheHealth.tokenCache.lastUpdate,
-                    status: this.determineCacheStatus(cacheHealth.tokenCache)
-                };
+            if (cacheHealth) {
+                this.monitoringState.systemHealth.overallScore = cacheHealth.overall_health_score * 100;
+                this.monitoringState.systemHealth.cacheEfficiency = cacheHealth.cache_hit_rate;
+                this.monitoringState.systemHealth.lastCheck = cacheHealth.recorded_at;
                 
-                this.adminState.cacheState.priceCache = {
-                    ...this.adminState.cacheState.priceCache,
-                    hitRate: this.calculateHitRate(cacheHealth.priceCache),
-                    lastRefresh: cacheHealth.priceCache.lastUpdate,
-                    status: this.determineCacheStatus(cacheHealth.priceCache)
-                };
-                
-                console.log('✅ Cache health data loaded from database');
-            } else {
-                this.simulateCacheData();
+                // Update cache health metrics
+                this.monitoringState.tokenCache.freshCount = cacheHealth.fresh_cache_count;
+                this.monitoringState.tokenCache.staleCount = cacheHealth.stale_cache_count;
+                this.monitoringState.tokenCache.expiredCount = cacheHealth.expired_cache_count;
+                this.monitoringState.tokenCache.size = cacheHealth.total_cached_tokens;
+                this.monitoringState.tokenCache.hitRate = cacheHealth.cache_hit_rate;
+                this.monitoringState.tokenCache.healthScore = cacheHealth.overall_health_score * 100;
             }
+
+            // Get token cache status
+            const { data: tokenCacheStats, error: tokenError } = await supabase
+                .from('token_cache')
+                .select('cache_status, cache_created_at, cache_expires_at')
+                .gte('cache_expires_at', new Date().toISOString());
+
+            if (!tokenError && tokenCacheStats) {
+                const now = new Date();
+                const fresh = tokenCacheStats.filter(t => 
+                    t.cache_status === 'FRESH' && new Date(t.cache_expires_at) > now
+                ).length;
+                
+                this.monitoringState.tokenCache.size = tokenCacheStats.length;
+                this.monitoringState.tokenCache.freshCount = fresh;
+                this.monitoringState.tokenCache.staleCount = tokenCacheStats.length - fresh;
+                this.monitoringState.tokenCache.status = fresh > 0 ? 'healthy' : 'warning';
+            }
+
+            // Get price cache status
+            const { data: priceCacheStats, error: priceError } = await supabase
+                .from('price_cache')
+                .select('cache_expires_at, timestamp, fetch_duration_ms')
+                .gte('cache_expires_at', new Date().toISOString())
+                .order('timestamp', { ascending: false })
+                .limit(100);
+
+            if (!priceError && priceCacheStats) {
+                const now = new Date();
+                const fresh = priceCacheStats.filter(p => 
+                    new Date(p.cache_expires_at) > now
+                ).length;
+                
+                this.monitoringState.priceCache.size = priceCacheStats.length;
+                this.monitoringState.priceCache.freshCount = fresh;
+                this.monitoringState.priceCache.staleCount = priceCacheStats.length - fresh;
+                this.monitoringState.priceCache.status = fresh > 0 ? 'healthy' : 'warning';
+                
+                // Calculate average response time
+                const avgResponseTime = priceCacheStats
+                    .filter(p => p.fetch_duration_ms)
+                    .reduce((sum, p) => sum + p.fetch_duration_ms, 0) / priceCacheStats.length;
+                
+                this.monitoringState.priceCache.responseTime = Math.round(avgResponseTime) || 0;
+            }
+            
+            console.log('✅ Cache health data loaded');
             
         } catch (error) {
             console.error('Error loading cache health data:', error);
-            this.simulateCacheData();
+            throw error;
         }
     }
 
     /**
-     * Simulate Cache Data (Fallback)
+     * Load Cache Analytics from Database
      */
-    simulateCacheData() {
-        const now = new Date();
-        
-        this.adminState.cacheState.tokenCache = {
-            hitRate: 94.2 + (Math.random() - 0.5) * 5,
-            responseTime: 35 + Math.random() * 20,
-            size: 8.7 + Math.random() * 2,
-            lastRefresh: now,
-            status: 'healthy'
-        };
-        
-        this.adminState.cacheState.priceCache = {
-            hitRate: 97.8 + (Math.random() - 0.5) * 3,
-            responseTime: 25 + Math.random() * 15,
-            size: 3.7 + Math.random() * 1,
-            lastRefresh: now,
-            status: 'healthy'
-        };
-        
-        this.adminState.cacheState.backgroundJobs = {
-            active: Math.floor(Math.random() * 5) + 1,
-            pending: Math.floor(Math.random() * 10) + 3,
-            failed: Math.floor(Math.random() * 2),
-            paused: false
-        };
-        
-        console.log('📊 Using simulated cache data');
-    }
-
-    /**
-     * Start Real-time Monitoring
-     */
-    startRealTimeMonitoring() {
-        // Clear existing interval
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-        }
-
-        // Update every 5 seconds
-        this.updateInterval = setInterval(async () => {
-            try {
-                await this.updateCacheMetrics();
-                this.updateCacheDisplay();
-            } catch (error) {
-                console.error('Cache monitoring update error:', error);
-            }
-        }, 5000);
-
-        console.log('✅ Cache real-time monitoring started');
-    }
-
-    /**
-     * Update Cache Metrics
-     */
-    async updateCacheMetrics() {
+    async loadCacheAnalytics() {
         try {
-            // Simulate metric variations
-            this.adminState.cacheState.tokenCache.hitRate += (Math.random() - 0.5) * 2;
-            this.adminState.cacheState.priceCache.hitRate += (Math.random() - 0.5) * 1;
+            const supabase = this.getSupabase();
             
-            // Keep hit rates within realistic bounds
-            this.adminState.cacheState.tokenCache.hitRate = Math.max(85, 
-                Math.min(99, this.adminState.cacheState.tokenCache.hitRate));
-            this.adminState.cacheState.priceCache.hitRate = Math.max(90, 
-                Math.min(99.5, this.adminState.cacheState.priceCache.hitRate));
+            // Get latest cache analytics
+            const { data: analytics, error } = await supabase
+                .from('cache_analytics')
+                .select('*')
+                .order('period_start', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+
+            if (analytics) {
+                // Update token cache metrics
+                this.monitoringState.tokenCache.hitRate = analytics.cache_hit_rate || 0;
+                this.monitoringState.tokenCache.responseTime = analytics.avg_processing_time_ms || 0;
+                
+                // Update price cache metrics  
+                this.monitoringState.priceCache.hitRate = analytics.cache_hit_rate || 0;
+                this.monitoringState.priceCache.responseTime = analytics.avg_api_response_time_ms || 0;
+                
+                // Update system health
+                this.monitoringState.systemHealth.cacheEfficiency = analytics.cache_hit_rate || 0;
+                this.monitoringState.systemHealth.dataFreshness = 
+                    analytics.avg_data_age_minutes < 5 ? 100 : Math.max(0, 100 - (analytics.avg_data_age_minutes - 5) * 2);
+            }
             
-            // Update response times
-            this.adminState.cacheState.tokenCache.responseTime = 35 + Math.random() * 20;
-            this.adminState.cacheState.priceCache.responseTime = 25 + Math.random() * 15;
-            
-            // Update performance metrics
-            this.adminState.cacheState.performance.dailyRequests += Math.floor(Math.random() * 100);
-            this.adminState.cacheState.performance.efficiency = 
-                (this.adminState.cacheState.tokenCache.hitRate + 
-                 this.adminState.cacheState.priceCache.hitRate) / 2;
+            console.log('✅ Cache analytics loaded');
             
         } catch (error) {
-            console.error('Error updating cache metrics:', error);
+            console.error('Error loading cache analytics:', error);
+            throw error;
         }
+    }
+
+    /**
+     * Load API Rate Limits from Database
+     */
+    async loadApiRateLimits() {
+        try {
+            const supabase = this.getSupabase();
+            
+            // Get current API rate limit status
+            const { data: rateLimits, error } = await supabase
+                .from('api_rate_limits')
+                .select('*')
+                .gte('window_start', new Date(Date.now() - 3600000).toISOString()); // Last hour
+
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+
+            if (rateLimits) {
+                rateLimits.forEach(limit => {
+                    const source = limit.api_source.toLowerCase();
+                    if (this.monitoringState.apiRateLimits[source]) {
+                        this.monitoringState.apiRateLimits[source] = {
+                            requestsMade: limit.requests_made,
+                            requestsLimit: limit.requests_limit,
+                            isLimited: limit.is_limited,
+                            successRate: limit.success_rate || 100,
+                            avgResponseTime: limit.avg_response_time_ms || 0
+                        };
+                    }
+                });
+                
+                // Calculate API health
+                const totalSources = Object.keys(this.monitoringState.apiRateLimits).length;
+                const healthySources = Object.values(this.monitoringState.apiRateLimits)
+                    .filter(api => !api.isLimited && api.successRate > 90).length;
+                
+                this.monitoringState.systemHealth.apiHealth = (healthySources / totalSources) * 100;
+            }
+            
+            console.log('✅ API rate limits loaded');
+            
+        } catch (error) {
+            console.error('Error loading API rate limits:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load Background Jobs Status from Database
+     */
+    async loadBackgroundJobsStatus() {
+        try {
+            const supabase = this.getSupabase();
+            
+            // Get background jobs status
+            const { data: jobs, error } = await supabase
+                .from('background_jobs')
+                .select('status, job_type, started_at, completed_at')
+                .gte('scheduled_at', new Date(Date.now() - 86400000).toISOString()); // Last 24 hours
+
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+
+            if (jobs) {
+                this.monitoringState.backgroundJobs = {
+                    active: jobs.filter(j => j.status === 'RUNNING').length,
+                    pending: jobs.filter(j => j.status === 'PENDING').length,
+                    failed: jobs.filter(j => j.status === 'FAILED').length,
+                    completed: jobs.filter(j => j.status === 'COMPLETED').length,
+                    paused: false // Could be determined by checking for recent job activity
+                };
+            }
+            
+            console.log('✅ Background jobs status loaded');
+            
+        } catch (error) {
+            console.error('Error loading background jobs status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Calculate Overall System Health
+     */
+    calculateSystemHealth() {
+        try {
+            const cacheHealth = (this.monitoringState.tokenCache.healthScore + this.monitoringState.priceCache.healthScore) / 2;
+            const apiHealth = this.monitoringState.systemHealth.apiHealth;
+            const dataFreshness = this.monitoringState.systemHealth.dataFreshness;
+            
+            // Weight the different health components
+            this.monitoringState.systemHealth.overallScore = Math.round(
+                (cacheHealth * 0.4) + 
+                (apiHealth * 0.3) + 
+                (dataFreshness * 0.3)
+            );
+            
+            console.log(`📊 System health calculated: ${this.monitoringState.systemHealth.overallScore}%`);
+            
+        } catch (error) {
+            console.error('Error calculating system health:', error);
+        }
+    }
+
+    /**
+     * Start Real-time Cache Monitoring
+     */
+    startCacheMonitoring() {
+        try {
+            // Monitor cache every 30 seconds
+            this.monitoringInterval = setInterval(async () => {
+                try {
+                    await this.refreshCacheData();
+                    this.updateCacheDisplay();
+                } catch (error) {
+                    console.error('Cache monitoring error:', error);
+                }
+            }, 30000);
+
+            console.log('✅ Real-time cache monitoring started');
+            
+        } catch (error) {
+            console.error('Failed to start cache monitoring:', error);
+        }
+    }
+
+    /**
+     * Refresh Cache Data
+     */
+    async refreshCacheData() {
+        try {
+            console.log('🔄 Refreshing cache data...');
+            await this.loadCacheData();
+            this.updateCacheDisplay();
+            console.log('✅ Cache data refreshed');
+            
+        } catch (error) {
+            console.error('Error refreshing cache data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Refresh All Caches
+     */
+    async refreshAllCaches() {
+        try {
+            console.log('🔄 Initiating cache refresh...');
+            this.showAdminNotification('Cache refresh initiated...', 'info');
+            
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            // Trigger background job for cache refresh
+            const { data: job, error } = await supabase
+                .from('background_jobs')
+                .insert({
+                    job_type: 'CACHE_REFRESH',
+                    job_data: {
+                        refresh_type: 'ALL_CACHES',
+                        requested_by: sessionStorage.getItem('adminWallet') || 'admin',
+                        priority: 'HIGH'
+                    },
+                    priority: 'HIGH',
+                    scheduled_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            this.showAdminNotification('Cache refresh job queued successfully', 'success');
+            
+            // Refresh data after a delay
+            setTimeout(async () => {
+                await this.refreshCacheData();
+            }, 5000);
+            
+        } catch (error) {
+            console.error('Error refreshing all caches:', error);
+            this.showAdminNotification('Failed to refresh caches: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Clear Stale Cache
+     */
+    async clearStaleCache() {
+        try {
+            console.log('🗑️ Clearing stale cache...');
+            this.showAdminNotification('Clearing stale cache...', 'info');
+            
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            // Delete expired token cache entries
+            const { error: tokenError } = await supabase
+                .from('token_cache')
+                .delete()
+                .lt('cache_expires_at', new Date().toISOString());
+
+            if (tokenError) {
+                console.warn('Error clearing stale token cache:', tokenError);
+            }
+
+            // Delete expired price cache entries
+            const { error: priceError } = await supabase
+                .from('price_cache')
+                .delete()
+                .lt('cache_expires_at', new Date().toISOString());
+
+            if (priceError) {
+                console.warn('Error clearing stale price cache:', priceError);
+            }
+
+            // Log admin action
+            await this.logAdminAction('cache_clear', {
+                action: 'clear_stale_cache',
+                admin_wallet: sessionStorage.getItem('adminWallet') || 'admin'
+            });
+
+            this.showAdminNotification('Stale cache cleared successfully', 'success');
+            
+            // Refresh data
+            await this.refreshCacheData();
+            
+        } catch (error) {
+            console.error('Error clearing stale cache:', error);
+            this.showAdminNotification('Failed to clear stale cache: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Optimize Cache Performance
+     */
+    async optimizeCache() {
+        try {
+            console.log('⚡ Optimizing cache performance...');
+            this.showAdminNotification('Cache optimization started...', 'info');
+            
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            // Create optimization job
+            const { data: job, error } = await supabase
+                .from('background_jobs')
+                .insert({
+                    job_type: 'CACHE_OPTIMIZATION',
+                    job_data: {
+                        optimization_type: 'FULL_OPTIMIZATION',
+                        requested_by: sessionStorage.getItem('adminWallet') || 'admin',
+                        targets: ['token_cache', 'price_cache']
+                    },
+                    priority: 'NORMAL',
+                    scheduled_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            // Log admin action
+            await this.logAdminAction('cache_optimization', {
+                action: 'optimize_cache',
+                job_id: job.id,
+                admin_wallet: sessionStorage.getItem('adminWallet') || 'admin'
+            });
+
+            this.showAdminNotification('Cache optimization job queued', 'success');
+            
+        } catch (error) {
+            console.error('Error optimizing cache:', error);
+            this.showAdminNotification('Failed to optimize cache: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * View Cache Analytics
+     */
+    async viewCacheAnalytics() {
+        try {
+            console.log('📊 Loading cache analytics...');
+            
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
+
+            // Get recent analytics data
+            const { data: analytics, error } = await supabase
+                .from('cache_analytics')
+                .select('*')
+                .order('period_start', { ascending: false })
+                .limit(24); // Last 24 periods
+
+            if (error) {
+                throw error;
+            }
+
+            this.showCacheAnalyticsModal(analytics || []);
+            
+        } catch (error) {
+            console.error('Error loading cache analytics:', error);
+            this.showAdminNotification('Failed to load cache analytics', 'error');
+        }
+    }
+
+    /**
+     * Show Cache Analytics Modal
+     */
+    showCacheAnalyticsModal(analytics) {
+        const modalHtml = `
+            <div class="modal" id="cache-analytics-modal">
+                <div class="modal-content" style="max-width: 900px;">
+                    <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    <h3>📊 Cache Performance Analytics</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                        <div class="metric-card">
+                            <h4>Average Hit Rate</h4>
+                            <p class="metric-value">${analytics.length > 0 ? (analytics.reduce((sum, a) => sum + (a.cache_hit_rate || 0), 0) / analytics.length).toFixed(1) : 0}%</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Total Requests</h4>
+                            <p class="metric-value">${analytics.reduce((sum, a) => sum + (a.total_requests || 0), 0)}</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>API Calls Saved</h4>
+                            <p class="metric-value">${analytics.reduce((sum, a) => sum + (a.cache_hits || 0), 0)}</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Avg Response Time</h4>
+                            <p class="metric-value">${analytics.length > 0 ? (analytics.reduce((sum, a) => sum + (a.avg_processing_time_ms || 0), 0) / analytics.length).toFixed(0) : 0}ms</p>
+                        </div>
+                    </div>
+                    
+                    <div style="max-height: 400px; overflow-y: auto; margin: 1rem 0;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Hit Rate</th>
+                                    <th>Requests</th>
+                                    <th>API Calls</th>
+                                    <th>Response Time</th>
+                                    <th>Tokens Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${analytics.map(item => `
+                                    <tr>
+                                        <td>${new Date(item.period_start).toLocaleString()}</td>
+                                        <td>${(item.cache_hit_rate || 0).toFixed(1)}%</td>
+                                        <td>${item.total_requests || 0}</td>
+                                        <td>${item.api_calls_made || 0}</td>
+                                        <td>${item.avg_processing_time_ms || 0}ms</td>
+                                        <td>${item.tokens_updated || 0}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 1rem;">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove();">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
     /**
@@ -180,22 +651,16 @@ class CacheMonitor {
      */
     updateCacheDisplay() {
         try {
-            const { cacheState } = this.adminState;
-            
             // Update cache health cards
-            this.updateElement('token-cache-hit', `${cacheState.tokenCache.hitRate.toFixed(1)}%`);
-            this.updateElement('price-cache-hit', `${cacheState.priceCache.hitRate.toFixed(1)}%`);
-            this.updateElement('avg-response-time', `${Math.round(cacheState.tokenCache.responseTime)}ms`);
-            this.updateElement('cache-size', `${(cacheState.tokenCache.size + cacheState.priceCache.size).toFixed(1)}MB`);
+            this.updateCacheHealthCard('token-cache-hit', this.monitoringState.tokenCache.hitRate.toFixed(1) + '%', 'excellent');
+            this.updateCacheHealthCard('cache-response-time', this.monitoringState.tokenCache.responseTime + 'ms', 'good');
+            this.updateCacheHealthCard('cache-size', this.formatCacheSize(this.monitoringState.tokenCache.size), 'warning');
+            this.updateCacheHealthCard('fresh-tokens', this.monitoringState.tokenCache.freshCount, 'good');
             
-            // Update performance metrics
-            this.updateElement('daily-requests', this.formatNumber(cacheState.performance.dailyRequests));
-            this.updateElement('cache-savings', `$${cacheState.performance.costSavings.toFixed(2)}`);
-            this.updateElement('efficiency-score', `${cacheState.performance.efficiency.toFixed(1)}%`);
-            this.updateElement('uptime', `${cacheState.performance.uptime}%`);
+            // Update system health indicators
+            this.updateSystemHealthIndicators();
             
-            // Update metric classes based on values
-            this.updateMetricClasses();
+            console.log('✅ Cache display updated');
             
         } catch (error) {
             console.error('Error updating cache display:', error);
@@ -203,62 +668,47 @@ class CacheMonitor {
     }
 
     /**
-     * Update Metric Classes for Color Coding
+     * Update Cache Health Card
      */
-    updateMetricClasses() {
-        const { cacheState } = this.adminState;
-        
-        // Token cache hit rate
-        const tokenCacheElement = document.getElementById('token-cache-hit');
-        if (tokenCacheElement) {
-            tokenCacheElement.className = `cache-metric ${this.getMetricClass(cacheState.tokenCache.hitRate, 'hitRate')}`;
-        }
-        
-        // Price cache hit rate
-        const priceCacheElement = document.getElementById('price-cache-hit');
-        if (priceCacheElement) {
-            priceCacheElement.className = `cache-metric ${this.getMetricClass(cacheState.priceCache.hitRate, 'hitRate')}`;
-        }
-        
-        // Response time
-        const responseTimeElement = document.getElementById('avg-response-time');
-        if (responseTimeElement) {
-            responseTimeElement.className = `cache-metric ${this.getMetricClass(cacheState.tokenCache.responseTime, 'responseTime')}`;
-        }
-        
-        // Cache size
-        const cacheSizeElement = document.getElementById('cache-size');
-        if (cacheSizeElement) {
-            const totalSize = cacheState.tokenCache.size + cacheState.priceCache.size;
-            cacheSizeElement.className = `cache-metric ${this.getMetricClass(totalSize, 'cacheSize')}`;
+    updateCacheHealthCard(elementId, value, status) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+            element.className = `cache-metric ${status}`;
         }
     }
 
     /**
-     * Get Metric Class for Color Coding
+     * Update System Health Indicators
      */
-    getMetricClass(value, type) {
-        switch (type) {
-            case 'hitRate':
-                if (value >= 95) return 'excellent';
-                if (value >= 90) return 'good';
-                if (value >= 80) return 'warning';
-                return 'critical';
+    updateSystemHealthIndicators() {
+        // Update overall health score
+        const healthElement = document.getElementById('system-health-score');
+        if (healthElement) {
+            const score = this.monitoringState.systemHealth.overallScore;
+            healthElement.textContent = score + '%';
             
-            case 'responseTime':
-                if (value <= 30) return 'excellent';
-                if (value <= 50) return 'good';
-                if (value <= 100) return 'warning';
-                return 'critical';
-            
-            case 'cacheSize':
-                if (value <= 10) return 'excellent';
-                if (value <= 20) return 'good';
-                if (value <= 50) return 'warning';
-                return 'critical';
-            
-            default:
-                return 'good';
+            if (score >= 90) {
+                healthElement.className = 'health-score excellent';
+            } else if (score >= 70) {
+                healthElement.className = 'health-score good';
+            } else {
+                healthElement.className = 'health-score warning';
+            }
+        }
+        
+        // Update status indicators
+        this.updateStatusIndicator('token-cache-status', this.monitoringState.tokenCache.status);
+        this.updateStatusIndicator('price-cache-status', this.monitoringState.priceCache.status);
+    }
+
+    /**
+     * Update Status Indicator
+     */
+    updateStatusIndicator(elementId, status) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.className = `status-indicator ${status}`;
         }
     }
 
@@ -266,17 +716,16 @@ class CacheMonitor {
      * Setup Event Listeners
      */
     setupEventListeners() {
-        // Cache refresh buttons
+        // Cache management buttons
         document.addEventListener('click', (e) => {
-            if (e.target.id === 'refresh-token-cache' || e.target.onclick?.toString().includes('refreshTokenCache')) {
+            if (e.target.onclick?.toString().includes('refreshTokenCache')) {
                 this.refreshTokenCache();
-            } else if (e.target.id === 'refresh-price-cache' || e.target.onclick?.toString().includes('refreshPriceCache')) {
-                this.refreshPriceCache();
-            } else if (e.target.onclick?.toString().includes('invalidateCache')) {
-                const type = e.target.onclick.toString().includes('all') ? 'all' : 'selective';
-                this.invalidateCache(type);
+            } else if (e.target.onclick?.toString().includes('clearStaleCache')) {
+                this.clearStaleCache();
             } else if (e.target.onclick?.toString().includes('optimizeCache')) {
                 this.optimizeCache();
+            } else if (e.target.onclick?.toString().includes('viewCacheAnalytics')) {
+                this.viewCacheAnalytics();
             }
         });
 
@@ -289,341 +738,76 @@ class CacheMonitor {
     async refreshTokenCache() {
         try {
             console.log('🪙 Refreshing token cache...');
-            this.showOperationProgress('Refreshing token cache...', 0);
+            this.showAdminNotification('Token cache refresh initiated...', 'info');
             
-            // Add to operation queue
-            this.operationQueue.push({
-                type: this.operationTypes.REFRESH_TOKEN,
-                description: 'Token Cache Refresh',
-                progress: 0
-            });
+            const supabase = this.getSupabase();
+            if (!supabase) {
+                throw new Error('Database connection not available');
+            }
 
-            await this.processOperation(this.operationTypes.REFRESH_TOKEN);
+            // Create background job for token cache refresh
+            const { data: job, error } = await supabase
+                .from('background_jobs')
+                .insert({
+                    job_type: 'TOKEN_CACHE_REFRESH',
+                    job_data: {
+                        refresh_type: 'FULL_REFRESH',
+                        requested_by: sessionStorage.getItem('adminWallet') || 'admin'
+                    },
+                    priority: 'HIGH',
+                    scheduled_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            this.showAdminNotification('Token cache refresh job queued', 'success');
             
-            this.showAdminNotification('Token cache refreshed successfully', 'success');
+            // Log admin action
+            await this.logAdminAction('token_cache_refresh', {
+                action: 'refresh_token_cache',
+                job_id: job.id,
+                admin_wallet: sessionStorage.getItem('adminWallet') || 'admin'
+            });
             
         } catch (error) {
             console.error('Error refreshing token cache:', error);
-            this.showAdminNotification('Failed to refresh token cache', 'error');
+            this.showAdminNotification('Failed to refresh token cache: ' + error.message, 'error');
         }
     }
 
     /**
-     * Refresh Price Cache
+     * Log Admin Action
      */
-    async refreshPriceCache() {
+    async logAdminAction(actionType, actionData) {
         try {
-            console.log('💰 Refreshing price cache...');
-            this.showOperationProgress('Refreshing price cache...', 0);
-            
-            this.operationQueue.push({
-                type: this.operationTypes.REFRESH_PRICE,
-                description: 'Price Cache Refresh',
-                progress: 0
-            });
+            const supabase = this.getSupabase();
+            if (!supabase) return;
 
-            await this.processOperation(this.operationTypes.REFRESH_PRICE);
+            const adminWallet = sessionStorage.getItem('adminWallet') || 'admin';
             
-            this.showAdminNotification('Price cache refreshed successfully', 'success');
+            await supabase
+                .from('admin_audit_log')
+                .insert({
+                    admin_id: adminWallet,
+                    action: actionType,
+                    action_data: actionData,
+                    ip_address: 'web-client',
+                    user_agent: navigator.userAgent,
+                    timestamp: new Date().toISOString()
+                });
+
+            console.log(`📝 Admin action logged: ${actionType}`);
             
         } catch (error) {
-            console.error('Error refreshing price cache:', error);
-            this.showAdminNotification('Failed to refresh price cache', 'error');
+            console.error('Error logging admin action:', error);
         }
-    }
-
-    /**
-     * Invalidate Cache
-     */
-    async invalidateCache(type) {
-        try {
-            const operationType = type === 'all' ? 
-                this.operationTypes.INVALIDATE_ALL : 
-                this.operationTypes.INVALIDATE_SELECTIVE;
-            
-            console.log(`🗑️ Invalidating ${type} cache...`);
-            this.showOperationProgress(`Invalidating ${type} cache...`, 0);
-            
-            this.operationQueue.push({
-                type: operationType,
-                description: `${type === 'all' ? 'Full' : 'Selective'} Cache Invalidation`,
-                progress: 0
-            });
-
-            await this.processOperation(operationType);
-            
-            this.showAdminNotification(`${type === 'all' ? 'All' : 'Selected'} cache invalidated`, 'warning');
-            
-        } catch (error) {
-            console.error('Error invalidating cache:', error);
-            this.showAdminNotification('Failed to invalidate cache', 'error');
-        }
-    }
-
-    /**
-     * Optimize Cache
-     */
-    async optimizeCache() {
-        try {
-            console.log('⚡ Optimizing cache performance...');
-            this.showOperationProgress('Optimizing cache...', 0);
-            
-            this.operationQueue.push({
-                type: this.operationTypes.OPTIMIZE,
-                description: 'Cache Optimization',
-                progress: 0
-            });
-
-            await this.processOperation(this.operationTypes.OPTIMIZE);
-            
-            this.showAdminNotification('Cache optimization completed', 'success');
-            
-        } catch (error) {
-            console.error('Error optimizing cache:', error);
-            this.showAdminNotification('Failed to optimize cache', 'error');
-        }
-    }
-
-    /**
-     * Process Cache Operation
-     */
-    async processOperation(operationType) {
-        if (this.isOperationInProgress) {
-            console.log('Operation already in progress, queuing...');
-            return;
-        }
-
-        this.isOperationInProgress = true;
-
-        try {
-            // Simulate operation progress
-            for (let progress = 0; progress <= 100; progress += 10) {
-                this.updateOperationProgress(progress);
-                await this.sleep(200); // Simulate work
-            }
-
-            // Update cache state based on operation
-            await this.updateCacheStateAfterOperation(operationType);
-            
-            // Complete operation
-            this.hideOperationProgress();
-            
-        } catch (error) {
-            console.error('Error processing cache operation:', error);
-            this.hideOperationProgress();
-            throw error;
-        } finally {
-            this.isOperationInProgress = false;
-        }
-    }
-
-    /**
-     * Update Cache State After Operation
-     */
-    async updateCacheStateAfterOperation(operationType) {
-        const now = new Date();
-        
-        switch (operationType) {
-            case this.operationTypes.REFRESH_TOKEN:
-                this.adminState.cacheState.tokenCache.lastRefresh = now;
-                this.adminState.cacheState.tokenCache.hitRate = Math.min(99, 
-                    this.adminState.cacheState.tokenCache.hitRate + Math.random() * 3);
-                break;
-                
-            case this.operationTypes.REFRESH_PRICE:
-                this.adminState.cacheState.priceCache.lastRefresh = now;
-                this.adminState.cacheState.priceCache.hitRate = Math.min(99.5, 
-                    this.adminState.cacheState.priceCache.hitRate + Math.random() * 2);
-                break;
-                
-            case this.operationTypes.INVALIDATE_ALL:
-                this.adminState.cacheState.tokenCache.hitRate = 0;
-                this.adminState.cacheState.priceCache.hitRate = 0;
-                // Will gradually recover
-                break;
-                
-            case this.operationTypes.OPTIMIZE:
-                this.adminState.cacheState.tokenCache.responseTime *= 0.8;
-                this.adminState.cacheState.priceCache.responseTime *= 0.8;
-                this.adminState.cacheState.performance.efficiency += 2;
-                break;
-        }
-        
-        // Update display
-        this.updateCacheDisplay();
-    }
-
-    /**
-     * Show Operation Progress
-     */
-    showOperationProgress(message, progress) {
-        const progressContainer = document.getElementById('cache-progress');
-        if (progressContainer) {
-            progressContainer.classList.remove('hidden');
-            
-            const progressBar = document.getElementById('cache-progress-bar');
-            const progressText = document.getElementById('cache-progress-text');
-            
-            if (progressBar) {
-                progressBar.style.width = `${progress}%`;
-            }
-            
-            if (progressText) {
-                progressText.textContent = message;
-            }
-        }
-    }
-
-    /**
-     * Update Operation Progress
-     */
-    updateOperationProgress(progress) {
-        const progressBar = document.getElementById('cache-progress-bar');
-        const progressText = document.getElementById('cache-progress-text');
-        
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-        }
-        
-        if (progressText) {
-            progressText.textContent = `Processing... ${progress}%`;
-        }
-    }
-
-    /**
-     * Hide Operation Progress
-     */
-    hideOperationProgress() {
-        const progressContainer = document.getElementById('cache-progress');
-        if (progressContainer) {
-            progressContainer.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Quick Cache Refresh (for dashboard)
-     */
-    async quickRefresh() {
-        try {
-            console.log('🔄 Quick cache refresh triggered');
-            
-            // Refresh both caches quickly
-            await Promise.all([
-                this.refreshTokenCache(),
-                this.refreshPriceCache()
-            ]);
-            
-            this.showAdminNotification('Quick cache refresh completed', 'success');
-            
-        } catch (error) {
-            console.error('Error in quick cache refresh:', error);
-            this.showAdminNotification('Quick cache refresh failed', 'error');
-        }
-    }
-
-    /**
-     * Get Cache Performance Report
-     */
-    getCachePerformanceReport() {
-        const { cacheState } = this.adminState;
-        
-        return {
-            overview: {
-                tokenCacheHitRate: cacheState.tokenCache.hitRate,
-                priceCacheHitRate: cacheState.priceCache.hitRate,
-                avgResponseTime: (cacheState.tokenCache.responseTime + cacheState.priceCache.responseTime) / 2,
-                totalCacheSize: cacheState.tokenCache.size + cacheState.priceCache.size,
-                overallEfficiency: cacheState.performance.efficiency
-            },
-            recommendations: this.generateOptimizationRecommendations(),
-            alerts: this.generateCacheAlerts()
-        };
-    }
-
-    /**
-     * Generate Optimization Recommendations
-     */
-    generateOptimizationRecommendations() {
-        const { cacheState } = this.adminState;
-        const recommendations = [];
-        
-        if (cacheState.tokenCache.hitRate < 90) {
-            recommendations.push({
-                type: 'warning',
-                message: 'Token cache hit rate is below optimal. Consider increasing cache TTL.',
-                action: 'increase_token_ttl'
-            });
-        }
-        
-        if (cacheState.priceCache.hitRate < 95) {
-            recommendations.push({
-                type: 'info',
-                message: 'Price cache could be optimized. Consider predictive caching.',
-                action: 'enable_predictive_caching'
-            });
-        }
-        
-        if (cacheState.tokenCache.responseTime > 50) {
-            recommendations.push({
-                type: 'warning',
-                message: 'Response times are higher than optimal. Consider cache warming.',
-                action: 'implement_cache_warming'
-            });
-        }
-        
-        return recommendations;
-    }
-
-    /**
-     * Generate Cache Alerts
-     */
-    generateCacheAlerts() {
-        const { cacheState } = this.adminState;
-        const alerts = [];
-        
-        if (cacheState.tokenCache.hitRate < 80) {
-            alerts.push({
-                severity: 'critical',
-                message: 'Token cache hit rate critically low',
-                timestamp: new Date()
-            });
-        }
-        
-        if (cacheState.backgroundJobs.failed > 0) {
-            alerts.push({
-                severity: 'warning',
-                message: `${cacheState.backgroundJobs.failed} background jobs failed`,
-                timestamp: new Date()
-            });
-        }
-        
-        return alerts;
     }
 
     // ===== UTILITY FUNCTIONS =====
-
-    /**
-     * Calculate Hit Rate
-     */
-    calculateHitRate(cacheData) {
-        if (!cacheData || !cacheData.fresh || !cacheData.total) {
-            return 94.2; // Default fallback
-        }
-        
-        return (cacheData.fresh / cacheData.total) * 100;
-    }
-
-    /**
-     * Determine Cache Status
-     */
-    determineCacheStatus(cacheData) {
-        const hitRate = this.calculateHitRate(cacheData);
-        
-        if (hitRate >= 95) return 'excellent';
-        if (hitRate >= 90) return 'healthy';
-        if (hitRate >= 80) return 'warning';
-        return 'critical';
-    }
 
     /**
      * Get Supabase Client
@@ -645,25 +829,26 @@ class CacheMonitor {
     }
 
     /**
-     * Update Element Text Content
+     * Format Cache Size
      */
-    updateElement(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
+    formatCacheSize(sizeBytes) {
+        if (!sizeBytes) return '0 KB';
+        
+        // If it's a count, convert to approximate size
+        if (sizeBytes < 1000) {
+            return `${sizeBytes} items`;
         }
-    }
-
-    /**
-     * Format Number with Abbreviations
-     */
-    formatNumber(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
+        
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let size = sizeBytes;
+        let unitIndex = 0;
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
         }
-        return num.toString();
+        
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
     }
 
     /**
@@ -678,39 +863,39 @@ class CacheMonitor {
     }
 
     /**
-     * Sleep Utility
-     */
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    /**
      * Cleanup
      */
     cleanup() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+            this.monitoringInterval = null;
         }
         
-        // Destroy charts
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') {
-                chart.destroy();
-            }
-        });
+        if (this.cacheRefreshInterval) {
+            clearInterval(this.cacheRefreshInterval);
+            this.cacheRefreshInterval = null;
+        }
+        
+        if (this.performanceChart) {
+            this.performanceChart.destroy();
+            this.performanceChart = null;
+        }
         
         console.log('🧹 Cache Monitor cleaned up');
     }
 }
 
+// Create singleton instance
+CacheMonitor.instance = null;
+
 // Export for global use
 window.CacheMonitor = CacheMonitor;
 
-console.log('✅ CacheMonitor component loaded');
+console.log('✅ CacheMonitor component loaded - LIVE DATA ONLY');
 console.log('🔧 Features:');
-console.log('   📊 Real-time cache health monitoring');
-console.log('   🔄 Manual cache refresh controls');
-console.log('   ⚡ Cache optimization tools');
-console.log('   📈 Performance analytics');
-console.log('   🚨 Automated alerting system');
+console.log('   📊 Real-time cache monitoring from database tables');
+console.log('   🔄 Live cache refresh and optimization');
+console.log('   📈 Performance analytics and health scoring');
+console.log('   🗑️ Stale cache cleanup operations');
+console.log('   ⚡ Background job integration for cache operations');
+console.log('   📝 Complete admin action audit logging');
