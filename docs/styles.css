@@ -121,8 +121,9 @@ body {
     margin: 0 auto;
     padding: 0 2rem;
     display: flex;
-    justify-content: space-between;
+    justify-content: center; /* Center the entire nav content */
     align-items: center;
+    position: relative; /* For absolute positioning of wallet info */
 }
 
 .logo {
@@ -136,7 +137,8 @@ body {
     align-items: center;
     transition: all 0.3s ease;
     cursor: pointer;
-    flex-shrink: 0; /* Prevents logo from shrinking */
+    position: absolute; /* Position absolutely */
+    left: 2rem; /* Keep logo on the left */
 }
 
 .logo:hover {
@@ -146,12 +148,41 @@ body {
 
 .nav-links {
     display: flex;
-    gap: 2rem; /* Reduced from 2.5rem to 2rem for better spacing */
+    gap: 2rem;
     list-style: none;
     align-items: center;
-    margin-left: 2rem; /* Controlled gap from logo */
-    flex: 1; /* Takes up available space */
-    justify-content: flex-start; /* Aligns items to start after logo gap */
+    justify-content: center; /* Center the navigation items */
+    margin: 0; /* Remove margin */
+    flex: none; /* Don't flex-grow */
+}
+
+#connectWalletBtn,
+#traderInfo {
+    position: absolute;
+    right: 2rem; /* Keep wallet info on the right */
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .nav-container {
+        justify-content: space-between; /* On mobile, use space-between */
+        position: relative;
+    }
+    
+    .logo {
+        position: static; /* Reset positioning on mobile */
+        left: auto;
+    }
+    
+    .nav-links {
+        display: none; /* Hide nav links on mobile (you might want a hamburger menu) */
+    }
+    
+    #connectWalletBtn,
+    #traderInfo {
+        position: static; /* Reset positioning on mobile */
+        right: auto;
+    }
 }
 
 .nav-link {
