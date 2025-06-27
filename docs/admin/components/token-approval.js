@@ -86,6 +86,7 @@ class TokenApproval {
                 console.log('No tokens found in cache for approval');
                 this.approvalQueue = [];
                 this.updateApprovalStatistics();
+                this.renderApprovalQueue();
                 return;
             }
 
@@ -137,8 +138,9 @@ class TokenApproval {
                     tags: this.generateTags(token)
                 }));
             
-            // Update statistics
+            // Update statistics and render UI
             this.updateApprovalStatistics();
+            this.renderApprovalQueue();
             
             console.log(`✅ Loaded ${this.approvalQueue.length} tokens pending approval`);
             console.log(`   📊 Approved tokens: ${approvedSet.size}`);
@@ -149,8 +151,257 @@ class TokenApproval {
             this.showAdminNotification(`Failed to load pending approvals: ${error.message}`, 'error');
             this.approvalQueue = [];
             this.updateApprovalStatistics();
+            this.renderApprovalQueue();
             throw error;
         }
+    }
+
+    /**
+     * Render Approval Queue - NEW FUNCTION
+     */
+    renderApprovalQueue() {
+        try {
+            console.log('🎨 Rendering approval queue UI...');
+            
+            const container = document.getElementById('approval-queue');
+            if (!container) {
+                console.error('Approval queue container not found');
+                return;
+            }
+
+            if (this.approvalQueue.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #94a3b8;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
+                        <h3 style="margin-bottom: 0.5rem; color: #d1d5db;">No Tokens Pending Approval</h3>
+                        <p>All discovered tokens have been processed or no fresh tokens are available.</p>
+                        <button onclick="window.TokenApproval.instance.loadPendingApprovals()" 
+                                style="margin-top: 1rem; padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                            🔄 Refresh Queue
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create approval items HTML
+            const approvalItems = this.approvalQueue.map(token => this.createApprovalItemHTML(token)).join('');
+            
+            container.innerHTML = `
+                <div style="display: grid; gap: 1rem;">
+                    ${approvalItems}
+                </div>
+            `;
+
+            console.log(`✅ Rendered ${this.approvalQueue.length} approval items`);
+            
+        } catch (error) {
+            console.error('Error rendering approval queue:', error);
+            const container = document.getElementById('approval-queue');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #ef4444;">
+                        <h3>Error Loading Approval Queue</h3>
+                        <p>${error.message}</p>
+                        <button onclick="window.TokenApproval.instance.loadPendingApprovals()" 
+                                style="margin-top: 1rem; padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                            🔄 Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * Create HTML for Individual Approval Item - NEW FUNCTION
+     */
+    createApprovalItemHTML(token) {
+        const riskColor = this.getRiskColor(token.riskScore);
+        const changeColor = token.priceChange24h >= 0 ? '#22c55e' : '#ef4444';
+        const changeIcon = token.priceChange24h >= 0 ? '📈' : '📉';
+
+        return `
+            <div class="approval-item" data-token-id="${token.id}" style="
+                background: var(--admin-surface, #1f2937);
+                border: 1px solid var(--admin-border, #374151);
+                border-radius: 12px;
+                padding: 1.5rem;
+                transition: all 0.2s ease;
+            ">
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: start;">
+                    <!-- Token Info -->
+                    <div style="display: grid; grid-template-columns: 60px 1fr; gap: 1rem; align-items: center;">
+                        <!-- Token Logo/Icon -->
+                        <div style="
+                            width: 60px;
+                            height: 60px;
+                            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 1.25rem;
+                        ">
+                            ${token.logoURI ? 
+                                `<img src="${token.logoURI}" alt="${token.symbol}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: linear-gradient(135deg, #8b5cf6, #3b82f6); border-radius: 50%; color: white; font-weight: bold;">${token.symbol?.charAt(0) || '?'}</div>` :
+                                token.symbol?.charAt(0) || '?'
+                            }
+                        </div>
+                        
+                        <!-- Token Details -->
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <h3 style="margin: 0; color: var(--admin-text, #f3f4f6); font-size: 1.25rem; font-weight: 600;">
+                                    ${token.symbol || 'Unknown'}
+                                </h3>
+                                <div style="display: flex; gap: 0.25rem;">
+                                    ${token.tags.map(tag => `
+                                        <span style="
+                                            background: rgba(139, 92, 246, 0.2);
+                                            color: #a78bfa;
+                                            padding: 0.125rem 0.5rem;
+                                            border-radius: 1rem;
+                                            font-size: 0.75rem;
+                                            font-weight: 500;
+                                        ">${tag}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <p style="margin: 0 0 0.75rem 0; color: #94a3b8; font-size: 0.875rem;">
+                                ${this.truncateText(token.name || 'Unknown Token', 50)}
+                            </p>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; font-size: 0.875rem;">
+                                <div>
+                                    <span style="color: #9ca3af;">Market Cap:</span><br>
+                                    <span style="color: var(--admin-text, #f3f4f6); font-weight: 600;">
+                                        ${token.marketCap ? '$' + this.formatNumber(token.marketCap) : 'N/A'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af;">Price:</span><br>
+                                    <span style="color: var(--admin-text, #f3f4f6); font-weight: 600;">
+                                        ${token.price ? '$' + token.price.toFixed(6) : 'N/A'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af;">24h Change:</span><br>
+                                    <span style="color: ${changeColor}; font-weight: 600;">
+                                        ${changeIcon} ${token.priceChange24h !== null ? token.priceChange24h.toFixed(2) + '%' : 'N/A'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af;">Risk Score:</span><br>
+                                    <span style="color: ${riskColor}; font-weight: 600;">
+                                        ${(token.riskScore * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; min-width: 200px;">
+                        <!-- Selection Checkbox -->
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 0.5rem;">
+                            <input type="checkbox" class="approval-checkbox" data-token-id="${token.id}" style="
+                                width: 18px;
+                                height: 18px;
+                                accent-color: #8b5cf6;
+                            ">
+                            <span style="color: #9ca3af; font-size: 0.875rem;">Select for batch operation</span>
+                        </label>
+                        
+                        <!-- Primary Actions -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button onclick="window.TokenApproval.instance.approveToken('${token.id}')" style="
+                                padding: 0.75rem 1rem;
+                                background: linear-gradient(135deg, #22c55e, #16a34a);
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-size: 0.875rem;
+                            " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                                ✅ Approve
+                            </button>
+                            <button onclick="window.TokenApproval.instance.rejectToken('${token.id}')" style="
+                                padding: 0.75rem 1rem;
+                                background: linear-gradient(135deg, #ef4444, #dc2626);
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-size: 0.875rem;
+                            " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                                ❌ Reject
+                            </button>
+                        </div>
+                        
+                        <!-- Secondary Actions -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button onclick="window.TokenApproval.instance.openTokenReview('${token.id}')" style="
+                                padding: 0.5rem 0.75rem;
+                                background: var(--admin-bg, #111827);
+                                color: #8b5cf6;
+                                border: 1px solid #8b5cf6;
+                                border-radius: 6px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-size: 0.8125rem;
+                            " onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='var(--admin-bg, #111827)'">
+                                🔍 Review
+                            </button>
+                            <button onclick="window.open('https://www.coingecko.com/en/search?query=${token.symbol}', '_blank')" style="
+                                padding: 0.5rem 0.75rem;
+                                background: var(--admin-bg, #111827);
+                                color: #3b82f6;
+                                border: 1px solid #3b82f6;
+                                border-radius: 6px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-size: 0.8125rem;
+                            " onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'" onmouseout="this.style.background='var(--admin-bg, #111827)'">
+                                🔗 CoinGecko
+                            </button>
+                        </div>
+                        
+                        <!-- Token Address -->
+                        <div style="
+                            background: var(--admin-bg, #111827);
+                            border: 1px solid var(--admin-border, #374151);
+                            border-radius: 6px;
+                            padding: 0.5rem;
+                            font-family: monospace;
+                            font-size: 0.75rem;
+                            color: #9ca3af;
+                            text-align: center;
+                            cursor: pointer;
+                        " onclick="navigator.clipboard.writeText('${token.tokenAddress}'); this.style.color='#22c55e'; this.textContent='✅ Copied!'; setTimeout(() => { this.style.color='#9ca3af'; this.textContent='${this.truncateAddress(token.tokenAddress)}'; }, 2000);">
+                            ${this.truncateAddress(token.tokenAddress)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Get Risk Color Based on Score
+     */
+    getRiskColor(riskScore) {
+        if (riskScore < 0.3) return '#22c55e'; // Low risk - green
+        if (riskScore < 0.6) return '#f59e0b'; // Medium risk - yellow
+        return '#ef4444'; // High risk - red
     }
 
     /**
@@ -277,7 +528,6 @@ class TokenApproval {
                 const difference = newCount - previousCount;
                 console.log(`📥 ${difference} new token(s) added to approval queue`);
                 this.showAdminNotification(`${difference} new token(s) require approval`, 'info');
-                this.updateApprovalDisplay();
             }
         } catch (error) {
             console.error('Error checking for new tokens:', error);
@@ -316,10 +566,10 @@ class TokenApproval {
                 console.log(`⚠️ Token ${token.symbol} already approved`);
                 this.showAdminNotification(`Token ${token.symbol} already approved`, 'info');
                 
-                // Remove from pending queue
+                // Remove from pending queue and re-render
                 this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
                 this.updateApprovalStatistics();
-                this.updateApprovalDisplay();
+                this.renderApprovalQueue();
                 return;
             }
 
@@ -364,7 +614,7 @@ class TokenApproval {
             
             // Update statistics and UI
             this.updateApprovalStatistics();
-            this.updateApprovalDisplay();
+            this.renderApprovalQueue();
             
             this.showAdminNotification(`Token ${token.symbol} approved successfully`, 'success');
             
@@ -415,10 +665,10 @@ class TokenApproval {
                 console.log(`⚠️ Token ${token.symbol} already blacklisted`);
                 this.showAdminNotification(`Token ${token.symbol} already blacklisted`, 'info');
                 
-                // Remove from pending queue
+                // Remove from pending queue and re-render
                 this.approvalQueue = this.approvalQueue.filter(t => t.id !== token.id);
                 this.updateApprovalStatistics();
-                this.updateApprovalDisplay();
+                this.renderApprovalQueue();
                 return;
             }
 
@@ -470,7 +720,7 @@ class TokenApproval {
             
             // Update statistics and UI
             this.updateApprovalStatistics();
-            this.updateApprovalDisplay();
+            this.renderApprovalQueue();
             
             this.showAdminNotification(`Token ${token.symbol} blacklisted successfully`, 'warning');
             
@@ -603,7 +853,6 @@ class TokenApproval {
             // Reload both queues
             await this.loadWhitelistQueue();
             await this.loadPendingApprovals();
-            this.updateApprovalDisplay();
             
         } catch (error) {
             console.error('Error in bulk whitelist:', error);
@@ -979,15 +1228,11 @@ class TokenApproval {
     }
 
     /**
-     * Update Approval Display
+     * Update Approval Display - FIXED
      */
     updateApprovalDisplay() {
         this.updateApprovalStatistics();
-        
-        // Re-render approval queue
-        if (window.renderApprovalQueue) {
-            window.renderApprovalQueue();
-        }
+        this.renderApprovalQueue(); // Direct call instead of checking for global function
     }
 
     /**
@@ -1012,7 +1257,7 @@ class TokenApproval {
      * Get Supabase Client
      */
     getSupabase() {
-        if (this.adminState.supabaseClient) {
+        if (this.adminState?.supabaseClient) {
             if (typeof this.adminState.supabaseClient.getSupabaseClient === 'function') {
                 return this.adminState.supabaseClient.getSupabaseClient();
             } else if (this.adminState.supabaseClient.from) {
@@ -1033,6 +1278,14 @@ class TokenApproval {
     truncateAddress(address) {
         if (!address) return 'N/A';
         return `${address.slice(0, 6)}...${address.slice(-6)}`;
+    }
+
+    /**
+     * Truncate Text
+     */
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     }
 
     /**
@@ -1095,6 +1348,60 @@ TokenApproval.instance = null;
 // Export for global use
 window.TokenApproval = TokenApproval;
 
+// Batch operation functions for onclick handlers
+window.batchApprove = function() {
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.batchApprove();
+    } else {
+        console.error('TokenApproval instance not available');
+    }
+};
+
+window.batchReject = function() {
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.batchReject();
+    } else {
+        console.error('TokenApproval instance not available');
+    }
+};
+
+window.selectAll = function() {
+    document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.updateSelectedCount();
+    }
+};
+
+window.clearSelection = function() {
+    document.querySelectorAll('.approval-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.updateSelectedCount();
+    }
+};
+
+window.bulkAnalyze = function() {
+    console.log('🔍 Bulk analyze functionality will be implemented...');
+    if (window.showAdminNotification) {
+        window.showAdminNotification('Bulk analyze feature coming soon', 'info');
+    }
+};
+
+window.viewBlacklistForWhitelist = function() {
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.viewBlacklistForWhitelist();
+    }
+};
+
+window.processWhitelistQueue = function() {
+    if (window.TokenApproval.instance) {
+        window.TokenApproval.instance.processWhitelistQueue();
+    }
+};
+
 console.log('✅ TokenApproval component loaded - MANUAL ONLY with Whitelist Integration');
 console.log('🏁 Features:');
 console.log('   ✅ Manual token approval workflow ONLY');
@@ -1103,3 +1410,4 @@ console.log('   🔄 Whitelist integration (blacklist → approval queue)');
 console.log('   📊 Live database integration with token_approvals and token_blacklist');
 console.log('   🔍 Bulk operations for approval, rejection, and whitelisting');
 console.log('   📝 Complete admin action audit logging');
+console.log('   🎨 Enhanced UI rendering with approval queue display');
