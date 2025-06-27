@@ -1,31 +1,30 @@
-// TokenService - SIMPLIFIED FOR TOKEN_CACHE TABLE ONLY
-// Focuses only on token_cache table - no user management, no complex features
+// CompetitionService - SIMPLIFIED FOR COMPETITIONS TABLE ONLY
+// Focuses only on competitions table - managed via admin panel
 
-class TokenService {
+class CompetitionService {
     constructor() {
         // Singleton pattern
-        if (TokenService.instance) {
-            console.log('TokenService: Returning existing instance');
-            return TokenService.instance;
+        if (CompetitionService.instance) {
+            console.log('CompetitionService: Returning existing instance');
+            return CompetitionService.instance;
         }
         
-        this.tokens = [];
+        this.competitions = [];
         this.isInitialized = false;
         this.isInitializing = false;
         this.lastUpdate = null;
-        this.cacheStatus = 'unknown';
         this.updateInterval = null;
         
         // Store as singleton instance
-        TokenService.instance = this;
+        CompetitionService.instance = this;
         
-        console.log('TokenService constructor called - SIMPLIFIED VERSION');
+        console.log('CompetitionService constructor called - SIMPLIFIED VERSION');
     }
 
     async initialize() {
         try {
             if (this.isInitializing) {
-                console.log('TokenService: Already initializing, waiting...');
+                console.log('CompetitionService: Already initializing, waiting...');
                 let attempts = 0;
                 while (this.isInitializing && !this.isInitialized && attempts < 50) {
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -35,22 +34,21 @@ class TokenService {
             }
             
             if (this.isInitialized) {
-                console.log('TokenService: Already initialized');
+                console.log('CompetitionService: Already initialized');
                 return true;
             }
             
             this.isInitializing = true;
-            console.log('TokenService: Starting simplified initialization...');
+            console.log('CompetitionService: Starting simplified initialization...');
             
-            // Step 1: Try to load from token_cache table
-            console.log('🔄 Loading tokens from token_cache table...');
-            const cacheLoaded = await this.loadTokensFromCache();
+            // Step 1: Try to load from competitions table
+            console.log('🔄 Loading competitions from table...');
+            const competitionsLoaded = await this.loadCompetitionsFromTable();
             
-            // Step 2: If cache fails, use demo data
-            if (!cacheLoaded || this.tokens.length === 0) {
-                console.log('🔄 Cache empty, using demo tokens...');
-                this.tokens = this.createDemoTokens();
-                this.cacheStatus = 'demo_fallback';
+            // Step 2: If no competitions, create demo data
+            if (!competitionsLoaded || this.competitions.length === 0) {
+                console.log('🔄 No competitions found, using demo data...');
+                this.competitions = this.createDemoCompetitions();
             }
             
             // Step 3: Mark as initialized
@@ -58,259 +56,244 @@ class TokenService {
             this.isInitialized = true;
             this.isInitializing = false;
             
-            console.log(`✅ TokenService initialized: ${this.tokens.length} tokens, status: ${this.cacheStatus}`);
+            console.log(`✅ CompetitionService initialized: ${this.competitions.length} competitions`);
             
             // Step 4: Start background refresh
             this.startBackgroundRefresh();
             
             return true;
         } catch (error) {
-            console.error('❌ TokenService initialization failed:', error);
+            console.error('❌ CompetitionService initialization failed:', error);
             
             // Emergency fallback to demo data
-            this.tokens = this.createDemoTokens();
-            this.cacheStatus = 'error_fallback';
+            this.competitions = this.createDemoCompetitions();
             this.isInitialized = true;
             this.isInitializing = false;
             
-            console.log('TokenService initialized with emergency demo data');
+            console.log('CompetitionService initialized with demo data');
             return true;
         }
     }
 
-    // Load tokens directly from token_cache table only
-    async loadTokensFromCache() {
+    // Load competitions directly from competitions table
+    async loadCompetitionsFromTable() {
         try {
             if (!window.supabase) {
                 console.warn('Supabase client not available');
                 return false;
             }
 
-            console.log('📊 Loading tokens from token_cache table...');
+            console.log('🏆 Loading competitions from table...');
             
-            // Query token_cache table directly
-            const { data: cachedTokens, error } = await window.supabase
-                .from('token_cache')
+            // Query competitions table for active competitions
+            const { data: competitions, error } = await window.supabase
+                .from('competitions')
                 .select('*')
-                .gte('cache_expires_at', new Date().toISOString()) // Only fresh cache
-                .eq('cache_status', 'FRESH')
-                .order('market_cap_usd', { ascending: false })
-                .limit(50);
+                .in('status', ['SETUP', 'VOTING', 'ACTIVE'])
+                .order('created_at', { ascending: false })
+                .limit(20);
 
             if (error) {
-                console.error('Token cache query error:', error);
+                console.error('Competitions query error:', error);
                 return false;
             }
 
-            if (!cachedTokens || cachedTokens.length === 0) {
-                console.log('⚠️ No fresh tokens in cache');
+            if (!competitions || competitions.length === 0) {
+                console.log('⚠️ No active competitions found');
                 return false;
             }
 
-            console.log(`📦 Found ${cachedTokens.length} cached tokens`);
+            console.log(`📦 Found ${competitions.length} competitions`);
             
-            // Process tokens
-            this.tokens = this.processTokensFromCache(cachedTokens);
-            this.cacheStatus = 'cache';
+            // Process competitions with token data
+            this.competitions = await this.processCompetitions(competitions);
             
-            console.log(`✅ Loaded ${this.tokens.length} tokens from cache`);
-            return this.tokens.length > 0;
+            console.log(`✅ Loaded ${this.competitions.length} competitions`);
+            return this.competitions.length > 0;
             
         } catch (error) {
-            console.error('Error loading tokens from cache:', error);
+            console.error('Error loading competitions:', error);
             return false;
         }
     }
 
-    // Process tokens from cache table
-    processTokensFromCache(cachedTokens) {
-        const processedTokens = [];
-        const now = new Date().toISOString();
+    // Process competitions and enrich with token data
+    async processCompetitions(rawCompetitions) {
+        const processedCompetitions = [];
+        const tokenService = window.getTokenService?.();
         
-        console.log(`🔄 Processing ${cachedTokens.length} cached tokens...`);
+        console.log(`🔄 Processing ${rawCompetitions.length} competitions...`);
         
-        for (let i = 0; i < cachedTokens.length; i++) {
+        for (let i = 0; i < rawCompetitions.length; i++) {
             try {
-                const cachedToken = cachedTokens[i];
+                const competition = rawCompetitions[i];
                 
-                // Map from cache table structure to token format
-                const processedToken = {
-                    // Core identifiers
-                    address: cachedToken.token_address,
-                    symbol: cachedToken.symbol,
-                    name: cachedToken.name,
-                    
-                    // Logo with validation
-                    logoURI: this.validateAndFixTokenLogo(cachedToken.logo_uri, cachedToken.symbol),
-                    
-                    // Financial data
-                    market_cap: parseFloat(cachedToken.market_cap_usd) || 0,
-                    price: parseFloat(cachedToken.current_price) || 0,
-                    volume_24h: parseFloat(cachedToken.volume_24h) || 0,
-                    price_change_24h: parseFloat(cachedToken.price_change_24h) || 0,
-                    
-                    // Technical data
-                    decimals: parseInt(cachedToken.decimals) || 9,
-                    age_days: parseInt(cachedToken.age_days) || 0,
-                    
-                    // Status and metadata
-                    is_active: true,
-                    last_updated: cachedToken.cache_created_at || now,
-                    data_source: cachedToken.data_source || 'cache'
-                };
+                // Get token data for the competition
+                let tokenA = null;
+                let tokenB = null;
                 
-                // Basic validation
-                if (this.validateToken(processedToken)) {
-                    processedTokens.push(processedToken);
-                    console.log(`✅ Token ${i + 1} processed: ${processedToken.symbol}`);
-                } else {
-                    console.warn(`⚠️ Token ${i + 1} failed validation: ${processedToken.symbol}`);
+                if (tokenService && tokenService.isReady()) {
+                    tokenA = await tokenService.getTokenByAddress(competition.token_a_address);
+                    tokenB = await tokenService.getTokenByAddress(competition.token_b_address);
                 }
                 
-            } catch (tokenError) {
-                console.error(`❌ Error processing token ${i + 1}:`, tokenError);
+                // Create processed competition object
+                const processedCompetition = {
+                    // Core competition data
+                    id: competition.id || competition.competition_id,
+                    title: competition.title || `${competition.token_a_symbol} vs ${competition.token_b_symbol}`,
+                    description: competition.description || `Predict which token will perform better`,
+                    
+                    // Token data
+                    token_a_address: competition.token_a_address,
+                    token_b_address: competition.token_b_address,
+                    token_a_symbol: competition.token_a_symbol,
+                    token_b_symbol: competition.token_b_symbol,
+                    token_a: tokenA,
+                    token_b: tokenB,
+                    
+                    // Competition settings
+                    status: competition.status,
+                    start_time: competition.start_time,
+                    end_time: competition.end_time,
+                    voting_end_time: competition.voting_end_time,
+                    
+                    // Pool and betting data
+                    total_pool: parseFloat(competition.total_pool) || 0,
+                    entry_fee: parseFloat(competition.entry_fee) || 0.1,
+                    max_participants: parseInt(competition.max_participants) || 100,
+                    current_participants: parseInt(competition.current_participants) || 0,
+                    
+                    // Metadata
+                    created_at: competition.created_at,
+                    created_by: competition.created_by || 'admin',
+                    
+                    // Calculated fields
+                    is_active: competition.status === 'ACTIVE',
+                    is_voting: competition.status === 'VOTING',
+                    can_join: competition.status === 'SETUP' || competition.status === 'VOTING',
+                    time_remaining: this.calculateTimeRemaining(competition.end_time)
+                };
+                
+                processedCompetitions.push(processedCompetition);
+                console.log(`✅ Competition ${i + 1} processed: ${processedCompetition.title}`);
+                
+            } catch (competitionError) {
+                console.error(`❌ Error processing competition ${i + 1}:`, competitionError);
             }
         }
         
-        console.log(`✅ Successfully processed ${processedTokens.length}/${cachedTokens.length} tokens`);
-        return processedTokens;
+        console.log(`✅ Successfully processed ${processedCompetitions.length}/${rawCompetitions.length} competitions`);
+        return processedCompetitions;
     }
 
-    // Validate and fix token logo
-    validateAndFixTokenLogo(logoURI, symbol) {
+    // Calculate time remaining for a competition
+    calculateTimeRemaining(endTime) {
         try {
-            // If no logo or broken placeholder, generate fallback
-            if (!logoURI || 
-                logoURI.includes('placeholder-token.png') || 
-                logoURI === '/placeholder-token.png' ||
-                logoURI.includes('lastrrx.github.io') ||
-                logoURI === 'null' ||
-                logoURI === 'undefined') {
-                
-                return this.generateTokenLogoFallback(symbol);
-            }
+            if (!endTime) return null;
             
-            // Return existing logo if it looks valid
-            return logoURI;
+            const now = new Date();
+            const end = new Date(endTime);
+            const diff = end.getTime() - now.getTime();
             
+            if (diff <= 0) return { expired: true };
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            return {
+                expired: false,
+                hours,
+                minutes,
+                formatted: `${hours}h ${minutes}m`
+            };
         } catch (error) {
-            console.error('Error validating token logo:', error);
-            return this.generateTokenLogoFallback(symbol || 'TOKEN');
+            console.error('Error calculating time remaining:', error);
+            return null;
         }
     }
 
-    // Generate reliable logo fallback
-    generateTokenLogoFallback(symbol) {
-        try {
-            const cleanSymbol = String(symbol).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-            const firstChar = cleanSymbol.charAt(0) || 'T';
-            
-            // Use UI Avatars with TokenWars branding
-            return `https://ui-avatars.com/api/?name=${encodeURIComponent(firstChar)}&background=8b5cf6&color=fff&size=64&bold=true&format=png`;
-        } catch (error) {
-            console.error('Error generating logo fallback:', error);
-            return 'https://ui-avatars.com/api/?name=T&background=8b5cf6&color=fff&size=64&bold=true&format=png';
-        }
-    }
-
-    // Basic token validation
-    validateToken(token) {
-        try {
-            // Check required fields
-            if (!token.address || !token.symbol || !token.name) {
-                return false;
-            }
-            
-            // Check numeric values
-            if (typeof token.market_cap !== 'number' || token.market_cap < 0) {
-                return false;
-            }
-            
-            if (typeof token.price !== 'number' || token.price <= 0) {
-                return false;
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('Error validating token:', error);
-            return false;
-        }
-    }
-
-    // Create demo tokens (fallback only)
-    createDemoTokens() {
-        const now = new Date().toISOString();
+    // Create demo competitions (fallback)
+    createDemoCompetitions() {
+        const now = new Date();
+        const futureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        
         return [
             {
-                address: 'So11111111111111111111111111111111111111112',
-                symbol: 'SOL',
-                name: 'Wrapped SOL',
-                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                market_cap: 45000000000,
-                price: 180.50 + (Math.random() - 0.5) * 10,
-                volume_24h: 2500000000,
-                price_change_24h: (Math.random() - 0.5) * 10,
-                age_days: 1500,
-                is_active: true,
-                last_updated: now,
-                decimals: 9,
-                data_source: 'demo'
+                id: 'demo-1',
+                title: 'SOL vs USDC',
+                description: 'Which will perform better in the next 24 hours?',
+                token_a_address: 'So11111111111111111111111111111111111111112',
+                token_b_address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                token_a_symbol: 'SOL',
+                token_b_symbol: 'USDC',
+                token_a: null,
+                token_b: null,
+                status: 'VOTING',
+                start_time: now.toISOString(),
+                end_time: futureTime.toISOString(),
+                voting_end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+                total_pool: 15.7,
+                entry_fee: 0.1,
+                max_participants: 100,
+                current_participants: 23,
+                created_at: now.toISOString(),
+                created_by: 'demo-admin',
+                is_active: false,
+                is_voting: true,
+                can_join: true,
+                time_remaining: this.calculateTimeRemaining(futureTime.toISOString())
             },
             {
-                address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-                symbol: 'USDC',
-                name: 'USD Coin',
-                logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-                market_cap: 42000000000,
-                price: 1.00 + (Math.random() - 0.5) * 0.02,
-                volume_24h: 3000000000,
-                price_change_24h: (Math.random() - 0.5) * 0.5,
-                age_days: 1200,
-                is_active: true,
-                last_updated: now,
-                decimals: 6,
-                data_source: 'demo'
-            },
-            {
-                address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-                symbol: 'BONK',
-                name: 'Bonk',
-                logoURI: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I',
-                market_cap: 900000000,
-                price: 0.000023 + (Math.random() - 0.5) * 0.000005,
-                volume_24h: 120000000,
-                price_change_24h: (Math.random() - 0.5) * 15,
-                age_days: 400,
-                is_active: true,
-                last_updated: now,
-                decimals: 5,
-                data_source: 'demo'
+                id: 'demo-2',
+                title: 'BONK vs JUP',
+                description: 'Battle of the meme coins vs utility tokens',
+                token_a_address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+                token_b_address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+                token_a_symbol: 'BONK',
+                token_b_symbol: 'JUP',
+                token_a: null,
+                token_b: null,
+                status: 'SETUP',
+                start_time: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(),
+                end_time: new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString(),
+                voting_end_time: new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+                total_pool: 8.3,
+                entry_fee: 0.1,
+                max_participants: 50,
+                current_participants: 12,
+                created_at: now.toISOString(),
+                created_by: 'demo-admin',
+                is_active: false,
+                is_voting: false,
+                can_join: true,
+                time_remaining: this.calculateTimeRemaining(new Date(now.getTime() + 25 * 60 * 60 * 1000).toISOString())
             }
         ];
     }
 
-    // Refresh token data
-    async refreshTokenData() {
+    // Refresh competitions data
+    async refreshCompetitions() {
         try {
             if (this.isInitializing) {
                 console.log('Skipping refresh - initialization in progress');
                 return false;
             }
             
-            console.log('Refreshing token data from cache...');
+            console.log('Refreshing competitions from table...');
             
-            const wasSuccessful = await this.loadTokensFromCache();
+            const wasSuccessful = await this.loadCompetitionsFromTable();
             
             if (wasSuccessful) {
                 this.lastUpdate = new Date();
-                console.log(`✅ Token data refreshed: ${this.tokens.length} tokens`);
+                console.log(`✅ Competitions refreshed: ${this.competitions.length} competitions`);
                 return true;
             } else {
                 console.log('⚠️ Refresh failed, keeping existing data');
                 return false;
             }
         } catch (error) {
-            console.error('Error refreshing token data:', error);
+            console.error('Error refreshing competitions:', error);
             return false;
         }
     }
@@ -322,52 +305,72 @@ class TokenService {
             clearInterval(this.updateInterval);
         }
 
-        // Refresh every 5 minutes
+        // Refresh every 2 minutes (competitions change more frequently)
         this.updateInterval = setInterval(async () => {
             try {
-                console.log('Background token refresh triggered...');
-                await this.refreshTokenData();
+                console.log('Background competitions refresh triggered...');
+                await this.refreshCompetitions();
             } catch (error) {
                 console.error('Background refresh failed:', error);
             }
-        }, 5 * 60 * 1000); // 5 minutes
+        }, 2 * 60 * 1000); // 2 minutes
 
-        console.log('Background token refresh started (5-minute intervals)');
+        console.log('Background competitions refresh started (2-minute intervals)');
     }
 
-    // Get all tokens
-    async getTokens() {
+    // Get all competitions
+    async getCompetitions() {
         try {
             if (!this.isInitialized && !this.isInitializing) {
                 await this.initialize();
             }
             
-            return this.tokens.filter(token => token.is_active);
+            return this.competitions;
         } catch (error) {
-            console.error('Error getting tokens:', error);
-            return this.tokens.filter(token => token.is_active);
+            console.error('Error getting competitions:', error);
+            return this.competitions;
         }
     }
 
-    // Get token by address
-    async getTokenByAddress(address) {
+    // Get active competitions
+    async getActiveCompetitions() {
         try {
-            const tokens = await this.getTokens();
-            return tokens.find(token => token.address === address);
+            const competitions = await this.getCompetitions();
+            return competitions.filter(comp => comp.is_active);
         } catch (error) {
-            console.error('Error getting token by address:', error);
+            console.error('Error getting active competitions:', error);
+            return [];
+        }
+    }
+
+    // Get competitions by status
+    async getCompetitionsByStatus(status) {
+        try {
+            const competitions = await this.getCompetitions();
+            return competitions.filter(comp => comp.status === status);
+        } catch (error) {
+            console.error('Error getting competitions by status:', error);
+            return [];
+        }
+    }
+
+    // Get competition by ID
+    async getCompetitionById(id) {
+        try {
+            const competitions = await this.getCompetitions();
+            return competitions.find(comp => comp.id === id);
+        } catch (error) {
+            console.error('Error getting competition by ID:', error);
             return null;
         }
     }
 
-    // Get cache status
-    getCacheStatus() {
+    // Get service status
+    getStatus() {
         return {
-            status: this.cacheStatus,
-            tokenCount: this.tokens.length,
-            lastUpdate: this.lastUpdate,
             isInitialized: this.isInitialized,
-            dataSource: this.cacheStatus
+            competitionCount: this.competitions.length,
+            lastUpdate: this.lastUpdate
         };
     }
 
@@ -382,29 +385,29 @@ class TokenService {
             clearInterval(this.updateInterval);
             this.updateInterval = null;
         }
-        console.log('TokenService cleaned up');
+        console.log('CompetitionService cleaned up');
     }
 }
 
 // Static property to hold singleton instance
-TokenService.instance = null;
+CompetitionService.instance = null;
 
 // Create global singleton instance
-function getTokenService() {
-    if (!window.tokenService) {
-        window.tokenService = new TokenService();
+function getCompetitionService() {
+    if (!window.competitionService) {
+        window.competitionService = new CompetitionService();
     }
-    return window.tokenService;
+    return window.competitionService;
 }
 
 // Expose globally
-window.TokenService = TokenService;
-window.getTokenService = getTokenService;
+window.CompetitionService = CompetitionService;
+window.getCompetitionService = getCompetitionService;
 
-console.log('✅ TokenService (SIMPLIFIED) class loaded and exposed globally');
-console.log('🎯 Features:');
-console.log('   ✅ Direct token_cache table queries only');
-console.log('   ✅ Demo token fallback when cache empty');
-console.log('   ✅ Background refresh every 5 minutes');
-console.log('   ✅ Logo validation and fallback generation');
-console.log('   ✅ Clean, minimal code focused on core functionality');
+console.log('✅ CompetitionService (SIMPLIFIED) class loaded and exposed globally');
+console.log('🏆 Features:');
+console.log('   ✅ Direct competitions table queries only');
+console.log('   ✅ Demo competition fallback when table empty');
+console.log('   ✅ Background refresh every 2 minutes');
+console.log('   ✅ Token data enrichment from TokenService');
+console.log('   ✅ Status filtering and time calculations');
