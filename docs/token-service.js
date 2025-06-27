@@ -1,5 +1,5 @@
-// TokenService - UPDATED FOR LIVE DATA INTEGRATION
-// Now uses live-token-fetch Edge Function for real market data
+// TokenService - FIXED FOR DIRECT TABLE QUERIES
+// Now uses direct Supabase table queries instead of Edge Functions
 
 class TokenService {
     constructor() {
@@ -20,7 +20,7 @@ class TokenService {
         // Store as singleton instance
         TokenService.instance = this;
         
-        console.log('TokenService constructor called - LIVE DATA VERSION');
+        console.log('TokenService constructor called - DIRECT TABLE VERSION');
     }
 
     async initialize() {
@@ -48,30 +48,25 @@ class TokenService {
             }
             
             this.isInitializing = true;
-            console.log('TokenService: Starting initialization with LIVE DATA...');
+            console.log('TokenService: Starting initialization with DIRECT TABLE ACCESS...');
             
-            // Step 1: Try to load LIVE data first
-            console.log('🔄 Step 1: Loading LIVE tokens from market APIs...');
-            const liveLoaded = await this.loadLiveTokenData();
+            // Step 1: Try to load from cache tables directly
+            console.log('🔄 Step 1: Loading tokens from cache table...');
+            const cacheLoaded = await this.loadTokensFromCache();
             
-            // Step 2: If live data fails, try cache
-            if (!liveLoaded || this.tokens.length === 0) {
-                console.log('🔄 Step 2: Live data failed, trying cache...');
-                const cacheLoaded = await this.loadTokensFromCache();
-                
-                if (!cacheLoaded || this.tokens.length === 0) {
-                    console.log('🔄 Step 3: Cache empty, using demo fallback...');
-                    this.tokens = this.createDemoTokens();
-                    this.cacheStatus = 'demo_fallback';
-                }
+            // Step 2: If cache fails, use demo data
+            if (!cacheLoaded || this.tokens.length === 0) {
+                console.log('🔄 Step 2: Cache empty, using demo fallback...');
+                this.tokens = this.createDemoTokens();
+                this.cacheStatus = 'demo_fallback';
             }
             
             // Step 3: Generate token pairs
-            console.log('🔄 Step 4: Generating token pairs...');
+            console.log('🔄 Step 3: Generating token pairs...');
             this.tokenPairs = this.generateDemoTokenPairs();
             
             // Step 4: Mark as initialized
-            console.log('🔄 Step 5: Finalizing initialization...');
+            console.log('🔄 Step 4: Finalizing initialization...');
             this.lastUpdate = new Date();
             this.isInitialized = true;
             this.isInitializing = false;
@@ -80,7 +75,7 @@ class TokenService {
             
             // Step 5: Start background refresh cycle
             if (!this.updateInterval) {
-                console.log('🔄 Step 6: Starting background refresh...');
+                console.log('🔄 Step 5: Starting background refresh...');
                 this.startBackgroundRefresh();
             }
             
@@ -101,112 +96,70 @@ class TokenService {
         }
     }
 
-    // NEW: Load live token data from market APIs
-    async loadLiveTokenData() {
-        try {
-            const supabaseUrl = window.SUPABASE_CONFIG?.url;
-            if (!supabaseUrl) {
-                throw new Error('Supabase configuration not available');
-            }
-
-            console.log('📡 Fetching LIVE tokens from market APIs...');
-            
-            const response = await fetch(`${supabaseUrl}/functions/v1/live-token-fetch`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.SUPABASE_CONFIG.anonKey}`
-                },
-                body: JSON.stringify({
-                    limit: 10 // Get 10 live tokens
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Live data fetch failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('📦 Live data response received:', typeof data);
-            console.log('📊 Response keys:', Object.keys(data));
-            
-            if (data.success && data.results && Array.isArray(data.results) && data.results.length > 0) {
-                console.log(`🔄 Processing ${data.results.length} live tokens...`);
-                
-                // Load tokens from cache after live update
-                const cacheSuccess = await this.loadTokensFromCache();
-                
-                if (cacheSuccess && this.tokens.length > 0) {
-                    this.cacheStatus = 'live_data';
-                    console.log(`✅ Loaded ${this.tokens.length} tokens from live data`);
-                    return true;
-                } else {
-                    console.log('⚠️ Live data processed but cache empty');
-                    return false;
-                }
-            } else {
-                console.log('⚠️ Live data function returned no results');
-                console.log('Response structure:', data);
-                return false;
-            }
-            
-        } catch (error) {
-            console.error('Error loading live token data:', error);
-            return false;
-        }
-    }
-
-    // UPDATED: Load tokens from cache (now used after live data updates)
+    // FIXED: Load tokens directly from token_cache table
     async loadTokensFromCache() {
         try {
-            const supabaseUrl = window.SUPABASE_CONFIG?.url;
-            if (!supabaseUrl) {
-                throw new Error('Supabase configuration not available');
+            if (!window.supabase) {
+                console.warn('Supabase client not available');
+                return false;
             }
 
-            console.log('Fetching tokens from cache...');
+            console.log('📊 Loading tokens directly from token_cache table...');
             
-            const response = await fetch(`${supabaseUrl}/functions/v1/fetch-tokens`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.SUPABASE_CONFIG.anonKey}`
-                },
-                body: JSON.stringify({
-                    limit: 50,
-                    forceRefresh: false
-                })
-            });
+            // Query token_cache table directly - NO EDGE FUNCTIONS
+            const { data: cachedTokens, error } = await window.supabase
+                .from('token_cache')
+                .select('*')
+                .gte('cache_expires_at', new Date().toISOString()) // Only fresh cache
+                .eq('cache_status', 'FRESH')
+                .order('market_cap_usd', { ascending: false })
+                .limit(50);
 
-            if (!response.ok) {
-                throw new Error(`Cache fetch failed: ${response.status}`);
-            }
+            if (error) {
+                console.error('Token cache query error:', error);
+                
+                // Fallback to main tokens table
+                console.log('📊 Fallback: Trying main tokens table...');
+                const { data: dbTokens, error: dbError } = await window.supabase
+                    .from('tokens')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('market_cap', { ascending: false })
+                    .limit(20);
 
-            const data = await response.json();
-            console.log('📦 Cache response received:', typeof data);
-            
-            if (data.success && data.tokens && Array.isArray(data.tokens) && data.tokens.length > 0) {
-                console.log(`🔄 Processing ${data.tokens.length} cached tokens...`);
-                
-                // Process tokens safely
-                this.tokens = this.processTokensSafely(data.tokens);
-                
-                // Update cache status based on source
-                if (this.cacheStatus !== 'live_data') {
-                    this.cacheStatus = data.source || 'cache';
-                }
-                
-                console.log(`✅ Loaded ${this.tokens.length} tokens from cache`);
-                
-                if (this.tokens.length > 0) {
-                    console.log('🔍 First token sample:', this.tokens[0]);
-                    return true;
-                } else {
-                    console.log('⚠️ No tokens processed successfully');
+                if (dbError) {
+                    console.error('Main tokens table query error:', dbError);
                     return false;
                 }
+
+                if (dbTokens && dbTokens.length > 0) {
+                    console.log(`📦 Loaded ${dbTokens.length} tokens from main table`);
+                    this.tokens = this.processTokensFromMainTable(dbTokens);
+                    this.cacheStatus = 'database';
+                    return true;
+                }
+                
+                return false;
+            }
+
+            if (!cachedTokens || cachedTokens.length === 0) {
+                console.log('⚠️ No fresh tokens in cache');
+                return false;
+            }
+
+            console.log(`📦 Found ${cachedTokens.length} cached tokens`);
+            
+            // Process tokens safely
+            this.tokens = this.processTokensFromCache(cachedTokens);
+            this.cacheStatus = 'cache';
+            
+            console.log(`✅ Loaded ${this.tokens.length} tokens from cache`);
+            
+            if (this.tokens.length > 0) {
+                console.log('🔍 First token sample:', this.tokens[0]);
+                return true;
             } else {
-                console.log('⚠️ Cache returned invalid structure or no tokens');
+                console.log('⚠️ No tokens processed successfully');
                 return false;
             }
             
@@ -216,118 +169,164 @@ class TokenService {
         }
     }
 
-    // NEW: Force live data refresh
-    async refreshLiveData() {
-        try {
-            console.log('🔄 Forcing live data refresh...');
-            
-            const liveSuccess = await this.loadLiveTokenData();
-            
-            if (liveSuccess) {
-                this.lastUpdate = new Date();
-                console.log('✅ Live data refresh successful');
-                return true;
-            } else {
-                console.log('⚠️ Live data refresh failed');
-                return false;
-            }
-        } catch (error) {
-            console.error('Error refreshing live data:', error);
-            return false;
-        }
-    }
-
-    // ENHANCED: Safe token processing without spread operator + Logo validation
-    processTokensSafely(rawTokens) {
+    // NEW: Process tokens from cache table
+    processTokensFromCache(cachedTokens) {
         const processedTokens = [];
         const now = new Date().toISOString();
         
-        console.log(`🔄 Processing ${rawTokens.length} raw tokens safely with logo validation...`);
+        console.log(`🔄 Processing ${cachedTokens.length} cached tokens...`);
         
-        for (let i = 0; i < rawTokens.length; i++) {
+        for (let i = 0; i < cachedTokens.length; i++) {
             try {
-                const rawToken = rawTokens[i];
-                console.log(`Processing token ${i + 1}/${rawTokens.length}:`, rawToken?.symbol || 'Unknown');
+                const cachedToken = cachedTokens[i];
+                console.log(`Processing cached token ${i + 1}/${cachedTokens.length}:`, cachedToken?.symbol || 'Unknown');
                 
-                // EXPLICIT PROPERTY COPYING - NO SPREAD OPERATOR
+                // Map from cache table structure to token format
                 const processedToken = {
-                    // Core identifiers
-                    address: this.extractProperty(rawToken, ['address', 'token_address']),
-                    symbol: this.extractProperty(rawToken, ['symbol']),
-                    name: this.extractProperty(rawToken, ['name']),
+                    // Core identifiers from cache
+                    address: cachedToken.token_address,
+                    symbol: cachedToken.symbol,
+                    name: cachedToken.name,
                     
-                    // LOGO FIX: Enhanced logo processing with validation
-                    logoURI: this.processTokenLogo(rawToken),
+                    // Logo with validation
+                    logoURI: this.validateAndFixTokenLogo(cachedToken.logo_uri, cachedToken.symbol),
                     
-                    // Financial data
-                    market_cap: this.parseNumericValue(this.extractProperty(rawToken, ['market_cap', 'market_cap_usd'])),
-                    price: this.parseNumericValue(this.extractProperty(rawToken, ['price', 'current_price'])),
-                    volume_24h: this.parseNumericValue(this.extractProperty(rawToken, ['volume_24h', 'total_volume'])),
-                    price_change_24h: this.parseNumericValue(this.extractProperty(rawToken, ['price_change_24h'])),
+                    // Financial data from cache
+                    market_cap: parseFloat(cachedToken.market_cap_usd) || 0,
+                    price: parseFloat(cachedToken.current_price) || 0,
+                    volume_24h: parseFloat(cachedToken.volume_24h) || 0,
+                    price_change_24h: parseFloat(cachedToken.price_change_24h) || 0,
                     
                     // Technical data
-                    decimals: parseInt(this.extractProperty(rawToken, ['decimals'])) || 9,
-                    age_days: parseInt(this.extractProperty(rawToken, ['age_days'])) || 0,
-                    liquidity_score: this.parseNumericValue(this.extractProperty(rawToken, ['liquidity_score'])) || 0.5,
+                    decimals: parseInt(cachedToken.decimals) || 9,
+                    age_days: parseInt(cachedToken.age_days) || 0,
+                    liquidity_score: parseFloat(cachedToken.liquidity_score) || 0.5,
                     
                     // Status and metadata
                     is_active: true,
-                    last_updated: this.extractProperty(rawToken, ['cache_timestamp', 'last_updated']) || now,
-                    data_source: this.extractProperty(rawToken, ['data_source']) || 'cache',
-                    
-                    // LOGO DEBUG INFO
-                    logo_source: this.extractProperty(rawToken, ['logo_source']) || 'unknown'
+                    last_updated: cachedToken.cache_created_at || now,
+                    data_source: cachedToken.data_source || 'cache',
+                    logo_source: cachedToken.logo_source || 'cache'
                 };
                 
                 // Validate processed token
                 if (this.validateProcessedToken(processedToken)) {
                     processedTokens.push(processedToken);
-                    console.log(`✅ Token ${i + 1} processed successfully:`, processedToken.symbol, 'Logo:', processedToken.logoURI ? '✅' : '❌');
+                    console.log(`✅ Cached token ${i + 1} processed successfully:`, processedToken.symbol);
                 } else {
-                    console.warn(`⚠️ Token ${i + 1} failed validation:`, processedToken.symbol);
+                    console.warn(`⚠️ Cached token ${i + 1} failed validation:`, processedToken.symbol);
                 }
                 
             } catch (tokenError) {
-                console.error(`❌ Error processing token ${i + 1}:`, tokenError);
+                console.error(`❌ Error processing cached token ${i + 1}:`, tokenError);
                 // Continue with next token
             }
         }
         
-        console.log(`✅ Successfully processed ${processedTokens.length}/${rawTokens.length} tokens with logos`);
+        console.log(`✅ Successfully processed ${processedTokens.length}/${cachedTokens.length} cached tokens`);
         return processedTokens;
     }
 
-    // NEW: Enhanced logo processing with fallback system
-    processTokenLogo(rawToken) {
+    // NEW: Process tokens from main table
+    processTokensFromMainTable(dbTokens) {
+        const processedTokens = [];
+        const now = new Date().toISOString();
+        
+        console.log(`🔄 Processing ${dbTokens.length} database tokens...`);
+        
+        for (let i = 0; i < dbTokens.length; i++) {
+            try {
+                const dbToken = dbTokens[i];
+                
+                const processedToken = {
+                    address: dbToken.address,
+                    symbol: dbToken.symbol,
+                    name: dbToken.name,
+                    logoURI: this.validateAndFixTokenLogo(dbToken.logo_uri, dbToken.symbol),
+                    market_cap: parseFloat(dbToken.market_cap) || 0,
+                    price: parseFloat(dbToken.current_price) || 0,
+                    volume_24h: parseFloat(dbToken.total_volume) || 0,
+                    price_change_24h: parseFloat(dbToken.price_change_24h) || 0,
+                    decimals: parseInt(dbToken.decimals) || 9,
+                    age_days: parseInt(dbToken.age_days) || 0,
+                    liquidity_score: parseFloat(dbToken.liquidity_score) || 0.5,
+                    is_active: true,
+                    last_updated: dbToken.last_updated || now,
+                    data_source: 'database'
+                };
+                
+                if (this.validateProcessedToken(processedToken)) {
+                    processedTokens.push(processedToken);
+                }
+                
+            } catch (tokenError) {
+                console.error(`❌ Error processing database token ${i + 1}:`, tokenError);
+            }
+        }
+        
+        return processedTokens;
+    }
+
+    // FIXED: Refresh data using direct table queries
+    async refreshTokenData(forceRefresh = false) {
         try {
-            // Try multiple logo property names
-            let logoURI = this.extractProperty(rawToken, ['logoURI', 'logo_uri', 'image', 'logo_url']);
+            if (this.isInitializing) {
+                console.log('Skipping refresh - initialization in progress');
+                return false;
+            }
             
-            // Get symbol for fallback generation
-            const symbol = this.extractProperty(rawToken, ['symbol']) || 'TOKEN';
+            console.log(`Refreshing token data from tables (forceRefresh: ${forceRefresh})...`);
             
+            const oldTokenCount = this.tokens.length;
+            
+            // Load directly from cache table
+            const wasSuccessful = await this.loadTokensFromCache();
+            
+            if (wasSuccessful) {
+                // Regenerate pairs if tokens changed significantly
+                if (Math.abs(this.tokens.length - oldTokenCount) > 2) {
+                    this.tokenPairs = await this.generateTokenPairs();
+                }
+                
+                this.lastUpdate = new Date();
+                console.log(`✅ Token data refreshed: ${this.tokens.length} tokens`);
+                return true;
+            } else {
+                console.log('⚠️ Refresh failed, keeping existing data');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error refreshing token data:', error);
+            return false;
+        }
+    }
+
+    // Enhanced logo processing with fallback system
+    validateAndFixTokenLogo(logoURI, symbol) {
+        try {
             // If no logo or broken placeholder, generate fallback
             if (!logoURI || 
                 logoURI.includes('placeholder-token.png') || 
                 logoURI === '/placeholder-token.png' ||
-                logoURI.includes('lastrrx.github.io')) {
+                logoURI.includes('lastrrx.github.io') ||
+                logoURI === 'null' ||
+                logoURI === 'undefined') {
                 
                 console.log(`🖼️ Generating logo fallback for ${symbol}`);
-                logoURI = this.generateTokenLogoFallback(symbol);
+                return this.generateTokenLogoFallback(symbol);
             }
             
             // Validate logo URL format
             if (!this.isValidLogoURL(logoURI)) {
                 console.warn(`🖼️ Invalid logo URL for ${symbol}, using fallback`);
-                logoURI = this.generateTokenLogoFallback(symbol);
+                return this.generateTokenLogoFallback(symbol);
             }
             
             return logoURI;
             
         } catch (error) {
-            console.error('Error processing token logo:', error);
-            const symbol = this.extractProperty(rawToken, ['symbol']) || 'TOKEN';
-            return this.generateTokenLogoFallback(symbol);
+            console.error('Error validating token logo:', error);
+            return this.generateTokenLogoFallback(symbol || 'TOKEN');
         }
     }
 
@@ -365,34 +364,6 @@ class TokenService {
         } catch (error) {
             return false;
         }
-    }
-
-    // Safe property extraction helper
-    extractProperty(obj, propertyNames) {
-        if (!obj || typeof obj !== 'object') return null;
-        
-        for (const propName of propertyNames) {
-            try {
-                if (obj.hasOwnProperty(propName) && obj[propName] !== undefined && obj[propName] !== null) {
-                    return obj[propName];
-                }
-            } catch (error) {
-                console.warn(`Error accessing property ${propName}:`, error);
-                continue;
-            }
-        }
-        return null;
-    }
-
-    // Safe numeric value parsing
-    parseNumericValue(value) {
-        if (value === null || value === undefined) return 0;
-        if (typeof value === 'number' && !isNaN(value)) return value;
-        if (typeof value === 'string') {
-            const parsed = parseFloat(value);
-            return isNaN(parsed) ? 0 : parsed;
-        }
-        return 0;
     }
 
     // Validate processed token
@@ -511,66 +482,24 @@ class TokenService {
         return pairs;
     }
 
-    // Start background refresh cycle (enhanced with live data)
+    // Start background refresh cycle (now uses direct table queries)
     startBackgroundRefresh() {
         // Clear existing interval to prevent multiple timers
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
         }
 
-        // Refresh every 3 minutes (more frequent for live data)
+        // Refresh every 5 minutes (reasonable for direct DB queries)
         this.updateInterval = setInterval(async () => {
             try {
-                console.log('Background live data refresh triggered...');
-                await this.refreshLiveData();
+                console.log('Background token data refresh triggered...');
+                await this.refreshTokenData();
             } catch (error) {
                 console.error('Background refresh failed:', error);
             }
-        }, 3 * 60 * 1000); // 3 minutes
+        }, 5 * 60 * 1000); // 5 minutes
 
-        console.log('Background live data refresh started (3-minute intervals)');
-    }
-
-    // UPDATED: Refresh data with live data priority
-    async refreshTokenData(forceRefresh = false) {
-        try {
-            if (this.isInitializing) {
-                console.log('Skipping refresh - initialization in progress');
-                return false;
-            }
-            
-            console.log(`Refreshing token data (forceRefresh: ${forceRefresh})...`);
-            
-            const oldTokenCount = this.tokens.length;
-            
-            // Try live data first, then cache
-            let wasSuccessful = false;
-            
-            if (forceRefresh) {
-                wasSuccessful = await this.loadLiveTokenData();
-            }
-            
-            if (!wasSuccessful) {
-                wasSuccessful = await this.loadTokensFromCache();
-            }
-            
-            if (wasSuccessful) {
-                // Regenerate pairs if tokens changed significantly
-                if (Math.abs(this.tokens.length - oldTokenCount) > 2) {
-                    this.tokenPairs = await this.generateTokenPairs();
-                }
-                
-                this.lastUpdate = new Date();
-                console.log(`✅ Token data refreshed: ${this.tokens.length} tokens`);
-                return true;
-            } else {
-                console.log('⚠️ Refresh failed, keeping existing data');
-                return false;
-            }
-        } catch (error) {
-            console.error('Error refreshing token data:', error);
-            return false;
-        }
+        console.log('Background token data refresh started (5-minute intervals)');
     }
 
     // Get valid tokens - ENHANCED
@@ -786,7 +715,7 @@ class TokenService {
     isDataStale() {
         if (!this.lastUpdate) return true;
         
-        const staleThreshold = window.APP_CONFIG?.CACHE_CONFIG?.TOKEN_CACHE_DURATION || 180000; // 3 minutes for live data
+        const staleThreshold = window.APP_CONFIG?.CACHE_CONFIG?.TOKEN_CACHE_DURATION || 300000; // 5 minutes for direct queries
         const age = Date.now() - this.lastUpdate.getTime();
         
         return age > staleThreshold;
@@ -801,7 +730,7 @@ class TokenService {
             lastUpdate: this.lastUpdate,
             isInitialized: this.isInitialized,
             isStale: this.isDataStale(),
-            isLiveData: this.cacheStatus === 'live_data'
+            dataSource: this.cacheStatus
         };
     }
 
@@ -840,10 +769,10 @@ function getTokenService() {
 window.TokenService = TokenService;
 window.getTokenService = getTokenService;
 
-console.log('✅ TokenService (LIVE DATA VERSION) class loaded and exposed globally');
-console.log('🔧 Enhanced Features:');
-console.log('   ✅ Live market data integration via live-token-fetch');
-console.log('   ✅ Automatic background refresh with live data');
-console.log('   ✅ Cache-first fallback for reliability');
+console.log('✅ TokenService (DIRECT TABLE VERSION) class loaded and exposed globally');
+console.log('🔧 Key Changes:');
+console.log('   ✅ Direct token_cache table queries instead of Edge Functions');
+console.log('   ✅ Fallback to main tokens table if cache empty');
+console.log('   ✅ No more CORS issues with Supabase tables');
 console.log('   ✅ Enhanced logo processing and validation');
-console.log('   ✅ Real-time data source indicators');
+console.log('   ✅ Graceful degradation when tables unavailable');
