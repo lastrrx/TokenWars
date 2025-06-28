@@ -53,7 +53,7 @@
                 <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
                 
                 <!-- Disconnected State -->
-                <li id="connectWalletBtn"><a href="#" class="btn-primary wallet-connect-btn">Connect Wallet</a></li>
+                <li id="connectWalletBtn"><a href="#" class="btn-primary wallet-connect-btn" onclick="openWalletModal()">Connect Wallet</a>
                 
                 <!-- Connected State (Hidden by default) -->
                 <li id="traderInfo" style="display: none;">
@@ -92,7 +92,7 @@
                         <h1 class="hero-title">TokenWars</h1>
                         <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                         <div class="cta-buttons">
-                            <a href="#" class="btn-hero-primary wallet-connect-btn">Connect Wallet</a>
+                            <a href="#" class="btn-hero-primary wallet-connect-btn" onclick="openWalletModal()">Connect Wallet</a>
                             <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
                         </div>
                     </div>
@@ -170,7 +170,7 @@
                                     <div class="empty-icon">🔗</div>
                                     <h3>Connect Wallet to Join Competitions</h3>
                                     <p>Connect your wallet to participate in token prediction competitions and earn SOL rewards.</p>
-                                    <button class="btn-primary wallet-connect-btn">Connect Wallet</button>
+                                    <button class="btn-primary wallet-connect-btn" onclick="openWalletModal()">Connect Wallet</button>
                                 </div>
                             </div>
                         </div>
