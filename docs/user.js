@@ -1,5 +1,6 @@
 // Enhanced Portfolio Management with Complete Supabase Integration
 // This replaces the content in user.js
+// FIXED: Proper Supabase client reference
 
 // ==============================================
 // PORTFOLIO STATE MANAGEMENT
@@ -29,8 +30,8 @@ async function initializePortfolio() {
     console.log('💼 Initializing portfolio system...');
     
     try {
-        // Get service references
-        PortfolioState.supabaseClient = window.supabaseClient;
+        // FIXED: Get direct Supabase client instead of wrapper
+        PortfolioState.supabaseClient = window.supabase;
         PortfolioState.walletService = window.getWalletService?.();
         
         // Check if user is connected
@@ -94,13 +95,11 @@ async function loadPortfolioData() {
  */
 async function loadUserData(walletAddress) {
     try {
-        if (!PortfolioState.supabaseClient?.getSupabaseClient) {
+        if (!PortfolioState.supabaseClient) {
             throw new Error('Supabase client not available');
         }
         
-        const supabase = PortfolioState.supabaseClient.getSupabaseClient();
-        
-        const { data: user, error } = await supabase
+        const { data: user, error } = await PortfolioState.supabaseClient
             .from('users')
             .select('*')
             .eq('wallet_address', walletAddress)
@@ -130,13 +129,11 @@ async function loadUserData(walletAddress) {
  */
 async function loadBettingHistory(walletAddress) {
     try {
-        if (!PortfolioState.supabaseClient?.getSupabaseClient) {
+        if (!PortfolioState.supabaseClient) {
             throw new Error('Supabase client not available');
         }
         
-        const supabase = PortfolioState.supabaseClient.getSupabaseClient();
-        
-        const { data: bets, error } = await supabase
+        const { data: bets, error } = await PortfolioState.supabaseClient
             .from('bets')
             .select(`
                 *,
@@ -172,14 +169,12 @@ async function loadBettingHistory(walletAddress) {
  */
 async function loadLeaderboardPosition(walletAddress) {
     try {
-        if (!PortfolioState.supabaseClient?.getSupabaseClient) {
+        if (!PortfolioState.supabaseClient) {
             throw new Error('Supabase client not available');
         }
         
-        const supabase = PortfolioState.supabaseClient.getSupabaseClient();
-        
         // Get user's leaderboard entry
-        const { data: userEntry, error: userError } = await supabase
+        const { data: userEntry, error: userError } = await PortfolioState.supabaseClient
             .from('leaderboards')
             .select('*')
             .eq('user_wallet', walletAddress)
@@ -189,7 +184,7 @@ async function loadLeaderboardPosition(walletAddress) {
         
         // Get user's rank
         if (userEntry) {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await PortfolioState.supabaseClient
                 .from('leaderboards')
                 .select('*', { count: 'exact', head: true })
                 .gte('total_score', userEntry.total_score);
@@ -1050,3 +1045,4 @@ window.filterBettingHistory = filterBettingHistory;
 window.refreshPortfolioData = refreshPortfolioData;
 
 console.log('✅ Enhanced Portfolio System loaded with Supabase integration');
+console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
