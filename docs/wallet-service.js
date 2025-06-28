@@ -1,6 +1,6 @@
-// FIXED WalletService - Phase 3: Complete Multi-Wallet Integration
+// FIXED WalletService - Phase 3: Complete Multi-Wallet Integration with Database User Profile Restoration
 // Handles Phantom, Solflare, Backpack, and Demo mode with session persistence
-// ADDED: Missing isConnected() method to prevent app.js errors
+// FIXED: Added database integration for user profile restoration
 
 class WalletService {
     constructor() {
@@ -21,6 +21,10 @@ class WalletService {
         this.demoSession = null;
         this.connectionListeners = [];
         this.balanceUpdateInterval = null;
+        
+        // ADDED: User profile state
+        this.userProfile = null;
+        this.isProfileLoaded = false;
         
         // Profanity filter - basic implementation (expandable)
         this.profanityList = [
@@ -70,6 +74,7 @@ class WalletService {
             console.log(`   🔗 Connected: ${this.connectedWallet ? 'Yes' : 'No'}`);
             console.log(`   💰 Wallet Type: ${this.walletType || 'None'}`);
             console.log(`   🎮 Demo Mode: ${this.isDemo}`);
+            console.log(`   👤 Profile Loaded: ${this.isProfileLoaded}`);
             
             return true;
         } catch (error) {
@@ -110,6 +115,16 @@ class WalletService {
             console.error('Error getting balance:', error);
             return 0;
         }
+    }
+
+    // ADDED: Method to check if user profile is loaded
+    hasUserProfile() {
+        return this.isProfileLoaded && this.userProfile;
+    }
+
+    // ADDED: Get current user profile
+    getCurrentUserProfile() {
+        return this.userProfile;
     }
 
     // ==============================================
@@ -326,6 +341,9 @@ class WalletService {
             localStorage.setItem(this.storageKeys.walletType, 'demo');
             localStorage.setItem(this.storageKeys.publicKey, this.publicKey);
             
+            // FIXED: Load or create user profile for demo
+            await this.loadUserProfileFromDatabase();
+            
             console.log('✅ Demo wallet connected successfully');
             console.log(`   💰 Demo balance: ${this.balance} SOL`);
             console.log(`   🔑 Demo key: ${this.publicKey}`);
@@ -356,6 +374,9 @@ class WalletService {
             // Get initial balance
             await this.updateBalance();
             
+            // FIXED: Load user profile from database
+            await this.loadUserProfileFromDatabase();
+            
             // Start balance monitoring
             this.startBalanceMonitoring();
             
@@ -363,12 +384,14 @@ class WalletService {
             this.notifyConnectionListeners('connected', {
                 walletType: this.walletType,
                 publicKey: this.publicKey,
-                balance: this.balance
+                balance: this.balance,
+                userProfile: this.userProfile
             });
             
             console.log(`✅ ${walletType} wallet connection established`);
             console.log(`   🔑 Public Key: ${this.publicKey}`);
             console.log(`   💰 Balance: ${this.balance} SOL`);
+            console.log(`   👤 Profile: ${this.userProfile ? 'Loaded' : 'Not found'}`);
             
         } catch (error) {
             console.error('Error handling successful connection:', error);
@@ -377,10 +400,93 @@ class WalletService {
     }
 
     // ==============================================
+    // FIXED: ADDED DATABASE INTEGRATION FOR USER PROFILES
+    // ==============================================
+
+    /**
+     * Load user profile from database
+     */
+    async loadUserProfileFromDatabase() {
+        try {
+            if (!this.publicKey) {
+                console.warn('No wallet address available for profile lookup');
+                return;
+            }
+
+            console.log('👤 Loading user profile from database...');
+
+            // Check if supabase client is available
+            if (!window.supabaseClient?.getOrCreateUser) {
+                console.warn('Supabase client not available, checking localStorage for cached profile');
+                this.loadCachedUserProfile();
+                return;
+            }
+
+            // Try to get user from database
+            const userData = await window.supabaseClient.getOrCreateUser(this.publicKey);
+            
+            if (userData) {
+                this.userProfile = userData;
+                this.isProfileLoaded = true;
+                
+                // Cache profile locally
+                localStorage.setItem(this.storageKeys.userProfile, JSON.stringify(userData));
+                
+                console.log('✅ User profile loaded from database:', userData.username || userData.wallet_address);
+                
+                // Notify listeners about profile load
+                this.notifyConnectionListeners('profileLoaded', this.userProfile);
+                
+            } else {
+                console.log('ℹ️ No user profile found in database, user needs to create profile');
+                this.userProfile = null;
+                this.isProfileLoaded = false;
+                
+                // Clear any cached profile
+                localStorage.removeItem(this.storageKeys.userProfile);
+                
+                // Notify listeners that profile is needed
+                this.notifyConnectionListeners('profileNeeded', { walletAddress: this.publicKey });
+            }
+
+        } catch (error) {
+            console.error('Failed to load user profile from database:', error);
+            
+            // Fallback to cached profile
+            this.loadCachedUserProfile();
+        }
+    }
+
+    /**
+     * Load cached user profile from localStorage
+     */
+    loadCachedUserProfile() {
+        try {
+            const cachedProfile = localStorage.getItem(this.storageKeys.userProfile);
+            if (cachedProfile) {
+                this.userProfile = JSON.parse(cachedProfile);
+                this.isProfileLoaded = true;
+                console.log('✅ User profile loaded from cache:', this.userProfile.username || 'Unknown');
+                
+                // Notify listeners
+                this.notifyConnectionListeners('profileLoaded', this.userProfile);
+            } else {
+                console.log('ℹ️ No cached user profile found');
+                this.userProfile = null;
+                this.isProfileLoaded = false;
+            }
+        } catch (error) {
+            console.error('Error loading cached user profile:', error);
+            this.userProfile = null;
+            this.isProfileLoaded = false;
+        }
+    }
+
+    // ==============================================
     // SESSION MANAGEMENT
     // ==============================================
 
-    // Check for persisted wallet connection
+    // FIXED: Check for persisted wallet connection with database integration
     async checkPersistedConnection() {
         try {
             const walletType = localStorage.getItem(this.storageKeys.walletType);
@@ -405,7 +511,19 @@ class WalletService {
                     this.walletType = 'demo';
                     this.connectedWallet = 'demo';
                     
+                    // FIXED: Load user profile for demo wallet
+                    await this.loadUserProfileFromDatabase();
+                    
                     console.log('✅ Demo wallet session restored');
+                    console.log(`   👤 Profile: ${this.userProfile ? 'Loaded' : 'Not found'}`);
+                    
+                    // Notify listeners about restoration
+                    this.notifyConnectionListeners('connectionRestored', {
+                        walletType: this.walletType,
+                        publicKey: this.publicKey,
+                        userProfile: this.userProfile
+                    });
+                    
                     return true;
                 }
             } else {
@@ -425,7 +543,20 @@ class WalletService {
                         this.isDemo = false;
                         
                         await this.updateBalance();
+                        
+                        // FIXED: Load user profile from database
+                        await this.loadUserProfileFromDatabase();
+                        
                         console.log(`✅ ${walletType} wallet connection restored`);
+                        console.log(`   👤 Profile: ${this.userProfile ? 'Loaded' : 'Not found'}`);
+                        
+                        // Notify listeners about restoration
+                        this.notifyConnectionListeners('connectionRestored', {
+                            walletType: this.walletType,
+                            publicKey: this.publicKey,
+                            userProfile: this.userProfile
+                        });
+                        
                         return true;
                     } else {
                         console.log(`❌ ${walletType} wallet no longer connected, clearing session`);
@@ -479,6 +610,8 @@ class WalletService {
         this.balance = 0;
         this.isDemo = false;
         this.demoSession = null;
+        this.userProfile = null;
+        this.isProfileLoaded = false;
         
         console.log('🧹 Persisted wallet connection cleared');
     }
@@ -662,8 +795,10 @@ class WalletService {
                 }
             }
             
-            // Store locally
+            // Store locally and in service state
             localStorage.setItem(this.storageKeys.userProfile, JSON.stringify(profileData));
+            this.userProfile = profileData;
+            this.isProfileLoaded = true;
             
             console.log(`✅ User profile created: ${username}`);
             
@@ -680,29 +815,26 @@ class WalletService {
 
     // Get user profile
     getUserProfile() {
-        try {
-            const profileData = localStorage.getItem(this.storageKeys.userProfile);
-            return profileData ? JSON.parse(profileData) : null;
-        } catch (error) {
-            console.error('Error getting user profile:', error);
-            return null;
-        }
+        return this.userProfile;
     }
 
     // Update user profile
     updateUserProfile(updates) {
         try {
-            const currentProfile = this.getUserProfile();
-            if (!currentProfile) {
+            if (!this.userProfile) {
                 throw new Error('No profile found to update');
             }
             
             const updatedProfile = {
-                ...currentProfile,
+                ...this.userProfile,
                 ...updates,
                 updatedAt: new Date().toISOString()
             };
             
+            // Update in service state
+            this.userProfile = updatedProfile;
+            
+            // Update in localStorage
             localStorage.setItem(this.storageKeys.userProfile, JSON.stringify(updatedProfile));
             
             // Notify listeners
@@ -764,7 +896,8 @@ class WalletService {
             formattedBalance: this.formatBalance(),
             isDemo: this.isDemo,
             network: this.networkType,
-            hasProfile: !!this.getUserProfile()
+            hasProfile: this.hasUserProfile(),
+            userProfile: this.userProfile
         };
     }
 
@@ -807,13 +940,22 @@ class WalletService {
         this.notifyConnectionListeners('disconnected', null);
     }
 
-    // Handle account change
-    handleAccountChange(newPublicKey) {
+    // FIXED: Handle account change with profile reload
+    async handleAccountChange(newPublicKey) {
         console.log('🔄 Wallet account changed');
         this.publicKey = newPublicKey;
         localStorage.setItem(this.storageKeys.publicKey, newPublicKey);
-        this.updateBalance();
-        this.notifyConnectionListeners('accountChanged', { publicKey: newPublicKey });
+        
+        // Clear old profile and load new one
+        this.userProfile = null;
+        this.isProfileLoaded = false;
+        await this.loadUserProfileFromDatabase();
+        
+        await this.updateBalance();
+        this.notifyConnectionListeners('accountChanged', { 
+            publicKey: newPublicKey,
+            userProfile: this.userProfile 
+        });
     }
 
     // Add connection listener
@@ -904,3 +1046,6 @@ console.log('   ✅ ADDED: isConnected() method for app.js compatibility');
 console.log('   ✅ ADDED: getWalletAddress() helper method');
 console.log('   ✅ ADDED: getBalance() helper method');
 console.log('   ✅ FIXED: Method alignment with app.js expectations');
+console.log('   ✅ FIXED: Database integration for user profile restoration');
+console.log('   ✅ FIXED: Profile loading during wallet restoration');
+console.log('   ✅ FIXED: Proper state management for user profiles');
