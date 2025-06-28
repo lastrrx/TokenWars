@@ -1435,9 +1435,9 @@
     </div>
 
     <!-- Scripts - Load in correct order -->
-    <script src="config.js"></script>
-    <script src="supabase-client.js"></script>
-    <script src="admin.js"></script>
+    <script src="../docs/config.js"></script>           <!-- ✅ Correct -->
+    <script src="../docs/supabase-client.js"></script>  <!-- ✅ Correct -->
+    <script src="./admin.js"></script>                  <!-- ✅ Same folder -->
     
     <script>
         // Initialize admin panel when DOM is ready
