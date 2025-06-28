@@ -1336,9 +1336,10 @@ async function createCompetitionDirectDatabase(config = {}) {
         }
         
         // Get optimal token pair from database
-        const tokenPair = await selectOptimalTokenPairFromDatabase();
+        const tokenPair = config.selectedPair;
         if (!tokenPair) {
-            throw new Error('No suitable token pair available');
+            console.log('No pair selected - manual selection required');
+            throw new Error('No token pair selected. Please select a pair manually.');
         }
         
         // Validate the selected pair
