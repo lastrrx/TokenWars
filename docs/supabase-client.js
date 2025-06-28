@@ -1,8 +1,8 @@
-// Supabase Client Initialization and Database Interface
-// FIXED for proper Supabase library loading and initialization
+// FIXED Supabase Client Initialization and Database Interface
+// Ensures proper client instance exposure for database-centric architecture
 
 // Global variables
-let supabase = null;
+let supabaseClient = null;
 let currentUser = null;
 
 // Immediately expose functions to prevent "function not defined" errors
@@ -42,7 +42,7 @@ async function waitForSupabaseLibrary() {
     throw new Error('Supabase library not loaded after 5 seconds. Please check if the Supabase CDN script is properly included.');
 }
 
-// FIXED: Initialize Supabase connection with proper library detection
+// FIXED: Initialize Supabase connection with proper client exposure
 async function initializeSupabase() {
     try {
         console.log('🚀 Starting Supabase initialization...');
@@ -73,10 +73,11 @@ async function initializeSupabase() {
         console.log('🔄 Creating Supabase client...');
         
         // Initialize Supabase client with the detected library
-        supabase = supabaseLib.createClient(config.url, config.anonKey);
+        supabaseClient = supabaseLib.createClient(config.url, config.anonKey);
         
-        // Store globally for immediate access
-        window.supabase = supabase;
+        // FIXED: Properly expose client instance for database queries
+        window.supabase = supabaseClient; // For .from() calls
+        window.supabaseClient = supabaseClient; // Alternative reference
         
         console.log('✅ Supabase client initialized successfully');
         updateDbStatus('connected', '✅ Database: Connected');
@@ -90,7 +91,7 @@ async function initializeSupabase() {
             console.warn('⚠️ Database connection test had issues, but client is ready');
         }
         
-        return supabase;
+        return supabaseClient;
     } catch (error) {
         console.error('❌ Failed to initialize Supabase:', error);
         updateDbStatus('disconnected', `❌ Database: ${error.message}`);
@@ -101,7 +102,7 @@ async function initializeSupabase() {
 // FIXED: Test database connection with graceful degradation
 async function testConnection() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             throw new Error('Supabase client not initialized');
         }
         
@@ -112,7 +113,7 @@ async function testConnection() {
         
         // First, try a very basic query
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('users')
                 .select('count', { count: 'exact', head: true })
                 .limit(1);
@@ -135,7 +136,7 @@ async function testConnection() {
         
         // Try token_cache table
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('token_cache')
                 .select('count', { count: 'exact', head: true })
                 .limit(1);
@@ -155,26 +156,26 @@ async function testConnection() {
             console.warn('Token cache table test failed:', tokenError);
         }
         
-        // Try price_cache table
+        // Try competitions table
         try {
-            const { data, error } = await supabase
-                .from('price_cache')
+            const { data, error } = await supabaseClient
+                .from('competitions')
                 .select('count', { count: 'exact', head: true })
                 .limit(1);
             
             if (error) {
                 if (error.code === 'PGRST106' || error.message.includes('relation') || error.message.includes('does not exist')) {
-                    console.warn('Price cache table may not exist yet, but connection works:', error.message);
+                    console.warn('Competitions table may not exist yet, but connection works:', error.message);
                     return true;
                 } else {
-                    console.warn('Price cache query failed:', error);
+                    console.warn('Competitions query failed:', error);
                 }
             } else {
-                console.log('✅ Price cache table accessible');
+                console.log('✅ Competitions table accessible');
                 return true;
             }
-        } catch (priceError) {
-            console.warn('Price cache table test failed:', priceError);
+        } catch (compError) {
+            console.warn('Competitions table test failed:', compError);
         }
         
         console.log('ℹ️ Database connection established, but tables may need setup');
@@ -197,20 +198,20 @@ function updateDbStatus(status, message) {
 }
 
 // ==============================================
-// CACHE MANAGEMENT FUNCTIONS (IMPROVED)
+// DIRECT DATABASE QUERY FUNCTIONS (SIMPLIFIED)
 // ==============================================
 
 // Get cached token data with fallback
 async function getCachedTokenData(limit = 50, category = null) {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             throw new Error('Database not available');
         }
         
         console.log('📊 Querying token cache...');
         
         // Try to get from token_cache first
-        let query = supabase
+        let query = supabaseClient
             .from('token_cache')
             .select('*')
             .gte('cache_expires_at', new Date().toISOString()) // Only fresh cache
@@ -243,7 +244,7 @@ async function getCachedTokenData(limit = 50, category = null) {
 
         // Fallback to main tokens table
         console.log('⚠️ Cache miss or empty, falling back to main tokens table...');
-        const { data: dbTokens, error: dbError } = await supabase
+        const { data: dbTokens, error: dbError } = await supabaseClient
             .from('tokens')
             .select('*')
             .eq('is_active', true)
@@ -291,14 +292,14 @@ async function getCachedTokenData(limit = 50, category = null) {
 // Get cached price data
 async function getCachedPriceData(tokenAddresses) {
     try {
-        if (!supabase || !tokenAddresses || tokenAddresses.length === 0) {
+        if (!supabaseClient || !tokenAddresses || tokenAddresses.length === 0) {
             return { success: false, prices: [] };
         }
         
         console.log(`💰 Querying price cache for ${tokenAddresses.length} tokens...`);
         
         // Try price_cache first
-        const { data: cachedPrices, error: cacheError } = await supabase
+        const { data: cachedPrices, error: cacheError } = await supabaseClient
             .from('price_cache')
             .select('*')
             .in('token_address', tokenAddresses)
@@ -331,7 +332,7 @@ async function getCachedPriceData(tokenAddresses) {
 
         // Fallback to price_history
         console.log('⚠️ Price cache miss, trying price history...');
-        const { data: historyPrices, error: historyError } = await supabase
+        const { data: historyPrices, error: historyError } = await supabaseClient
             .from('price_history')
             .select('*')
             .in('token_address', tokenAddresses)
@@ -377,72 +378,14 @@ async function getCachedPriceData(tokenAddresses) {
     }
 }
 
-// Get cache health status
-async function getCacheHealthStatus() {
-    try {
-        if (!supabase) {
-            return { available: false, error: 'Database not available' };
-        }
-
-        console.log('🏥 Checking cache health...');
-
-        // Check token cache health
-        const { data: tokenCacheHealth, error: tokenError } = await supabase
-            .from('token_cache')
-            .select('cache_status, cache_created_at, cache_expires_at')
-            .order('cache_created_at', { ascending: false })
-            .limit(100);
-
-        // Check price cache health
-        const { data: priceCacheHealth, error: priceError } = await supabase
-            .from('price_cache')
-            .select('timestamp, cache_expires_at')
-            .order('timestamp', { ascending: false })
-            .limit(100);
-
-        const now = new Date();
-        const health = {
-            available: true,
-            tokenCache: {
-                total: tokenCacheHealth?.length || 0,
-                fresh: tokenCacheHealth?.filter(t => 
-                    t.cache_status === 'FRESH' && new Date(t.cache_expires_at) > now
-                ).length || 0,
-                stale: 0,
-                lastUpdate: tokenCacheHealth?.[0]?.cache_created_at || null,
-                error: tokenError
-            },
-            priceCache: {
-                total: priceCacheHealth?.length || 0,
-                fresh: priceCacheHealth?.filter(p => 
-                    new Date(p.cache_expires_at) > now
-                ).length || 0,
-                stale: 0,
-                lastUpdate: priceCacheHealth?.[0]?.timestamp || null,
-                error: priceError
-            }
-        };
-
-        health.tokenCache.stale = health.tokenCache.total - health.tokenCache.fresh;
-        health.priceCache.stale = health.priceCache.total - health.priceCache.fresh;
-
-        console.log('📊 Cache health status:', health);
-        return health;
-
-    } catch (error) {
-        console.error('Error getting cache health:', error);
-        return { available: false, error: error.message };
-    }
-}
-
 // ==============================================
-// USER MANAGEMENT FUNCTIONS (IMPROVED)
+// USER MANAGEMENT FUNCTIONS (SIMPLIFIED)
 // ==============================================
 
 // Set user context for RLS policies
 async function setUserContext(walletAddress, role = 'user') {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.warn('Supabase not initialized for user context');
             return;
         }
@@ -451,7 +394,7 @@ async function setUserContext(walletAddress, role = 'user') {
         
         // Try to set user context, but don't fail if function doesn't exist
         try {
-            await supabase.rpc('set_user_context', {
+            await supabaseClient.rpc('set_user_context', {
                 wallet_addr: walletAddress,
                 user_role: role
             });
@@ -472,7 +415,7 @@ async function setUserContext(walletAddress, role = 'user') {
 // Get or create user by wallet address (with graceful degradation)
 async function getOrCreateUser(walletAddress) {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             throw new Error('Database not available');
         }
         
@@ -482,7 +425,7 @@ async function getOrCreateUser(walletAddress) {
         await setUserContext(walletAddress);
         
         // First, try to get existing user
-        const { data: existingUser, error: selectError } = await supabase
+        const { data: existingUser, error: selectError } = await supabaseClient
             .from('users')
             .select('*')
             .eq('wallet_address', walletAddress)
@@ -503,7 +446,7 @@ async function getOrCreateUser(walletAddress) {
             
             // Update last active time if possible
             try {
-                await supabase
+                await supabaseClient
                     .from('users')
                     .update({ last_active: new Date().toISOString() })
                     .eq('wallet_address', walletAddress);
@@ -534,7 +477,7 @@ async function getOrCreateUser(walletAddress) {
 // Create new user profile (with graceful degradation)
 async function createUserProfile(walletAddress, username, avatar = '🎯') {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             throw new Error('Database not available');
         }
         
@@ -558,7 +501,7 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
             last_active: new Date().toISOString()
         };
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('users')
             .insert([userData])
             .select()
@@ -574,7 +517,7 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
 
         // Try to create initial leaderboard entry (don't fail if table doesn't exist)
         try {
-            await supabase
+            await supabaseClient
                 .from('leaderboards')
                 .insert([{
                     user_wallet: walletAddress,
@@ -609,25 +552,15 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
     }
 }
 
-// Generate unique referral code
-function generateReferralCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
 // Check username availability (with graceful degradation)
 async function checkUsernameAvailability(username) {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.warn('Database not available for username check');
             return true; // Allow any username if DB not available
         }
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('users')
             .select('username')
             .eq('username', username)
@@ -650,14 +583,24 @@ async function checkUsernameAvailability(username) {
     }
 }
 
+// Generate unique referral code
+function generateReferralCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
 // ==============================================
-// COMPETITION FUNCTIONS (IMPROVED)
+// COMPETITION FUNCTIONS (SIMPLIFIED)
 // ==============================================
 
 // Get active competitions with graceful degradation
 async function getActiveCompetitions() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.warn('Database not available for competitions');
             return [];
         }
@@ -666,7 +609,7 @@ async function getActiveCompetitions() {
         
         // Try the enhanced view first
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('active_competitions')
                 .select('*')
                 .order('start_time', { ascending: true });
@@ -680,7 +623,7 @@ async function getActiveCompetitions() {
         }
 
         // Fallback to basic competitions table
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('competitions')
             .select('*')
             .in('status', ['SETUP', 'VOTING', 'ACTIVE'])
@@ -728,9 +671,9 @@ function handleSupabaseError(error) {
 // Clear user context (for logout)
 async function clearUserContext() {
     try {
-        if (supabase) {
+        if (supabaseClient) {
             try {
-                await supabase.rpc('clear_user_context');
+                await supabaseClient.rpc('clear_user_context');
             } catch (rpcError) {
                 console.warn('clear_user_context function not available');
             }
@@ -743,7 +686,7 @@ async function clearUserContext() {
 }
 
 // ==============================================
-// GLOBAL EXPORTS
+// GLOBAL EXPORTS - FIXED FOR DATABASE-CENTRIC ACCESS
 // ==============================================
 
 // Export essential functions for global use immediately
@@ -755,7 +698,6 @@ window.supabaseClient = {
     // Cache management
     getCachedTokenData,
     getCachedPriceData,
-    getCacheHealthStatus,
     
     // User management
     getOrCreateUser,
@@ -770,22 +712,23 @@ window.supabaseClient = {
     // Utilities
     handleSupabaseError,
     getCurrentUser: () => currentUser,
-    getSupabaseClient: () => supabase,
+    getSupabaseClient: () => supabaseClient,
     
     // Status checkers
-    isReady: () => !!supabase,
-    isConnected: () => !!supabase
+    isReady: () => !!supabaseClient,
+    isConnected: () => !!supabaseClient
 };
 
-console.log('✅ Supabase client module loaded and exposed globally');
+console.log('✅ FIXED Supabase client module loaded with proper database access');
 console.log('🔧 Key Features:');
-console.log('   ✅ Proper Supabase library detection and loading');
+console.log('   ✅ FIXED: Proper Supabase client instance exposure');
+console.log('   ✅ FIXED: Database queries via supabase.from() now work');
 console.log('   ✅ Graceful degradation when tables missing');
 console.log('   ✅ Direct table queries with comprehensive error handling');
 console.log('   ✅ Enhanced cache management functions');
 console.log('   ✅ Robust user management with fallbacks');
 
-// FIXED: Auto-initialize with better timing
+// FIXED: Auto-initialize with better timing and client exposure
 async function autoInitialize() {
     try {
         // Wait a bit for DOM and config to be ready
