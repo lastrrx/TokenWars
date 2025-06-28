@@ -2,6 +2,7 @@
 // Enhanced with direct Supabase table queries instead of Edge Functions
 // REMOVED: TokenService and CompetitionManager (replaced by edge functions)
 // FIXED: Wallet service method calls and initialization
+// FIXED: Added missing wallet event listeners and handlers
 
 // Global state
 let walletService = null;
@@ -30,7 +31,7 @@ let dataStatus = {
 // FIXED SERVICE INITIALIZATION - DATABASE-CENTRIC
 // ==============================================
 
-// Initialize WalletService safely
+// FIXED: Initialize WalletService safely with event listeners
 async function initializeWalletServiceSafely() {
     try {
         console.log('🔗 Initializing WalletService...');
@@ -41,6 +42,10 @@ async function initializeWalletServiceSafely() {
             
             if (success) {
                 console.log('✅ WalletService initialized successfully');
+                
+                // FIXED: Set up wallet event listeners AFTER initialization
+                setupWalletEventListeners();
+                
                 return true;
             } else {
                 console.warn('⚠️ WalletService initialization failed');
@@ -55,14 +60,6 @@ async function initializeWalletServiceSafely() {
         return false;
     }
 }
-
-// CRITICAL: This listener was missing!
-walletService.addConnectionListener('connectionRestored', (eventType, data) => {
-    if (eventType === 'connectionRestored') {
-        console.log('🔄 Wallet connection restored:', data);
-        handleWalletConnectionRestored(data); // This updates the UI!
-    }
-});
 
 // FIXED: Initialize Supabase connection without Edge Function tests
 async function initializeSupabaseConnection() {
@@ -323,6 +320,205 @@ async function testBasicTableAccess() {
     } catch (error) {
         console.error('❌ Basic table access test failed:', error);
         return { success: false, error: error.message };
+    }
+}
+
+// ==============================================
+// FIXED: MISSING WALLET EVENT LISTENERS AND HANDLERS
+// ==============================================
+
+/**
+ * FIXED: Set up wallet event listeners after wallet service is ready
+ */
+function setupWalletEventListeners() {
+    console.log('🔗 Setting up wallet event listeners...');
+    
+    try {
+        if (!walletService) {
+            console.error('WalletService not available for event listeners');
+            return;
+        }
+        
+        // CRITICAL: Listen for wallet events using the correct API
+        walletService.addConnectionListener((eventType, data) => {
+            console.log('📡 Wallet event received:', eventType, data);
+            
+            if (eventType === 'connectionRestored') {
+                console.log('🔄 Wallet connection restored:', data);
+                handleWalletConnectionRestored(data);
+            }
+            
+            if (eventType === 'connected') {
+                console.log('🔗 Wallet connected:', data);
+                handleWalletConnected(data);
+            }
+            
+            if (eventType === 'profileLoaded') {
+                console.log('👤 User profile loaded:', data);
+                handleUserProfileLoaded(data);
+            }
+            
+            if (eventType === 'profileNeeded') {
+                console.log('👤 User profile needed:', data);
+                handleUserProfileNeeded(data);
+            }
+            
+            if (eventType === 'disconnected') {
+                console.log('🔌 Wallet disconnected');
+                updateUIForDisconnectedUser();
+            }
+            
+            if (eventType === 'balanceUpdated') {
+                console.log('💰 Balance updated:', data);
+                updateBalanceDisplay(data);
+            }
+        });
+        
+        console.log('✅ Wallet event listeners set up successfully');
+        
+    } catch (error) {
+        console.error('❌ Error setting up wallet event listeners:', error);
+    }
+}
+
+/**
+ * FIXED: Handle wallet connection restored
+ */
+function handleWalletConnectionRestored(data) {
+    console.log('🔄 Processing wallet connection restoration...', data);
+    
+    try {
+        if (data && data.userProfile) {
+            // Wallet + Profile restored successfully
+            console.log('✅ Wallet and profile restored');
+            
+            // Update global state
+            connectedUser = {
+                walletAddress: data.publicKey,
+                walletType: data.walletType,
+                profile: data.userProfile,
+                username: data.userProfile.username,
+                avatar: data.userProfile.avatar || '🎯'
+            };
+            
+            // Update UI for connected state
+            updateUIForConnectedUser();
+            
+            // Load portfolio if on portfolio page
+            if (currentPage === 'portfolio') {
+                setTimeout(() => {
+                    initializePortfolioPage();
+                }, 500);
+            }
+            
+        } else if (data && data.publicKey) {
+            // Wallet restored but no profile
+            console.log('⚠️ Wallet restored but no profile found');
+            
+            connectedUser = {
+                walletAddress: data.publicKey,
+                walletType: data.walletType,
+                profile: null
+            };
+            
+            updateUIForConnectedUser();
+            
+        } else {
+            // Restoration failed
+            console.log('❌ Wallet restoration failed');
+            updateUIForDisconnectedUser();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error handling wallet connection restored:', error);
+    }
+}
+
+/**
+ * Handle new wallet connection
+ */
+function handleWalletConnected(data) {
+    console.log('🔗 Processing new wallet connection...', data);
+    
+    try {
+        if (data && data.userProfile) {
+            connectedUser = {
+                walletAddress: data.publicKey,
+                walletType: data.walletType,
+                profile: data.userProfile,
+                username: data.userProfile.username,
+                avatar: data.userProfile.avatar || '🎯'
+            };
+        } else {
+            connectedUser = {
+                walletAddress: data.publicKey,
+                walletType: data.walletType,
+                profile: null
+            };
+        }
+        
+        updateUIForConnectedUser();
+        
+        // Close wallet modal if open
+        if (typeof closeWalletModal === 'function') {
+            closeWalletModal();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error handling wallet connected:', error);
+    }
+}
+
+/**
+ * Handle user profile loaded
+ */
+function handleUserProfileLoaded(profileData) {
+    console.log('👤 Processing user profile loaded...', profileData);
+    
+    try {
+        if (connectedUser) {
+            connectedUser.profile = profileData;
+            connectedUser.username = profileData.username;
+            connectedUser.avatar = profileData.avatar || '🎯';
+        }
+        
+        updateUIForConnectedUser();
+        
+    } catch (error) {
+        console.error('❌ Error handling user profile loaded:', error);
+    }
+}
+
+/**
+ * Handle user profile needed
+ */
+function handleUserProfileNeeded(data) {
+    console.log('👤 User profile needed, wallet connected but no profile');
+    
+    try {
+        if (connectedUser) {
+            connectedUser.profile = null;
+        }
+        
+        // Still show as connected but indicate profile is needed
+        updateUIForConnectedUser();
+        
+    } catch (error) {
+        console.error('❌ Error handling user profile needed:', error);
+    }
+}
+
+/**
+ * Update balance display
+ */
+function updateBalanceDisplay(data) {
+    try {
+        const balanceElement = document.getElementById('navTraderBalance');
+        if (balanceElement && data.formatted) {
+            balanceElement.textContent = `${data.formatted} SOL`;
+        }
+    } catch (error) {
+        console.error('❌ Error updating balance display:', error);
     }
 }
 
@@ -1404,7 +1600,7 @@ function resetModal() {
     }
 }
 
-// Update UI for connected user
+// FIXED: Update UI for connected user
 function updateUIForConnectedUser() {
     try {
         // Hide connect button
@@ -1420,13 +1616,19 @@ function updateUIForConnectedUser() {
         }
         
         // Update trader display elements
-        const profile = walletService?.getUserProfile();
+        const profile = walletService?.getUserProfile() || connectedUser?.profile;
         if (profile) {
             updateTraderDisplayElements(profile);
+        } else if (connectedUser) {
+            // Show wallet address if no profile
+            updateTraderDisplayElementsNoProfile(connectedUser);
         }
         
         // Update hero sections
         updateHeroSections(true);
+        
+        // Update competition sections
+        updateCompetitionSections(true);
         
         console.log('✅ UI updated for connected user');
         
@@ -1453,6 +1655,9 @@ function updateUIForDisconnectedUser() {
         // Update hero sections
         updateHeroSections(false);
         
+        // Update competition sections
+        updateCompetitionSections(false);
+        
         console.log('✅ UI updated for disconnected user');
         
     } catch (error) {
@@ -1460,12 +1665,12 @@ function updateUIForDisconnectedUser() {
     }
 }
 
-// Update trader display elements
+// Update trader display elements with profile
 function updateTraderDisplayElements(profile) {
     try {
         const elements = [
             { id: 'navTraderName', value: profile.username },
-            { id: 'navTraderAvatar', value: profile.avatar },
+            { id: 'navTraderAvatar', value: profile.avatar || '🎯' },
             { id: 'heroTraderNameText', value: profile.username }
         ];
         
@@ -1480,11 +1685,43 @@ function updateTraderDisplayElements(profile) {
         const balanceElement = document.getElementById('navTraderBalance');
         if (balanceElement && walletService) {
             const status = walletService.getConnectionStatus();
-            balanceElement.textContent = `${status.formattedBalance} SOL`;
+            balanceElement.textContent = `${status.formattedBalance || '0.00'} SOL`;
         }
         
     } catch (error) {
         console.error('❌ Error updating trader display elements:', error);
+    }
+}
+
+// Update trader display elements without profile
+function updateTraderDisplayElementsNoProfile(user) {
+    try {
+        const shortAddress = user.walletAddress ? 
+            `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : 
+            'Wallet';
+        
+        const elements = [
+            { id: 'navTraderName', value: shortAddress },
+            { id: 'navTraderAvatar', value: '🎯' },
+            { id: 'heroTraderNameText', value: shortAddress }
+        ];
+        
+        elements.forEach(({ id, value }) => {
+            const element = document.getElementById(id);
+            if (element && value) {
+                element.textContent = value;
+            }
+        });
+        
+        // Update balance if available
+        const balanceElement = document.getElementById('navTraderBalance');
+        if (balanceElement && walletService) {
+            const status = walletService.getConnectionStatus();
+            balanceElement.textContent = `${status.formattedBalance || '0.00'} SOL`;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error updating trader display elements (no profile):', error);
     }
 }
 
@@ -1509,10 +1746,32 @@ function updateHeroSections(isConnected) {
     }
 }
 
+// Update competition sections based on connection state
+function updateCompetitionSections(isConnected) {
+    try {
+        const competitionsDisconnected = document.getElementById('competitionsDisconnected');
+        const competitionsConnected = document.getElementById('competitionsConnected');
+        
+        if (competitionsDisconnected && competitionsConnected) {
+            if (isConnected) {
+                competitionsDisconnected.style.display = 'none';
+                competitionsConnected.style.display = 'block';
+            } else {
+                // Show disconnected view but still allow viewing competitions
+                competitionsDisconnected.style.display = 'block';
+                competitionsConnected.style.display = 'none';
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error updating competition sections:', error);
+    }
+}
+
 // Update wallet status display
 function updateWalletStatusDisplay() {
     try {
-        if (walletService && walletService.isReady()) {
+        if (walletService && walletService.isReady && walletService.isReady()) {
             const status = walletService.getConnectionStatus();
             if (status.isConnected) {
                 updateUIForConnectedUser();
@@ -1859,11 +2118,17 @@ window.addEventListener('beforeunload', cleanup);
     window.setupStep3EventListeners = setupStep3EventListeners;
     window.debugValidationState = debugValidationState;
     
-    // Enhanced app functions
+    // FIXED: Enhanced app functions with wallet event handling
     window.initializeApp = initializeApp;
     window.initializeServicesWithTiming = initializeServicesWithTiming;
     window.testBasicTableAccess = testBasicTableAccess;
     window.refreshDataFromTables = refreshDataFromTables;
+    window.setupWalletEventListeners = setupWalletEventListeners;
+    window.handleWalletConnectionRestored = handleWalletConnectionRestored;
+    window.handleWalletConnected = handleWalletConnected;
+    window.handleUserProfileLoaded = handleUserProfileLoaded;
+    window.handleUserProfileNeeded = handleUserProfileNeeded;
+    window.updateBalanceDisplay = updateBalanceDisplay;
     
     // Competition filter functions
     window.handleCompetitionFilterChange = function() {
@@ -1995,7 +2260,7 @@ if (document.readyState === 'loading') {
     }, 100);
 }
 
-console.log('📱 FIXED App.js Complete - Database-Centric Architecture!');
+console.log('📱 FIXED App.js Complete - Database-Centric Architecture with Wallet Event Listeners!');
 console.log('🎯 Key Features:');
 console.log('   ✅ FIXED: Removed TokenService and CompetitionManager references');
 console.log('   ✅ FIXED: Wallet service method calls aligned with available methods');
@@ -2004,9 +2269,12 @@ console.log('   ✅ FIXED: Function hoisting issue resolved');
 console.log('   ✅ FIXED: Global function exposure moved to bottom');
 console.log('   ✅ FIXED: Added automatic DOM ready initialization');
 console.log('   ✅ FIXED: Enhanced error handling and wallet connection checking');
+console.log('   ✅ FIXED: Added missing wallet event listeners and handlers');
+console.log('   ✅ FIXED: Proper wallet connection restoration flow');
+console.log('   ✅ FIXED: UI updates for connected/disconnected states');
 console.log('   ✅ Integrated portfolio system with safe initialization');
 console.log('   ✅ Direct Supabase table queries only (no Edge Functions)');
 console.log('   ✅ Enhanced wallet connection with portfolio integration');
 console.log('   ✅ Comprehensive error handling and recovery');
 console.log('   ✅ Background monitoring and health checks');
-console.log('🚀 Ready for testing!');
+console.log('🚀 Ready for testing with complete wallet recognition!');
