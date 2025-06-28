@@ -1,6 +1,7 @@
 // FIXED WalletService - Phase 3: Complete Multi-Wallet Integration with Database User Profile Restoration
 // Handles Phantom, Solflare, Backpack, and Demo mode with session persistence
 // FIXED: Added database integration for user profile restoration
+// FIXED: Proper Supabase client reference
 
 class WalletService {
     constructor() {
@@ -174,7 +175,7 @@ class WalletService {
     // Connect to specified wallet
     async connectWallet(walletType) {
         try {
-            console.log(`🔗 Connecting to ${walletType} wallet...`);
+            console.log(`🔗 Attempting to connect to ${walletType} wallet...`);
             
             if (walletType === 'demo') {
                 return await this.connectDemoWallet();
@@ -415,30 +416,44 @@ class WalletService {
 
             console.log('👤 Loading user profile from database...');
 
-            // Check if supabase client is available
-            if (!window.supabaseClient?.getOrCreateUser) {
+            // FIXED: Check if direct Supabase client is available
+            if (!window.supabase) {
                 console.warn('Supabase client not available, checking localStorage for cached profile');
                 this.loadCachedUserProfile();
                 return;
             }
 
-            // Try to get user from database
-            const userData = await window.supabaseClient.getOrCreateUser(this.publicKey);
+            // FIXED: Try to get user from database using direct client
+            const { data: user, error } = await window.supabase
+                .from('users')
+                .select('*')
+                .eq('wallet_address', this.publicKey)
+                .single();
             
-            if (userData) {
-                this.userProfile = userData;
+            if (user && !error) {
+                this.userProfile = user;
                 this.isProfileLoaded = true;
                 
                 // Cache profile locally
-                localStorage.setItem(this.storageKeys.userProfile, JSON.stringify(userData));
+                localStorage.setItem(this.storageKeys.userProfile, JSON.stringify(user));
                 
-                console.log('✅ User profile loaded from database:', userData.username || userData.wallet_address);
+                console.log('✅ User profile loaded from database:', user.username || user.wallet_address);
                 
                 // Notify listeners about profile load
                 this.notifyConnectionListeners('profileLoaded', this.userProfile);
                 
             } else {
-                console.log('ℹ️ No user profile found in database, user needs to create profile');
+                // Check for specific error codes
+                if (error && error.code === 'PGRST116') {
+                    // No user found - normal for new users
+                    console.log('ℹ️ No user profile found in database, user needs to create profile');
+                } else if (error) {
+                    console.warn('Database query error:', error);
+                    // Try cached profile as fallback
+                    this.loadCachedUserProfile();
+                    return;
+                }
+                
                 this.userProfile = null;
                 this.isProfileLoaded = false;
                 
@@ -729,17 +744,37 @@ class WalletService {
     // Check username availability
     async checkUsernameAvailability(username) {
         try {
-            if (!window.supabaseClient) {
+            // FIXED: Use direct Supabase client for username check
+            if (!window.supabase) {
                 console.warn('Database not available for username check');
                 return { available: true, error: 'Cannot verify uniqueness without database' };
             }
             
-            const isAvailable = await window.supabaseClient.checkUsernameAvailability(username);
+            const { data, error } = await window.supabase
+                .from('users')
+                .select('username')
+                .eq('username', username)
+                .single();
+
+            if (error && error.code === 'PGRST116') {
+                // No rows returned = username available
+                return { available: true, error: null };
+            }
+
+            if (error && error.code === 'PGRST106') {
+                // Table doesn't exist = allow any username
+                return { available: true, error: null };
+            }
+
+            if (error) {
+                // Other error
+                console.error('Error checking username:', error);
+                return { available: true, error: 'Could not verify availability' };
+            }
+
+            // Username exists
+            return { available: false, error: 'Username is already taken' };
             
-            return {
-                available: isAvailable,
-                error: isAvailable ? null : 'Username is already taken'
-            };
         } catch (error) {
             console.error('Error checking username availability:', error);
             return { available: true, error: 'Could not verify availability' };
@@ -781,17 +816,34 @@ class WalletService {
                 currentStreak: 0
             };
             
-            // Save to database if available
-            if (window.supabaseClient && !this.isDemo) {
-                const dbProfile = await window.supabaseClient.createUserProfile(
-                    this.publicKey,
-                    username,
-                    avatar
-                );
-                
-                if (dbProfile) {
-                    profileData.id = dbProfile.id;
-                    console.log('✅ User profile saved to database');
+            // FIXED: Save to database if available using direct client
+            if (window.supabase && !this.isDemo) {
+                try {
+                    const { data: dbProfile, error } = await window.supabase
+                        .from('users')
+                        .insert([{
+                            wallet_address: this.publicKey,
+                            username: username,
+                            avatar: avatar,
+                            total_winnings: 0,
+                            total_bets: 0,
+                            win_rate: 0,
+                            current_streak: 0,
+                            is_banned: false,
+                            created_at: new Date().toISOString(),
+                            last_active: new Date().toISOString()
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (dbProfile && !error) {
+                        profileData.id = dbProfile.id;
+                        console.log('✅ User profile saved to database');
+                    } else if (error) {
+                        console.warn('Database save error:', error);
+                    }
+                } catch (dbError) {
+                    console.warn('Failed to save to database:', dbError);
                 }
             }
             
@@ -1049,3 +1101,4 @@ console.log('   ✅ FIXED: Method alignment with app.js expectations');
 console.log('   ✅ FIXED: Database integration for user profile restoration');
 console.log('   ✅ FIXED: Profile loading during wallet restoration');
 console.log('   ✅ FIXED: Proper state management for user profiles');
+console.log('   ✅ FIXED: Proper Supabase client reference (window.supabase)');
