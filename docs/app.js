@@ -1,6 +1,7 @@
 // Main Application Logic - FIXED FOR DIRECT TABLE ACCESS
 // Enhanced with direct Supabase table queries instead of Edge Functions
 // INTEGRATED: Portfolio system and Competition system
+// FIXED: Function hoisting and initialization issues
 
 // Global state
 let walletService = null;
@@ -32,48 +33,6 @@ let dataStatus = {
     tokenCacheCount: 0,
     supabaseReady: false
 };
-
-// CRITICAL FIX: Ensure functions are exposed globally IMMEDIATELY
-(function() {
-    // Enhanced navigation functions with routing
-    window.showPage = showPage;
-    window.initializeRouting = initializeRouting;
-    window.navigateToPage = navigateToPage;
-    window.updatePageFromHash = updatePageFromHash;
-    window.scrollToLearnMore = scrollToLearnMore;
-    
-    // Updated navigation functions (removed showMarkets)
-    window.showCompetitions = () => showPage('competitions'); 
-    window.showLeaderboard = () => showPage('leaderboard');
-    window.showPortfolio = () => showPage('portfolio');
-    window.hideAllSections = hideAllPages;
-    window.updateActiveNavLink = updateActiveNavLink;
-    
-    // Wallet functions
-    window.openWalletModal = openWalletModal;
-    window.closeWalletModal = closeWalletModal;
-    window.selectWallet = selectWallet;
-    window.goToStep = goToStep;
-    window.continueFromConfirmation = continueFromConfirmation;
-    window.updateTraderPreview = updateTraderPreview;
-    window.selectAvatar = selectAvatar;
-    window.toggleAgreement = toggleAgreement;
-    window.finalizeProfile = finalizeProfile;
-    window.completedOnboarding = completedOnboarding;
-    window.disconnectWallet = disconnectWallet;
-    window.validateUsernameInput = validateUsernameInput;
-    window.setupStep3EventListeners = setupStep3EventListeners;
-    window.debugValidationState = debugValidationState;
-    
-    // Enhanced app functions
-    window.initializeApp = initializeApp;
-    window.initializeServicesWithTiming = initializeServicesWithTiming;
-    window.testBasicTableAccess = testBasicTableAccess;
-    window.refreshDataFromTables = refreshDataFromTables;
-    window.checkCacheHealth = checkCacheHealth;
-    
-    console.log('✅ Direct Table Access App - All functions exposed globally');
-})();
 
 // ==============================================
 // FIXED SERVICE INITIALIZATION WITH DIRECT TABLE ACCESS
@@ -2012,6 +1971,102 @@ function cleanup() {
 
 window.addEventListener('beforeunload', cleanup);
 
+// ==============================================
+// FIXED GLOBAL FUNCTION EXPOSURE - MOVED TO BOTTOM
+// ==============================================
+
+// CRITICAL FIX: Expose functions globally AFTER they're defined
+(function() {
+    console.log('🔧 Exposing functions globally after definition...');
+    
+    // Enhanced navigation functions with routing
+    window.showPage = showPage;
+    window.initializeRouting = initializeRouting;
+    window.navigateToPage = navigateToPage;
+    window.updatePageFromHash = updatePageFromHash;
+    window.scrollToLearnMore = scrollToLearnMore;
+    
+    // Updated navigation functions (removed showMarkets)
+    window.showCompetitions = () => showPage('competitions'); 
+    window.showLeaderboard = () => showPage('leaderboard');
+    window.showPortfolio = () => showPage('portfolio');
+    window.hideAllSections = hideAllPages;
+    window.updateActiveNavLink = updateActiveNavLink;
+    
+    // Wallet functions
+    window.openWalletModal = openWalletModal;
+    window.closeWalletModal = closeWalletModal;
+    window.selectWallet = selectWallet;
+    window.goToStep = goToStep;
+    window.continueFromConfirmation = continueFromConfirmation;
+    window.updateTraderPreview = updateTraderPreview;
+    window.selectAvatar = selectAvatar;
+    window.toggleAgreement = toggleAgreement;
+    window.finalizeProfile = finalizeProfile;
+    window.completedOnboarding = completedOnboarding;
+    window.disconnectWallet = disconnectWallet;
+    window.validateUsernameInput = validateUsernameInput;
+    window.setupStep3EventListeners = setupStep3EventListeners;
+    window.debugValidationState = debugValidationState;
+    
+    // Enhanced app functions
+    window.initializeApp = initializeApp;
+    window.initializeServicesWithTiming = initializeServicesWithTiming;
+    window.testBasicTableAccess = testBasicTableAccess;
+    window.refreshDataFromTables = refreshDataFromTables;
+    window.checkCacheHealth = checkCacheHealth;
+    
+    // Competition filter functions
+    window.handleCompetitionFilterChange = function() {
+        console.log('🔄 Competition filter changed');
+        if (window.initializeCompetitionsPage) {
+            window.initializeCompetitionsPage();
+        }
+    };
+    
+    window.refreshCompetitions = function() {
+        console.log('🔄 Refreshing competitions');
+        if (window.initializeCompetitionsPage) {
+            window.initializeCompetitionsPage();
+        }
+    };
+    
+    // Leaderboard filter functions
+    window.handleLeaderboardFilterChange = function() {
+        console.log('🔄 Leaderboard filter changed');
+        if (window.initializeLeaderboard) {
+            window.initializeLeaderboard();
+        }
+    };
+    
+    window.refreshLeaderboard = function() {
+        console.log('🔄 Refreshing leaderboard');
+        if (window.initializeLeaderboard) {
+            window.initializeLeaderboard();
+        }
+    };
+    
+    // Portfolio filter functions
+    window.handlePortfolioViewChange = function() {
+        console.log('🔄 Portfolio view changed');
+        if (window.displayPortfolioView) {
+            const select = document.getElementById('portfolio-view');
+            if (select) {
+                window.displayPortfolioView(select.value);
+            }
+        }
+    };
+    
+    window.refreshPortfolioData = function() {
+        console.log('🔄 Refreshing portfolio data');
+        if (window.refreshPortfolioData) {
+            window.refreshPortfolioData();
+        }
+    };
+    
+    console.log('✅ All functions exposed globally successfully');
+})();
+
 // Global exports
 window.app = {
     // Enhanced navigation functions
@@ -2070,9 +2125,37 @@ window.initializePortfolioPage = initializePortfolioPage;
 window.handlePortfolioWalletChange = handlePortfolioWalletChange;
 window.loadPortfolioSummaryForHome = loadPortfolioSummaryForHome;
 
-console.log('📱 App.js Complete with Portfolio Integration!');
+// ==============================================
+// AUTO-INITIALIZATION ON DOM READY
+// ==============================================
+
+// FIXED: Add automatic initialization
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM loaded, starting TokenWars initialization...');
+    
+    // Small delay to ensure all scripts are loaded
+    setTimeout(() => {
+        initializeApp();
+    }, 100);
+});
+
+// Alternative initialization if DOM already loaded
+if (document.readyState === 'loading') {
+    // DOM hasn't finished loading yet
+    console.log('⏳ Waiting for DOM to finish loading...');
+} else {
+    // DOM is already ready
+    console.log('✅ DOM already loaded, initializing immediately...');
+    setTimeout(() => {
+        initializeApp();
+    }, 100);
+}
+
+console.log('📱 FIXED App.js Complete with Portfolio Integration!');
 console.log('🎯 Key Features:');
-console.log('   ✅ Fixed service initialization (removed missing function calls)');
+console.log('   ✅ FIXED: Function hoisting issue resolved');
+console.log('   ✅ FIXED: Global function exposure moved to bottom');
+console.log('   ✅ FIXED: Added automatic DOM ready initialization');
 console.log('   ✅ Integrated portfolio system with safe initialization');
 console.log('   ✅ Direct Supabase table queries only (no Edge Functions)');
 console.log('   ✅ Enhanced wallet connection with portfolio integration');
