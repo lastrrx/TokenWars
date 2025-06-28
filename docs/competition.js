@@ -55,6 +55,366 @@ async function initializeCompetitionSystem() {
     }
 }
 
+        // Add these functions to your app.js file to integrate with the new competition system
+        
+        /**
+         * Enhanced Competition Page Loading with VOTING/ACTIVE filtering
+         */
+        async function loadCompetitionsContent() {
+            console.log('📦 Loading competitions content with VOTING/ACTIVE filtering...');
+            
+            try {
+                // Initialize competition system if not already done
+                if (typeof initializeCompetitionSystem === 'function') {
+                    await initializeCompetitionSystem();
+                } else {
+                    console.warn('⚠️ Competition system not available');
+                    const activeGrid = document.getElementById('activeGrid');
+                    if (activeGrid) {
+                        activeGrid.innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-icon">⚠️</div>
+                                <h3>Competition System Unavailable</h3>
+                                <p>The competition system is currently not available.</p>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Set up competition filters
+                setupCompetitionFilters();
+                
+                console.log('✅ Competitions content loaded successfully');
+                
+            } catch (error) {
+                console.error('❌ Error loading competitions content:', error);
+                
+                const activeGrid = document.getElementById('activeGrid');
+                if (activeGrid) {
+                    activeGrid.innerHTML = `
+                        <div class="empty-state error-state">
+                            <div class="empty-icon">❌</div>
+                            <h3>Error Loading Competitions</h3>
+                            <p>Unable to load competitions. Please try refreshing the page.</p>
+                            <button class="btn-primary" onclick="loadCompetitionsContent()" style="margin-top: 1rem;">
+                                Try Again
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        /**
+         * Setup Competition Filters and Event Listeners
+         */
+        function setupCompetitionFilters() {
+            console.log('🔍 Setting up competition filters...');
+            
+            // Set up filter change handlers
+            const competitionPhaseSelect = document.getElementById('competition-phase');
+            if (competitionPhaseSelect) {
+                competitionPhaseSelect.addEventListener('change', handleCompetitionFilterChange);
+                console.log('✅ Competition phase filter set up');
+            }
+            
+            const sortBySelect = document.getElementById('sort-by');
+            if (sortBySelect) {
+                sortBySelect.addEventListener('change', handleCompetitionFilterChange);
+                console.log('✅ Sort by filter set up');
+            }
+            
+            // Set up refresh button
+            const refreshBtn = document.querySelector('.btn-refresh');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', refreshCompetitions);
+                console.log('✅ Refresh button set up');
+            }
+            
+            // Update counts periodically
+            setInterval(updateCompetitionCounts, 30000); // Every 30 seconds
+        }
+        
+        /**
+         * Handle Competition Filter Changes
+         */
+        function handleCompetitionFilterChange() {
+            console.log('🔄 Competition filter changed');
+            
+            // Call the competition system's filter handler
+            if (typeof window.handleCompetitionFilterChange === 'function') {
+                window.handleCompetitionFilterChange();
+            }
+            
+            // Update counts
+            updateCompetitionCounts();
+        }
+        
+        /**
+         * Refresh Competitions Data
+         */
+        async function refreshCompetitions() {
+            console.log('🔄 Refreshing competitions data...');
+            
+            const refreshBtn = document.querySelector('.btn-refresh');
+            const refreshIcon = document.querySelector('.refresh-icon');
+            
+            // Add loading state to refresh button
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+            }
+            if (refreshIcon) {
+                refreshIcon.style.animation = 'spin 1s linear infinite';
+            }
+            
+            try {
+                // Call the competition system's refresh function
+                if (typeof window.loadActiveCompetitions === 'function') {
+                    await window.loadActiveCompetitions();
+                    console.log('✅ Competitions refreshed successfully');
+                } else {
+                    console.warn('⚠️ loadActiveCompetitions function not available');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error refreshing competitions:', error);
+            } finally {
+                // Remove loading state
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                }
+                if (refreshIcon) {
+                    refreshIcon.style.animation = '';
+                }
+            }
+        }
+        
+        /**
+         * Update Competition Counts in UI
+         */
+        function updateCompetitionCounts() {
+            try {
+                // Get competition counts from the competition system
+                if (window.CompetitionState) {
+                    const votingCount = window.CompetitionState.votingCompetitions?.length || 0;
+                    const activeCount = window.CompetitionState.activeCompetitions?.length || 0;
+                    const totalCount = votingCount + activeCount;
+                    
+                    // Update status cards
+                    const votingCountEl = document.getElementById('votingCompetitionsCount');
+                    if (votingCountEl) {
+                        votingCountEl.textContent = votingCount;
+                    }
+                    
+                    const activeCountEl = document.getElementById('activeCompetitionsCount');
+                    if (activeCountEl) {
+                        activeCountEl.textContent = activeCount;
+                    }
+                    
+                    const totalCountEl = document.getElementById('totalCompetitionsCount');
+                    if (totalCountEl) {
+                        totalCountEl.textContent = totalCount;
+                    }
+                    
+                    // Update section description
+                    const sectionDescription = document.querySelector('#competitionsConnected .section-description');
+                    if (sectionDescription) {
+                        sectionDescription.textContent = `${totalCount} live competitions (${votingCount} voting, ${activeCount} active)`;
+                    }
+                    
+                    // Update stats summary
+                    const totalCompetitionsEl = document.getElementById('totalCompetitions');
+                    if (totalCompetitionsEl) {
+                        totalCompetitionsEl.textContent = totalCount;
+                    }
+                    
+                    const activeCompetitionsEl = document.getElementById('activeCompetitions');
+                    if (activeCompetitionsEl) {
+                        activeCompetitionsEl.textContent = activeCount;
+                    }
+                    
+                    console.log(`📊 Updated competition counts: ${votingCount} voting, ${activeCount} active, ${totalCount} total`);
+                }
+            } catch (error) {
+                console.error('❌ Error updating competition counts:', error);
+            }
+        }
+        
+        /**
+         * Enhanced Page Navigation to Include Competition System
+         */
+        async function showPageEnhanced(pageName) {
+            console.log(`📄 Navigating to page: ${pageName}`);
+            
+            // Clean up previous page if needed
+            if (typeof cleanupCurrentPage === 'function') {
+                cleanupCurrentPage();
+            }
+            
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const targetPage = document.getElementById(`${pageName}Page`);
+            const targetNavLink = document.querySelector(`[data-page="${pageName}"]`);
+            
+            if (targetPage) {
+                targetPage.classList.add('active');
+                console.log(`✅ Page ${pageName} displayed`);
+            }
+            
+            if (targetNavLink) {
+                targetNavLink.classList.add('active');
+            }
+            
+            // Load page-specific content
+            try {
+                switch (pageName) {
+                    case 'competitions':
+                        await loadCompetitionsContent();
+                        break;
+                    case 'leaderboard':
+                        if (typeof loadLeaderboardContent === 'function') {
+                            await loadLeaderboardContent();
+                        }
+                        break;
+                    case 'portfolio':
+                        if (typeof loadPortfolioContent === 'function') {
+                            await loadPortfolioContent();
+                        }
+                        break;
+                    default:
+                        console.log(`ℹ️ No specific content loader for page: ${pageName}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error loading content for page ${pageName}:`, error);
+            }
+            
+            console.log(`✅ Successfully navigated to ${pageName}`);
+        }
+        
+        /**
+         * Cleanup Function for Page Transitions
+         */
+        function cleanupCurrentPage() {
+            // Clean up competition system if leaving competitions page
+            const currentPage = document.querySelector('.page-content.active');
+            if (currentPage && currentPage.id === 'competitionsPage') {
+                if (typeof window.cleanupCompetitionsPage === 'function') {
+                    window.cleanupCompetitionsPage();
+                }
+            }
+        }
+        
+        /**
+         * Initialize Enhanced Competition Integration
+         */
+        function initializeCompetitionIntegration() {
+            console.log('🔗 Initializing competition integration...');
+            
+            // Set up global filter handler
+            window.handleCompetitionFilterChange = handleCompetitionFilterChange;
+            
+            // Set up enhanced page navigation
+            window.showPageEnhanced = showPageEnhanced;
+            
+            // Override the default showPage function
+            window.showPage = showPageEnhanced;
+            
+            // Set up periodic updates for competition counts
+            setInterval(() => {
+                if (document.getElementById('competitionsPage')?.classList.contains('active')) {
+                    updateCompetitionCounts();
+                }
+            }, 30000); // Every 30 seconds
+            
+            console.log('✅ Competition integration initialized');
+        }
+        
+        /**
+         * Enhanced App Initialization
+         */
+        async function initializeAppEnhanced() {
+            console.log('🚀 Initializing enhanced app with competition system...');
+            
+            try {
+                // Initialize competition integration
+                initializeCompetitionIntegration();
+                
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        setupInitialState();
+                    });
+                } else {
+                    setupInitialState();
+                }
+                
+                console.log('✅ Enhanced app initialization complete');
+                
+            } catch (error) {
+                console.error('❌ Error during enhanced app initialization:', error);
+            }
+        }
+        
+        /**
+         * Setup Initial State
+         */
+        function setupInitialState() {
+            console.log('⚙️ Setting up initial app state...');
+            
+            try {
+                // Set up navigation event listeners
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const pageName = link.getAttribute('data-page');
+                        if (pageName) {
+                            showPageEnhanced(pageName);
+                        }
+                    });
+                });
+                
+                // Initialize home page as default if no specific page is shown
+                const activePage = document.querySelector('.page-content.active');
+                if (!activePage) {
+                    showPageEnhanced('home');
+                }
+                
+                console.log('✅ Initial state setup complete');
+                
+            } catch (error) {
+                console.error('❌ Error setting up initial state:', error);
+            }
+        }
+        
+        /**
+         * Export functions for global use
+         */
+        window.loadCompetitionsContent = loadCompetitionsContent;
+        window.setupCompetitionFilters = setupCompetitionFilters;
+        window.refreshCompetitions = refreshCompetitions;
+        window.updateCompetitionCounts = updateCompetitionCounts;
+        window.initializeCompetitionIntegration = initializeCompetitionIntegration;
+        window.initializeAppEnhanced = initializeAppEnhanced;
+        
+        // Initialize enhanced app
+        initializeAppEnhanced();
+        
+        console.log('✅ Competition integration script loaded');
+        console.log('🎯 Features:');
+        console.log('   ✅ VOTING/ACTIVE filtering integration');
+        console.log('   ✅ Enhanced competition page loading');
+        console.log('   ✅ Real-time count updates');
+        console.log('   ✅ Improved error handling');
+        console.log('   ✅ Competition system integration');
+
 /**
  * Load VOTING and ACTIVE Competitions with Token Cache Data
  */
