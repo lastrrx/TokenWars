@@ -56,6 +56,14 @@ async function initializeWalletServiceSafely() {
     }
 }
 
+// CRITICAL: This listener was missing!
+walletService.addConnectionListener('connectionRestored', (eventType, data) => {
+    if (eventType === 'connectionRestored') {
+        console.log('🔄 Wallet connection restored:', data);
+        handleWalletConnectionRestored(data); // This updates the UI!
+    }
+});
+
 // FIXED: Initialize Supabase connection without Edge Function tests
 async function initializeSupabaseConnection() {
     try {
