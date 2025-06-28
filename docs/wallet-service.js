@@ -1,5 +1,6 @@
-// WalletService - Phase 3: Complete Multi-Wallet Integration
+// FIXED WalletService - Phase 3: Complete Multi-Wallet Integration
 // Handles Phantom, Solflare, Backpack, and Demo mode with session persistence
+// ADDED: Missing isConnected() method to prevent app.js errors
 
 class WalletService {
     constructor() {
@@ -74,6 +75,40 @@ class WalletService {
         } catch (error) {
             console.error('❌ WalletService initialization failed:', error);
             return false;
+        }
+    }
+
+    // ==============================================
+    // FIXED: ADDED MISSING CONNECTION STATUS METHODS
+    // ==============================================
+
+    // ADDED: Missing isConnected() method that app.js expects
+    isConnected() {
+        try {
+            return !!(this.connectedWallet && this.publicKey);
+        } catch (error) {
+            console.error('Error checking connection status:', error);
+            return false;
+        }
+    }
+
+    // ADDED: Helper method to get wallet address (expected by app.js)
+    getWalletAddress() {
+        try {
+            return this.publicKey || null;
+        } catch (error) {
+            console.error('Error getting wallet address:', error);
+            return null;
+        }
+    }
+
+    // ADDED: Helper method to get balance (expected by app.js)
+    getBalance() {
+        try {
+            return this.balance || 0;
+        } catch (error) {
+            console.error('Error getting balance:', error);
+            return 0;
         }
     }
 
@@ -854,7 +889,7 @@ function getWalletService() {
 window.WalletService = WalletService;
 window.getWalletService = getWalletService;
 
-console.log('✅ WalletService (Phase 3) class loaded and exposed globally');
+console.log('✅ FIXED WalletService (Phase 3) class loaded and exposed globally');
 console.log('🚀 Phase 3 Features:');
 console.log('   🔗 Multi-wallet support (Phantom, Solflare, Backpack)');
 console.log('   🎮 Demo mode with temporary local sessions');
@@ -864,3 +899,8 @@ console.log('   👤 User profile creation with validation');
 console.log('   🛡️ Profanity filtering and username validation');
 console.log('   🔄 Automatic reconnection on page load');
 console.log('   📱 Network management (devnet → mainnet ready)');
+console.log('🔧 FIXES:');
+console.log('   ✅ ADDED: isConnected() method for app.js compatibility');
+console.log('   ✅ ADDED: getWalletAddress() helper method');
+console.log('   ✅ ADDED: getBalance() helper method');
+console.log('   ✅ FIXED: Method alignment with app.js expectations');
