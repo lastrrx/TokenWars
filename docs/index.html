@@ -153,7 +153,8 @@
             </div>
         </div>
 
-        <!-- COMPETITIONS PAGE -->
+
+        <!-- COMPETITIONS PAGE SECTION - Updated for VOTING/ACTIVE filtering -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
                 <!-- Disconnected User View -->
@@ -176,7 +177,117 @@
                         </div>
                     </section>
                 </div>
-
+        
+                <!-- Connected User View -->
+                <div id="competitionsConnected" style="display: none;">
+                    <section class="section">
+                        <div class="container">
+                            <div class="section-header">
+                                <h2 class="section-title">LIVE COMPETITIONS</h2>
+                                <p class="section-description">Predict token performance and earn SOL rewards</p>
+                                
+                                <!-- Enhanced Competition Filters -->
+                                <div class="section-filters">
+                                    <select id="competition-phase" class="filter-select" onchange="handleCompetitionFilterChange()">
+                                        <option value="all">All Competitions</option>
+                                        <option value="voting">Voting Open</option>
+                                        <option value="active">Running</option>
+                                    </select>
+                                    
+                                    <select id="sort-by" class="filter-select" onchange="handleCompetitionFilterChange()">
+                                        <option value="time_remaining">Time Remaining</option>
+                                        <option value="total_pool">Pool Size</option>
+                                        <option value="total_bets">Participants</option>
+                                        <option value="created_at">Newest First</option>
+                                    </select>
+                                    
+                                    <button class="btn-refresh" onclick="loadActiveCompetitions()" title="Refresh competitions">
+                                        <span class="refresh-icon">🔄</span> Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Competition Status Summary -->
+                            <div class="competition-status-summary">
+                                <div class="status-cards">
+                                    <div class="status-card voting">
+                                        <div class="status-icon">🗳️</div>
+                                        <div class="status-content">
+                                            <div class="status-count" id="votingCompetitionsCount">0</div>
+                                            <div class="status-label">Voting Open</div>
+                                            <div class="status-desc">Place predictions</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="status-card active">
+                                        <div class="status-icon">⚡</div>
+                                        <div class="status-content">
+                                            <div class="status-count" id="activeCompetitionsCount">0</div>
+                                            <div class="status-label">Running</div>
+                                            <div class="status-desc">Performance tracking</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="status-card total">
+                                        <div class="status-icon">🏆</div>
+                                        <div class="status-content">
+                                            <div class="status-count" id="totalCompetitionsCount">0</div>
+                                            <div class="status-label">Total Live</div>
+                                            <div class="status-desc">Competitions available</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Competitions Container -->
+                            <div class="competitions-container">
+                                <!-- Active Grid for Competition System -->
+                                <div class="competitions-grid" id="activeGrid">
+                                    <div class="loading-state">
+                                        <div class="loading-spinner"></div>
+                                        <p>Loading live competitions...</p>
+                                    </div>
+                                </div>
+                            </div>
+        
+                            <!-- Competition Statistics Summary -->
+                            <div class="competition-stats-summary" style="margin-top: 3rem;">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">🏆</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalCompetitions">0</div>
+                                            <div class="stat-label">Live Competitions</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">👥</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalParticipants">0</div>
+                                            <div class="stat-label">Active Participants</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">💰</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="totalPrizePool">0.0 SOL</div>
+                                            <div class="stat-label">Total Prize Pool</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">⚡</div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="activeCompetitions">0</div>
+                                            <div class="stat-label">Running Now</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
                 <!-- Connected User View -->
                 <div id="competitionsConnected" style="display: none;">
                     <section class="section">
