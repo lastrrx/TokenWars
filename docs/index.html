@@ -153,7 +153,7 @@
             </div>
         </div>
 
-        <!-- COMPETITIONS PAGE - Database-Centric Implementation -->
+        <!-- COMPETITIONS PAGE -->
         <div id="competitionsPage" class="page-content">
             <div class="main-content">
                 <!-- Disconnected User View -->
@@ -177,7 +177,7 @@
                     </section>
                 </div>
 
-                <!-- Connected User View - Database-Driven -->
+                <!-- Connected User View -->
                 <div id="competitionsConnected" style="display: none;">
                     <section class="section">
                         <div class="container">
@@ -209,6 +209,11 @@
                                         <div class="loading-spinner"></div>
                                         <p>Loading competitions from database...</p>
                                     </div>
+                                </div>
+                                
+                                <!-- Active Grid for Competition System -->
+                                <div class="competitions-grid" id="activeGrid" style="display: none;">
+                                    <!-- Competition cards will be populated here -->
                                 </div>
                             </div>
 
@@ -304,6 +309,7 @@
                                     <option value="overview">Overview</option>
                                     <option value="history">Betting History</option>
                                     <option value="statistics">Statistics</option>
+                                    <option value="achievements">Achievements</option>
                                 </select>
                                 <button class="btn-refresh" onclick="refreshPortfolioData()">
                                     <span class="refresh-icon">🔄</span> Refresh
@@ -332,6 +338,10 @@
                 <button class="modal-close" onclick="closeCompetitionModal()">×</button>
             </div>
             <div class="modal-body">
+                <div id="modalContent" class="modal-content">
+                    <!-- Modal content will be populated by competition.js -->
+                </div>
+                
                 <div class="modal-tokens-section">
                     <div class="modal-token-card">
                         <img id="modalTokenALogo" class="modal-token-logo" src="" alt="">
@@ -429,7 +439,7 @@
                 </div>
 
                 <div class="wallet-options">
-                    <div class="wallet-option" data-wallet="phantom">
+                    <div class="wallet-option" data-wallet="phantom" onclick="selectWallet('phantom')">
                         <div class="wallet-icon">👻</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Phantom</div>
@@ -438,7 +448,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option" data-wallet="solflare">
+                    <div class="wallet-option" data-wallet="solflare" onclick="selectWallet('solflare')">
                         <div class="wallet-icon">☀️</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Solflare</div>
@@ -447,7 +457,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option" data-wallet="backpack">
+                    <div class="wallet-option" data-wallet="backpack" onclick="selectWallet('backpack')">
                         <div class="wallet-icon">🎒</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Backpack</div>
@@ -456,7 +466,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option demo-wallet" data-wallet="demo">
+                    <div class="wallet-option demo-wallet" data-wallet="demo" onclick="selectWallet('demo')">
                         <div class="wallet-icon">🎮</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Demo Mode</div>
@@ -471,1130 +481,125 @@
                 </div>
             </div>
 
-            <!-- Additional wallet modal steps... -->
-            <!-- (Keeping existing step 2, 3, 4 content for brevity) -->
+            <!-- Step 2: Connecting -->
+            <div class="step-content" id="step2Content">
+                <div class="connecting-state">
+                    <div class="connecting-icon">🔄</div>
+                    <h3>Connecting to <span id="selectedWalletName">Wallet</span></h3>
+                    <p>Please approve the connection in your wallet...</p>
+                    <div class="connecting-animation">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Profile Creation -->
+            <div class="step-content" id="step3Content">
+                <div class="profile-creation">
+                    <h3>Create Your Trader Profile</h3>
+                    <p>Set up your profile to start competing</p>
+                    
+                    <div class="profile-form">
+                        <div class="form-group">
+                            <label for="traderUsername">Choose Username</label>
+                            <div class="input-group">
+                                <input type="text" id="traderUsername" placeholder="Enter username" maxlength="20">
+                                <span class="input-status" id="inputStatus"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Choose Avatar</label>
+                            <div class="avatar-grid">
+                                <div class="avatar-option-modern" data-avatar="🎯" onclick="selectAvatar('🎯')">🎯</div>
+                                <div class="avatar-option-modern" data-avatar="🚀" onclick="selectAvatar('🚀')">🚀</div>
+                                <div class="avatar-option-modern" data-avatar="💎" onclick="selectAvatar('💎')">💎</div>
+                                <div class="avatar-option-modern" data-avatar="⚡" onclick="selectAvatar('⚡')">⚡</div>
+                                <div class="avatar-option-modern" data-avatar="🔥" onclick="selectAvatar('🔥')">🔥</div>
+                                <div class="avatar-option-modern" data-avatar="🎲" onclick="selectAvatar('🎲')">🎲</div>
+                                <div class="avatar-option-modern" data-avatar="🏆" onclick="selectAvatar('🏆')">🏆</div>
+                                <div class="avatar-option-modern" data-avatar="🎪" onclick="selectAvatar('🎪')">🎪</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-preview">
+                            <h4>Preview</h4>
+                            <div class="preview-card">
+                                <div class="preview-avatar" id="previewAvatar">🎯</div>
+                                <div class="preview-name" id="previewName">Trader Username</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
+                        <button class="btn-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Agreement -->
+            <div class="step-content" id="step4Content">
+                <div class="agreement-step">
+                    <h3>Terms & Conditions</h3>
+                    <div class="terms-content">
+                        <p><strong>By using TokenWars, you agree to:</strong></p>
+                        <ul>
+                            <li>Participate in prediction competitions fairly</li>
+                            <li>Accept that all bets are final once placed</li>
+                            <li>Understand that cryptocurrency trading involves risk</li>
+                            <li>Use the platform responsibly and within your means</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="agreement-checkbox" onclick="toggleAgreement()">
+                        <div class="checkbox" id="agreementCheckbox"></div>
+                        <span>I agree to the Terms & Conditions</span>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-modal-secondary" onclick="goToStep(3)">Back</button>
+                        <button class="btn-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Complete Setup</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Success -->
+            <div class="step-content" id="step5Content">
+                <div class="success-step">
+                    <div class="success-icon">🎉</div>
+                    <h3>Welcome to TokenWars!</h3>
+                    <p>Your profile has been created successfully. You're ready to start competing!</p>
+                    <div class="success-actions">
+                        <button class="btn-primary" onclick="completedOnboarding()">Start Trading</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Configuration Script -->
-    <script>
-        window.SUPABASE_CONFIG = {
-            url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
-        };
-        
-        console.log('✅ Configuration loaded');
-    </script>
-    
-    <!-- Core application files in database-centric order -->
+    <!-- JavaScript Files in Dependency Order -->
+    <!-- Configuration first -->
     <script src="config.js"></script>
+    
+    <!-- Database client setup -->
     <script src="supabase-client.js"></script>
+    
+    <!-- Utility functions -->
     <script src="utils.js"></script>
+    
+    <!-- Wallet services -->
     <script src="wallet-service.js"></script>
-    <!-- ❌ REMOVED: competition-manager.js -->
+    
+    <!-- Competition system -->
     <script src="competition.js"></script>
+    
+    <!-- User/portfolio system -->
+    <script src="user.js"></script>
+    
+    <!-- Main application logic (must be last) -->
     <script src="app.js"></script>
-    
-    <!-- Database-Centric Application Logic -->
-    <script>
-        // =============================================
-        // DATABASE-CENTRIC TOKENWARS APPLICATION
-        // =============================================
 
-        console.log('🗄️ Starting Database-Centric TokenWars Application...');
-
-        // Global state for database-driven app
-        let globalState = {
-            supabase: null,
-            isConnected: false,
-            currentUser: null,
-            competitions: [],
-            users: [],
-            currentPage: 'home',
-            filters: {
-                phase: 'all',
-                sortBy: 'start_time'
-            }
-        };
-
-        // =============================================
-        // DATABASE CONNECTION & INITIALIZATION
-        // =============================================
-
-        async function initializeDatabaseApp() {
-            try {
-                console.log('🚀 Initializing database-centric application...');
-                
-                // Initialize Supabase connection
-                await initializeSupabaseConnection();
-                
-                // Set up page navigation
-                initializeNavigation();
-                
-                // Set up wallet connection handlers
-                setupWalletHandlers();
-                
-                // Update UI based on initial state
-                updateUIForConnectionState();
-                
-                console.log('✅ Database-centric application initialized successfully');
-                
-            } catch (error) {
-                console.error('❌ Failed to initialize application:', error);
-                showNotification('Failed to initialize application', 'error');
-            }
-        }
-
-        async function initializeSupabaseConnection() {
-            try {
-                if (window.supabaseClient && typeof window.supabaseClient.initializeSupabase === 'function') {
-                    globalState.supabase = await window.supabaseClient.initializeSupabase();
-                    console.log('✅ Supabase connected via supabaseClient');
-                } else if (window.SUPABASE_CONFIG) {
-                    const { createClient } = supabase;
-                    globalState.supabase = createClient(
-                        window.SUPABASE_CONFIG.url,
-                        window.SUPABASE_CONFIG.anonKey
-                    );
-                    console.log('✅ Supabase connected directly');
-                } else {
-                    throw new Error('No Supabase configuration available');
-                }
-                
-                // Update status
-                updateDbStatus('connected', '✅ Database: Connected');
-                
-            } catch (error) {
-                console.error('❌ Supabase connection failed:', error);
-                updateDbStatus('disconnected', '❌ Database: Failed');
-                throw error;
-            }
-        }
-
-        // =============================================
-        // COMPETITIONS - DATABASE QUERIES ONLY
-        // =============================================
-
-        async function loadCompetitionsFromDatabase() {
-            try {
-                console.log('📊 Loading competitions from database...');
-                
-                if (!globalState.supabase) {
-                    throw new Error('Database not connected');
-                }
-
-                // Query competitions table directly
-                const { data: competitions, error } = await globalState.supabase
-                    .from('competitions')
-                    .select(`
-                        *,
-                        token_pairs (
-                            token_a_symbol,
-                            token_b_symbol,
-                            token_a_name,
-                            token_b_name
-                        )
-                    `)
-                    .order('created_at', { ascending: false });
-
-                if (error) {
-                    throw error;
-                }
-
-                console.log(`✅ Loaded ${competitions?.length || 0} competitions from database`);
-                
-                globalState.competitions = competitions || [];
-                return competitions || [];
-                
-            } catch (error) {
-                console.error('❌ Failed to load competitions:', error);
-                showNotification('Failed to load competitions from database', 'error');
-                return [];
-            }
-        }
-
-        async function getCurrentTokenPrices(tokenAddresses) {
-            try {
-                if (!globalState.supabase || !tokenAddresses || tokenAddresses.length === 0) {
-                    return {};
-                }
-
-                // Query token_cache table for current prices
-                const { data: tokenPrices, error } = await globalState.supabase
-                    .from('token_cache')
-                    .select('token_address, current_price, price_change_24h, symbol, name, logo_uri')
-                    .in('token_address', tokenAddresses)
-                    .eq('cache_status', 'FRESH');
-
-                if (error) {
-                    throw error;
-                }
-
-                // Convert to lookup object
-                const pricesLookup = {};
-                tokenPrices?.forEach(token => {
-                    pricesLookup[token.token_address] = {
-                        price: token.current_price,
-                        change24h: token.price_change_24h,
-                        symbol: token.symbol,
-                        name: token.name,
-                        logo: token.logo_uri
-                    };
-                });
-
-                return pricesLookup;
-                
-            } catch (error) {
-                console.error('❌ Failed to load token prices:', error);
-                return {};
-            }
-        }
-
-        async function renderCompetitions() {
-            try {
-                console.log('🎨 Rendering competitions...');
-                
-                const competitions = await loadCompetitionsFromDatabase();
-                const grid = document.getElementById('competitionsGrid');
-                
-                if (!grid) {
-                    console.error('Competitions grid not found');
-                    return;
-                }
-
-                if (competitions.length === 0) {
-                    grid.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">🏆</div>
-                            <h3>No Competitions Available</h3>
-                            <p>Competitions are created by administrators. Check back soon for new prediction opportunities!</p>
-                        </div>
-                    `;
-                    updateCompetitionStats(competitions);
-                    return;
-                }
-
-                // Get token prices for all competition tokens
-                const tokenAddresses = new Set();
-                competitions.forEach(comp => {
-                    tokenAddresses.add(comp.token_a_address);
-                    tokenAddresses.add(comp.token_b_address);
-                });
-                
-                const tokenPrices = await getCurrentTokenPrices(Array.from(tokenAddresses));
-
-                // Apply filters
-                const filteredCompetitions = applyCompetitionFilters(competitions);
-
-                // Render competition cards
-                grid.innerHTML = filteredCompetitions.map(competition => 
-                    createCompetitionCard(competition, tokenPrices)
-                ).join('');
-
-                // Update statistics
-                updateCompetitionStats(competitions);
-                
-                console.log(`✅ Rendered ${filteredCompetitions.length} competitions`);
-                
-            } catch (error) {
-                console.error('❌ Error rendering competitions:', error);
-                const grid = document.getElementById('competitionsGrid');
-                if (grid) {
-                    grid.innerHTML = `
-                        <div class="error-state">
-                            <div class="error-icon">❌</div>
-                            <h3>Failed to Load Competitions</h3>
-                            <p>Unable to load competitions from database. Please try refreshing the page.</p>
-                            <button class="btn-primary" onclick="refreshCompetitions()">Retry</button>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        function createCompetitionCard(competition, tokenPrices) {
-            const tokenA = tokenPrices[competition.token_a_address] || {};
-            const tokenB = tokenPrices[competition.token_b_address] || {};
-            
-            const statusClass = competition.status.toLowerCase();
-            const timeInfo = getCompetitionTimeInfo(competition);
-            
-            return `
-                <div class="competition-card" onclick="openCompetitionModal('${competition.competition_id}')">
-                    <div class="competition-header">
-                        <div class="competition-status ${statusClass}">
-                            ${getStatusIcon(competition.status)} ${competition.status}
-                        </div>
-                        <div class="data-indicator">
-                            <div class="data-dot live"></div>
-                            Live Data
-                        </div>
-                    </div>
-                    
-                    <div class="token-battle">
-                        <div class="token-info">
-                            ${tokenA.logo ? `<img src="${tokenA.logo}" alt="${competition.token_a_symbol}" class="token-logo">` : 
-                              `<div class="token-logo-placeholder">${competition.token_a_symbol?.charAt(0) || 'T'}</div>`}
-                            <div class="token-symbol">${competition.token_a_symbol || 'Unknown'}</div>
-                            <div class="token-name">${competition.token_a_name || 'Token A'}</div>
-                            ${tokenA.price ? `<div class="token-price">$${parseFloat(tokenA.price).toFixed(4)}</div>` : ''}
-                            ${tokenA.change24h ? `<div class="price-change ${tokenA.change24h >= 0 ? 'positive' : 'negative'}">
-                                ${tokenA.change24h >= 0 ? '+' : ''}${tokenA.change24h.toFixed(2)}%
-                            </div>` : ''}
-                        </div>
-                        
-                        <div class="vs-divider">
-                            <div class="vs-text">VS</div>
-                            <div class="competition-timer">
-                                <div class="timer-label">${timeInfo.label}</div>
-                                <div class="timer-value">${timeInfo.value}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="token-info">
-                            ${tokenB.logo ? `<img src="${tokenB.logo}" alt="${competition.token_b_symbol}" class="token-logo">` : 
-                              `<div class="token-logo-placeholder">${competition.token_b_symbol?.charAt(0) || 'T'}</div>`}
-                            <div class="token-symbol">${competition.token_b_symbol || 'Unknown'}</div>
-                            <div class="token-name">${competition.token_b_name || 'Token B'}</div>
-                            ${tokenB.price ? `<div class="token-price">$${parseFloat(tokenB.price).toFixed(4)}</div>` : ''}
-                            ${tokenB.change24h ? `<div class="price-change ${tokenB.change24h >= 0 ? 'positive' : 'negative'}">
-                                ${tokenB.change24h >= 0 ? '+' : ''}${tokenB.change24h.toFixed(2)}%
-                            </div>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="competition-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">${competition.total_bets || 0}</div>
-                            <div class="stat-label">Participants</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">${parseFloat(competition.total_pool || 0).toFixed(1)} SOL</div>
-                            <div class="stat-label">Prize Pool</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">0.1 SOL</div>
-                            <div class="stat-label">Entry Fee</div>
-                        </div>
-                    </div>
-                    
-                    <div class="action-section">
-                        ${getActionButton(competition)}
-                    </div>
-                </div>
-            `;
-        }
-
-        function getStatusIcon(status) {
-            const icons = {
-                'SETUP': '⏰',
-                'VOTING': '🗳️',
-                'ACTIVE': '⚡',
-                'CLOSED': '🏁',
-                'RESOLVED': '✅'
-            };
-            return icons[status] || '❓';
-        }
-
-        function getCompetitionTimeInfo(competition) {
-            const now = new Date();
-            const startTime = new Date(competition.start_time);
-            const votingEndTime = new Date(competition.voting_end_time);
-            const endTime = new Date(competition.end_time);
-
-            if (competition.status === 'SETUP') {
-                const timeUntilStart = startTime - now;
-                return {
-                    label: 'STARTS IN',
-                    value: formatTimeRemaining(timeUntilStart)
-                };
-            } else if (competition.status === 'VOTING') {
-                const timeUntilVotingEnd = votingEndTime - now;
-                return {
-                    label: 'VOTING ENDS',
-                    value: formatTimeRemaining(timeUntilVotingEnd)
-                };
-            } else if (competition.status === 'ACTIVE') {
-                const timeUntilEnd = endTime - now;
-                return {
-                    label: 'ENDS IN',
-                    value: formatTimeRemaining(timeUntilEnd)
-                };
-            } else {
-                return {
-                    label: 'COMPLETED',
-                    value: new Date(competition.end_time).toLocaleDateString()
-                };
-            }
-        }
-
-        function formatTimeRemaining(milliseconds) {
-            if (milliseconds <= 0) return 'Ended';
-            
-            const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((milliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (days > 0) return `${days}d ${hours}h`;
-            if (hours > 0) return `${hours}h ${minutes}m`;
-            return `${minutes}m`;
-        }
-
-        function getActionButton(competition) {
-            if (!globalState.isConnected) {
-                return `
-                    <button class="action-button" onclick="event.stopPropagation(); openWalletModal()">
-                        Connect to Participate
-                    </button>
-                `;
-            }
-
-            switch (competition.status) {
-                case 'VOTING':
-                    return `
-                        <button class="action-button">
-                            Place Prediction
-                        </button>
-                    `;
-                case 'ACTIVE':
-                    return `
-                        <button class="action-button" disabled>
-                            Competition Running
-                        </button>
-                    `;
-                case 'CLOSED':
-                case 'RESOLVED':
-                    return `
-                        <button class="action-button" disabled>
-                            View Results
-                        </button>
-                    `;
-                default:
-                    return `
-                        <button class="action-button" disabled>
-                            Opening Soon
-                        </button>
-                    `;
-            }
-        }
-
-        function applyCompetitionFilters(competitions) {
-            let filtered = [...competitions];
-
-            // Filter by phase
-            if (globalState.filters.phase !== 'all') {
-                const statusMap = {
-                    'voting': ['VOTING'],
-                    'active': ['ACTIVE'],
-                    'completed': ['CLOSED', 'RESOLVED']
-                };
-                const allowedStatuses = statusMap[globalState.filters.phase];
-                if (allowedStatuses) {
-                    filtered = filtered.filter(comp => allowedStatuses.includes(comp.status));
-                }
-            }
-
-            // Sort
-            filtered.sort((a, b) => {
-                switch (globalState.filters.sortBy) {
-                    case 'total_pool':
-                        return parseFloat(b.total_pool || 0) - parseFloat(a.total_pool || 0);
-                    case 'total_bets':
-                        return (b.total_bets || 0) - (a.total_bets || 0);
-                    case 'start_time':
-                    default:
-                        return new Date(b.start_time) - new Date(a.start_time);
-                }
-            });
-
-            return filtered;
-        }
-
-        function updateCompetitionStats(competitions) {
-            const stats = {
-                total: competitions.length,
-                active: competitions.filter(c => ['VOTING', 'ACTIVE'].includes(c.status)).length,
-                participants: competitions.reduce((sum, c) => sum + (c.total_bets || 0), 0),
-                prizePool: competitions.reduce((sum, c) => sum + parseFloat(c.total_pool || 0), 0)
-            };
-
-            updateElementSafely('totalCompetitions', stats.total);
-            updateElementSafely('activeCompetitions', stats.active);
-            updateElementSafely('totalParticipants', stats.participants);
-            updateElementSafely('totalPrizePool', `${stats.prizePool.toFixed(1)} SOL`);
-        }
-
-        // =============================================
-        // LEADERBOARD - DATABASE QUERIES ONLY
-        // =============================================
-
-        async function loadLeaderboardFromDatabase() {
-            try {
-                console.log('🏆 Loading leaderboard from database...');
-                
-                if (!globalState.supabase) {
-                    throw new Error('Database not connected');
-                }
-
-                // Query users table directly
-                const { data: users, error } = await globalState.supabase
-                    .from('users')
-                    .select('*')
-                    .order('total_winnings', { ascending: false })
-                    .limit(100);
-
-                if (error) {
-                    throw error;
-                }
-
-                console.log(`✅ Loaded ${users?.length || 0} users for leaderboard`);
-                
-                globalState.users = users || [];
-                return users || [];
-                
-            } catch (error) {
-                console.error('❌ Failed to load leaderboard:', error);
-                showNotification('Failed to load leaderboard from database', 'error');
-                return [];
-            }
-        }
-
-        async function renderLeaderboard() {
-            try {
-                console.log('🎨 Rendering leaderboard...');
-                
-                const users = await loadLeaderboardFromDatabase();
-                const table = document.getElementById('leaderboardTable');
-                
-                if (!table) {
-                    console.error('Leaderboard table not found');
-                    return;
-                }
-
-                if (users.length === 0) {
-                    table.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">👥</div>
-                            <h3>No Traders Yet</h3>
-                            <p>Be the first to join competitions and appear on the leaderboard!</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Apply filters and render
-                const filteredUsers = applyLeaderboardFilters(users);
-                
-                table.innerHTML = `
-                    <div class="leaderboard-header">
-                        <div class="rank-col">Rank</div>
-                        <div class="trader-col">Trader</div>
-                        <div class="winnings-col">Winnings</div>
-                        <div class="stats-col">Win Rate</div>
-                        <div class="competitions-col">Competitions</div>
-                        <div class="streak-col">Streak</div>
-                    </div>
-                    ${filteredUsers.map((user, index) => createLeaderboardRow(user, index + 1)).join('')}
-                `;
-                
-                console.log(`✅ Rendered ${filteredUsers.length} leaderboard entries`);
-                
-            } catch (error) {
-                console.error('❌ Error rendering leaderboard:', error);
-                const table = document.getElementById('leaderboardTable');
-                if (table) {
-                    table.innerHTML = `
-                        <div class="error-state">
-                            <div class="error-icon">❌</div>
-                            <h3>Failed to Load Leaderboard</h3>
-                            <p>Unable to load leaderboard from database.</p>
-                            <button class="btn-primary" onclick="refreshLeaderboard()">Retry</button>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        function createLeaderboardRow(user, rank) {
-            const isTop3 = rank <= 3;
-            const rankIcons = ['🥇', '🥈', '🥉'];
-            const rankDisplay = isTop3 ? rankIcons[rank - 1] : `#${rank}`;
-
-            return `
-                <div class="leaderboard-row ${isTop3 ? 'top-3' : ''}">
-                    <div class="rank-col">${rankDisplay}</div>
-                    <div class="trader-col">
-                        <div class="trader-info">
-                            <div class="trader-name">${user.username || 'Anonymous'}</div>
-                            <div class="trader-address">${formatAddress(user.wallet_address)}</div>
-                        </div>
-                    </div>
-                    <div class="winnings-col">
-                        <div class="winnings-amount">${parseFloat(user.total_winnings || 0).toFixed(2)} SOL</div>
-                    </div>
-                    <div class="stats-col">
-                        <div class="win-rate">${parseFloat(user.win_rate || 0).toFixed(1)}%</div>
-                        <div class="total-bets">${user.total_bets || 0} bets</div>
-                    </div>
-                    <div class="competitions-col">
-                        <div class="competitions-count">${user.total_bets || 0}</div>
-                    </div>
-                    <div class="streak-col">
-                        <div class="current-streak ${(user.current_streak || 0) > 0 ? 'positive' : ''}">${user.current_streak || 0}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function applyLeaderboardFilters(users) {
-            // Apply time period filters if needed
-            // For now, return all users sorted by the selected criteria
-            return [...users].sort((a, b) => {
-                switch (globalState.filters.leaderboardSort || 'total_winnings') {
-                    case 'win_rate':
-                        return parseFloat(b.win_rate || 0) - parseFloat(a.win_rate || 0);
-                    case 'current_streak':
-                        return (b.current_streak || 0) - (a.current_streak || 0);
-                    case 'total_bets':
-                        return (b.total_bets || 0) - (a.total_bets || 0);
-                    case 'total_winnings':
-                    default:
-                        return parseFloat(b.total_winnings || 0) - parseFloat(a.total_winnings || 0);
-                }
-            });
-        }
-
-        // =============================================
-        // PORTFOLIO - DATABASE QUERIES ONLY
-        // =============================================
-
-        async function loadPortfolioFromDatabase() {
-            try {
-                console.log('📊 Loading portfolio from database...');
-                
-                if (!globalState.isConnected || !globalState.currentUser) {
-                    showPortfolioConnectPrompt();
-                    return;
-                }
-
-                if (!globalState.supabase) {
-                    throw new Error('Database not connected');
-                }
-
-                // Get user's betting history
-                const { data: userBets, error: betsError } = await globalState.supabase
-                    .from('bets')
-                    .select(`
-                        *,
-                        competitions (
-                            token_a_symbol,
-                            token_b_symbol,
-                            status,
-                            start_time,
-                            end_time
-                        )
-                    `)
-                    .eq('user_wallet', globalState.currentUser.wallet_address)
-                    .order('timestamp', { ascending: false });
-
-                if (betsError) {
-                    throw betsError;
-                }
-
-                // Get user profile
-                const { data: userProfile, error: profileError } = await globalState.supabase
-                    .from('users')
-                    .select('*')
-                    .eq('wallet_address', globalState.currentUser.wallet_address)
-                    .single();
-
-                if (profileError) {
-                    throw profileError;
-                }
-
-                renderPortfolio(userProfile, userBets || []);
-                
-            } catch (error) {
-                console.error('❌ Failed to load portfolio:', error);
-                showPortfolioError();
-            }
-        }
-
-        function renderPortfolio(userProfile, userBets) {
-            const content = document.getElementById('portfolio-content');
-            if (!content) return;
-
-            const stats = calculatePortfolioStats(userProfile, userBets);
-
-            content.innerHTML = `
-                <div class="portfolio-overview">
-                    <div class="portfolio-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon">💰</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${stats.totalWinnings.toFixed(2)} SOL</div>
-                                <div class="stat-label">Total Winnings</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">📊</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${stats.winRate.toFixed(1)}%</div>
-                                <div class="stat-label">Win Rate</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🏆</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${stats.totalBets}</div>
-                                <div class="stat-label">Total Bets</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🔥</div>
-                            <div class="stat-content">
-                                <div class="stat-value">${stats.currentStreak}</div>
-                                <div class="stat-label">Current Streak</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="betting-history">
-                        <h3>Betting History</h3>
-                        ${userBets.length === 0 ? 
-                            `<div class="empty-state">
-                                <p>No betting history yet. Join a competition to get started!</p>
-                            </div>` :
-                            `<div class="bets-list">
-                                ${userBets.map(bet => createBetHistoryItem(bet)).join('')}
-                            </div>`
-                        }
-                    </div>
-                </div>
-            `;
-        }
-
-        function calculatePortfolioStats(userProfile, userBets) {
-            return {
-                totalWinnings: parseFloat(userProfile.total_winnings || 0),
-                winRate: parseFloat(userProfile.win_rate || 0),
-                totalBets: parseInt(userProfile.total_bets || 0),
-                currentStreak: parseInt(userProfile.current_streak || 0)
-            };
-        }
-
-        function createBetHistoryItem(bet) {
-            const competition = bet.competitions;
-            const statusClass = bet.status?.toLowerCase() || 'placed';
-            
-            return `
-                <div class="bet-item">
-                    <div class="bet-competition">
-                        ${competition?.token_a_symbol || 'Unknown'} vs ${competition?.token_b_symbol || 'Unknown'}
-                    </div>
-                    <div class="bet-details">
-                        <span class="bet-amount">${parseFloat(bet.amount || 0).toFixed(2)} SOL</span>
-                        <span class="bet-choice">on ${bet.chosen_token === 'token_a' ? competition?.token_a_symbol : competition?.token_b_symbol}</span>
-                    </div>
-                    <div class="bet-status ${statusClass}">${bet.status || 'Placed'}</div>
-                    <div class="bet-date">${new Date(bet.timestamp).toLocaleDateString()}</div>
-                </div>
-            `;
-        }
-
-        function showPortfolioConnectPrompt() {
-            const content = document.getElementById('portfolio-content');
-            if (content) {
-                content.innerHTML = `
-                    <div class="connect-prompt">
-                        <div class="prompt-icon">🔗</div>
-                        <h3>Connect Wallet to View Portfolio</h3>
-                        <p>Connect your wallet to see your prediction history and statistics</p>
-                        <button class="btn-primary" onclick="openWalletModal()">Connect Wallet</button>
-                    </div>
-                `;
-            }
-        }
-
-        function showPortfolioError() {
-            const content = document.getElementById('portfolio-content');
-            if (content) {
-                content.innerHTML = `
-                    <div class="error-state">
-                        <div class="error-icon">❌</div>
-                        <h3>Failed to Load Portfolio</h3>
-                        <p>Unable to load portfolio data from database.</p>
-                        <button class="btn-primary" onclick="refreshPortfolioData()">Retry</button>
-                    </div>
-                `;
-            }
-        }
-
-        // =============================================
-        // NAVIGATION & UI MANAGEMENT
-        // =============================================
-
-        function initializeNavigation() {
-            // Set up page navigation
-            updatePageFromHash();
-            
-            // Handle hash changes
-            window.addEventListener('hashchange', updatePageFromHash);
-            
-            // Handle popstate
-            window.addEventListener('popstate', updatePageFromHash);
-        }
-
-        function updatePageFromHash() {
-            const hash = window.location.hash.substring(1) || 'home';
-            const validPages = ['home', 'competitions', 'leaderboard', 'portfolio'];
-            
-            if (validPages.includes(hash)) {
-                showPage(hash, false);
-            } else {
-                showPage('home');
-            }
-        }
-
-        function showPage(pageName, updateHash = true) {
-            console.log(`📄 Navigating to page: ${pageName}`);
-            
-            // Update global state
-            globalState.currentPage = pageName;
-            
-            // Hide all pages
-            document.querySelectorAll('.page-content').forEach(page => {
-                page.classList.remove('active');
-            });
-            
-            // Show target page
-            const targetPage = document.getElementById(`${pageName}Page`);
-            if (targetPage) {
-                targetPage.classList.add('active');
-            }
-            
-            // Update navigation
-            updateActiveNavLink(pageName);
-            
-            // Update hash
-            if (updateHash) {
-                window.location.hash = pageName;
-            }
-            
-            // Load page-specific content
-            loadPageContent(pageName);
-        }
-
-        function updateActiveNavLink(activePageName) {
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            
-            const activeLink = document.querySelector(`[data-page="${activePageName}"]`);
-            if (activeLink) {
-                activeLink.classList.add('active');
-            }
-        }
-
-        async function loadPageContent(pageName) {
-            console.log(`📦 Loading content for page: ${pageName}`);
-            
-            // Update UI based on connection state first
-            updateUIForConnectionState();
-            
-            // Load page-specific content
-            switch (pageName) {
-                case 'competitions':
-                    if (globalState.isConnected) {
-                        await renderCompetitions();
-                    }
-                    break;
-                case 'leaderboard':
-                    await renderLeaderboard();
-                    break;
-                case 'portfolio':
-                    await loadPortfolioFromDatabase();
-                    break;
-                case 'home':
-                    // Home page content is static
-                    break;
-            }
-        }
-
-        // =============================================
-        // WALLET CONNECTION HANDLING
-        // =============================================
-
-        function setupWalletHandlers() {
-            // Set up wallet connect button handlers
-            document.querySelectorAll('.wallet-connect-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    openWalletModal();
-                });
-            });
-        }
-
-        function updateUIForConnectionState() {
-            const isConnected = globalState.isConnected;
-            
-            // Update navigation
-            const connectBtn = document.getElementById('connectWalletBtn');
-            const traderInfo = document.getElementById('traderInfo');
-            
-            if (connectBtn && traderInfo) {
-                if (isConnected) {
-                    connectBtn.style.display = 'none';
-                    traderInfo.style.display = 'block';
-                    updateTraderInfo();
-                } else {
-                    connectBtn.style.display = 'block';
-                    traderInfo.style.display = 'none';
-                }
-            }
-            
-            // Update hero sections
-            const heroDisconnected = document.getElementById('heroDisconnected');
-            const heroConnected = document.getElementById('heroConnected');
-            
-            if (heroDisconnected && heroConnected) {
-                if (isConnected) {
-                    heroDisconnected.style.display = 'none';
-                    heroConnected.style.display = 'block';
-                    updateHeroTraderName();
-                } else {
-                    heroDisconnected.style.display = 'block';
-                    heroConnected.style.display = 'none';
-                }
-            }
-            
-            // Update competitions view
-            updateCompetitionsView();
-        }
-
-        function updateTraderInfo() {
-            if (!globalState.currentUser) return;
-            
-            const navTraderName = document.getElementById('navTraderName');
-            const navTraderAvatar = document.getElementById('navTraderAvatar');
-            const navTraderBalance = document.getElementById('navTraderBalance');
-            
-            if (navTraderName) navTraderName.textContent = globalState.currentUser.username || 'Trader';
-            if (navTraderAvatar) navTraderAvatar.textContent = globalState.currentUser.avatar || '🎯';
-            if (navTraderBalance) navTraderBalance.textContent = `${(globalState.currentUser.balance || 0).toFixed(2)} SOL`;
-        }
-
-        function updateHeroTraderName() {
-            const heroTraderNameText = document.getElementById('heroTraderNameText');
-            if (heroTraderNameText && globalState.currentUser) {
-                heroTraderNameText.textContent = globalState.currentUser.username || 'Trader';
-            }
-        }
-
-        function updateCompetitionsView() {
-            const connectedView = document.getElementById('competitionsConnected');
-            const disconnectedView = document.getElementById('competitionsDisconnected');
-            
-            if (connectedView && disconnectedView) {
-                if (globalState.isConnected) {
-                    connectedView.style.display = 'block';
-                    disconnectedView.style.display = 'none';
-                } else {
-                    connectedView.style.display = 'none';
-                    disconnectedView.style.display = 'block';
-                }
-            }
-        }
-
-        // =============================================
-        // EVENT HANDLERS & UTILITY FUNCTIONS
-        // =============================================
-
-        function handleCompetitionFilterChange() {
-            const phaseSelect = document.getElementById('competition-phase');
-            const sortSelect = document.getElementById('sort-by');
-            
-            if (phaseSelect) globalState.filters.phase = phaseSelect.value;
-            if (sortSelect) globalState.filters.sortBy = sortSelect.value;
-            
-            if (globalState.currentPage === 'competitions') {
-                renderCompetitions();
-            }
-        }
-
-        function handleLeaderboardFilterChange() {
-            const sortSelect = document.getElementById('leaderboard-sort');
-            
-            if (sortSelect) globalState.filters.leaderboardSort = sortSelect.value;
-            
-            if (globalState.currentPage === 'leaderboard') {
-                renderLeaderboard();
-            }
-        }
-
-        function handlePortfolioViewChange() {
-            // Portfolio view changes can be handled here
-            if (globalState.currentPage === 'portfolio') {
-                loadPortfolioFromDatabase();
-            }
-        }
-
-        async function refreshCompetitions() {
-            console.log('🔄 Refreshing competitions...');
-            await renderCompetitions();
-            showNotification('Competitions refreshed', 'success');
-        }
-
-        async function refreshLeaderboard() {
-            console.log('🔄 Refreshing leaderboard...');
-            await renderLeaderboard();
-            showNotification('Leaderboard refreshed', 'success');
-        }
-
-        async function refreshPortfolioData() {
-            console.log('🔄 Refreshing portfolio...');
-            await loadPortfolioFromDatabase();
-            showNotification('Portfolio refreshed', 'success');
-        }
-
-        function scrollToLearnMore() {
-            const learnMoreSection = document.getElementById('learnMoreSection');
-            if (learnMoreSection) {
-                learnMoreSection.scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        }
-
-        // =============================================
-        // MODAL FUNCTIONS (Placeholder)
-        // =============================================
-
-        function openCompetitionModal(competitionId) {
-            console.log('🎯 Opening competition modal:', competitionId);
-            // Modal implementation would go here
-            showNotification('Competition details modal - feature coming soon', 'info');
-        }
-
-        function closeCompetitionModal() {
-            const modal = document.getElementById('competitionModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        function openWalletModal() {
-            console.log('🔗 Opening wallet modal...');
-            // This would integrate with existing wallet service
-            showNotification('Please connect your wallet using the wallet service', 'info');
-        }
-
-        function closeWalletModal() {
-            const modal = document.getElementById('walletModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        function disconnectWallet() {
-            globalState.isConnected = false;
-            globalState.currentUser = null;
-            updateUIForConnectionState();
-            showNotification('Wallet disconnected', 'info');
-        }
-
-        // =============================================
-        // UTILITY FUNCTIONS
-        // =============================================
-
-        function updateElementSafely(id, value) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-            }
-        }
-
-        function updateDbStatus(status, message) {
-            const statusElement = document.getElementById('dbStatus');
-            if (statusElement) {
-                statusElement.className = `db-status ${status}`;
-                statusElement.textContent = message;
-            }
-        }
-
-        function formatAddress(address) {
-            if (!address) return 'Unknown';
-            return `${address.slice(0, 4)}...${address.slice(-4)}`;
-        }
-
-        function showNotification(message, type = 'info') {
-            console.log(`📢 [${type.toUpperCase()}] ${message}`);
-            
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: 0.5rem;
-                z-index: 9999;
-                max-width: 400px;
-            `;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.remove();
-                }
-            }, 5000);
-        }
-
-        // =============================================
-        // GLOBAL EXPORTS & INITIALIZATION
-        // =============================================
-
-        // Export functions for global use
-        window.showPage = showPage;
-        window.refreshCompetitions = refreshCompetitions;
-        window.refreshLeaderboard = refreshLeaderboard;
-        window.refreshPortfolioData = refreshPortfolioData;
-        window.handleCompetitionFilterChange = handleCompetitionFilterChange;
-        window.handleLeaderboardFilterChange = handleLeaderboardFilterChange;
-        window.handlePortfolioViewChange = handlePortfolioViewChange;
-        window.openCompetitionModal = openCompetitionModal;
-        window.closeCompetitionModal = closeCompetitionModal;
-        window.openWalletModal = openWalletModal;
-        window.closeWalletModal = closeWalletModal;
-        window.disconnectWallet = disconnectWallet;
-        window.scrollToLearnMore = scrollToLearnMore;
-
-        // Initialize application when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM loaded, initializing database-centric TokenWars...');
-            initializeDatabaseApp();
-        });
-
-        console.log('✅ Database-Centric TokenWars Application Loaded');
-        console.log('🗄️ Features:');
-        console.log('   ✅ Direct database queries only (no service layer)');
-        console.log('   ✅ Real-time data from token_cache and competitions tables');
-        console.log('   ✅ No demo/fallback data - database-driven only');
-        console.log('   ✅ Competition display with live token prices');
-        console.log('   ✅ Leaderboard from users table');
-        console.log('   ✅ Portfolio from bets and users tables');
-        console.log('   ✅ Wallet integration preserved');
-        console.log('   ✅ Responsive UI with database status indicators');
-        console.log('   ❌ No competition-manager.js dependency');
-        console.log('   ❌ No service layer complexity');
-        console.log('   ❌ No demo data or fallbacks');
-    </script>
-    
     <!-- Competition Card Styling -->
     <style>
         /* Competition Card Styles */
@@ -1886,103 +891,6 @@
             flex: 1;
         }
 
-        /* Leaderboard Styles */
-        .leaderboard-header {
-            display: grid;
-            grid-template-columns: 60px 1fr 120px 120px 120px 100px;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(139, 92, 246, 0.1);
-            border-radius: 0.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        .leaderboard-row {
-            display: grid;
-            grid-template-columns: 60px 1fr 120px 120px 120px 100px;
-            gap: 1rem;
-            padding: 1rem;
-            border-bottom: 1px solid rgba(139, 92, 246, 0.1);
-            transition: background 0.2s ease;
-        }
-
-        .leaderboard-row:hover {
-            background: rgba(139, 92, 246, 0.05);
-        }
-
-        .leaderboard-row.top-3 {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
-        }
-
-        /* Portfolio Styles */
-        .portfolio-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .betting-history h3 {
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        .bets-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .bet-item {
-            display: grid;
-            grid-template-columns: 1fr auto auto auto;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(139, 92, 246, 0.05);
-            border-radius: 0.5rem;
-            align-items: center;
-        }
-
-        .bet-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .bet-status.won {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-        }
-
-        .bet-status.lost {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
-        .bet-status.pending {
-            background: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-        }
-
-        /* Connect Prompt */
-        .connect-prompt {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.05));
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 1.5rem;
-        }
-
-        .prompt-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            opacity: 0.7;
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
             .competitions-grid {
@@ -2006,17 +914,6 @@
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
-            .leaderboard-header,
-            .leaderboard-row {
-                grid-template-columns: 50px 1fr 80px 80px;
-                font-size: 0.875rem;
-            }
-
-            .bet-item {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
         }
 
         @media (max-width: 480px) {
@@ -2026,10 +923,6 @@
             
             .competition-stats {
                 grid-template-columns: 1fr;
-            }
-
-            .portfolio-stats {
-                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
