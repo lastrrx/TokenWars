@@ -676,11 +676,8 @@ class CompetitionManager {
             
             const supabase = this.getSupabaseInstance();
             
-            // Generate unique competition ID
-            const competitionId = `COMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
             const competitionData = {
-                competition_id: competitionId,
                 token_a_address: tokenPair.token_a_address,
                 token_b_address: tokenPair.token_b_address,
                 token_a_symbol: tokenPair.token_a_symbol,
@@ -739,7 +736,7 @@ class CompetitionManager {
                     .update({ 
                         usage_count: (tokenPair.usage_count || 0) + 1,
                         last_used: new Date().toISOString(),
-                        last_competition_id: competitionId,
+                        last_competition_id: data.competition_Id,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', tokenPair.id);
@@ -769,7 +766,7 @@ class CompetitionManager {
             this.schedulePhaseTransition(competitionId, 'ACTIVE', new Date(competition.voting_end_time));
             this.schedulePhaseTransition(competitionId, 'CLOSED', new Date(competition.end_time));
             
-            console.log(`✅ Automation set up for competition: ${competitionId}`);
+            console.log(`✅ Automation set up for competition: ${data.competition_id}`);
             return true;
         } catch (error) {
             console.error('Failed to setup competition automation:', error);
@@ -797,13 +794,13 @@ class CompetitionManager {
                     await this.advanceCompetitionPhase(competitionId);
                     this.phaseTimers.delete(competitionId);
                 } catch (error) {
-                    console.error(`Failed to advance competition ${competitionId} to ${newPhase}:`, error);
+                    console.error(`Failed to advance competition ${data.competition_id} to ${newPhase}:`, error);
                 }
             }, delay);
             
             this.phaseTimers.set(competitionId, timer);
             
-            console.log(`📅 Scheduled ${competitionId} → ${newPhase} in ${Math.round(delay / 1000)}s`);
+            console.log(`📅 Scheduled ${data.competition_id} → ${newPhase} in ${Math.round(delay / 1000)}s`);
         } catch (error) {
             console.error('Failed to schedule phase transition:', error);
         }
@@ -813,7 +810,7 @@ class CompetitionManager {
         try {
             const competition = this.activeCompetitions.get(competitionId);
             if (!competition) {
-                console.warn(`Competition ${competitionId} not found in active competitions`);
+                console.warn(`Competition ${data.competition_id} not found in active competitions`);
                 return false;
             }
             
@@ -834,13 +831,13 @@ class CompetitionManager {
                 case 'CLOSED':
                     return await this.resolveCompetition(competitionId);
                 default:
-                    console.warn(`Unknown phase: ${currentPhase} for competition ${competitionId}`);
+                    console.warn(`Unknown phase: ${currentPhase} for competition ${data.competition_id}`);
                     return false;
             }
             
             await this.updateCompetitionStatus(competitionId, nextPhase);
             
-            console.log(`🔄 Competition ${competitionId}: ${currentPhase} → ${nextPhase}`);
+            console.log(`🔄 Competition ${data.competition_id}: ${currentPhase} → ${nextPhase}`);
             
             if (nextPhase === 'VOTING') {
                 this.schedulePhaseTransition(competitionId, 'ACTIVE', new Date(competition.voting_end_time));
@@ -850,7 +847,7 @@ class CompetitionManager {
             
             return true;
         } catch (error) {
-            console.error(`Failed to advance competition ${competitionId}:`, error);
+            console.error(`Failed to advance competition ${data.competition_id}:`, error);
             return false;
         }
     }
@@ -883,7 +880,7 @@ class CompetitionManager {
             
             return data;
         } catch (error) {
-            console.error(`Failed to update competition status for ${competitionId}:`, error);
+            console.error(`Failed to update competition status for ${data.competition_id}:`, error);
             throw error;
         }
     }
@@ -893,12 +890,12 @@ class CompetitionManager {
     // ==============================================
 
     async scheduleCompetitionPriceCollection(competitionId) {
-        console.log(`📊 Price collection scheduled for competition: ${competitionId}`);
+        console.log(`📊 Price collection scheduled for competition: ${data.competition_id}`);
         return true;
     }
 
     async resolveCompetition(competitionId) {
-        console.log(`🏁 Resolving competition: ${competitionId}`);
+        console.log(`🏁 Resolving competition: ${data.competition_id}`);
         this.cleanupCompetition(competitionId);
         return true;
     }
@@ -921,7 +918,7 @@ class CompetitionManager {
         this.priceCollectionSchedules.delete(competitionId);
         this.activeCompetitions.delete(competitionId);
         
-        console.log(`🧹 Cleaned up resources for competition: ${competitionId}`);
+        console.log(`🧹 Cleaned up resources for competition: ${data.competition_id}`);
     }
 
     // ==============================================
