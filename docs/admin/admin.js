@@ -2,6 +2,7 @@
  * TokenWars Admin Panel Controller - FIXED: Database-Centric Competition Creation
  * PRESERVES: All existing functionality (3700+ lines)
  * FIXES: Competition creation to use direct database queries instead of TokenService
+ * FIXED: UUID generation issues - let database auto-generate UUIDs
  */
 
 // Enhanced Admin State Management with Debug Logging
@@ -1321,8 +1322,9 @@ async function validateTokenPairFromDatabase(pair) {
 }
 
 /**
- * FIXED: Database-Centric Competition Creation
+ * FIXED: Database-Centric Competition Creation - UUID GENERATION FIXED
  * Replaces service-based approach with direct database operations
+ * ✅ REMOVED custom competition_id generation - let database auto-generate UUID
  */
 async function createCompetitionDirectDatabase(config = {}) {
     try {
@@ -1351,9 +1353,10 @@ async function createCompetitionDirectDatabase(config = {}) {
         const votingEndTime = new Date(startTime.getTime() + (config.votingDuration || 15) * 60 * 1000);
         const endTime = new Date(votingEndTime.getTime() + (config.activeDuration || 24) * 60 * 60 * 1000);
         
-        // Prepare competition data
+        // ✅ FIXED: Prepare competition data WITHOUT custom competition_id
+        // Let database auto-generate UUID using uuid_generate_v4()
         const competitionData = {
-            competition_id: `COMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            // ❌ REMOVED: competition_id: `COMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             token_a_address: tokenPair.token_a_address,
             token_b_address: tokenPair.token_b_address,
             token_a_symbol: tokenPair.token_a_symbol,
@@ -1375,9 +1378,9 @@ async function createCompetitionDirectDatabase(config = {}) {
             updated_at: now.toISOString()
         };
         
-        debugLog('competitionCreation', 'Competition data prepared:', competitionData);
+        debugLog('competitionCreation', 'Competition data prepared (without custom ID):', competitionData);
         
-        // Insert competition into database
+        // Insert competition into database - let it auto-generate UUID
         const supabase = getSupabase();
         const { data, error } = await supabase
             .from('competitions')
@@ -1389,13 +1392,15 @@ async function createCompetitionDirectDatabase(config = {}) {
             throw new Error(`Database insert failed: ${error.message}`);
         }
         
-        // Update token pair usage
+        debugLog('competitionCreation', '✅ Competition created with auto-generated UUID:', data.competition_id);
+        
+        // ✅ FIXED: Update token pair usage with the database-generated competition_id
         await supabase
             .from('token_pairs')
             .update({
                 usage_count: (tokenPair.usage_count || 0) + 1,
                 last_used: now.toISOString(),
-                last_competition_id: data.competition_id,
+                last_competition_id: data.competition_id, // ✅ Now using auto-generated UUID
                 updated_at: now.toISOString()
             })
             .eq('id', tokenPair.id);
@@ -1479,7 +1484,7 @@ async function submitManualCompetition() {
             submitButton.disabled = true;
         }
         
-        // Create competition using database-centric approach
+        // ✅ FIXED: Create competition using database-centric approach (without custom UUID)
         const competition = await createCompetitionDirectDatabase(config);
         
         if (competition) {
@@ -4124,13 +4129,14 @@ window.viewBlacklistForWhitelist = viewBlacklistForWhitelist;
 window.processWhitelistQueue = processWhitelistQueue;
 window.viewCompetitionDetails = viewCompetitionDetails;
 
-debugLog('init', '✅ TokenWars Admin Panel Controller - DATABASE-CENTRIC COMPETITION CREATION FIXED');
+debugLog('init', '✅ TokenWars Admin Panel Controller - FIXED: UUID GENERATION ISSUES RESOLVED');
 debugLog('init', '🔧 FIXES APPLIED:');
-debugLog('init', '   🎯 Competition Creation: Fixed to use database-centric approach');
+debugLog('init', '   🆔 UUID Generation: Removed custom competition_id - database auto-generates proper UUIDs');
+debugLog('init', '   🎯 Competition Creation: Fixed createCompetitionDirectDatabase() function');
 debugLog('init', '   📊 Token Pair Selection: Uses AdminState.pairState.activePairs directly');
 debugLog('init', '   🗄️ Database Integration: Direct Supabase queries replace service calls');
 debugLog('init', '   ✅ Validation: Simplified since token_pairs are pre-approved');
-debugLog('init', '   🔄 Usage Tracking: Updates pair usage count and timestamps');
+debugLog('init', '   🔄 Usage Tracking: Fixed to use auto-generated competition_id');
 debugLog('init', '   📋 Competition Manager: Updated to use database queries');
 debugLog('init', '   🎨 UI Preservation: All existing functionality maintained (3700+ lines)');
 debugLog('init', '   🚀 Enhanced Features: Comprehensive automation controls and diagnostics');
