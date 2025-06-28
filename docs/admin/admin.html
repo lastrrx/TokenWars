@@ -3,31 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TokenWars Advanced Admin Panel - Production Ready</title>
-    <link rel="stylesheet" href="admin.css">
-
+    <title>TokenWars Admin Panel - Live Data Management</title>
+    
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
-        /* CSS Variables for Admin Theme */
         :root {
             --admin-bg: #0f172a;
             --admin-surface: #1e293b;
             --admin-border: #334155;
             --admin-text: #f1f5f9;
             --admin-text-secondary: #94a3b8;
+            --admin-text-muted: #64748b;
             --admin-primary: #8b5cf6;
             --admin-success: #22c55e;
             --admin-warning: #f59e0b;
-            --admin-error: #ef4444;
+            --admin-danger: #ef4444;
             --admin-info: #3b82f6;
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --radius-sm: 0.25rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
         }
 
-        /* Enhanced Production Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--admin-bg);
+            color: var(--admin-text);
+            line-height: 1.6;
+        }
+
+        /* Loading States */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -59,302 +77,466 @@
             100% { transform: rotate(360deg); }
         }
 
-        .admin-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(31, 41, 55, 0.95);
-            border: 1px solid;
-            border-radius: 0.5rem;
-            padding: 1rem 1.5rem;
-            color: #f3f4f6;
-            z-index: 4000;
-            min-width: 300px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
+        /* Authentication Screen */
+        .auth-container {
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            animation: slideIn 0.3s ease;
+            justify-content: center;
+            padding: var(--space-6);
         }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .auth-box {
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-8);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
         }
 
-        .admin-notification.success { border-color: #22c55e; }
-        .admin-notification.error { border-color: #ef4444; }
-        .admin-notification.warning { border-color: #f59e0b; }
-        .admin-notification.info { border-color: #3b82f6; }
-
-        .admin-notification button {
-            background: none;
-            border: none;
-            color: #9ca3af;
-            font-size: 1.2rem;
-            cursor: pointer;
-            margin-left: 1rem;
+        .auth-box h1 {
+            margin-bottom: var(--space-4);
+            color: var(--admin-primary);
+            font-size: 1.5rem;
         }
 
-        .status-indicator {
-            width: 12px;
-            height: 12px;
+        .auth-description {
+            color: var(--admin-text-secondary);
+            margin-bottom: var(--space-8);
+        }
+
+        .auth-steps {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        .auth-step {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            opacity: 0.5;
+        }
+
+        .auth-step.active {
+            opacity: 1;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            display: inline-block;
+            background: var(--admin-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
         }
 
-        .status-indicator.healthy { background: #22c55e; }
-        .status-indicator.error { background: #ef4444; }
-        .status-indicator.stale { background: #f59e0b; }
-        .status-indicator.unknown { background: #6b7280; }
+        .step-content {
+            flex: 1;
+            text-align: left;
+        }
 
-        /* Enhanced Metrics Grid */
+        .step-content h3 {
+            margin-bottom: var(--space-2);
+            font-size: 1rem;
+        }
+
+        .wallet-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--admin-success);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+        }
+
+        .wallet-address {
+            font-family: monospace;
+            color: var(--admin-success);
+        }
+
+        .status-icon {
+            color: var(--admin-success);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--admin-danger);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            margin-top: var(--space-4);
+            color: var(--admin-danger);
+            font-size: 0.875rem;
+        }
+
+        /* Main Admin Panel */
+        .admin-panel {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .admin-header {
+            background: var(--admin-surface);
+            border-bottom: 1px solid var(--admin-border);
+            padding: var(--space-4) var(--space-6);
+        }
+
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-container h1 {
+            color: var(--admin-primary);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .real-time-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--admin-success);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            color: var(--admin-success);
+        }
+
+        .real-time-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--admin-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .admin-wallet {
+            font-family: monospace;
+            color: var(--admin-text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Navigation */
+        .admin-nav {
+            background: var(--admin-surface);
+            border-bottom: 1px solid var(--admin-border);
+            padding: 0 var(--space-6);
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            overflow-x: auto;
+        }
+
+        .nav-item {
+            padding: var(--space-4) var(--space-6);
+            color: var(--admin-text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            color: var(--admin-text);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .nav-item.active {
+            color: var(--admin-primary);
+            border-bottom-color: var(--admin-primary);
+        }
+
+        /* Content */
+        .admin-content {
+            flex: 1;
+            padding: var(--space-6);
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section:not(.hidden) {
+            display: block;
+        }
+
+        .section-header {
+            margin-bottom: var(--space-8);
+        }
+
+        .section-header h2 {
+            margin-bottom: var(--space-2);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .section-description {
+            color: var(--admin-text-secondary);
+        }
+
+        /* Metrics Grid */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
         }
 
         .metric-card {
             background: var(--admin-surface);
             border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.2s ease;
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            transition: transform 0.2s ease;
         }
 
         .metric-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
         }
 
-        .metric-card h3 {
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-4);
+        }
+
+        .metric-title {
             color: var(--admin-text-secondary);
             font-size: 0.875rem;
-            font-weight: 500;
-            margin: 0 0 0.75rem 0;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+
+        .metric-icon {
+            font-size: 1.25rem;
         }
 
         .metric-value {
-            color: var(--admin-text);
             font-size: 2rem;
             font-weight: 700;
-            margin: 0;
-            line-height: 1;
+            margin-bottom: var(--space-2);
+            color: var(--admin-text);
         }
 
         .metric-change {
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
+            font-size: 0.875rem;
             font-weight: 500;
         }
 
-        .metric-change.positive { color: var(--admin-success); }
-        .metric-change.negative { color: var(--admin-error); }
-
-        /* Cache Health Grid */
-        .cache-health-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
+        .metric-change.positive {
+            color: var(--admin-success);
         }
 
-        .cache-health-card {
-            background: var(--admin-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 8px;
-            padding: 1.25rem;
-            text-align: center;
+        .metric-change.negative {
+            color: var(--admin-danger);
         }
 
-        .cache-metric {
-            font-size: 1.875rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            line-height: 1;
-        }
-
-        .cache-metric.excellent { color: var(--admin-success); }
-        .cache-metric.good { color: var(--admin-info); }
-        .cache-metric.warning { color: var(--admin-warning); }
-        .cache-metric.error { color: var(--admin-error); }
-
-        .cache-health-card .label {
+        .metric-change.neutral {
             color: var(--admin-text-secondary);
-            font-size: 0.8125rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
 
-        /* Production Enhanced Sections */
-        .production-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            position: relative;
-        }
-
-        .production-badge {
-            position: absolute;
-            top: -8px;
-            right: 1rem;
-            background: linear-gradient(135deg, #22c55e, #3b82f6);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        /* Enhanced Automation Styles */
-        .automation-status {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-            padding: 1.25rem;
-            background: var(--admin-bg);
-            border-radius: 10px;
-            border: 1px solid var(--admin-border);
-        }
-
-        .automation-status.active {
-            border-left: 4px solid var(--admin-success);
-            background: rgba(34, 197, 94, 0.05);
-        }
-
-        .automation-status.inactive {
-            border-left: 4px solid var(--admin-error);
-            background: rgba(239, 68, 68, 0.05);
-        }
-
-        .automation-controls {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        /* Enhanced Parameter Grid */
-        .automation-parameters {
+        /* Content Grid */
+        .content-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-8);
+            margin-bottom: var(--space-8);
         }
 
-        .parameter-control {
-            background: var(--admin-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 10px;
-            padding: 1.25rem;
-            transition: all 0.2s ease;
-        }
-
-        .parameter-control:hover {
-            border-color: var(--admin-primary);
-            transform: translateY(-1px);
-        }
-
-        .parameter-control label {
-            display: block;
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-            color: var(--admin-text-secondary);
-            font-size: 0.8125rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .parameter-input {
-            width: 100%;
-            padding: 0.75rem;
+        .content-card {
             background: var(--admin-surface);
             border: 1px solid var(--admin-border);
-            border-radius: 6px;
-            color: var(--admin-text);
-            font-size: 1rem;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: var(--space-6);
+            border-bottom: 1px solid var(--admin-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
             font-weight: 600;
-            text-align: center;
-            transition: all 0.2s ease;
         }
 
-        .parameter-input:focus {
-            outline: none;
-            border-color: var(--admin-primary);
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        .card-content {
+            padding: var(--space-6);
         }
 
-        .parameter-value {
-            margin-top: 0.75rem;
-            text-align: center;
-            line-height: 1.4;
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .parameter-value > div:first-child {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--admin-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .parameter-value > div:last-child {
-            font-size: 0.75rem;
+        .data-table th {
+            background: var(--admin-bg);
             color: var(--admin-text-secondary);
-            font-weight: 500;
+            padding: var(--space-3) var(--space-4);
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--admin-border);
         }
 
-        /* Enhanced Button Styles */
+        .data-table td {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--admin-border);
+            color: var(--admin-text);
+        }
+
+        .data-table tr:hover {
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--admin-success);
+        }
+
+        .status-badge.pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--admin-warning);
+        }
+
+        .status-badge.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--admin-danger);
+        }
+
+        .status-badge.fresh {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--admin-success);
+        }
+
+        .status-badge.stale {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--admin-warning);
+        }
+
+        .status-badge.expired {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--admin-danger);
+        }
+
+        .status-badge.setup {
+            background: rgba(107, 114, 128, 0.2);
+            color: #6b7280;
+        }
+
+        .status-badge.voting {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--admin-info);
+        }
+
+        .status-badge.closed {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--admin-warning);
+        }
+
+        .status-badge.resolved {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--admin-primary);
+        }
+
+        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-4);
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-weight: 600;
             font-size: 0.875rem;
             cursor: pointer;
             transition: all 0.2s ease;
             text-decoration: none;
-            justify-content: center;
         }
 
         .btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--admin-primary), #7c3aed);
+            background: var(--admin-primary);
             color: white;
         }
 
         .btn-success {
-            background: linear-gradient(135deg, var(--admin-success), #16a34a);
+            background: var(--admin-success);
             color: white;
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, var(--admin-error), #dc2626);
+            background: var(--admin-danger);
             color: white;
         }
 
         .btn-warning {
-            background: linear-gradient(135deg, var(--admin-warning), #ea580c);
+            background: var(--admin-warning);
             color: white;
         }
 
         .btn-info {
-            background: linear-gradient(135deg, var(--admin-info), #2563eb);
+            background: var(--admin-info);
             color: white;
         }
 
@@ -364,217 +546,173 @@
             border: 1px solid var(--admin-border);
         }
 
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
+        .btn-small {
+            padding: var(--space-1) var(--space-2);
+            font-size: 0.75rem;
         }
 
-        /* Cache Controls Grid */
-        .cache-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
+        /* Form Controls */
+        .form-group {
+            margin-bottom: var(--space-4);
         }
 
-        /* Batch Controls */
-        .batch-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .selected-count {
-            margin-left: auto;
-            padding: 0.5rem 1rem;
-            background: var(--admin-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 6px;
-            font-size: 0.875rem;
-            color: var(--admin-text-secondary);
-        }
-
-        /* Enhanced Table Styles */
-        .table-container {
-            background: var(--admin-surface);
-            border: 1px solid var(--admin-border);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .admin-table th {
-            background: var(--admin-bg);
-            color: var(--admin-text-secondary);
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-2);
             font-weight: 600;
-            font-size: 0.8125rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--admin-border);
+            color: var(--admin-text-secondary);
         }
 
-        .admin-table td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--admin-border);
+        .form-input {
+            width: 100%;
+            padding: var(--space-3);
+            background: var(--admin-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: var(--radius-md);
             color: var(--admin-text);
             font-size: 0.875rem;
         }
 
-        .admin-table tr:hover {
-            background: rgba(139, 92, 246, 0.05);
+        .form-input:focus {
+            outline: none;
+            border-color: var(--admin-primary);
         }
 
-        /* Security Warning */
-        .security-warning {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid var(--admin-warning);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            color: var(--admin-warning);
-        }
-
-        /* Download Section */
-        .download-section {
-            background: var(--admin-surface);
-            border: 1px solid var(--admin-border);
-            border-radius: 8px;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-        }
-
-        .download-section h4 {
-            margin: 0 0 1rem 0;
-            color: var(--admin-text);
-            font-size: 1rem;
-        }
-
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.75);
+        /* Loading States */
+        .loading {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
+            padding: var(--space-8);
+            color: var(--admin-text-secondary);
         }
 
-        .modal-content {
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-8);
+            color: var(--admin-text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: var(--space-4);
+            opacity: 0.5;
+        }
+
+        /* Notifications */
+        .admin-notification {
+            position: fixed;
+            top: var(--space-4);
+            right: var(--space-4);
             background: var(--admin-surface);
             border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 600px;
-            width: 100%;
-            max-height: 80vh;
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            max-width: 400px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-notification.success {
+            border-color: var(--admin-success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .admin-notification.error {
+            border-color: var(--admin-danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .admin-notification.warning {
+            border-color: var(--admin-warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .admin-notification.info {
+            border-color: var(--admin-info);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Status Grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            max-height: 300px;
             overflow-y: auto;
-            position: relative;
         }
 
-        .close-modal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            color: var(--admin-text-secondary);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--admin-border);
         }
 
-        .close-modal:hover {
-            background: var(--admin-bg);
-            color: var(--admin-text);
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-message {
+            flex: 1;
+            font-size: 0.875rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--admin-text-muted);
         }
 
         /* Responsive Design */
-        @media (max-width: 1024px) {
-            .automation-parameters {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            }
-            
-            .metrics-grid {
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            }
-        }
-
         @media (max-width: 768px) {
-            .automation-parameters {
-                grid-template-columns: 1fr;
-            }
-            
-            .automation-status {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
+            .admin-content {
+                padding: var(--space-4);
             }
 
-            .automation-controls {
-                width: 100%;
-                justify-content: center;
-            }
-            
             .metrics-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .cache-health-grid {
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+
+            .content-grid {
+                grid-template-columns: 1fr;
             }
 
-            .cache-controls, .batch-controls {
-                justify-content: center;
+            .header-container {
+                flex-direction: column;
+                gap: var(--space-4);
+                align-items: flex-start;
             }
 
-            .selected-count {
-                margin-left: 0;
-                width: 100%;
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .production-section {
-                padding: 1rem;
-            }
-            
-            .parameter-control {
-                padding: 1rem;
-            }
-            
-            .btn {
-                padding: 0.625rem 1rem;
-                font-size: 0.8125rem;
+            .nav-menu {
+                padding: 0;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Admin Authentication Screen -->
+    <!-- Authentication Screen -->
     <div id="auth-screen" class="auth-container">
         <div class="auth-box">
-            <h1>🚀 TokenWars Production Admin Panel</h1>
-            <p class="auth-description">Live Data Management & Competition Automation</p>
+            <h1>🏆 TokenWars Admin Panel</h1>
+            <p class="auth-description">Live platform management and analytics</p>
             
             <div class="auth-steps">
-                <div class="auth-step" id="step-wallet">
+                <div class="auth-step active" id="step-wallet">
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>Connect Admin Wallet</h3>
@@ -588,13 +726,13 @@
                     </div>
                 </div>
                 
-                <div class="auth-step disabled" id="step-pin">
+                <div class="auth-step" id="step-pin">
                     <div class="step-number">2</div>
                     <div class="step-content">
                         <h3>Enter Admin PIN</h3>
-                        <input type="password" id="admin-pin" placeholder="Enter 6-digit PIN" 
+                        <input type="password" id="admin-pin" class="form-input" placeholder="Enter 6-digit PIN" 
                                maxlength="6" pattern="[0-9]{6}" disabled>
-                        <button id="verify-pin" class="btn btn-primary" disabled>
+                        <button id="verify-pin" class="btn btn-primary" disabled style="margin-top: 0.5rem;">
                             Verify Access
                         </button>
                     </div>
@@ -607,26 +745,22 @@
 
     <!-- Main Admin Panel -->
     <div id="admin-panel" class="admin-panel hidden">
-        <!-- Enhanced Admin Header -->
+        <!-- Header -->
         <header class="admin-header">
             <div class="header-container">
-                <h1>🏆 TokenWars Production Admin Panel</h1>
+                <h1>🏆 TokenWars Admin Panel</h1>
                 <div class="header-actions">
                     <div class="real-time-indicator">
                         <div class="real-time-pulse"></div>
                         <span>Live Data</span>
                     </div>
-                    <div id="token-update-status" class="token-update-status">
-                        <span class="status-indicator unknown"></span>
-                        <span>System Status: Loading...</span>
-                    </div>
-                    <span class="admin-wallet"></span>
+                    <span class="admin-wallet" id="admin-wallet-display"></span>
                     <button id="logout" class="btn btn-secondary">Logout</button>
                 </div>
             </div>
         </header>
 
-        <!-- Enhanced Admin Navigation -->
+        <!-- Navigation -->
         <nav class="admin-nav">
             <ul class="nav-menu">
                 <li><a href="#dashboard" class="nav-item active">📊 Dashboard</a></li>
@@ -640,936 +774,686 @@
             </ul>
         </nav>
 
-        <!-- Enhanced Admin Content -->
+        <!-- Content -->
         <main class="admin-content">
-            <!-- Enhanced Dashboard Section -->
+            <!-- Dashboard Section -->
             <section id="dashboard" class="admin-section">
-                <h2>🎛️ Live System Dashboard</h2>
+                <div class="section-header">
+                    <h2>Platform Dashboard</h2>
+                    <p class="section-description">Real-time platform metrics and system health</p>
+                </div>
                 
-                <!-- Enhanced Key Metrics -->
-                <div class="metrics-grid" id="dashboard-metrics">
+                <!-- Key Metrics -->
+                <div class="metrics-grid">
                     <div class="metric-card">
-                        <h3>💰 Total Volume</h3>
-                        <p class="metric-value" id="total-volume">0 SOL</p>
-                        <p class="metric-change positive">Live</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Total Volume</span>
+                            <span class="metric-icon">💰</span>
+                        </div>
+                        <div class="metric-value" id="total-volume">Loading...</div>
+                        <div class="metric-change neutral">All time</div>
                     </div>
+                    
                     <div class="metric-card">
-                        <h3>🏃 Active Competitions</h3>
-                        <p class="metric-value" id="active-competitions">0</p>
-                        <p class="metric-change positive">Real-time</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Active Competitions</span>
+                            <span class="metric-icon">🏁</span>
+                        </div>
+                        <div class="metric-value" id="active-competitions">Loading...</div>
+                        <div class="metric-change neutral">Currently running</div>
                     </div>
+                    
                     <div class="metric-card">
-                        <h3>🪙 Total Tokens</h3>
-                        <p class="metric-value" id="total-tokens">0</p>
-                        <p class="metric-change positive">Cache</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Total Tokens</span>
+                            <span class="metric-icon">🪙</span>
+                        </div>
+                        <div class="metric-value" id="total-tokens">Loading...</div>
+                        <div class="metric-change neutral">In cache</div>
                     </div>
+                    
                     <div class="metric-card">
-                        <h3>✅ Approved Tokens</h3>
-                        <p class="metric-value" id="approved-tokens">0</p>
-                        <p class="metric-change">Database</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Approved Tokens</span>
+                            <span class="metric-icon">✅</span>
+                        </div>
+                        <div class="metric-value" id="approved-tokens">Loading...</div>
+                        <div class="metric-change neutral">Reviewed</div>
                     </div>
+                    
                     <div class="metric-card">
-                        <h3>🚫 Blacklisted</h3>
-                        <p class="metric-value" id="blacklisted-tokens">0</p>
-                        <p class="metric-change negative">Active</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Blacklisted</span>
+                            <span class="metric-icon">🚫</span>
+                        </div>
+                        <div class="metric-value" id="blacklisted-tokens">Loading...</div>
+                        <div class="metric-change negative">Excluded</div>
                     </div>
+                    
                     <div class="metric-card">
-                        <h3>🔗 Token Pairs</h3>
-                        <p class="metric-value" id="active-pairs">0</p>
-                        <p class="metric-change positive">Generated</p>
+                        <div class="metric-header">
+                            <span class="metric-title">Active Pairs</span>
+                            <span class="metric-icon">🔗</span>
+                        </div>
+                        <div class="metric-value" id="active-pairs">Loading...</div>
+                        <div class="metric-change positive">Generated</div>
                     </div>
                 </div>
 
-                <!-- Enhanced System Status -->
-                <div class="system-status">
-                    <h3>🔧 System Health Status</h3>
-                    <div class="status-grid">
-                        <!-- Status items will be populated by JavaScript -->
+                <!-- Content Grid -->
+                <div class="content-grid">
+                    <!-- Recent Activity -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Competitions</h3>
+                            <button class="btn btn-secondary btn-small" onclick="refreshData()">🔄 Refresh</button>
+                        </div>
+                        <div class="card-content">
+                            <div class="data-table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tokens</th>
+                                            <th>Status</th>
+                                            <th>Pool</th>
+                                            <th>Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-competitions">
+                                        <tr>
+                                            <td colspan="4" class="loading">
+                                                <div class="loading-spinner"></div>
+                                                Loading competitions...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Production Quick Actions -->
-                <div class="production-section">
-                    <div class="production-badge">Live Data</div>
-                    <h3>⚡ Quick Actions</h3>
-                    <div class="cache-controls">
-                        <button class="btn btn-primary" onclick="quickCacheRefresh()">
-                            🔄 Refresh Cache
-                        </button>
-                        <button class="btn btn-secondary" onclick="viewPendingApprovals()">
-                            ✅ Pending Approvals (<span id="pending-count">0</span>)
-                        </button>
-                        <button class="btn btn-warning" onclick="reviewBlacklist()">
-                            🚫 Review Blacklist
-                        </button>
-                        <button class="btn btn-info" onclick="viewPairAnalytics()">
-                            📈 Pair Analytics
-                        </button>
-                    </div>
-                </div>
+                    <!-- System Health -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="card-title">System Health</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="status-grid"></div>
+                            
+                            <div class="metrics-grid" style="grid-template-columns: 1fr;">
+                                <div class="metric-card">
+                                    <div class="metric-header">
+                                        <span class="metric-title">Cache Health</span>
+                                        <span class="metric-icon">🔧</span>
+                                    </div>
+                                    <div class="metric-value" id="cache-health">Loading...</div>
+                                    <div class="metric-change neutral" id="cache-status">Checking status...</div>
+                                </div>
+                                
+                                <div class="metric-card">
+                                    <div class="metric-header">
+                                        <span class="metric-title">Fresh Tokens</span>
+                                        <span class="metric-icon">✅</span>
+                                    </div>
+                                    <div class="metric-value" id="fresh-tokens">Loading...</div>
+                                    <div class="metric-change neutral" id="fresh-status">Cache status</div>
+                                </div>
+                            </div>
 
-                <!-- Enhanced Recent Activity -->
-                <div class="recent-activity">
-                    <h3>📝 Recent Activity</h3>
-                    <div id="activity-feed" class="activity-feed">
-                        <!-- Activity items will be loaded here -->
+                            <!-- Activity Feed -->
+                            <div style="margin-top: 2rem;">
+                                <h4 style="margin-bottom: 1rem;">Recent Activity</h4>
+                                <div id="activity-feed" class="activity-feed">
+                                    <!-- Activity items will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Cache Management Section -->
             <section id="cache-management" class="admin-section hidden">
-                <h2>🔧 Live Cache Management</h2>
-                
-                <!-- Cache Health Overview -->
-                <div class="production-section">
-                    <div class="production-badge">Real-time</div>
-                    <h3>📊 Token Cache Health</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="token-cache-hit">0%</div>
-                            <div class="label">Cache Hit Rate</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="cache-response-time">0ms</div>
-                            <div class="label">Avg Response Time</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="cache-size">0MB</div>
-                            <div class="label">Cache Size</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="fresh-tokens">0</div>
-                            <div class="label">Fresh Tokens</div>
-                        </div>
-                    </div>
+                <div class="section-header">
+                    <h2>Cache Management</h2>
+                    <p class="section-description">Monitor and manage token and price cache systems</p>
                 </div>
 
-                <!-- Manual Cache Controls -->
-                <div class="production-section">
-                    <h3>🛠️ Cache Controls</h3>
-                    <div class="cache-controls">
-                        <button class="btn btn-primary" onclick="refreshTokenCache()">
-                            🪙 Refresh Token Cache
-                        </button>
-                        <button class="btn btn-secondary" onclick="clearStaleCache()">
-                            🗑️ Clear Stale Cache
-                        </button>
-                        <button class="btn btn-success" onclick="optimizeCache()">
-                            ⚡ Optimize Cache
-                        </button>
-                        <button class="btn btn-info" onclick="viewCacheAnalytics()">
-                            📊 Cache Analytics
-                        </button>
+                <!-- Cache Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Cache Size</span>
+                            <span class="metric-icon">💾</span>
+                        </div>
+                        <div class="metric-value" id="cache-size">Loading...</div>
+                        <div class="metric-change neutral">Total tokens</div>
                     </div>
                     
-                    <!-- Cache Progress Indicator -->
-                    <div id="cache-progress" class="hidden">
-                        <h4>Cache Operation Progress</h4>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="cache-progress-bar" style="width: 0%"></div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Fresh Tokens</span>
+                            <span class="metric-icon">✅</span>
                         </div>
-                        <div id="cache-progress-text">Initializing...</div>
+                        <div class="metric-value" id="fresh-tokens">Loading...</div>
+                        <div class="metric-change positive">Current</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Stale Tokens</span>
+                            <span class="metric-icon">⚠️</span>
+                        </div>
+                        <div class="metric-value" id="stale-tokens">Loading...</div>
+                        <div class="metric-change warning">Need refresh</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Last Update</span>
+                            <span class="metric-icon">🕒</span>
+                        </div>
+                        <div class="metric-value" id="last-cache-update">Loading...</div>
+                        <div class="metric-change neutral">Cache refresh</div>
                     </div>
                 </div>
             </section>
 
             <!-- Token Approval Section -->
             <section id="token-approval" class="admin-section hidden">
-                <h2>✅ Manual Token Approval</h2>
-                
+                <div class="section-header">
+                    <h2>Token Approval</h2>
+                    <p class="section-description">Review and approve tokens for platform inclusion</p>
+                </div>
+
                 <!-- Approval Statistics -->
-                <div class="production-section">
-                    <h3>📊 Approval Statistics</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="pending-approvals">0</div>
-                            <div class="label">Pending Approvals</div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Pending Approvals</span>
+                            <span class="metric-icon">⏳</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="approval-rate">0%</div>
-                            <div class="label">Approval Rate</div>
+                        <div class="metric-value" id="pending-approvals">Loading...</div>
+                        <div class="metric-change neutral">Awaiting review</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Approval Rate</span>
+                            <span class="metric-icon">📊</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="avg-review-time">0h</div>
-                            <div class="label">Avg Review Time</div>
+                        <div class="metric-value" id="approval-rate">Loading...</div>
+                        <div class="metric-change positive">Success rate</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Approved</span>
+                            <span class="metric-icon">✅</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="total-approved">0</div>
-                            <div class="label">Total Approved</div>
+                        <div class="metric-value" id="total-approved">Loading...</div>
+                        <div class="metric-change positive">Approved tokens</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Cache Tokens</span>
+                            <span class="metric-icon">🪙</span>
                         </div>
+                        <div class="metric-value" id="cache-tokens-count">Loading...</div>
+                        <div class="metric-change neutral">Total in cache</div>
                     </div>
                 </div>
 
-                <!-- Batch Operations -->
-                <div class="batch-selector">
-                    <h3>🔄 Batch Operations</h3>
-                    <div class="batch-controls">
-                        <button class="btn btn-success" onclick="batchApprove()">
-                            ✅ Approve Selected
-                        </button>
-                        <button class="btn btn-danger" onclick="batchReject()">
-                            ❌ Reject Selected
-                        </button>
-                        <button class="btn btn-secondary" onclick="selectAll()">
-                            🗂️ Select All
-                        </button>
-                        <button class="btn btn-secondary" onclick="clearSelection()">
-                            🗑️ Clear Selection
-                        </button>
-                        <button class="btn btn-primary" onclick="bulkAnalyze()">
-                            🔍 Bulk Analyze
-                        </button>
+                <!-- Approval Queue -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Pending Approval Queue</h3>
                     </div>
-                    <div class="selected-count">
-                        Selected: <span id="selected-count">0</span> tokens
-                    </div>
-                </div>
-
-                <!-- Pending Approval Queue -->
-                <div class="production-section">
-                    <h3>⏳ Pending Approval Queue</h3>
-                    <div class="approval-queue" id="approval-queue">
-                        <!-- Approval items will be populated here -->
-                    </div>
-                </div>
-
-                <!-- Whitelist Integration -->
-                <div class="production-section">
-                    <h3>🔄 Whitelist Integration</h3>
-                    <p>Tokens can be moved from blacklist to approval queue for review.</p>
-                    <div class="cache-controls">
-                        <button class="btn btn-info" onclick="viewBlacklistForWhitelist()">
-                            📋 View Blacklisted Tokens
-                        </button>
-                        <button class="btn btn-success" onclick="processWhitelistQueue()">
-                            ✅ Process Whitelist Queue
-                        </button>
+                    <div class="card-content">
+                        <div id="approval-queue">
+                            <!-- Approval items will be populated here -->
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Blacklist Management Section -->
             <section id="blacklist-management" class="admin-section hidden">
-                <h2>🚫 Blacklist Management & Analytics</h2>
-                
-                <!-- Blacklist Overview -->
-                <div class="production-section">
-                    <h3>📊 Blacklist Analytics</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="total-blacklisted">0</div>
-                            <div class="label">Total Blacklisted</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="auto-detected">0</div>
-                            <div class="label">Auto-Detected</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="detection-accuracy">0%</div>
-                            <div class="label">Detection Accuracy</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="appeals-pending">0</div>
-                            <div class="label">Appeals Pending</div>
-                        </div>
-                    </div>
+                <div class="section-header">
+                    <h2>Blacklist Management</h2>
+                    <p class="section-description">Manage excluded tokens and appeals</p>
                 </div>
 
-                <!-- Whitelist Operations -->
-                <div class="production-section">
-                    <div class="production-badge">New Feature</div>
-                    <h3>✅ Whitelist Operations</h3>
-                    <p>Remove tokens from blacklist and optionally add to approval queue.</p>
-                    <div class="cache-controls">
-                        <button class="btn btn-success" onclick="bulkWhitelist()">
-                            ✅ Bulk Whitelist Selected
-                        </button>
-                        <button class="btn btn-info" onclick="whitelistWithApproval()">
-                            🔄 Whitelist → Approval Queue
-                        </button>
-                        <button class="btn btn-secondary" onclick="exportBlacklist()">
-                            📤 Export Blacklist
-                        </button>
-                        <button class="btn btn-primary" onclick="scanForThreats()">
-                            🔍 Scan for New Threats
-                        </button>
+                <!-- Blacklist Statistics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Blacklisted</span>
+                            <span class="metric-icon">🚫</span>
+                        </div>
+                        <div class="metric-value" id="total-blacklisted">Loading...</div>
+                        <div class="metric-change negative">Excluded tokens</div>
                     </div>
-                </div>
-
-                <!-- Blacklist Categories -->
-                <div class="production-section">
-                    <h3>📂 Blacklist Categories</h3>
                     
-                    <!-- Manual Blacklist -->
-                    <div class="blacklist-category">
-                        <div class="blacklist-header">
-                            <h4>👨‍💼 Manual Blacklist</h4>
-                            <div class="blacklist-count" id="manual-blacklist-count">0</div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Recent Blacklisted</span>
+                            <span class="metric-icon">🆕</span>
                         </div>
-                        <div class="blacklist-items" id="manual-blacklist">
-                            <!-- Items will be populated here -->
-                        </div>
+                        <div class="metric-value" id="recent-blacklisted">Loading...</div>
+                        <div class="metric-change neutral">Last 7 days</div>
                     </div>
-
-                    <!-- Automatic Blacklist -->
-                    <div class="blacklist-category">
-                        <div class="blacklist-header">
-                            <h4>🤖 Auto-Detected</h4>
-                            <div class="blacklist-count" id="auto-blacklist-count">0</div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Whitelist Requests</span>
+                            <span class="metric-icon">📋</span>
                         </div>
-                        <div class="blacklist-items" id="auto-blacklist">
-                            <!-- Items will be populated here -->
-                        </div>
+                        <div class="metric-value" id="whitelist-requests">Loading...</div>
+                        <div class="metric-change neutral">Pending review</div>
                     </div>
-
-                    <!-- Community Reports -->
-                    <div class="blacklist-category">
-                        <div class="blacklist-header">
-                            <h4>👥 Community Reported</h4>
-                            <div class="blacklist-count" id="community-blacklist-count">0</div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Effectiveness</span>
+                            <span class="metric-icon">🎯</span>
                         </div>
-                        <div class="blacklist-items" id="community-blacklist">
-                            <!-- Items will be populated here -->
+                        <div class="metric-value" id="blacklist-effectiveness">Loading...</div>
+                        <div class="metric-change positive">Protection rate</div>
+                    </div>
+                </div>
+
+                <!-- Manual Blacklist -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Manual Blacklist</h3>
+                    </div>
+                    <div class="card-content">
+                        <div id="manual-blacklist">
+                            <!-- Blacklist items will be populated here -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Pair Analytics Section (Renamed from Optimization) -->
+            <!-- Pair Analytics Section -->
             <section id="pair-optimization" class="admin-section hidden">
-                <h2>📈 Token Pair Analytics</h2>
-                
+                <div class="section-header">
+                    <h2>Token Pair Analytics</h2>
+                    <p class="section-description">Analyze token pair compatibility and performance</p>
+                </div>
+
                 <!-- Pair Overview -->
-                <div class="production-section">
-                    <h3>📊 Pair Performance Overview</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="total-pairs">0</div>
-                            <div class="label">Total Pairs</div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Pairs</span>
+                            <span class="metric-icon">🔗</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="active-pairs-count">0</div>
-                            <div class="label">Active Pairs</div>
+                        <div class="metric-value" id="total-pairs">Loading...</div>
+                        <div class="metric-change neutral">Generated pairs</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Active Pairs</span>
+                            <span class="metric-icon">✅</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="avg-market-cap-diff">0%</div>
-                            <div class="label">Avg Market Cap Diff</div>
+                        <div class="metric-value" id="active-pairs-count">Loading...</div>
+                        <div class="metric-change positive">Available</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Avg Market Cap Diff</span>
+                            <span class="metric-icon">📊</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="avg-compatibility">0%</div>
-                            <div class="label">Avg Compatibility</div>
+                        <div class="metric-value" id="avg-market-cap-diff">Loading...</div>
+                        <div class="metric-change neutral">Compatibility</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Avg Compatibility</span>
+                            <span class="metric-icon">🎯</span>
                         </div>
+                        <div class="metric-value" id="avg-compatibility">Loading...</div>
+                        <div class="metric-change positive">Score</div>
                     </div>
                 </div>
 
-                <!-- Last Update Info -->
-                <div class="production-section">
-                    <h3>🕒 Pair Generation Status</h3>
-                    <div class="automation-status" id="pair-generation-status">
-                        <div class="status-indicator healthy"></div>
-                        <div>
-                            <div><strong>Last Update:</strong> <span id="last-pair-update">Never</span></div>
-                            <div><strong>Next Update:</strong> <span id="next-pair-update">Every 5 minutes</span></div>
-                            <div><strong>Edge Function:</strong> manage-token-pairs (Automated)</div>
+                <!-- Pair Status -->
+                <div class="content-card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h3 class="card-title">Pair Generation Status</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="status-grid">
+                            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
+                                <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-success); box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);"></div>
+                                <span>Last Update: <span id="last-pair-update">Never</span></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--admin-bg); border-radius: var(--radius-md); border: 1px solid var(--admin-border);">
+                                <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--admin-info); box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);"></div>
+                                <span>Next Update: Every 5 minutes</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pair Analytics Table -->
-                <div class="production-section">
-                    <h3>📋 Active Token Pairs</h3>
-                    <div class="table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>🪙 Token A</th>
-                                    <th>🪙 Token B</th>
-                                    <th>📊 Market Cap Ratio</th>
-                                    <th>🎯 Compatibility</th>
-                                    <th>📈 Category</th>
-                                    <th>🕒 Created</th>
-                                    <th>📊 Usage</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pairs-analytics-tbody">
-                                <tr>
-                                    <td colspan="7">Loading pair analytics...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Active Token Pairs</h3>
                     </div>
-                </div>
-
-                <!-- Pair Performance Charts -->
-                <div class="production-section">
-                    <h3>📈 Pair Performance Analytics</h3>
-                    <div class="performance-chart">
-                        <canvas id="pair-performance-chart"></canvas>
+                    <div class="card-content">
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>🪙 Token A</th>
+                                        <th>🪙 Token B</th>
+                                        <th>📊 Market Cap Ratio</th>
+                                        <th>🎯 Compatibility</th>
+                                        <th>📈 Category</th>
+                                        <th>🕒 Created</th>
+                                        <th>📊 Usage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pairs-analytics-tbody">
+                                    <tr>
+                                        <td colspan="7">Loading pair analytics...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Competition Management Section -->
             <section id="competitions" class="admin-section hidden">
-                <h2>🏁 Competition Management & Automation</h2>
-                
+                <div class="section-header">
+                    <h2>Competition Management</h2>
+                    <p class="section-description">Create and manage token competitions</p>
+                </div>
+
                 <!-- Competition Statistics -->
-                <div class="production-section">
-                    <h3>📊 Competition Overview</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="total-competitions-stat">0</div>
-                            <div class="cache-metric-label">Total Competitions</div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Competitions</span>
+                            <span class="metric-icon">🏁</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="active-competitions-stat">0</div>
-                            <div class="cache-metric-label">Active Now</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="total-participants-stat">0</div>
-                            <div class="cache-metric-label">Total Participants</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="total-volume-stat">0 SOL</div>
-                            <div class="cache-metric-label">Total Volume</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Competition Automation -->
-                <div class="production-section">
-                    <div class="production-badge">Automated</div>
-                    <h3>🤖 Competition Automation</h3>
-                    
-                    <!-- Security Warning -->
-                    <div class="security-warning">
-                        <strong>⚠️ Security Notice:</strong> Competition automation requires admin wallet verification. 
-                        Only wallets in the admin_users table can start/stop automation.
+                        <div class="metric-value" id="total-competitions-stat">Loading...</div>
+                        <div class="metric-change neutral">All time</div>
                     </div>
                     
-                    <!-- Automation Status -->
-                    <div class="automation-status" id="automation-status">
-                        <div class="status-indicator error"></div>
-                        <div>
-                            <div><strong>Status:</strong> <span id="automation-current-status">Stopped</span></div>
-                            <div><strong>Next Competition:</strong> <span id="next-competition-time">Not scheduled</span></div>
-                            <div><strong>Competitions Today:</strong> <span id="competitions-today">0</span></div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Active Now</span>
+                            <span class="metric-icon">🔥</span>
                         </div>
-                        <div class="automation-controls">
-                            <button class="btn btn-success" id="start-automation-btn" onclick="startCompetitionAutomation()">
-                                ▶️ Start Automation
+                        <div class="metric-value" id="active-competitions-stat">Loading...</div>
+                        <div class="metric-change positive">Running</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Participants</span>
+                            <span class="metric-icon">👥</span>
+                        </div>
+                        <div class="metric-value" id="total-participants-stat">Loading...</div>
+                        <div class="metric-change neutral">All competitions</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Volume</span>
+                            <span class="metric-icon">💰</span>
+                        </div>
+                        <div class="metric-value" id="total-volume-stat">Loading...</div>
+                        <div class="metric-change positive">SOL</div>
+                    </div>
+                </div>
+
+                <!-- Competition Actions -->
+                <div class="content-card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h3 class="card-title">Competition Actions</h3>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button class="btn btn-primary" id="create-competition-btn">
+                                🚀 Create Competition
                             </button>
-                            <button class="btn btn-danger" id="stop-automation-btn" onclick="stopCompetitionAutomation()" disabled>
-                                ⏹️ Stop Automation
+                            <button class="btn btn-secondary" onclick="refreshCompetitions()">
+                                🔄 Refresh List
+                            </button>
+                            <button class="btn btn-info" onclick="viewCompetitionAnalytics()">
+                                📊 View Analytics
+                            </button>
+                            <button class="btn btn-success" onclick="downloadCompetitionData()">
+                                📥 Download Data
                             </button>
                         </div>
                     </div>
-
-                    <!-- Automation Parameters -->
-                    <div class="automation-parameters">
-                        <div class="parameter-control">
-                            <label>Competitions per Day</label>
-                            <input type="number" class="parameter-input" id="competitions-per-day" 
-                                   min="1" max="24" value="4">
-                            <div class="parameter-value">Every 6 hours</div>
-                        </div>
-                        
-                        <div class="parameter-control">
-                            <label>Voting Period (minutes)</label>
-                            <input type="number" class="parameter-input" id="voting-period" 
-                                   min="5" max="60" value="15">
-                            <div class="parameter-value">15 minutes</div>
-                        </div>
-                        
-                        <div class="parameter-control">
-                            <label>Performance Period (hours)</label>
-                            <input type="number" class="parameter-input" id="performance-period" 
-                                   min="1" max="48" value="24">
-                            <div class="parameter-value">24 hours</div>
-                        </div>
-                        
-                        <div class="parameter-control">
-                            <label>Minimum Bet Amount (SOL)</label>
-                            <input type="number" class="parameter-input" id="min-bet-amount" 
-                                   min="0.01" max="10" step="0.01" value="0.1">
-                            <div class="parameter-value">0.1 SOL</div>
-                        </div>
-                        
-                        <div class="parameter-control">
-                            <label>Platform Fee (%)</label>
-                            <input type="number" class="parameter-input" id="platform-fee" 
-                                   min="1" max="30" value="15">
-                            <div class="parameter-value">15%</div>
-                        </div>
-                        
-                        <div class="parameter-control">
-                            <label>Max Pool Size (SOL)</label>
-                            <input type="number" class="parameter-input" id="max-pool-size" 
-                                   min="10" max="1000" value="100">
-                            <div class="parameter-value">100 SOL</div>
-                        </div>
-                    </div>
-
-                    <div class="cache-controls">
-                        <button class="btn btn-primary" onclick="saveAutomationSettings()">
-                            💾 Save Settings
-                        </button>
-                        <button class="btn btn-secondary" onclick="testAutomationSettings()">
-                            🧪 Test Configuration
-                        </button>
-                        <button class="btn btn-warning" onclick="resetAutomationSettings()">
-                            🔄 Reset to Defaults
-                        </button>
-                    </div>
                 </div>
 
-                <!-- Manual Competition Controls -->
-                <div class="production-section">
-                    <h3>🛠️ Manual Competition Controls</h3>
-                    <div class="cache-controls">
-                        <button id="create-competition-btn" class="btn btn-primary">
-                            🚀 Create New Competition
-                        </button>
-                        <button class="btn btn-secondary" onclick="refreshCompetitionsList()">
-                            🔄 Refresh List
-                        </button>
-                        <button class="btn btn-info" onclick="viewCompetitionAnalytics()">
-                            📊 View Analytics
-                        </button>
-                        <button class="btn btn-success" onclick="downloadCompetitionData()">
-                            📥 Download Competition Data
-                        </button>
+                <!-- Competitions Table -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">All Competitions</h3>
                     </div>
-                </div>
-
-                <!-- Download Section -->
-                <div class="download-section">
-                    <h4>📥 Export Options</h4>
-                    <div class="cache-controls">
-                        <button class="btn btn-info" onclick="downloadActiveCompetitions()">
-                            📄 Active Competitions (CSV)
-                        </button>
-                        <button class="btn btn-secondary" onclick="downloadPastCompetitions()">
-                            📚 Past Competitions (CSV)
-                        </button>
-                        <button class="btn btn-primary" onclick="downloadCompetitionReport()">
-                            📊 Full Report (JSON)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Competitions -->
-                <div class="production-section">
-                    <h3>🏃 Active Competitions</h3>
-                    <div class="table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>🆔 ID</th>
-                                    <th>🪙 Tokens</th>
-                                    <th>📊 Status</th>
-                                    <th>👥 Participants</th>
-                                    <th>💰 Pool Size</th>
-                                    <th>⏰ End Time</th>
-                                    <th>🤖 Type</th>
-                                    <th>🛠️ Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="competitions-tbody">
-                                <tr>
-                                    <td colspan="8">Loading competitions...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="card-content">
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>🆔 ID</th>
+                                        <th>🪙 Tokens</th>
+                                        <th>📊 Status</th>
+                                        <th>👥 Participants</th>
+                                        <th>💰 Pool Size</th>
+                                        <th>⏰ End Time</th>
+                                        <th>🤖 Type</th>
+                                        <th>🛠️ Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="competitions-tbody">
+                                    <tr>
+                                        <td colspan="8">Loading competitions...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Token Management Section -->
             <section id="tokens" class="admin-section hidden">
-                <h2>🪙 Token Management System</h2>
-                
-                <!-- Token Statistics -->
-                <div class="production-section">
-                    <h3>📊 Token Statistics</h3>
-                    <div class="cache-health-grid">
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="total-tokens-stat">0</div>
-                            <div class="label">Total Tokens</div>
+                <div class="section-header">
+                    <h2>Token Management</h2>
+                    <p class="section-description">Monitor and manage token cache</p>
+                </div>
+
+                <!-- Token Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Total Tokens</span>
+                            <span class="metric-icon">🪙</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="active-tokens-stat">0</div>
-                            <div class="label">Active (Fresh Cache)</div>
+                        <div class="metric-value" id="token-total">Loading...</div>
+                        <div class="metric-change neutral">In cache</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Fresh Cache</span>
+                            <span class="metric-icon">✅</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="approved-tokens-stat">0</div>
-                            <div class="label">Approved Tokens</div>
+                        <div class="metric-value" id="fresh-tokens-stat">Loading...</div>
+                        <div class="metric-change positive">Current data</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Stale Cache</span>
+                            <span class="metric-icon">⚠️</span>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric warning" id="blacklisted-tokens-stat">0</div>
-                            <div class="label">Blacklisted</div>
+                        <div class="metric-value" id="stale-tokens-stat">Loading...</div>
+                        <div class="metric-change warning">Needs update</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Expired Cache</span>
+                            <span class="metric-icon">❌</span>
                         </div>
+                        <div class="metric-value" id="expired-tokens-stat">Loading...</div>
+                        <div class="metric-change negative">Expired data</div>
                     </div>
                 </div>
 
-                <!-- Token Controls -->
-                <div class="production-section">
-                    <h3>🛠️ Token Management Controls</h3>
-                    <div class="token-controls">
-                        <input type="text" id="token-search" class="token-search" 
-                               placeholder="🔍 Search tokens by symbol, name, or address...">
-                        <button id="refresh-tokens-btn" class="btn btn-primary">
-                            🔄 Refresh Token Cache
-                        </button>
-                        <button class="btn btn-info" onclick="exportTokenList()">
-                            📤 Export Token List
-                        </button>
-                        <button class="btn btn-secondary" onclick="viewTokenAnalytics()">
-                            📊 Token Analytics
-                        </button>
+                <!-- Token Table -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Token Cache</h3>
+                        <div>
+                            <button class="btn btn-primary btn-small" onclick="refreshTokens()">🔄 Refresh</button>
+                        </div>
                     </div>
-                    
-                    <!-- Token Table -->
-                    <div class="table-container" id="tokens-table">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>🪙 Token</th>
-                                    <th>💰 Price</th>
-                                    <th>📊 Market Cap</th>
-                                    <th>📈 24h Change</th>
-                                    <th>✅ Status</th>
-                                    <th>🔍 Risk Score</th>
-                                    <th>🕒 Last Updated</th>
-                                    <th>🛠️ Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tokens-tbody">
-                                <tr>
-                                    <td colspan="8">Loading tokens...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="card-content">
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Token</th>
+                                        <th>Price</th>
+                                        <th>Market Cap</th>
+                                        <th>24h Change</th>
+                                        <th>Status</th>
+                                        <th>Last Update</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tokens-tbody">
+                                    <tr>
+                                        <td colspan="7" class="loading">
+                                            <div class="loading-spinner"></div>
+                                            Loading tokens...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Analytics Section -->
             <section id="analytics" class="admin-section hidden">
-                <h2>📊 Advanced Analytics & Reports</h2>
-                
-                <!-- Competition Analytics -->
-                <div class="production-section">
-                    <div class="production-badge">Reports</div>
-                    <h3>🏁 Competition Analytics</h3>
-                    <div class="cache-controls">
-                        <button class="btn btn-primary" onclick="generateCompetitionReport()">
-                            📊 Generate Competition Report
-                        </button>
-                        <button class="btn btn-secondary" onclick="generateRevenueReport()">
-                            💰 Platform Revenue Report
-                        </button>
-                        <button class="btn btn-info" onclick="generateParticipationReport()">
-                            👥 User Participation Report
-                        </button>
+                <div class="section-header">
+                    <h2>Advanced Analytics</h2>
+                    <p class="section-description">Platform performance and insights</p>
+                </div>
+
+                <!-- Analytics Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Platform Revenue</span>
+                            <span class="metric-icon">💵</span>
+                        </div>
+                        <div class="metric-value" id="platform-revenue">Loading...</div>
+                        <div class="metric-change positive">SOL collected</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Avg Competition Size</span>
+                            <span class="metric-icon">📊</span>
+                        </div>
+                        <div class="metric-value" id="avg-competition-size">Loading...</div>
+                        <div class="metric-change neutral">SOL per competition</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">User Retention</span>
+                            <span class="metric-icon">🔄</span>
+                        </div>
+                        <div class="metric-value" id="user-retention">Loading...</div>
+                        <div class="metric-change positive">Returning users</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Cache Efficiency</span>
+                            <span class="metric-icon">⚡</span>
+                        </div>
+                        <div class="metric-value" id="cache-efficiency">Loading...</div>
+                        <div class="metric-change positive">Hit rate</div>
                     </div>
                 </div>
 
-                <!-- User Analytics -->
-                <div class="production-section">
-                    <h3>👥 User Activity Analytics</h3>
-                    <div class="cache-controls">
-                        <button class="btn btn-primary" onclick="generateUserReport()">
-                            📈 User Activity Report
-                        </button>
-                        <button class="btn btn-secondary" onclick="generateEngagementReport()">
-                            🎯 Engagement Analytics
-                        </button>
-                        <button class="btn btn-info" onclick="generateRetentionReport()">
-                            🔄 User Retention Report
-                        </button>
+                <!-- Analytics Table -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cache Analytics</h3>
+                        <button class="btn btn-secondary btn-small" onclick="refreshAnalytics()">🔄 Refresh</button>
                     </div>
-                </div>
-
-                <!-- System Analytics -->
-                <div class="production-section">
-                    <h3>⚙️ System Performance</h3>
-                    <div class="performance-chart">
-                        <canvas id="system-performance-chart"></canvas>
+                    <div class="card-content">
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Cache Hits</th>
+                                        <th>Cache Misses</th>
+                                        <th>Hit Rate</th>
+                                        <th>API Calls</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-table">
+                                    <tr>
+                                        <td colspan="5" class="loading">
+                                            <div class="loading-spinner"></div>
+                                            Loading analytics...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Scripts -->
-    <script src="../config.js"></script>
-    <script src="../supabase-client.js"></script>
-    <script src="../competition-manager.js"></script>
-    <script src="auth.js"></script>
+    <!-- Scripts - Load in correct order -->
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="admin.js"></script>
     
-    <!-- Component Scripts -->
-    <script src="components/cache-monitor.js"></script>
-    <script src="components/token-approval.js"></script>
-    <script src="components/blacklist-manager.js"></script>
-    <script src="components/pair-optimizer.js"></script>
-    
     <script>
-        // Initialize admin panel on page load
+        // Initialize admin panel when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Starting TokenWars Production Admin Panel');
+            console.log('🚀 Starting TokenWars Admin Panel with existing scripts');
             
-            // Check if we're authenticated
-            const adminToken = sessionStorage.getItem('adminToken');
-            if (adminToken) {
-                // Skip auth and go straight to admin panel
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('admin-panel').classList.remove('hidden');
-                
-                // Initialize admin panel
-                initializeAdminPanel().catch(error => {
-                    console.error('Failed to initialize admin panel:', error);
-                });
-            }
-        });
-
-        // Quick Action Functions
-        function quickCacheRefresh() {
-            console.log('🔄 Quick cache refresh triggered');
-            showAdminNotification('Cache refresh initiated', 'info');
-        }
-        
-        function viewPendingApprovals() {
-            switchToSection('token-approval');
-        }
-        
-        function reviewBlacklist() {
-            switchToSection('blacklist-management');
-        }
-        
-        function viewPairAnalytics() {
-            switchToSection('pair-optimization');
-        }
-
-        // Competition Automation Functions
-        function startCompetitionAutomation() {
-            if (!verifyAdminWallet()) return;
-            
-            if (confirm('🚀 Start automated competition generation? This will create competitions based on configured parameters.')) {
-                console.log('▶️ Starting competition automation...');
-                showAdminNotification('Competition automation started', 'success');
-                // Implementation will be added in admin.js
-            }
-        }
-        
-        function stopCompetitionAutomation() {
-            if (!verifyAdminWallet()) return;
-            
-            if (confirm('⏹️ Stop automated competition generation? This will halt all automatic competition creation.')) {
-                console.log('⏹️ Stopping competition automation...');
-                showAdminNotification('Competition automation stopped', 'warning');
-                // Implementation will be added in admin.js
-            }
-        }
-        
-        function verifyAdminWallet() {
-            const adminWallet = sessionStorage.getItem('adminWallet');
-            if (!adminWallet) {
-                showAdminNotification('Admin wallet not connected', 'error');
-                return false;
-            }
-            // Database verification will be implemented in admin.js
-            return true;
-        }
-        
-        function saveAutomationSettings() {
-            console.log('💾 Saving automation settings...');
-            showAdminNotification('Automation settings saved', 'success');
-        }
-        
-        function testAutomationSettings() {
-            console.log('🧪 Testing automation configuration...');
-            showAdminNotification('Configuration test passed', 'success');
-        }
-        
-        function resetAutomationSettings() {
-            if (confirm('🔄 Reset automation settings to defaults?')) {
-                console.log('🔄 Resetting automation settings...');
-                showAdminNotification('Settings reset to defaults', 'warning');
-            }
-        }
-
-        // Download Functions
-        function downloadActiveCompetitions() {
-            console.log('📄 Downloading active competitions...');
-            showAdminNotification('Preparing download...', 'info');
-        }
-        
-        function downloadPastCompetitions() {
-            console.log('📚 Downloading past competitions...');
-            showAdminNotification('Preparing download...', 'info');
-        }
-        
-        function downloadCompetitionReport() {
-            console.log('📊 Generating full competition report...');
-            showAdminNotification('Generating report...', 'info');
-        }
-
-        // Analytics Functions
-        function generateCompetitionReport() {
-            console.log('📊 Generating competition analytics report...');
-            showAdminNotification('Report generation started', 'info');
-        }
-        
-        function generateUserReport() {
-            console.log('👥 Generating user activity report...');
-            showAdminNotification('User report generation started', 'info');
-        }
-
-        function generateRevenueReport() {
-            console.log('💰 Generating revenue report...');
-            showAdminNotification('Revenue report generation started', 'info');
-        }
-        
-        function generateParticipationReport() {
-            console.log('👥 Generating participation report...');
-            showAdminNotification('Participation report generation started', 'info');
-        }
-        
-        function generateEngagementReport() {
-            console.log('🎯 Generating engagement report...');
-            showAdminNotification('Engagement report generation started', 'info');
-        }
-        
-        function generateRetentionReport() {
-            console.log('🔄 Generating retention report...');
-            showAdminNotification('Retention report generation started', 'info');
-        }
-
-        // Cache Functions
-        function refreshTokenCache() {
-            console.log('🪙 Refreshing token cache...');
-            showAdminNotification('Token cache refresh initiated', 'info');
-        }
-        
-        function clearStaleCache() {
-            console.log('🗑️ Clearing stale cache...');
-            showAdminNotification('Stale cache cleared', 'success');
-        }
-        
-        function optimizeCache() {
-            console.log('⚡ Optimizing cache...');
-            showAdminNotification('Cache optimization started', 'info');
-        }
-        
-        function viewCacheAnalytics() {
-            console.log('📊 Viewing cache analytics...');
-            showAdminNotification('Loading cache analytics...', 'info');
-        }
-
-        // Blacklist Functions
-        function bulkWhitelist() {
-            console.log('✅ Bulk whitelist operation...');
-            showAdminNotification('Bulk whitelist feature coming soon', 'info');
-        }
-        
-        function whitelistWithApproval() {
-            console.log('🔄 Whitelist with approval...');
-            showAdminNotification('Whitelist to approval queue feature coming soon', 'info');
-        }
-        
-        function exportBlacklist() {
-            console.log('📤 Exporting blacklist...');
-            showAdminNotification('Blacklist export feature coming soon', 'info');
-        }
-        
-        function scanForThreats() {
-            console.log('🔍 Scanning for threats...');
-            showAdminNotification('Threat scanning feature coming soon', 'info');
-        }
-
-        // Token Management Functions
-        function exportTokenList() {
-            console.log('📤 Exporting token list...');
-            showAdminNotification('Token list export feature coming soon', 'info');
-        }
-        
-        function viewTokenAnalytics() {
-            console.log('📊 Viewing token analytics...');
-            showAdminNotification('Token analytics feature coming soon', 'info');
-        }
-
-        // Competition Functions
-        function refreshCompetitionsList() {
-            console.log('🔄 Refreshing competitions list...');
-            showAdminNotification('Competitions list refreshed', 'info');
-        }
-        
-        function viewCompetitionAnalytics() {
-            console.log('📊 Viewing competition analytics...');
-            showAdminNotification('Competition analytics feature coming soon', 'info');
-        }
-        
-        function downloadCompetitionData() {
-            console.log('📥 Downloading competition data...');
-            showAdminNotification('Competition data download feature coming soon', 'info');
-        }
-
-        // Navigation Functions
-        function switchToSection(sectionName) {
-            console.log('🧭 Switching to section:', sectionName);
-            
-            // Hide all sections
-            document.querySelectorAll('.admin-section').forEach(section => {
-                section.classList.add('hidden');
-            });
-            
-            // Show target section
-            const targetSection = document.getElementById(sectionName);
-            if (targetSection) {
-                targetSection.classList.remove('hidden');
-            }
-            
-            // Update navigation
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            const targetNavItem = document.querySelector(`[href="#${sectionName}"]`);
-            if (targetNavItem) {
-                targetNavItem.classList.add('active');
-            }
-        }
-
-        // Utility function for notifications
-        function showAdminNotification(message, type = 'info') {
-            console.log(`[${type.toUpperCase()}] ${message}`);
-            
-            const notification = document.createElement('div');
-            notification.className = `admin-notification ${type}`;
-            notification.innerHTML = `
-                <span>${message}</span>
-                <button onclick="this.parentElement.remove()">&times;</button>
-            `;
-            
-            document.body.appendChild(notification);
-            
+            // Wait for scripts to load, then initialize
             setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.remove();
+                if (typeof initializeAdminPanel === 'function') {
+                    console.log('✅ Found initializeAdminPanel function, starting initialization...');
+                    // The admin.js will handle initialization
+                } else {
+                    console.error('❌ initializeAdminPanel function not found');
                 }
-            }, 5000);
-        }
-
-        console.log('✅ Production Admin Panel HTML loaded');
-        console.log('🚀 Features:');
-        console.log('   🔧 Live cache management');
-        console.log('   ✅ Manual token approval workflow');
-        console.log('   🚫 Blacklist management with whitelist');
-        console.log('   📈 Pair analytics dashboard');
-        console.log('   🤖 Competition automation system');
-        console.log('   📊 Advanced analytics and reporting');
+            }, 1000);
+        });
     </script>
 </body>
 </html>
