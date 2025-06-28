@@ -2256,7 +2256,7 @@ async function createManualCompetitionWithInterface() {
         // Verify admin wallet
         const isAuthorized = await verifyAdminWalletEnhanced(adminWallet);
         if (!isAuthorized.authorized) {
-            showAdminNotification('Unauthorized'error');
+            showAdminNotification('Unauthorized', 'error');
             return;
         }
 
