@@ -2,6 +2,7 @@
  * CompetitionManager - Competition Lifecycle Management
  * FIXED: Database-Centric Architecture - Removed Service Layer Dependencies
  * SOLUTION: Direct database queries instead of TokenService/PriceService calls
+ * FIXED: UUID issues resolved - proper variable references and typos corrected
  */
 
 class CompetitionManager {
@@ -676,7 +677,6 @@ class CompetitionManager {
             
             const supabase = this.getSupabaseInstance();
             
-            
             const competitionData = {
                 token_a_address: tokenPair.token_a_address,
                 token_b_address: tokenPair.token_b_address,
@@ -692,8 +692,6 @@ class CompetitionManager {
                 end_time: timing.endTime,
                 total_pool: 0,
                 total_bets: 0,
-                token_a_bets: 0,
-                token_b_bets: 0,
                 winner_token: null,
                 token_a_end_price: null,
                 token_b_end_price: null,
@@ -711,7 +709,10 @@ class CompetitionManager {
                 pair_id: tokenPair.id,
                 created_by: config.isManual ? (config.createdBy || 'ADMIN_MANUAL') : 'AUTOMATED_SYSTEM',
                 created_at: timing.createdAt,
-                updated_at: timing.createdAt
+                updated_at: timing.createdAt,
+                bet_amount: config.betAmount || 0.1,
+                platform_fee_percentage: config.platformFeePercentage || 15.0,
+                is_auto_created: !config.isManual
             };
             
             console.log('Competition data prepared:', competitionData);
@@ -723,8 +724,8 @@ class CompetitionManager {
                 .single();
             
             if (error) {
-                console.error('Database insert error:', error);
-                throw error;
+                console.error('Database insert failed:', error);
+                throw new Error(`Database insert failed: ${error.message}`);
             }
             
             console.log('✅ Competition created in database:', data);
@@ -736,7 +737,7 @@ class CompetitionManager {
                     .update({ 
                         usage_count: (tokenPair.usage_count || 0) + 1,
                         last_used: new Date().toISOString(),
-                        last_competition_id: data.competition_Id,
+                        last_competition_id: data.competition_id, // ✅ Fixed: use data.competition_id after insert
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', tokenPair.id);
@@ -766,7 +767,7 @@ class CompetitionManager {
             this.schedulePhaseTransition(competitionId, 'ACTIVE', new Date(competition.voting_end_time));
             this.schedulePhaseTransition(competitionId, 'CLOSED', new Date(competition.end_time));
             
-            console.log(`✅ Automation set up for competition: ${data.competition_id}`);
+            console.log(`✅ Automation set up for competition: ${competitionId}`); // ✅ Fixed: use competitionId
             return true;
         } catch (error) {
             console.error('Failed to setup competition automation:', error);
@@ -794,13 +795,13 @@ class CompetitionManager {
                     await this.advanceCompetitionPhase(competitionId);
                     this.phaseTimers.delete(competitionId);
                 } catch (error) {
-                    console.error(`Failed to advance competition ${data.competition_id} to ${newPhase}:`, error);
+                    console.error(`Failed to advance competition ${competitionId} to ${newPhase}:`, error); // ✅ Fixed: use competitionId
                 }
             }, delay);
             
             this.phaseTimers.set(competitionId, timer);
             
-            console.log(`📅 Scheduled ${data.competition_id} → ${newPhase} in ${Math.round(delay / 1000)}s`);
+            console.log(`📅 Scheduled ${competitionId} → ${newPhase} in ${Math.round(delay / 1000)}s`); // ✅ Fixed: use competitionId
         } catch (error) {
             console.error('Failed to schedule phase transition:', error);
         }
@@ -810,7 +811,7 @@ class CompetitionManager {
         try {
             const competition = this.activeCompetitions.get(competitionId);
             if (!competition) {
-                console.warn(`Competition ${data.competition_id} not found in active competitions`);
+                console.warn(`Competition ${competitionId} not found in active competitions`); // ✅ Fixed: use competitionId
                 return false;
             }
             
@@ -831,13 +832,13 @@ class CompetitionManager {
                 case 'CLOSED':
                     return await this.resolveCompetition(competitionId);
                 default:
-                    console.warn(`Unknown phase: ${currentPhase} for competition ${data.competition_id}`);
+                    console.warn(`Unknown phase: ${currentPhase} for competition ${competitionId}`); // ✅ Fixed: use competitionId
                     return false;
             }
             
             await this.updateCompetitionStatus(competitionId, nextPhase);
             
-            console.log(`🔄 Competition ${data.competition_id}: ${currentPhase} → ${nextPhase}`);
+            console.log(`🔄 Competition ${competitionId}: ${currentPhase} → ${nextPhase}`); // ✅ Fixed: use competitionId
             
             if (nextPhase === 'VOTING') {
                 this.schedulePhaseTransition(competitionId, 'ACTIVE', new Date(competition.voting_end_time));
@@ -847,7 +848,7 @@ class CompetitionManager {
             
             return true;
         } catch (error) {
-            console.error(`Failed to advance competition ${data.competition_id}:`, error);
+            console.error(`Failed to advance competition ${competitionId}:`, error); // ✅ Fixed: use competitionId
             return false;
         }
     }
@@ -880,7 +881,7 @@ class CompetitionManager {
             
             return data;
         } catch (error) {
-            console.error(`Failed to update competition status for ${data.competition_id}:`, error);
+            console.error(`Failed to update competition status for ${competitionId}:`, error); // ✅ Fixed: use competitionId
             throw error;
         }
     }
@@ -890,12 +891,12 @@ class CompetitionManager {
     // ==============================================
 
     async scheduleCompetitionPriceCollection(competitionId) {
-        console.log(`📊 Price collection scheduled for competition: ${data.competition_id}`);
+        console.log(`📊 Price collection scheduled for competition: ${competitionId}`); // ✅ Fixed: use competitionId
         return true;
     }
 
     async resolveCompetition(competitionId) {
-        console.log(`🏁 Resolving competition: ${data.competition_id}`);
+        console.log(`🏁 Resolving competition: ${competitionId}`); // ✅ Fixed: use competitionId
         this.cleanupCompetition(competitionId);
         return true;
     }
@@ -918,7 +919,7 @@ class CompetitionManager {
         this.priceCollectionSchedules.delete(competitionId);
         this.activeCompetitions.delete(competitionId);
         
-        console.log(`🧹 Cleaned up resources for competition: ${data.competition_id}`);
+        console.log(`🧹 Cleaned up resources for competition: ${competitionId}`); // ✅ Fixed: use competitionId
     }
 
     // ==============================================
@@ -984,7 +985,7 @@ function getCompetitionManager() {
 window.CompetitionManager = CompetitionManager;
 window.getCompetitionManager = getCompetitionManager;
 
-console.log('✅ CompetitionManager class loaded - DATABASE-CENTRIC VERSION');
+console.log('✅ CompetitionManager class loaded - DATABASE-CENTRIC VERSION (UUID ISSUES FIXED)');
 console.log('🏁 Key Features:');
 console.log('   💾 Database-Centric Architecture: Direct database queries, no service layer dependencies');
 console.log('   🎯 Token Pair Selection: selectOptimalTokenPairFromDatabase() using direct SQL queries');
@@ -997,3 +998,4 @@ console.log('   📊 Competition monitoring and phase transitions');
 console.log('   ⚠️ Automatic disabling after repeated failures');
 console.log('   🔔 Admin notifications for status changes');
 console.log('   🗄️ Supabase integration with error handling and graceful degradation');
+console.log('   🔧 UUID FIXES: Removed custom ID generation, fixed variable references, added missing columns');
