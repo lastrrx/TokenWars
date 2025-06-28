@@ -61,7 +61,10 @@ async function loadRealCompetitions() {
         console.log('📊 Loading real competitions from database...');
         
         // Get competitions using supabase client
-        const competitions = await CompetitionState.supabaseClient.getActiveCompetitions();
+        const { data: competitions, error } = await CompetitionState.supabaseClient
+          .from('competitions')
+          .select('*')
+          .in('status', ['VOTING', 'ACTIVE']);
         
         if (competitions && competitions.length > 0) {
             // Enhance with real-time data
