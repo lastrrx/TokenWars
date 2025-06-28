@@ -1,5 +1,6 @@
 // Enhanced Competition.js - VOTING/ACTIVE ONLY VERSION
 // Integrates competitions page with main app and Supabase database
+// FIXED: Proper Supabase client reference
 
 // Global state for competitions
 const CompetitionState = {
@@ -24,8 +25,8 @@ async function initializeCompetitionSystem() {
     console.log('🏁 Initializing competition system for VOTING/ACTIVE competitions...');
     
     try {
-        // Get service references
-        CompetitionState.supabaseClient = window.supabaseClient;
+        // FIXED: Get direct Supabase client instead of wrapper
+        CompetitionState.supabaseClient = window.supabase;
         CompetitionState.walletService = window.getWalletService?.();
         CompetitionState.tokenService = window.getTokenService?.();
         
@@ -1374,3 +1375,4 @@ console.log('   ✅ Real-time updates and subscriptions');
 console.log('   ❌ REMOVED: All fallback/demo data');
 console.log('   ❌ REMOVED: SETUP/CANCELLED/CLOSED status handling');
 console.log('   🎯 NEW: Pure VOTING/ACTIVE database experience');
+console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
