@@ -270,6 +270,552 @@ body {
     left: 100%;
 }
 
+/* ===================================== */
+/* ENHANCED TIMER URGENCY SYSTEM */
+/* Add this to your styles.css file */
+/* ===================================== */
+
+/* Enhanced Timer Base Styles */
+.timer.enhanced-timer {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.timer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+    z-index: 2;
+}
+
+.timer-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.time-remaining {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+/* Timer Urgency Classes with Visual Effects */
+.timer-normal {
+    border-color: rgba(139, 92, 246, 0.2);
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.timer-normal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+    opacity: 0.3;
+}
+
+.timer-caution {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.1);
+    animation: pulse-caution 3s ease-in-out infinite;
+}
+
+.timer-caution::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    animation: progress-caution 3s ease-in-out infinite;
+}
+
+.timer-caution .timer-label {
+    color: #f59e0b;
+}
+
+.timer-warning {
+    border-color: rgba(249, 115, 22, 0.5);
+    background: rgba(249, 115, 22, 0.15);
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.timer-warning::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f97316, #fb923c);
+    animation: progress-warning 2s ease-in-out infinite;
+}
+
+.timer-warning .timer-label {
+    color: #f97316;
+    animation: text-glow-warning 2s ease-in-out infinite;
+}
+
+.timer-critical {
+    border-color: rgba(239, 68, 68, 0.6);
+    background: rgba(239, 68, 68, 0.2);
+    animation: pulse-critical 1s ease-in-out infinite;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    position: relative;
+}
+
+.timer-critical::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    animation: progress-critical 1s ease-in-out infinite;
+}
+
+.timer-critical::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, transparent, rgba(239, 68, 68, 0.3), transparent);
+    border-radius: inherit;
+    animation: border-glow-critical 1s ease-in-out infinite;
+    z-index: 1;
+}
+
+.timer-critical .time-remaining {
+    color: #ef4444;
+    animation: flash-critical 1s ease-in-out infinite;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.timer-critical .timer-label {
+    color: #ef4444;
+    animation: text-glow-critical 1s ease-in-out infinite;
+}
+
+.timer-expired {
+    border-color: rgba(107, 114, 128, 0.3);
+    background: rgba(75, 85, 99, 0.2);
+    opacity: 0.7;
+    animation: none;
+}
+
+.timer-expired::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #6b7280;
+    opacity: 0.5;
+}
+
+.timer-expired .time-remaining {
+    color: var(--text-muted);
+}
+
+.timer-expired .timer-label {
+    color: var(--text-muted);
+}
+
+/* Timer Animation Keyframes */
+@keyframes pulse-caution {
+    0%, 100% { 
+        border-color: rgba(245, 158, 11, 0.4);
+        box-shadow: 0 0 0 rgba(245, 158, 11, 0.4);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(245, 158, 11, 0.6);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        transform: scale(1.01);
+    }
+}
+
+@keyframes pulse-warning {
+    0%, 100% { 
+        border-color: rgba(249, 115, 22, 0.5);
+        box-shadow: 0 0 0 rgba(249, 115, 22, 0.3);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(249, 115, 22, 0.7);
+        box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+        transform: scale(1.015);
+    }
+}
+
+@keyframes pulse-critical {
+    0%, 100% { 
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(239, 68, 68, 0.8);
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+        transform: scale(1.02);
+    }
+}
+
+@keyframes progress-caution {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes progress-warning {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.9; }
+}
+
+@keyframes progress-critical {
+    0%, 100% { 
+        opacity: 0.7; 
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+    50% { 
+        opacity: 1; 
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+}
+
+@keyframes flash-critical {
+    0%, 100% { 
+        opacity: 1; 
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+    50% { 
+        opacity: 0.7; 
+        text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    }
+}
+
+@keyframes text-glow-warning {
+    0%, 100% { text-shadow: 0 0 5px rgba(249, 115, 22, 0.3); }
+    50% { text-shadow: 0 0 10px rgba(249, 115, 22, 0.6); }
+}
+
+@keyframes text-glow-critical {
+    0%, 100% { text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+    50% { text-shadow: 0 0 15px rgba(239, 68, 68, 0.7); }
+}
+
+@keyframes border-glow-critical {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+/* Timer Icon Enhancements */
+.timer-icon {
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.timer-caution .timer-icon {
+    animation: icon-bounce-caution 3s ease-in-out infinite;
+}
+
+.timer-warning .timer-icon {
+    animation: icon-bounce-warning 2s ease-in-out infinite;
+}
+
+.timer-critical .timer-icon {
+    animation: icon-bounce-critical 1s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+}
+
+@keyframes icon-bounce-caution {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
+
+@keyframes icon-bounce-warning {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.1); }
+}
+
+@keyframes icon-bounce-critical {
+    0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+    25% { transform: translateY(-2px) scale(1.1) rotate(-2deg); }
+    75% { transform: translateY(-2px) scale(1.1) rotate(2deg); }
+}
+
+/* Enhanced Market Data Display */
+.market-data {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.5rem 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    padding: 0.25rem 0.5rem;
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: 0.375rem;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.market-cap, .volume {
+    font-weight: 500;
+    font-family: var(--font-mono);
+}
+
+.market-cap {
+    color: var(--accent-purple);
+}
+
+.volume {
+    color: var(--accent-pink);
+}
+
+/* Enhanced Token Price Display */
+.token-price {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-family: var(--font-mono);
+    text-align: center;
+    padding: 0.25rem 0.5rem;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 0.375rem;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+/* Enhanced Performance Indicators */
+.performance {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    margin-top: 0.5rem;
+    text-align: center;
+    font-family: var(--font-mono);
+    border: 1px solid;
+    animation: performance-pulse 2s ease-in-out infinite;
+}
+
+.performance.positive {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+}
+
+.performance.negative {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes performance-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Price Change Enhancements */
+.price-change {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    margin: 0.25rem auto;
+    display: inline-block;
+    font-family: var(--font-mono);
+    border: 1px solid;
+    text-align: center;
+}
+
+.price-change.positive {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+}
+
+.price-change.negative {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* Competition Status Summary Enhancements */
+.competition-status-summary {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: rgba(15, 23, 42, 0.2);
+    border-radius: 1rem;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.status-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.status-card {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-card.voting {
+    border-color: rgba(34, 197, 94, 0.3);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+}
+
+.status-card.voting::before {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.status-card.active {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+}
+
+.status-card.active::before {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.status-card.total {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+}
+
+.status-card.total::before {
+    background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+}
+
+.status-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+}
+
+.status-card:hover::before {
+    opacity: 1;
+}
+
+/* Responsive Timer Adjustments */
+@media (max-width: 768px) {
+    .timer.enhanced-timer {
+        padding: 0.75rem;
+    }
+    
+    .timer-content {
+        gap: 0.5rem;
+    }
+    
+    .timer-label {
+        font-size: 0.7rem;
+    }
+    
+    .time-remaining {
+        font-size: 1rem;
+    }
+    
+    .timer-icon {
+        font-size: 1rem;
+        margin-right: 0.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .market-data {
+        flex-direction: column;
+        gap: 0.25rem;
+        text-align: center;
+    }
+    
+    .status-cards {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .status-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+    .timer-caution,
+    .timer-warning,
+    .timer-critical,
+    .timer-icon,
+    .performance,
+    .status-card {
+        animation: none !important;
+    }
+    
+    .timer-critical {
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .timer.enhanced-timer {
+        border-width: 2px;
+    }
+    
+    .timer-critical {
+        border-color: #ff0000;
+        background: rgba(255, 0, 0, 0.1);
+    }
+    
+    .timer-warning {
+        border-color: #ff8800;
+        background: rgba(255, 136, 0, 0.1);
+    }
+    
+    .timer-caution {
+        border-color: #ffaa00;
+        background: rgba(255, 170, 0, 0.1);
+    }
+}
+
 /* Enhanced trader info display */
 #traderInfo {
     display: flex;
