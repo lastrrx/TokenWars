@@ -17,7 +17,7 @@ let dataRefreshInterval = null;
 let currentPage = 'home';
 let pageHistory = ['home'];
 
-// Service initialization state tracking
+// Service /initialization state tracking
 let serviceStates = {
     wallet: { initialized: false, loading: false, error: null },
     supabase: { initialized: false, loading: false, error: null },
