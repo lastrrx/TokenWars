@@ -1314,6 +1314,7 @@ function getFilteredCompetitions() {
 
 function updateCompetitionStats() {
     try {
+        console.log('🔍 updateCompetitionStats called - client exists:', !!CompetitionState.supabaseClient);
         const totalCompetitions = CompetitionState.competitions.length;
         const votingCount = CompetitionState.votingCompetitions.length;
         const activeCount = CompetitionState.activeCompetitions.length;
