@@ -3,969 +3,599 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TokenWars - Predict. Compete. Profit.</title>
-    <meta name="description" content="TokenWars - Solana token prediction competitions. Predict token performance, compete with others, earn SOL rewards.">
-    <meta property="og:title" content="TokenWars - Predict. Compete. Profit.">
-    <meta property="og:description" content="Predict token performance, compete with others, earn SOL rewards">
-    <meta property="og:type" content="website">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <title>TokenWars - Predict. Compete. Win.</title>
     
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
-    <!-- Supabase Client -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Solana Web3.js -->
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- Chart.js for price charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Main Stylesheet -->
+    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Critical inline styles for modals and state management -->
-    <style>
-        /* Ensure hidden class works immediately */
-        .hidden {
-            display: none !important;
-        }
-        
-        /* Modal visibil/ity */
-        .wallet-modal:not(.hidden),
-        .competition-modal:not(.hidden),
-        .platform-guide-modal:not(.hidden) {
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* Wallet option hover states */
-        .wallet-option {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .wallet-option:hover {
-            transform: translateY(-2px);
-            border-color: var(--gold, #F59E0B);
-            background: rgba(245, 158, 11, 0.1);
-        }
-        
-        /* Avatar selection */
-        .avatar-option-modern {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .avatar-option-modern.selected,
-        .avatar-option-modern:hover {
-            transform: scale(1.1);
-            border-color: var(--gold, #F59E0B);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
-        }
-        
-        /* Token selection buttons */
-        .token-choice-button {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .token-choice-button.selected {
-            background: linear-gradient(135deg, var(--accent-purple, #8b5cf6), var(--accent-pink, #ec4899));
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4);
-        }
-        
-        /* Agreement checkbox */
-        .agreement-checkbox {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .checkbox {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border, #374151);
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-        
-        .checkbox.checked {
-            background: var(--gold, #F59E0B);
-            border-color: var(--gold, #F59E0B);
-        }
-        
-        .checkbox.checked::after {
-            content: '✓';
-            display: block;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            line-height: 16px;
-        }
-        
-        /* Page content visibility */
-        .page-content {
-            display: none;
-        }
-        
-        .page-content.active {
-            display: block !important;
-        }
-        
-        /* View state visibility */
-        .view-state {
-            display: block;
-        }
-        
-        .view-state.hidden {
-            display: none !important;
-        }
-        
-        /* Animation keyframes */
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-    </style>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
 </head>
 <body>
-    <!-- Database Connection Status -->
-    <div id="dbStatus" class="db-status disconnected">
-        Database: Connecting...
-    </div>
-
-    <!-- Token Update Status -->
-    <div id="tokenStatus" class="db-status disconnected" style="top: 3rem;">
-        Tokens: Loading...
-    </div>
-
     <!-- Animated Background -->
     <div class="animated-background"></div>
     <div class="geometric-patterns"></div>
-
+    
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#home" class="logo" data-page="home">TokenWars</a>
+            <a href="#home" class="logo" onclick="showPage('home')">
+                <span>TokenWars</span>
+            </a>
             
             <ul class="nav-links">
-                <li><a href="#home" class="nav-link active" data-page="home">Home</a></li>
-                <li><a href="#competitions" class="nav-link" data-page="competitions">Competitions</a></li>
-                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard">Leaderboard</a></li>
-                <li><a href="#portfolio" class="nav-link" data-page="portfolio">Portfolio</a></li>
-                <li><a href="#" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
+                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home')">Home</a></li>
+                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions')">Competitions</a></li>
+                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard')">Leaderboard</a></li>
+                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio')">Portfolio</a></li>
+                <li><a href="how-it-works.html" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
             </ul>
-
-            <!-- Wallet Connection State -->
-            <button id="connectWalletBtn" class="btn-primary wallet-connect-btn">Connect Wallet</button>
             
-            <!-- UPDATED: Trader info without balance -->
-            <div id="traderInfo" class="trader-info-display hidden">
-                <div id="navTraderAvatar" class="trader-avatar">🎯</div>
-                <div class="trader-details">
-                    <span id="navTraderName" class="trader-name">Trader</span>
-                </div>
-                <button class="nav-disconnect" title="Disconnect Wallet">⏻</button>
-            </div>
-
-            <!-- Mobile Menu Toggle -->
-            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
+            <!-- Wallet Connection -->
+            <button id="connectWalletBtn" class="btn-primary">
+                <i class="fas fa-wallet"></i> Connect Wallet
             </button>
+            
+            <!-- Trader Info (Hidden by default) -->
+            <div id="traderInfo" style="display: none;">
+                <div class="trader-info-display">
+                    <div class="trader-avatar">
+                        <span id="navTraderAvatar">🎯</span>
+                    </div>
+                    <div class="trader-details">
+                        <div class="trader-name" id="navTraderName">Trader</div>
+                    </div>
+                </div>
+                <button class="nav-disconnect" onclick="disconnectWallet()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
         </div>
     </nav>
 
-    <!-- PAGE CONTAINER -->
-    <div id="pageContainer" class="page-container">
+    <!-- Main Content Container -->
+    <div class="page-container">
         
-        <!-- HOME PAGE -->
-        <div id="homePage" class="page-content active">
-            <!-- Hero Section -->
-            <div class="hero">
+        <!-- Home Page -->
+        <section id="homePage" class="page-content active">
+            <!-- Hero Section for Disconnected Users -->
+            <div id="heroDisconnected" class="hero">
                 <div class="hero-content">
-                    <!-- Disconnected State Hero -->
-                    <div id="heroDisconnected" class="hero-state">
-                        <h1 class="hero-title">TokenWars</h1>
-                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
-                        <div class="cta-buttons">
-                            <button class="btn-hero-primary wallet-connect-btn">Connect Wallet</button>
-                            <a href="#learnMoreSection" class="btn-secondary" onclick="scrollToLearnMore(event)">Learn More</a>
-                        </div>
+                    <h1 class="hero-title">TokenWars</h1>
+                    <p class="hero-motto">Predict. Compete. Win.</p>
+                    
+                    <div class="cta-buttons">
+                        <button class="btn-hero-primary" onclick="openWalletModal()">
+                            <i class="fas fa-wallet"></i> Get Started
+                        </button>
+                        <button class="btn-secondary" onclick="scrollToLearnMore()">
+                            <i class="fas fa-info-circle"></i> Learn More
+                        </button>
                     </div>
-
-                    <!-- Connected State Hero -->
-                    <div id="heroConnected" class="hero-state hidden">
-                        <h1 class="hero-title">TokenWars</h1>
-                        <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
-                        
-                        <div class="trader-welcome-enhanced">
-                            <div class="welcome-message">
-                                <p class="welcome-trader">Welcome back, <span class="trader-name-highlight" id="heroTraderNameText">Trader</span>!</p>
-                            </div>
+                </div>
+            </div>
+            
+            <!-- Hero Section for Connected Users -->
+            <div id="heroConnected" class="hero" style="display: none;">
+                <div class="hero-content">
+                    <h1 class="hero-title">Welcome Back, <span id="heroTraderNameText">Trader</span>!</h1>
+                    <p class="hero-motto">Ready to dominate the markets?</p>
+                    
+                    <div class="cta-buttons">
+                        <button class="btn-hero-primary" onclick="showPage('competitions')">
+                            <i class="fas fa-trophy"></i> View Competitions
+                        </button>
+                        <button class="btn-secondary" onclick="showPage('portfolio')">
+                            <i class="fas fa-chart-line"></i> My Portfolio
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <div class="stat-value" id="homeWinnings">0 SOL</div>
+                            <div class="stat-label">Total Winnings</div>
                         </div>
-                        
-                        <div class="cta-buttons">
-                            <a href="#competitions" class="btn-hero-primary" data-page="competitions">View Competitions</a>
-                            <a href="#learnMoreSection" class="btn-secondary" onclick="scrollToLearnMore(event)">Learn More</a>
+                        <div class="hero-stat">
+                            <div class="stat-value" id="homeWinRate">0%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="stat-value" id="homeTotalBets">0</div>
+                            <div class="stat-label">Total Bets</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="stat-value" id="homeStreak">0</div>
+                            <div class="stat-label">Current Streak</div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- ENHANCED Learn More Section -->
-            <div class="learn-more-section" id="learnMoreSection">
+            
+            <!-- Learn More Section -->
+            <section id="learnMoreSection" class="learn-more-section">
                 <div class="container">
                     <div class="section-header">
                         <h2 class="section-title">How TokenWars Works</h2>
-                        <p class="section-description">Simple, fair, and transparent token prediction competitions</p>
+                        <p class="section-description">
+                            Experience the future of crypto prediction markets with our streamlined platform
+                        </p>
                     </div>
-
+                    
                     <div class="info-cards-grid">
                         <div class="info-card">
-                            <div class="card-icon">📊</div>
-                            <h3>Simple Predictions</h3>
-                            <p>Pick which token will outperform during the competition period. Place your bet during the voting phase before the competition starts.</p>
+                            <span class="card-icon">🎯</span>
+                            <h3>1. Choose Your Battle</h3>
+                            <p>Select from live token competitions featuring the hottest crypto assets. Each battle pits two tokens against each other in a performance showdown.</p>
                         </div>
+                        
                         <div class="info-card">
-                            <div class="card-icon">💰</div>
-                            <h3>Fixed Stakes</h3>
-                            <p>Everyone bets the same amount (0.1 SOL). Winners split the prize pool minus a 15% platform fee. Fair and transparent for all participants.</p>
+                            <span class="card-icon">💰</span>
+                            <h3>2. Place Your Prediction</h3>
+                            <p>Predict which token will outperform during the competition period. Stake SOL on your choice and join other traders in the battle.</p>
                         </div>
+                        
                         <div class="info-card">
-                            <div class="card-icon">🔐</div>
-                            <h3>Automated Payouts</h3>
-                            <p>Smart contracts handle everything automatically. When voting ends, the competition runs, and winners receive their payouts directly.</p>
+                            <span class="card-icon">⚡</span>
+                            <h3>3. Watch Live Performance</h3>
+                            <p>Follow real-time price movements and performance metrics as the competition unfolds. Track your position on the leaderboard.</p>
                         </div>
-                    </div>
-
-                    <div class="detailed-guide-cta">
-                        <h3>Want More Details?</h3>
-                        <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
-                        <a href="#" class="btn-hero-primary" onclick="openPlatformGuide(); return false;">
-                            📖 Complete Platform Guide →
-                        </a>
+                        
+                        <div class="info-card">
+                            <span class="card-icon">🏆</span>
+                            <h3>4. Claim Your Rewards</h3>
+                            <p>Winners share the prize pool based on their predictions. Automatic payouts ensure you receive your rewards instantly when competitions end.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- COMPETITIONS PAGE -->
-        <div id="competitionsPage" class="page-content">
-            <div class="main-content">
-                <!-- Disconnected User View -->
-                <div id="competitionsDisconnected" class="view-state">
-                    <section class="section">
-                        <div class="container">
-                            <div class="section-header">
-                                <h2 class="section-title">COMPETITIONS</h2>
-                                <p class="section-description">Connect your wallet to participate in token prediction competitions</p>
-                            </div>
-                            
-                            <div class="empty-competitions-container">
-                                <div class="empty-competitions">
-                                    <div class="empty-icon">🔗</div>
-                                    <h3>Connect Wallet to Join Competitions</h3>
-                                    <p>Connect your wallet to participate in token prediction competitions and earn SOL rewards.</p>
-                                    <button class="btn-primary wallet-connect-btn">Connect Wallet</button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
+            </section>
+        </section>
 
-                <!-- Connected User View -->
-                <div id="competitionsConnected" class="view-state hidden">
-                    <section class="section">
-                        <div class="container">
-                            <div class="section-header">
-                                <h2 class="section-title">LIVE COMPETITIONS</h2>
-                                <p class="section-description">Predict token performance and earn SOL rewards</p>
-                                
-                                <!-- Competition Filters (NO REFRESH BUTTON) -->
-                                <div class="section-filters">
-                                    <select id="competition-phase" class="filter-select">
-                                        <option value="all">All Competitions</option>
-                                        <option value="voting">Voting Open</option>
-                                        <option value="active">Running</option>
-                                    </select>
-                                    
-                                    <select id="sort-by" class="filter-select">
-                                        <option value="time_remaining">Time Remaining</option>
-                                        <option value="total_pool">Pool Size</option>
-                                        <option value="total_bets">Participants</option>
-                                        <option value="created_at">Newest First</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- Competition Status Summary -->
-                            <div class="competition-status-summary">
-                                <div class="status-cards">
-                                    <div class="status-card voting">
-                                        <div class="status-icon">🗳️</div>
-                                        <div class="status-content">
-                                            <div class="status-count" id="votingCompetitionsCount">0</div>
-                                            <div class="status-label">Voting Open</div>
-                                            <div class="status-desc">Place predictions</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="status-card active">
-                                        <div class="status-icon">⚡</div>
-                                        <div class="status-content">
-                                            <div class="status-count" id="activeCompetitionsCount">0</div>
-                                            <div class="status-label">Running</div>
-                                            <div class="status-desc">Performance tracking</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="status-card total">
-                                        <div class="status-icon">🏆</div>
-                                        <div class="status-content">
-                                            <div class="status-count" id="totalCompetitionsCount">0</div>
-                                            <div class="status-label">Total Live</div>
-                                            <div class="status-desc">Competitions available</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Competitions Container -->
-                            <div class="competitions-container">
-                                <!-- Competition Grid -->
-                                <div class="competitions-grid" id="activeGrid">
-                                    <div class="loading-state">
-                                        <div class="loading-spinner"></div>
-                                        <p>Loading live competitions...</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Competition Statistics Summary -->
-                            <div class="competition-stats-summary">
-                                <div class="stats-grid">
-                                    <div class="stat-card">
-                                        <div class="stat-icon">🏆</div>
-                                        <div class="stat-content">
-                                            <div class="stat-value" id="totalCompetitions">0</div>
-                                            <div class="stat-label">Live Competitions</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">👥</div>
-                                        <div class="stat-content">
-                                            <div class="stat-value" id="totalParticipants">0</div>
-                                            <div class="stat-label">Active Participants</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">💰</div>
-                                        <div class="stat-content">
-                                            <div class="stat-value" id="totalPrizePool">0.0 SOL</div>
-                                            <div class="stat-label">Total Prize Pool</div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">⚡</div>
-                                        <div class="stat-content">
-                                            <div class="stat-value" id="activeCompetitions">0</div>
-                                            <div class="stat-label">Running Now</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
-        
-        <!-- LEADERBOARD PAGE -->
-        <div id="leaderboardPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">LEADERBOARD</h2>
-                            <div class="section-filters">
-                                <select id="leaderboard-period" class="filter-select">
-                                    <option value="all-time">All Time</option>
-                                    <option value="monthly">This Month</option>
-                                    <option value="weekly">This Week</option>
-                                </select>
-                                <select id="leaderboard-sort" class="filter-select">
-                                    <option value="total_winnings">Total Winnings</option>
-                                    <option value="win_rate">Win Rate</option>
-                                    <option value="current_streak">Current Streak</option>
-                                    <option value="total_bets">Total Competitions</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Leaderboard Content -->
-                        <div id="leaderboard-content">
-                            <div class="leaderboard-table-container">
-                                <div class="leaderboard-table" id="leaderboardTable">
-                                    <div class="loading-state">
-                                        <div class="loading-spinner"></div>
-                                        <p>Loading leaderboard from database...</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- PORTFOLIO PAGE -->
-        <div id="portfolioPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">MY PORTFOLIO</h2>
-                            <div class="section-filters">
-                                <select id="portfolio-view" class="filter-select">
-                                    <option value="overview">Overview</option>
-                                    <option value="history">Betting History</option>
-                                    <option value="statistics">Statistics</option>
-                                    <option value="achievements">Achievements</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Portfolio Content Container -->
-                        <div id="portfolio-content">
-                            <div class="loading-state">
-                                <div class="loading-spinner"></div>
-                                <p>Loading your portfolio...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
-    <!-- Competition Details Modal -->
-    <div class="competition-modal hidden" id="competitionModal">
-        <div class="competition-modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Competition Details</h3>
-                <button class="modal-close" onclick="closeCompetitionModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div id="modalContent" class="modal-content">
-                    <!-- Modal content will be populated by competition.js -->
+        <!-- Competitions Page -->
+        <section id="competitionsPage" class="page-content">
+            <!-- Disconnected State -->
+            <div id="competitionsDisconnected" class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Live Competitions</h2>
+                    <p class="section-description">Connect your wallet to participate in token prediction battles</p>
                 </div>
                 
-                <div class="modal-tokens-section">
-                    <div class="modal-token-card">
-                        <img id="modalTokenALogo" class="modal-token-logo" src="" alt="">
-                        <div class="token-symbol" id="modalTokenASymbol">SOL</div>
-                        <div class="token-name" id="modalTokenAName">Solana</div>
-                        <div class="token-price" id="modalTokenAPrice">$0.00</div>
-                        <div class="price-change" id="modalTokenAChange">+0.00%</div>
-                    </div>
-                    <div class="modal-vs">VS</div>
-                    <div class="modal-token-card">
-                        <img id="modalTokenBLogo" class="modal-token-logo" src="" alt="">
-                        <div class="token-symbol" id="modalTokenBSymbol">USDC</div>
-                        <div class="token-name" id="modalTokenBName">USD Coin</div>
-                        <div class="token-price" id="modalTokenBPrice">$0.00</div>
-                        <div class="price-change" id="modalTokenBChange">+0.00%</div>
-                    </div>
-                </div>
-
-                <div class="competition-stats" id="modalStats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalParticipants">0</div>
-                        <div class="stat-label">Participants</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalPrizePool">0.0 SOL</div>
-                        <div class="stat-label">Prize Pool</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="modalTimeRemaining">--</div>
-                        <div class="stat-label">Time Remaining</div>
-                    </div>
-                </div>
-
-                <div class="betting-interface" id="bettingInterface">
-                    <h4 class="betting-title">Place Your Prediction</h4>
-                    
-                    <div class="token-choice-buttons">
-                        <button class="token-choice-button" id="choiceTokenA" onclick="selectToken('A')">
-                            <div class="token-symbol" id="choiceTokenASymbol">SOL</div>
-                            <div class="bet-button-label">I predict this wins</div>
-                        </button>
-                        <button class="token-choice-button" id="choiceTokenB" onclick="selectToken('B')">
-                            <div class="token-symbol" id="choiceTokenBSymbol">USDC</div>
-                            <div class="bet-button-label">I predict this wins</div>
-                        </button>
-                    </div>
-
-                    <div class="bet-amount-section">
-                        <label for="betAmount">
-                            Bet Amount (SOL)
-                        </label>
-                        <input 
-                            type="number" 
-                            id="betAmount" 
-                            class="bet-amount-input" 
-                            value="0.1" 
-                            min="0.1" 
-                            step="0.1"
-                            placeholder="0.1"
-                        >
-                    </div>
-
-                    <button class="place-bet-button" id="placeBetButton" onclick="placeBet()" disabled>
-                        Select a token to continue
+                <div class="connect-wallet-prompt">
+                    <div class="prompt-icon">🔗</div>
+                    <h3>Connect Wallet to Compete</h3>
+                    <p>Join the battle and compete against other traders in live token prediction markets</p>
+                    <button class="btn-primary" onclick="openWalletModal()">
+                        <i class="fas fa-wallet"></i> Connect Wallet
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Wallet Connection Modal -->
-    <div class="wallet-modal hidden" id="walletModal">
-        <div class="wallet-modal-content">
-            <div class="modal-header">
-                <button class="modal-close" onclick="closeWalletModal()">×</button>
-                <div class="modal-title" id="modalTitle">Connect Wallet</div>
-                <div class="modal-subtitle" id="modalSubtitle">Choose your preferred Solana wallet to get started</div>
-            </div>
-
-            <!-- Step Indicators -->
-            <div class="step-indicators">
-                <div class="step-indicator active" id="step1Indicator">1</div>
-                <div class="step-indicator" id="step2Indicator">2</div>
-                <div class="step-indicator" id="step3Indicator">3</div>
-                <div class="step-indicator" id="step4Indicator">4</div>
-            </div>
-
-            <!-- Step 1: Wallet Selection -->
-            <div class="step-content active" id="step1Content">
-                <div class="security-info">
-                    <div class="security-title">🔒 Security First</div>
-                    <div class="security-text">
-                        TokenWars connects to your wallet securely to track your predictions. We never access your private keys or make unauthorized transactions.
-                    </div>
-                </div>
-
-                <div class="wallet-options">
-                    <div class="wallet-option" data-wallet="phantom" onclick="selectWallet('phantom')">
-                        <div class="wallet-icon">👻</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Phantom</div>
-                            <div class="wallet-description">Most popular Solana wallet</div>
-                            <div class="wallet-status" id="phantomStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option" data-wallet="solflare" onclick="selectWallet('solflare')">
-                        <div class="wallet-icon">☀️</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Solflare</div>
-                            <div class="wallet-description">Secure and feature-rich</div>
-                            <div class="wallet-status" id="solflareStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option" data-wallet="backpack" onclick="selectWallet('backpack')">
-                        <div class="wallet-icon">🎒</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Backpack</div>
-                            <div class="wallet-description">Modern crypto wallet</div>
-                            <div class="wallet-status" id="backpackStatus">Checking...</div>
-                        </div>
-                    </div>
-
-                    <div class="wallet-option demo-wallet" data-wallet="demo" onclick="selectWallet('demo')">
-                        <div class="wallet-icon">🎮</div>
-                        <div class="wallet-info">
-                            <div class="wallet-name">Demo Mode</div>
-                            <div class="wallet-description">Try without wallet (10 SOL)</div>
-                            <div class="wallet-status" id="demoStatus">✓ Available</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-modal-secondary" onclick="closeWalletModal()">Cancel</button>
-                </div>
-            </div>
-
-            <!-- Step 2: Connecting -->
-            <div class="step-content" id="step2Content">
-                <div class="connecting-state">
-                    <div class="connecting-icon">🔄</div>
-                    <h3>Connecting to <span id="selectedWalletName">Wallet</span></h3>
-                    <p>Please approve the connection in your wallet...</p>
-                    <div class="connecting-animation">
-                        <div class="loading-spinner"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 3: Profile Creation -->
-            <div class="step-content" id="step3Content">
-                <div class="profile-creation">
-                    <h3>Create Your Trader Profile</h3>
-                    <p>Set up your profile to start competing</p>
+            
+            <!-- Connected State -->
+            <div id="competitionsConnected" class="container" style="display: none;">
+                <!-- Header Section -->
+                <div class="section-header">
+                    <h2 class="section-title">Live Competitions</h2>
+                    <p class="section-description">
+                        Choose your battles and predict winning tokens in real-time competitions
+                    </p>
                     
-                    <div class="profile-form">
-                        <div class="form-group">
-                            <label for="traderUsername">Choose Username</label>
-                            <div class="input-group">
-                                <input type="text" id="traderUsername" placeholder="Enter username" maxlength="20" oninput="validateUsernameInput()">
-                                <span class="input-status" id="inputStatus"></span>
+                    <!-- Filters -->
+                    <div class="section-filters">
+                        <select id="competition-phase" class="filter-select">
+                            <option value="all">All Phases</option>
+                            <option value="voting">Voting Phase</option>
+                            <option value="active">Active Competitions</option>
+                        </select>
+                        
+                        <select id="sort-by" class="filter-select">
+                            <option value="time_remaining">Time Remaining</option>
+                            <option value="total_pool">Prize Pool</option>
+                            <option value="total_bets">Participants</option>
+                            <option value="created_at">Newest First</option>
+                        </select>
+                        
+                        <button class="clear-filters" onclick="clearAllFilters()" style="display: none;">
+                            <span class="clear-icon">✕</span> Clear Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Competition Stats -->
+                <div class="competition-status-summary">
+                    <div class="status-cards">
+                        <div class="status-card voting">
+                            <div class="status-icon">🗳️</div>
+                            <div class="status-content">
+                                <div class="status-count" id="votingCompetitionsCount">0</div>
+                                <div class="status-label">Voting</div>
+                                <div class="status-desc">Accept predictions</div>
                             </div>
                         </div>
                         
+                        <div class="status-card active">
+                            <div class="status-icon">⚡</div>
+                            <div class="status-content">
+                                <div class="status-count" id="activeCompetitionsCount">0</div>
+                                <div class="status-label">Active</div>
+                                <div class="status-desc">Live competitions</div>
+                            </div>
+                        </div>
+                        
+                        <div class="status-card total">
+                            <div class="status-icon">🏆</div>
+                            <div class="status-content">
+                                <div class="status-count" id="totalCompetitionsCount">0</div>
+                                <div class="status-label">Total</div>
+                                <div class="status-desc">All competitions</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Competitions Grid -->
+                <div id="activeGrid" class="competitions-grid">
+                    <!-- Competition cards will be inserted here -->
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading live competitions...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Page -->
+        <section id="leaderboardPage" class="page-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Leaderboard</h2>
+                    <p class="section-description">Top traders and competition results</p>
+                </div>
+                
+                <div id="leaderboard-content">
+                    <div class="connect-wallet-prompt">
+                        <div class="prompt-icon">🏆</div>
+                        <h3>Connect Wallet to View Leaderboard</h3>
+                        <p>See where you rank among top traders and view competition results</p>
+                        <button class="btn-primary" onclick="openWalletModal()">
+                            <i class="fas fa-wallet"></i> Connect Wallet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Page -->
+        <section id="portfolioPage" class="page-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Portfolio</h2>
+                    <p class="section-description">Your trading history and statistics</p>
+                </div>
+                
+                <div id="portfolio-content">
+                    <div class="connect-wallet-prompt">
+                        <div class="prompt-icon">📊</div>
+                        <h3>Connect Wallet to View Portfolio</h3>
+                        <p>Track your prediction history, performance, and earnings</p>
+                        <button class="btn-primary" onclick="openWalletModal()">
+                            <i class="fas fa-wallet"></i> Connect Wallet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Wallet Connection Modal -->
+    <div id="walletModal" class="wallet-modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Connect Wallet</h2>
+                <p id="modalSubtitle">Choose your preferred Solana wallet to get started</p>
+                <button class="close-button" onclick="closeWalletModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Step Indicators -->
+            <div class="step-indicators">
+                <div class="step-indicator active" id="step1Indicator">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Connect</div>
+                </div>
+                <div class="step-indicator" id="step2Indicator">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Confirm</div>
+                </div>
+                <div class="step-indicator" id="step3Indicator">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Profile</div>
+                </div>
+                <div class="step-indicator" id="step4Indicator">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Complete</div>
+                </div>
+            </div>
+            
+            <!-- Step 1: Wallet Selection -->
+            <div id="step1Content" class="step-content active">
+                <div class="wallet-options">
+                    <div class="wallet-option" onclick="selectWallet('phantom')">
+                        <div class="wallet-icon">
+                            <img src="https://phantom.app/img/phantom-logo.png" alt="Phantom" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="fallback-icon" style="display: none;">👻</div>
+                        </div>
+                        <div class="wallet-info">
+                            <h4>Phantom</h4>
+                            <p>Secure wallet for DeFi & NFTs</p>
+                        </div>
+                        <div class="wallet-status" id="phantomStatus">✓ Available</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="selectWallet('solflare')">
+                        <div class="wallet-icon">
+                            <img src="https://solflare.com/assets/solflare-logo.svg" alt="Solflare" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="fallback-icon" style="display: none;">🔥</div>
+                        </div>
+                        <div class="wallet-info">
+                            <h4>Solflare</h4>
+                            <p>Popular Solana wallet</p>
+                        </div>
+                        <div class="wallet-status" id="solflareStatus">✓ Available</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="selectWallet('backpack')">
+                        <div class="wallet-icon">
+                            <div class="fallback-icon">🎒</div>
+                        </div>
+                        <div class="wallet-info">
+                            <h4>Backpack</h4>
+                            <p>Modern Solana wallet</p>
+                        </div>
+                        <div class="wallet-status" id="backpackStatus">✓ Available</div>
+                    </div>
+                    
+                    <div class="wallet-option demo" onclick="selectWallet('demo')">
+                        <div class="wallet-icon">
+                            <div class="fallback-icon">🎯</div>
+                        </div>
+                        <div class="wallet-info">
+                            <h4>Demo Mode</h4>
+                            <p>Try without a wallet (limited features)</p>
+                        </div>
+                        <div class="wallet-status" id="demoStatus">✓ Available</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Connecting -->
+            <div id="step2Content" class="step-content">
+                <div class="connecting-state">
+                    <div class="connecting-animation">
+                        <div class="pulse-circle"></div>
+                        <div class="wallet-icon-large">
+                            <span id="connectingWalletIcon">🔗</span>
+                        </div>
+                    </div>
+                    <h3>Connecting to <span id="selectedWalletName">Wallet</span></h3>
+                    <p>Please approve the connection in your wallet extension</p>
+                    <div class="connecting-tips">
+                        <p><i class="fas fa-info-circle"></i> Check for popup blockers</p>
+                        <p><i class="fas fa-shield-alt"></i> Your keys never leave your wallet</p>
+                    </div>
+                    <button class="btn-secondary" onclick="goToStep(1)">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Profile Creation -->
+            <div id="step3Content" class="step-content">
+                <div class="profile-creation">
+                    <h3>Create Your Trader Profile</h3>
+                    <p>Customize your identity for the leaderboards</p>
+                    
+                    <div class="profile-form">
                         <div class="form-group">
-                            <label>Choose Avatar</label>
+                            <label for="traderUsername">Username</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="traderUsername" 
+                                       placeholder="Enter username" 
+                                       maxlength="20"
+                                       autocomplete="off">
+                                <span class="input-status" id="inputStatus"></span>
+                            </div>
+                            <small>3-20 characters, letters, numbers, and underscores only</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Choose Your Avatar</label>
                             <div class="avatar-grid">
-                                <div class="avatar-option-modern" data-avatar="🎯" onclick="selectAvatar('🎯')">🎯</div>
+                                <div class="avatar-option-modern selected" data-avatar="🎯" onclick="selectAvatar('🎯')">🎯</div>
                                 <div class="avatar-option-modern" data-avatar="🚀" onclick="selectAvatar('🚀')">🚀</div>
-                                <div class="avatar-option-modern" data-avatar="💎" onclick="selectAvatar('💎')">💎</div>
                                 <div class="avatar-option-modern" data-avatar="⚡" onclick="selectAvatar('⚡')">⚡</div>
-                                <div class="avatar-option-modern" data-avatar="🔥" onclick="selectAvatar('🔥')">🔥</div>
-                                <div class="avatar-option-modern" data-avatar="🎲" onclick="selectAvatar('🎲')">🎲</div>
-                                <div class="avatar-option-modern" data-avatar="🏆" onclick="selectAvatar('🏆')">🏆</div>
-                                <div class="avatar-option-modern" data-avatar="🎪" onclick="selectAvatar('🎪')">🎪</div>
+                                <div class="avatar-option-modern" data-avatar="🦊" onclick="selectAvatar('🦊')">🦊</div>
+                                <div class="avatar-option-modern" data-avatar="🐺" onclick="selectAvatar('🐺')">🐺</div>
+                                <div class="avatar-option-modern" data-avatar="🦅" onclick="selectAvatar('🦅')">🦅</div>
+                                <div class="avatar-option-modern" data-avatar="🐉" onclick="selectAvatar('🐉')">🐉</div>
+                                <div class="avatar-option-modern" data-avatar="🔮" onclick="selectAvatar('🔮')">🔮</div>
                             </div>
                         </div>
                         
                         <div class="profile-preview">
-                            <h4>Preview</h4>
                             <div class="preview-card">
                                 <div class="preview-avatar" id="previewAvatar">🎯</div>
                                 <div class="preview-name" id="previewName">Trader Username</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
-                        <button class="btn-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Continue</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 4: Agreement -->
-            <div class="step-content" id="step4Content">
-                <div class="agreement-step">
-                    <h3>Terms & Conditions</h3>
-                    <div class="terms-content">
-                        <p><strong>By using TokenWars, you agree to:</strong></p>
-                        <ul>
-                            <li>Participate in prediction competitions fairly</li>
-                            <li>Accept that all bets are final once placed</li>
-                            <li>Understand that cryptocurrency trading involves risk</li>
-                            <li>Use the platform responsibly and within your means</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="agreement-checkbox" onclick="toggleAgreement()">
-                        <div class="checkbox" id="agreementCheckbox"></div>
-                        <span>I agree to the Terms & Conditions</span>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn-modal-secondary" onclick="goToStep(3)">Back</button>
-                        <button class="btn-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Complete Setup</button>
+                        
+                        <button id="createProfileBtn" class="btn-primary" onclick="goToStep(4)" disabled>
+                            Continue <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-
+            
+            <!-- Step 4: Terms & Completion -->
+            <div id="step4Content" class="step-content">
+                <div class="terms-completion">
+                    <h3>Almost Ready!</h3>
+                    <p>Review the terms and complete your setup</p>
+                    
+                    <div class="terms-section">
+                        <div class="agreement-checkbox" id="agreementCheckbox" onclick="toggleAgreement()">
+                            <div class="checkbox-mark">✓</div>
+                        </div>
+                        <div class="agreement-text">
+                            <p>I agree to the <a href="#" onclick="openPlatformGuide()">Terms of Service</a> and understand that:</p>
+                            <ul>
+                                <li>Trading involves risk and I can lose my investment</li>
+                                <li>Platform takes a 15% fee from prize pools</li>
+                                <li>All transactions are final and irreversible</li>
+                                <li>I am responsible for my wallet security</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <button id="finalizeBtn" class="btn-primary" onclick="finalizeProfile()" disabled>
+                        Complete Setup <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+            
             <!-- Step 5: Success -->
-            <div class="step-content" id="step5Content">
-                <div class="success-step">
-                    <div class="success-icon">🎉</div>
+            <div id="step5Content" class="step-content">
+                <div class="success-state">
+                    <div class="success-animation">
+                        <div class="success-checkmark">✓</div>
+                    </div>
                     <h3>Welcome to TokenWars!</h3>
-                    <p>Your profile has been created successfully. You're ready to start competing!</p>
+                    <p>Your profile has been created successfully</p>
                     <div class="success-actions">
-                        <button class="btn-primary" onclick="completedOnboarding()">Start Trading</button>
+                        <button class="btn-primary" onclick="completedOnboarding()">
+                            Start Trading <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Files in Dependency Order -->
-    <!-- Configuration first -->
+    <!-- Competition Modal -->
+    <div id="competitionModal" class="competition-modal hidden">
+        <div class="competition-modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Competition Details</h2>
+                <button class="close-button" onclick="closeCompetitionModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Token Information -->
+            <div class="modal-tokens-section">
+                <div class="modal-token-card">
+                    <img id="modalTokenALogo" src="" alt="Token A" class="modal-token-logo">
+                    <h3 id="modalTokenASymbol">TOKEN</h3>
+                    <p id="modalTokenAName">Token Name</p>
+                    <div class="token-price" id="modalTokenAPrice">$0.00</div>
+                    <div class="price-change" id="modalTokenAChange">0%</div>
+                </div>
+                
+                <div class="modal-vs">VS</div>
+                
+                <div class="modal-token-card">
+                    <img id="modalTokenBLogo" src="" alt="Token B" class="modal-token-logo">
+                    <h3 id="modalTokenBSymbol">TOKEN</h3>
+                    <p id="modalTokenBName">Token Name</p>
+                    <div class="token-price" id="modalTokenBPrice">$0.00</div>
+                    <div class="price-change" id="modalTokenBChange">0%</div>
+                </div>
+            </div>
+            
+            <!-- Competition Stats -->
+            <div class="modal-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="modalParticipants">0</div>
+                    <div class="stat-label">Participants</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="modalPrizePool">0 SOL</div>
+                    <div class="stat-label">Prize Pool</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="modalTimeRemaining">0</div>
+                    <div class="stat-label">Time Remaining</div>
+                </div>
+            </div>
+            
+            <!-- Betting Interface -->
+            <div id="bettingInterface" class="betting-interface">
+                <div class="betting-title">Place Your Prediction</div>
+                
+                <div class="token-choice-buttons">
+                    <button id="choiceTokenA" class="token-choice-button" onclick="selectToken('A')">
+                        <div class="token-symbol" id="choiceTokenASymbol">TOKEN A</div>
+                        <div class="bet-button-label">Choose This Token</div>
+                    </button>
+                    
+                    <button id="choiceTokenB" class="token-choice-button" onclick="selectToken('B')">
+                        <div class="token-symbol" id="choiceTokenBSymbol">TOKEN B</div>
+                        <div class="bet-button-label">Choose This Token</div>
+                    </button>
+                </div>
+                
+                <div class="bet-amount-section">
+                    <label for="betAmount">Bet Amount (SOL)</label>
+                    <input type="number" 
+                           id="betAmount" 
+                           class="bet-amount-input" 
+                           min="0.1" 
+                           step="0.1" 
+                           value="0.1"
+                           placeholder="0.1">
+                </div>
+                
+                <button id="placeBetButton" class="place-bet-button" onclick="placeBet()" disabled>
+                    Select a token to continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Guide Modal -->
+    <div id="platformGuideModal" class="platform-guide-modal hidden">
+        <div class="guide-modal-content">
+            <button class="guide-close-button" onclick="closePlatformGuide()">×</button>
+            <div id="guideContent" class="guide-content">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading platform guide...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Application Scripts -->
     <script src="config.js"></script>
-    
-    <!-- Database client setup -->
     <script src="supabase-client.js"></script>
-    
-    <!-- Utility functions -->
-    <script src="utils.js"></script>
-    
-    <!-- Wallet services -->
     <script src="wallet-service.js"></script>
-    
-    <!-- Competition system -->
     <script src="competition.js"></script>
-    
-    <!-- User/portfolio system -->
-    <script src="user.js"></script>
-    
-    <!-- Main application logic (must be last) -->
+    <script src="portfolio.js"></script>
+    <script src="leaderboard.js"></script>
     <script src="app.js"></script>
-
-    <!-- Page Navigation Helper Script -->
-    <script>
-        // Ensure navigation works immediately
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - Setting up navigation and wallet handlers');
-            
-            // Initialize wallet service if available
-            if (window.getWalletService || window.walletService) {
-                const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
-                if (walletService && walletService.initialize) {
-                    walletService.initialize().then(() => {
-                        console.log('Wallet service initialized');
-                        // Check if already connected
-                        if (walletService.isConnected && walletService.isConnected()) {
-                            console.log('Wallet already connected, updating UI');
-                            handleWalletConnectionSuccess();
-                        }
-                    });
-                }
-            }
-            
-            // Helper function to show page
-            window.showPage = function(pageName) {
-                console.log('Navigating to:', pageName);
-                
-                // Hide all pages
-                document.querySelectorAll('.page-content').forEach(page => {
-                    page.classList.remove('active');
-                });
-                
-                // Show requested page
-                const pageElement = document.getElementById(pageName + 'Page');
-                if (pageElement) {
-                    pageElement.classList.add('active');
-                }
-                
-                // Update navigation
-                document.querySelectorAll('.nav-link').forEach(link => {
-                    link.classList.remove('active');
-                    if (link.getAttribute('data-page') === pageName) {
-                        link.classList.add('active');
-                    }
-                });
-                
-                // Trigger page-specific load functions
-                switch(pageName) {
-                    case 'competitions':
-                        if (window.initializeCompetitionsPage) {
-                            window.initializeCompetitionsPage();
-                        }
-                        break;
-                    case 'portfolio':
-                        if (window.initializePortfolio) {
-                            window.initializePortfolio();
-                        }
-                        break;
-                    case 'leaderboard':
-                        if (window.loadLeaderboard) {
-                            window.loadLeaderboard();
-                        }
-                        break;
-                }
-            };
-
-            // Navigation click handlers
-            document.querySelectorAll('[data-page]').forEach(element => {
-                element.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const page = this.getAttribute('data-page');
-                    if (page) {
-                        window.showPage(page);
-                    }
-                });
-            });
-
-            // Wallet connect button handlers
-            document.querySelectorAll('.wallet-connect-btn').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (window.openWalletModal) {
-                        window.openWalletModal();
-                    }
-                });
-            });
-
-            // Disconnect wallet handler
-            document.querySelector('.nav-disconnect')?.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (window.disconnectWallet) {
-                    window.disconnectWallet();
-                }
-            });
-
-            // Modal close handlers
-            document.querySelectorAll('.modal-close').forEach(button => {
-                button.addEventListener('click', function() {
-                    const modal = this.closest('.competition-modal, .wallet-modal');
-                    if (modal) {
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-
-            // Filter change handlers
-            document.getElementById('competition-phase')?.addEventListener('change', function() {
-                console.log('Competition phase filter changed');
-                // Auto-refresh handled in competition.js
-            });
-
-            document.getElementById('sort-by')?.addEventListener('change', function() {
-                console.log('Sort by filter changed');
-                // Auto-refresh handled in competition.js
-            });
-
-            document.getElementById('portfolio-view')?.addEventListener('change', function() {
-                if (window.handlePortfolioViewChange) {
-                    window.handlePortfolioViewChange();
-                }
-            });
-
-            // Leaderboard filter handlers
-            document.getElementById('leaderboard-period')?.addEventListener('change', function() {
-                if (window.handleLeaderboardFilterChange) {
-                    window.handleLeaderboardFilterChange();
-                }
-            });
-
-            document.getElementById('leaderboard-sort')?.addEventListener('change', function() {
-                if (window.handleLeaderboardFilterChange) {
-                    window.handleLeaderboardFilterChange();
-                }
-            });
-        });
-
-        // Helper function to update UI after wallet connection
-        window.updateUIAfterConnection = function() {
-            console.log('Updating UI after wallet connection');
-            
-            // Hide disconnected states
-            document.getElementById('heroDisconnected')?.classList.add('hidden');
-            document.getElementById('competitionsDisconnected')?.classList.add('hidden');
-            document.getElementById('connectWalletBtn')?.classList.add('hidden');
-            
-            // Show connected states
-            document.getElementById('heroConnected')?.classList.remove('hidden');
-            document.getElementById('competitionsConnected')?.classList.remove('hidden');
-            document.getElementById('traderInfo')?.classList.remove('hidden');
-            
-            // Refresh current page content
-            const activePage = document.querySelector('.page-content.active');
-            if (activePage) {
-                const pageId = activePage.id.replace('Page', '');
-                window.showPage(pageId);
-            }
-        };
-
-        // Helper function to update UI after wallet disconnection
-        window.updateUIAfterDisconnection = function() {
-            console.log('Updating UI after wallet disconnection');
-            
-            // Show disconnected states
-            document.getElementById('heroDisconnected')?.classList.remove('hidden');
-            document.getElementById('competitionsDisconnected')?.classList.remove('hidden');
-            document.getElementById('connectWalletBtn')?.classList.remove('hidden');
-            
-            // Hide connected states
-            document.getElementById('heroConnected')?.classList.add('hidden');
-            document.getElementById('competitionsConnected')?.classList.add('hidden');
-            document.getElementById('traderInfo')?.classList.add('hidden');
-            
-            // Go to home page
-            window.showPage('home');
-        };
-
-        // Handle wallet connection success
-        window.handleWalletConnectionSuccess = async function() {
-            console.log('Handling successful wallet connection');
-            
-            // Close modal
-            if (window.closeWalletModal) {
-                window.closeWalletModal();
-            }
-            
-            // Update UI
-            updateUIAfterConnection();
-            
-            // Update navigation display
-            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
-            if (walletService) {
-                const userProfile = walletService.getCurrentUserProfile ? walletService.getCurrentUserProfile() : walletService.getUserProfile();
-                
-                // Update nav trader info (WITHOUT BALANCE)
-                document.getElementById('navTraderName').textContent = userProfile?.username || 'Trader';
-                document.getElementById('navTraderAvatar').textContent = userProfile?.avatar || '🎯';
-                
-                // Update hero trader name
-                document.getElementById('heroTraderNameText').textContent = userProfile?.username || 'Trader';
-            }
-            
-            // Load competitions if on competitions page
-            const activePage = document.querySelector('.page-content.active');
-            if (activePage && activePage.id === 'competitionsPage') {
-                if (window.initializeCompetitionsPage) {
-                    window.initializeCompetitionsPage();
-                }
-            }
-            
-            // Notify app of connection
-            if (window.app && window.app.handleWalletConnection) {
-                window.app.handleWalletConnection();
-            }
-        };
-
-        // Scroll to learn more
-        window.scrollToLearnMore = function(event) {
-            if (event) event.preventDefault();
-            const element = document.getElementById('learnMoreSection');
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-            }
-        };
-    </script>
 </body>
 </html>
