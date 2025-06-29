@@ -1,5 +1,6 @@
 // FIXED Competition.js - Immediate Display & Progressive Enhancement
 // Critical fixes: Immediate UI, graceful degradation, proper show/hide logic
+// NEW FIX: Proper Supabase ready promise waiting
 
 // ==============================================
 // IMMEDIATE GLOBAL FUNCTION EXPOSURE
@@ -89,9 +90,35 @@ async function initializeCompetitionSystemFixed() {
         CompetitionState.initialized = true;
         CompetitionState.loading = true;
         
-        // Get services
+        // FIXED: Wait for Supabase to be ready before getting client
+        if (window.SupabaseReady) {
+            console.log('⏳ Waiting for Supabase client to be ready...');
+            try {
+                await window.SupabaseReady;
+                console.log('✅ Supabase ready promise resolved');
+            } catch (error) {
+                console.warn('⚠️ Supabase ready promise failed:', error);
+            }
+        }
+        
+        // Get services after Supabase is ready
         CompetitionState.supabaseClient = window.supabase;
         CompetitionState.walletService = window.getWalletService?.();
+        
+        // Verify we have a proper Supabase client
+        if (!CompetitionState.supabaseClient || typeof CompetitionState.supabaseClient.from !== 'function') {
+            console.warn('⚠️ Supabase client not properly initialized, retrying...');
+            
+            // Short retry with explicit check
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            CompetitionState.supabaseClient = window.supabase;
+            
+            if (!CompetitionState.supabaseClient || typeof CompetitionState.supabaseClient.from !== 'function') {
+                throw new Error('Supabase client not available after retry');
+            }
+        }
+        
+        console.log('✅ Supabase client verified and ready for competitions');
         
         // Show loading state immediately
         showCompetitionsLoadingState();
@@ -126,9 +153,9 @@ async function loadRealCompetitionsFromDatabase() {
             throw new Error('Supabase client not available');
         }
         
-        // Wait for Supabase to be ready
-        if (window.SupabaseReady) {
-            await window.SupabaseReady;
+        // Verify client has required methods
+        if (typeof CompetitionState.supabaseClient.from !== 'function') {
+            throw new Error('Supabase client missing .from() method');
         }
         
         const { data: competitions, error } = await CompetitionState.supabaseClient
@@ -1230,14 +1257,16 @@ function showNotificationFixed(message, type = 'info') {
 // Export for debugging
 window.CompetitionState = CompetitionState;
 
-console.log('✅ FIXED Competition.js loaded - Database-First!');
+console.log('✅ FIXED Competition.js loaded - Database-First with Supabase Ready Promise!');
 console.log('🔧 CRITICAL FIXES:');
 console.log('   ✅ DATABASE-FIRST loading - competitions from Supabase competitions table');
-console.log('   ✅ REMOVED mock data - all competitions loaded from database');
+console.log('   ✅ SUPABASE READY PROMISE - waits for window.SupabaseReady before using client');
+console.log('   ✅ CLIENT VERIFICATION - checks .from() method exists before using');
+console.log('   ✅ RETRY LOGIC - handles client timing issues gracefully');
 console.log('   ✅ PROPER show/hide logic - connected/disconnected views work correctly');
 console.log('   ✅ TOKEN CACHE integration - enhanced with real token data');
 console.log('   ✅ RELIABLE modal system - betting interface works with database');
 console.log('   ✅ GRACEFUL error handling - proper loading and error states');
 console.log('   ✅ WALLET integration - proper connection status checking');
 console.log('   ✅ REAL BET PLACEMENT - saves to Supabase bets table');
-console.log('🚀 Competitions loaded directly from database!');
+console.log('🚀 Competitions loaded directly from database with proper timing!');
