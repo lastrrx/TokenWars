@@ -1,6 +1,6 @@
 /**
  * BlacklistManager - Live Blacklist Management with Whitelist Analytics
- * Manages token blacklisting, whitelisting, and analytics from token_blacklist table
+ * Updated to use token_address instead of id for all operations
  */
 
 class BlacklistManager {
@@ -25,7 +25,7 @@ class BlacklistManager {
             detectionAccuracy: 0,
             appealsPending: 0
         };
-        this.selectedTokens = new Set();
+        this.selectedTokens = new Set(); // Now stores token_address instead of id
         
         // Store singleton instance
         BlacklistManager.instance = this;
@@ -85,7 +85,7 @@ class BlacklistManager {
                 throw new Error(`Database error: ${error.message}`);
             }
 
-            // Group by category
+            // Clear existing data
             this.blacklistData = {
                 manual: [],
                 automatic: [],
@@ -93,8 +93,18 @@ class BlacklistManager {
                 appeals: []
             };
 
+            // Debug: Log the raw data from database
+            console.log('📊 Raw blacklist data from database:', blacklistedTokens);
+
             if (blacklistedTokens && blacklistedTokens.length > 0) {
                 blacklistedTokens.forEach(token => {
+                    // Debug: Log each token's structure
+                    console.log('🔍 Processing token:', {
+                        token_address: token.token_address,
+                        token_symbol: token.token_symbol,
+                        category: token.category
+                    });
+
                     const category = token.category?.toLowerCase() || 'manual';
                     if (this.blacklistData[category]) {
                         this.blacklistData[category].push(token);
@@ -157,13 +167,15 @@ class BlacklistManager {
             };
 
             // Update admin state
-            this.adminState.blacklistState.statistics = this.statistics;
-            this.adminState.blacklistState.categories = {
-                manual: this.blacklistData.manual.length,
-                automatic: this.blacklistData.automatic.length,
-                community: this.blacklistData.community.length,
-                appeals: this.blacklistData.appeals.length
-            };
+            if (this.adminState.blacklistState) {
+                this.adminState.blacklistState.statistics = this.statistics;
+                this.adminState.blacklistState.categories = {
+                    manual: this.blacklistData.manual.length,
+                    automatic: this.blacklistData.automatic.length,
+                    community: this.blacklistData.community.length,
+                    appeals: this.blacklistData.appeals.length
+                };
+            }
 
             console.log('📊 Blacklist statistics calculated:', this.statistics);
         } catch (error) {
@@ -245,10 +257,13 @@ class BlacklistManager {
         const addedDate = token.added_at ? this.formatDate(token.added_at) : 'Unknown';
         const confidence = token.confidence ? `${Math.round(token.confidence * 100)}%` : 'N/A';
 
+        // Debug: Log token address being used in HTML
+        console.log('🔍 Creating HTML for token address:', token.token_address);
+
         return `
-            <div class="blacklist-item" data-token-id="${token.id}">
+            <div class="blacklist-item" data-token-address="${token.token_address}">
                 <div class="blacklist-token-info">
-                    <input type="checkbox" class="blacklist-checkbox" data-token-id="${token.id}">
+                    <input type="checkbox" class="blacklist-checkbox" data-token-address="${token.token_address}" onchange="window.BlacklistManager.instance.toggleTokenSelection('${token.token_address}')">
                     <div class="token-avatar" style="background: #ef4444; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600;">
                         ${(token.token_symbol || token.token_address.substring(0, 2)).charAt(0).toUpperCase()}
                     </div>
@@ -270,13 +285,13 @@ class BlacklistManager {
                     </div>
                 </div>
                 <div class="blacklist-actions">
-                    <button class="btn btn-small btn-success" onclick="window.BlacklistManager.instance.whitelistToken('${token.id}')">
+                    <button class="btn btn-small btn-success" onclick="window.BlacklistManager.instance.whitelistToken('${token.token_address}')">
                         ✅ Whitelist
                     </button>
-                    <button class="btn btn-small btn-info" onclick="window.BlacklistManager.instance.reviewToken('${token.id}')">
+                    <button class="btn btn-small btn-info" onclick="window.BlacklistManager.instance.reviewToken('${token.token_address}')">
                         🔍 Review
                     </button>
-                    <button class="btn btn-small btn-warning" onclick="window.BlacklistManager.instance.updateSeverity('${token.id}')">
+                    <button class="btn btn-small btn-warning" onclick="window.BlacklistManager.instance.updateSeverity('${token.token_address}')">
                         ⚠️ Update Severity
                     </button>
                 </div>
@@ -287,17 +302,21 @@ class BlacklistManager {
     /**
      * Whitelist Token (Remove from blacklist and add to approval queue)
      */
-    async whitelistToken(tokenId) {
+    async whitelistToken(tokenAddress) {
         try {
-            const token = this.findTokenById(tokenId);
+            // Debug: Log the token address being searched for
+            console.log('🔍 Searching for token with address:', tokenAddress);
+
+            const token = this.findTokenByAddress(tokenAddress);
             if (!token) {
-                throw new Error('Token not found');
+                console.error('❌ Token not found with address:', tokenAddress);
+                throw new Error(`Token not found with address: ${tokenAddress}`);
             }
 
             const confirmed = confirm(`Whitelist ${token.token_symbol || token.token_address}?\n\nThis will:\n1. Remove from blacklist\n2. Add to approval queue for review`);
             if (!confirmed) return;
 
-            console.log(`🔄 Whitelisting token: ${token.token_symbol}`);
+            console.log(`🔄 Whitelisting token: ${token.token_symbol} (${tokenAddress})`);
 
             const supabase = this.getSupabase();
 
@@ -309,7 +328,7 @@ class BlacklistManager {
                     is_active: false,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', tokenId);
+                .eq('token_address', tokenAddress);
 
             if (blacklistError) {
                 throw new Error(`Failed to update blacklist: ${blacklistError.message}`);
@@ -370,7 +389,7 @@ class BlacklistManager {
             this.updateBlacklistDisplay();
 
             // Refresh token approval component if available
-            if (this.adminState.components.tokenApproval) {
+            if (this.adminState.components && this.adminState.components.tokenApproval) {
                 await this.adminState.components.tokenApproval.loadPendingApprovals();
             }
 
@@ -388,26 +407,26 @@ class BlacklistManager {
      */
     async bulkWhitelist() {
         try {
-            const selectedIds = Array.from(this.selectedTokens);
-            if (selectedIds.length === 0) {
+            const selectedAddresses = Array.from(this.selectedTokens);
+            if (selectedAddresses.length === 0) {
                 this.showNotification('No tokens selected for whitelisting', 'warning');
                 return;
             }
 
-            const confirmed = confirm(`Whitelist ${selectedIds.length} selected tokens?\n\nThis will remove them from blacklist and add to approval queue.`);
+            const confirmed = confirm(`Whitelist ${selectedAddresses.length} selected tokens?\n\nThis will remove them from blacklist and add to approval queue.`);
             if (!confirmed) return;
 
-            console.log(`🔄 Bulk whitelisting ${selectedIds.length} tokens...`);
+            console.log(`🔄 Bulk whitelisting ${selectedAddresses.length} tokens...`);
 
             let successCount = 0;
             let errorCount = 0;
 
-            for (const tokenId of selectedIds) {
+            for (const tokenAddress of selectedAddresses) {
                 try {
-                    await this.whitelistToken(tokenId);
+                    await this.whitelistToken(tokenAddress);
                     successCount++;
                 } catch (error) {
-                    console.error(`Failed to whitelist token ${tokenId}:`, error);
+                    console.error(`Failed to whitelist token ${tokenAddress}:`, error);
                     errorCount++;
                 }
             }
@@ -430,11 +449,11 @@ class BlacklistManager {
     /**
      * Review Token (Open details modal or external link)
      */
-    async reviewToken(tokenId) {
+    async reviewToken(tokenAddress) {
         try {
-            const token = this.findTokenById(tokenId);
+            const token = this.findTokenByAddress(tokenAddress);
             if (!token) {
-                throw new Error('Token not found');
+                throw new Error(`Token not found with address: ${tokenAddress}`);
             }
 
             // Create review modal
@@ -503,7 +522,7 @@ class BlacklistManager {
                     ` : ''}
                     
                     <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                        <button onclick="window.BlacklistManager.instance.whitelistToken('${token.id}'); this.closest('.modal-overlay').remove();" 
+                        <button onclick="window.BlacklistManager.instance.whitelistToken('${token.token_address}'); this.closest('.modal-overlay').remove();" 
                                 style="flex: 1; background: #22c55e; color: white; padding: 0.75rem; border: none; border-radius: 6px; cursor: pointer;">
                             ✅ Whitelist Token
                         </button>
@@ -526,11 +545,15 @@ class BlacklistManager {
     /**
      * Update Token Severity
      */
-    async updateSeverity(tokenId) {
+    async updateSeverity(tokenAddress) {
         try {
-            const token = this.findTokenById(tokenId);
+            // Debug: Log the token address being searched for
+            console.log('🔍 Update severity - searching for token with address:', tokenAddress);
+
+            const token = this.findTokenByAddress(tokenAddress);
             if (!token) {
-                throw new Error('Token not found');
+                console.error('❌ Token not found for severity update with address:', tokenAddress);
+                throw new Error(`Token not found with address: ${tokenAddress}`);
             }
 
             const newSeverity = prompt(`Update severity for ${token.token_symbol}:\n\nCurrent: ${token.severity || 'medium'}\n\nEnter new severity (low, medium, high, critical):`, token.severity || 'medium');
@@ -548,7 +571,7 @@ class BlacklistManager {
                     severity: newSeverity.toLowerCase(),
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', tokenId);
+                .eq('token_address', tokenAddress);
 
             if (error) {
                 throw new Error(`Database error: ${error.message}`);
@@ -644,11 +667,12 @@ class BlacklistManager {
     /**
      * Selection Management
      */
-    toggleTokenSelection(tokenId) {
-        if (this.selectedTokens.has(tokenId)) {
-            this.selectedTokens.delete(tokenId);
+    toggleTokenSelection(tokenAddress) {
+        console.log('🔍 Toggling selection for token address:', tokenAddress);
+        if (this.selectedTokens.has(tokenAddress)) {
+            this.selectedTokens.delete(tokenAddress);
         } else {
-            this.selectedTokens.add(tokenId);
+            this.selectedTokens.add(tokenAddress);
         }
         this.updateSelectionCount();
     }
@@ -660,7 +684,7 @@ class BlacklistManager {
             ...this.blacklistData.community
         ];
         
-        allTokens.forEach(token => this.selectedTokens.add(token.id));
+        allTokens.forEach(token => this.selectedTokens.add(token.token_address));
         this.updateSelectionCount();
         this.updateCheckboxes();
     }
@@ -676,26 +700,35 @@ class BlacklistManager {
         if (countElement) {
             countElement.textContent = this.selectedTokens.size;
         }
+        console.log('📊 Selection count updated:', this.selectedTokens.size);
     }
 
     updateCheckboxes() {
         document.querySelectorAll('.blacklist-checkbox').forEach(checkbox => {
-            const tokenId = checkbox.dataset.tokenId;
-            checkbox.checked = this.selectedTokens.has(tokenId);
+            const tokenAddress = checkbox.dataset.tokenAddress;
+            checkbox.checked = this.selectedTokens.has(tokenAddress);
         });
     }
 
     /**
      * Utility Functions
      */
-    findTokenById(tokenId) {
+    findTokenByAddress(tokenAddress) {
         const allTokens = [
             ...this.blacklistData.manual,
             ...this.blacklistData.automatic,
             ...this.blacklistData.community,
             ...this.blacklistData.appeals
         ];
-        return allTokens.find(token => token.id === tokenId);
+        
+        // Debug: Enhanced logging for token search
+        console.log('🔍 findTokenByAddress called with:', tokenAddress);
+        console.log('🔍 Available tokens for search:', allTokens.map(t => t.token_address));
+        
+        const foundToken = allTokens.find(token => token.token_address === tokenAddress);
+        
+        console.log('🔍 findTokenByAddress result:', foundToken ? 'Found' : 'Not found');
+        return foundToken;
     }
 
     formatDate(dateString) {
@@ -788,7 +821,7 @@ window.scanForThreats = function() {
 // Export class
 window.BlacklistManager = BlacklistManager;
 
-console.log('✅ BlacklistManager loaded - Live Data with Whitelist Analytics');
+console.log('✅ BlacklistManager loaded - Using token_address for all operations');
 console.log('🚀 Features:');
 console.log('   📊 Live blacklist data from token_blacklist table');
 console.log('   ✅ Whitelist functionality (blacklist → approval queue)');
@@ -797,3 +830,4 @@ console.log('   🔍 Token review with detailed information');
 console.log('   📤 Export functionality for blacklist data');
 console.log('   🚨 Threat scanning integration');
 console.log('   📝 Complete admin audit logging');
+console.log('   🎯 Token address-based operations (no more ID confusion!)');
