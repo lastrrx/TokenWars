@@ -152,7 +152,7 @@
                 <li><a href="#competitions" class="nav-link" data-page="competitions">Competitions</a></li>
                 <li><a href="#leaderboard" class="nav-link" data-page="leaderboard">Leaderboard</a></li>
                 <li><a href="#portfolio" class="nav-link" data-page="portfolio">Portfolio</a></li>
-                <li><a href="#" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
+                <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
             </ul>
 
             <!-- Wallet Connection State -->
@@ -215,35 +215,14 @@
                 </div>
             </div>
 
-                        <!-- Update the home page "Learn More" section -->
+            <!-- Learn More Section -->
             <div class="learn-more-section" id="learnMoreSection">
                 <div class="container">
                     <div class="section-header">
                         <h2 class="section-title">How TokenWars Works</h2>
                         <p class="section-description">Simple, fair, and transparent token prediction competitions</p>
                     </div>
-            
-                    <div class="process-flow-container">
-                        <h3 class="text-center mb-4" style="color: var(--accent-purple);">Competition Flow</h3>
-                        <div class="process-steps">
-                            <div class="process-step">
-                                <div class="step-number">1</div>
-                                <h4>Choose Competition</h4>
-                                <p>Select from active token battles</p>
-                            </div>
-                            <div class="process-step">
-                                <div class="step-number">2</div>
-                                <h4>Place Prediction</h4>
-                                <p>Pick the winning token with 0.1 SOL</p>
-                            </div>
-                            <div class="process-step">
-                                <div class="step-number">3</div>
-                                <h4>Track Performance</h4>
-                                <p>Watch real-time price movements</p>
-                            </div>
-                        </div>
-                    </div>
-            
+
                     <div class="info-cards-grid">
                         <div class="info-card">
                             <div class="card-icon">📊</div>
@@ -261,16 +240,17 @@
                             <p>Smart contracts handle everything. Escrow opens, competition runs, winners get paid automatically.</p>
                         </div>
                     </div>
-            
+
                     <div class="detailed-guide-cta">
                         <h3>Want More Details?</h3>
                         <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
-                        <button class="btn-hero-primary" onclick="openPlatformGuide()">
+                        <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
                             📖 Complete Platform Guide →
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
+        </div>
         
         <!-- COMPETITIONS PAGE -->
         <div id="competitionsPage" class="page-content">
@@ -1208,49 +1188,5 @@
             window.showPage('home');
         };
     </script>
-<script>
-    // Platform Guide popup function
-    function openPlatformGuide() {
-        const width = 1200;
-        const height = 800;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-        
-        window.open(
-            'how-it-works.html',
-            'TokenWars Platform Guide',
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-        return false;
-    }
-
-    // Fix competition modal display
-    function openEnhancedCompetitionModal(competitionId) {
-        const modal = document.getElementById('competitionModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            // Load competition data here
-            console.log('Opening modal for competition:', competitionId);
-        }
-    }
-
-    // Ensure filters work properly
-    document.addEventListener('DOMContentLoaded', function() {
-        // Remove refresh buttons
-        const refreshButtons = document.querySelectorAll('.btn-refresh');
-        refreshButtons.forEach(btn => btn.style.display = 'none');
-        
-        // Add change event listeners to filters
-        const filters = document.querySelectorAll('.filter-select');
-        filters.forEach(filter => {
-            filter.addEventListener('change', function() {
-                if (window.handleCompetitionFilterChange) {
-                    window.handleCompetitionFilterChange();
-                }
-            });
-        });
-    });
-</script>
-
 </body>
 </html>
