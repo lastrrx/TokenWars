@@ -54,6 +54,18 @@
         #traderInfo:not(.hidden) {
             display: flex !important;
         }
+        
+        /* Fix page content display */
+        .page-content {
+            display: none;
+            min-height: calc(100vh - 80px);
+        }
+        
+        .page-content.active {
+            display: block !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
     </style>
 </head>
 <body>
@@ -74,13 +86,13 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#home" class="logo" onclick="showPage('home'); return false;">TokenWars</a>
+            <a href="#home" class="logo" onclick="(window.showPage || window.fixPageNavigation)('home'); return false;">TokenWars</a>
             
             <ul class="nav-links">
-                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home'); return false;">Home</a></li>
-                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions'); return false;">Competitions</a></li>
-                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard'); return false;">Leaderboard</a></li>
-                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio'); return false;">Portfolio</a></li>
+                <li><a href="#home" class="nav-link active" data-page="home" onclick="(window.showPage || window.fixPageNavigation)('home'); return false;">Home</a></li>
+                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="(window.showPage || window.fixPageNavigation)('competitions'); return false;">Competitions</a></li>
+                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="(window.showPage || window.fixPageNavigation)('leaderboard'); return false;">Leaderboard</a></li>
+                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="(window.showPage || window.fixPageNavigation)('portfolio'); return false;">Portfolio</a></li>
                 <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
                 
                 <!-- Disconnected State -->
@@ -140,7 +152,7 @@
                         </div>
                         
                         <div class="cta-buttons">
-                            <a href="#competitions" class="btn-hero-primary" onclick="showPage('competitions'); return false;">View Competitions</a>
+                            <a href="#competitions" class="btn-hero-primary" onclick="(window.showPage || window.fixPageNavigation)('competitions'); return false;">View Competitions</a>
                             <a href="#" class="btn-secondary" onclick="scrollToLearnMore(); return false;">Learn More</a>
                         </div>
                     </div>
@@ -1262,6 +1274,105 @@
                 window.forceShowConnectedViews();
             }
         }, 2000);
+        
+        // Fix page navigation if showPage function is broken
+        window.fixPageNavigation = function(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show the requested page
+            const pageId = pageName + 'Page';
+            const page = document.getElementById(pageId);
+            if (page) {
+                page.classList.add('active');
+                console.log(`Showing page: ${pageName}`);
+            }
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-page') === pageName) {
+                    link.classList.add('active');
+                }
+            });
+        };
+        
+        // Override showPage if it's not working
+        if (!window.showPage || typeof window.showPage !== 'function') {
+            window.showPage = window.fixPageNavigation;
+        }
+        
+        // Ensure at least one page is visible on load
+        setTimeout(() => {
+            const activePages = document.querySelectorAll('.page-content.active');
+            if (activePages.length === 0) {
+                console.log('No active page found, showing home page');
+                window.fixPageNavigation('home');
+            }
+        }, 1000);
+        
+        // Emergency function to manually show a page
+        window.showPageManually = function(pageName) {
+            // First ensure the page exists
+            const pageId = pageName + 'Page';
+            const page = document.getElementById(pageId);
+            
+            if (!page) {
+                console.error(`Page not found: ${pageId}`);
+                console.log('Available pages:', Array.from(document.querySelectorAll('.page-content')).map(p => p.id));
+                return;
+            }
+            
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(p => {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            });
+            
+            // Show the requested page
+            page.classList.add('active');
+            page.style.display = 'block';
+            page.style.opacity = '1';
+            page.style.transform = 'none';
+            
+            // Update nav
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-page') === pageName) {
+                    link.classList.add('active');
+                }
+            });
+            
+            console.log(`Manually showed page: ${pageName}`);
+        };
+        
+        console.log('Page navigation helpers loaded. Use showPageManually("home"), showPageManually("competitions"), etc. if needed.');
+        
+        // Diagnostic function
+        window.diagnosePages = function() {
+            console.log('=== PAGE DIAGNOSTIC ===');
+            const pages = document.querySelectorAll('.page-content');
+            console.log(`Found ${pages.length} pages:`);
+            
+            pages.forEach(page => {
+                const isActive = page.classList.contains('active');
+                const display = window.getComputedStyle(page).display;
+                const opacity = window.getComputedStyle(page).opacity;
+                console.log(`- ${page.id}: active=${isActive}, display=${display}, opacity=${opacity}`);
+            });
+            
+            const activeNav = document.querySelector('.nav-link.active');
+            console.log(`Active nav: ${activeNav ? activeNav.getAttribute('data-page') : 'none'}`);
+            
+            // Check if showPage exists
+            console.log(`showPage function exists: ${typeof window.showPage}`);
+            console.log('===================');
+        };
+        
+        // Run diagnostic on load
+        setTimeout(window.diagnosePages, 1500);
     </script>
 
     <!-- Competition Card Styling -->
