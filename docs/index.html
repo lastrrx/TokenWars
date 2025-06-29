@@ -25,6 +25,107 @@
     
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Critical inline styles for modals and state management -->
+    <style>
+        /* Ensure hidden class works immediately */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Modal visibility */
+        .wallet-modal:not(.hidden),
+        .competition-modal:not(.hidden) {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Wallet option hover states */
+        .wallet-option {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .wallet-option:hover {
+            transform: translateY(-2px);
+            border-color: var(--gold, #F59E0B);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        /* Avatar selection */
+        .avatar-option-modern {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .avatar-option-modern.selected,
+        .avatar-option-modern:hover {
+            transform: scale(1.1);
+            border-color: var(--gold, #F59E0B);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+        
+        /* Token selection buttons */
+        .token-choice-button {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .token-choice-button.selected {
+            background: linear-gradient(135deg, var(--accent-purple, #8b5cf6), var(--accent-pink, #ec4899));
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        /* Agreement checkbox */
+        .agreement-checkbox {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border, #374151);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox.checked {
+            background: var(--gold, #F59E0B);
+            border-color: var(--gold, #F59E0B);
+        }
+        
+        .checkbox.checked::after {
+            content: '✓';
+            display: block;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            line-height: 16px;
+        }
+        
+        /* Page content visibility */
+        .page-content {
+            display: none;
+        }
+        
+        .page-content.active {
+            display: block !important;
+        }
+        
+        /* View state visibility */
+        .view-state {
+            display: block;
+        }
+        
+        .view-state.hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Database Connection Status -->
@@ -91,7 +192,7 @@
                         <p class="hero-motto">PREDICT. COMPETE. PROFIT.</p>
                         <div class="cta-buttons">
                             <button class="btn-hero-primary wallet-connect-btn">Connect Wallet</button>
-                            <a href="#learn-more" class="btn-secondary">Learn More</a>
+                            <a href="#learnMoreSection" class="btn-secondary" onclick="scrollToLearnMore(event)">Learn More</a>
                         </div>
                     </div>
 
@@ -108,7 +209,7 @@
                         
                         <div class="cta-buttons">
                             <a href="#competitions" class="btn-hero-primary" data-page="competitions">View Competitions</a>
-                            <a href="#learn-more" class="btn-secondary">Learn More</a>
+                            <a href="#learnMoreSection" class="btn-secondary" onclick="scrollToLearnMore(event)">Learn More</a>
                         </div>
                     </div>
                 </div>
@@ -365,7 +466,7 @@
         <div class="competition-modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Competition Details</h3>
-                <button class="modal-close">×</button>
+                <button class="modal-close" onclick="closeCompetitionModal()">×</button>
             </div>
             <div class="modal-body">
                 <div id="modalContent" class="modal-content">
@@ -409,11 +510,11 @@
                     <h4 class="betting-title">Place Your Prediction</h4>
                     
                     <div class="token-choice-buttons">
-                        <button class="token-choice-button" id="choiceTokenA">
+                        <button class="token-choice-button" id="choiceTokenA" onclick="selectToken('A')">
                             <div class="token-symbol" id="choiceTokenASymbol">SOL</div>
                             <div class="bet-button-label">I predict this wins</div>
                         </button>
-                        <button class="token-choice-button" id="choiceTokenB">
+                        <button class="token-choice-button" id="choiceTokenB" onclick="selectToken('B')">
                             <div class="token-symbol" id="choiceTokenBSymbol">USDC</div>
                             <div class="bet-button-label">I predict this wins</div>
                         </button>
@@ -434,7 +535,7 @@
                         >
                     </div>
 
-                    <button class="place-bet-button" id="placeBetButton" disabled>
+                    <button class="place-bet-button" id="placeBetButton" onclick="placeBet()" disabled>
                         Select a token to continue
                     </button>
                 </div>
@@ -446,7 +547,7 @@
     <div class="wallet-modal hidden" id="walletModal">
         <div class="wallet-modal-content">
             <div class="modal-header">
-                <button class="modal-close">×</button>
+                <button class="modal-close" onclick="closeWalletModal()">×</button>
                 <div class="modal-title" id="modalTitle">Connect Wallet</div>
                 <div class="modal-subtitle" id="modalSubtitle">Choose your preferred Solana wallet to get started</div>
             </div>
@@ -469,7 +570,7 @@
                 </div>
 
                 <div class="wallet-options">
-                    <div class="wallet-option" data-wallet="phantom">
+                    <div class="wallet-option" data-wallet="phantom" onclick="selectWallet('phantom')">
                         <div class="wallet-icon">👻</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Phantom</div>
@@ -478,7 +579,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option" data-wallet="solflare">
+                    <div class="wallet-option" data-wallet="solflare" onclick="selectWallet('solflare')">
                         <div class="wallet-icon">☀️</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Solflare</div>
@@ -487,7 +588,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option" data-wallet="backpack">
+                    <div class="wallet-option" data-wallet="backpack" onclick="selectWallet('backpack')">
                         <div class="wallet-icon">🎒</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Backpack</div>
@@ -496,7 +597,7 @@
                         </div>
                     </div>
 
-                    <div class="wallet-option demo-wallet" data-wallet="demo">
+                    <div class="wallet-option demo-wallet" data-wallet="demo" onclick="selectWallet('demo')">
                         <div class="wallet-icon">🎮</div>
                         <div class="wallet-info">
                             <div class="wallet-name">Demo Mode</div>
@@ -507,7 +608,7 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button class="btn-modal-secondary">Cancel</button>
+                    <button class="btn-modal-secondary" onclick="closeWalletModal()">Cancel</button>
                 </div>
             </div>
 
@@ -533,7 +634,7 @@
                         <div class="form-group">
                             <label for="traderUsername">Choose Username</label>
                             <div class="input-group">
-                                <input type="text" id="traderUsername" placeholder="Enter username" maxlength="20">
+                                <input type="text" id="traderUsername" placeholder="Enter username" maxlength="20" oninput="validateUsernameInput()">
                                 <span class="input-status" id="inputStatus"></span>
                             </div>
                         </div>
@@ -541,14 +642,14 @@
                         <div class="form-group">
                             <label>Choose Avatar</label>
                             <div class="avatar-grid">
-                                <div class="avatar-option-modern" data-avatar="🎯">🎯</div>
-                                <div class="avatar-option-modern" data-avatar="🚀">🚀</div>
-                                <div class="avatar-option-modern" data-avatar="💎">💎</div>
-                                <div class="avatar-option-modern" data-avatar="⚡">⚡</div>
-                                <div class="avatar-option-modern" data-avatar="🔥">🔥</div>
-                                <div class="avatar-option-modern" data-avatar="🎲">🎲</div>
-                                <div class="avatar-option-modern" data-avatar="🏆">🏆</div>
-                                <div class="avatar-option-modern" data-avatar="🎪">🎪</div>
+                                <div class="avatar-option-modern" data-avatar="🎯" onclick="selectAvatar('🎯')">🎯</div>
+                                <div class="avatar-option-modern" data-avatar="🚀" onclick="selectAvatar('🚀')">🚀</div>
+                                <div class="avatar-option-modern" data-avatar="💎" onclick="selectAvatar('💎')">💎</div>
+                                <div class="avatar-option-modern" data-avatar="⚡" onclick="selectAvatar('⚡')">⚡</div>
+                                <div class="avatar-option-modern" data-avatar="🔥" onclick="selectAvatar('🔥')">🔥</div>
+                                <div class="avatar-option-modern" data-avatar="🎲" onclick="selectAvatar('🎲')">🎲</div>
+                                <div class="avatar-option-modern" data-avatar="🏆" onclick="selectAvatar('🏆')">🏆</div>
+                                <div class="avatar-option-modern" data-avatar="🎪" onclick="selectAvatar('🎪')">🎪</div>
                             </div>
                         </div>
                         
@@ -562,8 +663,8 @@
                     </div>
                     
                     <div class="modal-actions">
-                        <button class="btn-modal-secondary">Back</button>
-                        <button class="btn-primary" id="createProfileBtn" disabled>Continue</button>
+                        <button class="btn-modal-secondary" onclick="goToStep(1)">Back</button>
+                        <button class="btn-primary" id="createProfileBtn" onclick="goToStep(4)" disabled>Continue</button>
                     </div>
                 </div>
             </div>
@@ -582,14 +683,14 @@
                         </ul>
                     </div>
                     
-                    <div class="agreement-checkbox">
+                    <div class="agreement-checkbox" onclick="toggleAgreement()">
                         <div class="checkbox" id="agreementCheckbox"></div>
                         <span>I agree to the Terms & Conditions</span>
                     </div>
                     
                     <div class="modal-actions">
-                        <button class="btn-modal-secondary">Back</button>
-                        <button class="btn-primary" id="finalizeBtn" disabled>Complete Setup</button>
+                        <button class="btn-modal-secondary" onclick="goToStep(3)">Back</button>
+                        <button class="btn-primary" id="finalizeBtn" onclick="finalizeProfile()" disabled>Complete Setup</button>
                     </div>
                 </div>
             </div>
@@ -601,7 +702,7 @@
                     <h3>Welcome to TokenWars!</h3>
                     <p>Your profile has been created successfully. You're ready to start competing!</p>
                     <div class="success-actions">
-                        <button class="btn-primary">Start Trading</button>
+                        <button class="btn-primary" onclick="completedOnboarding()">Start Trading</button>
                     </div>
                 </div>
             </div>
@@ -630,10 +731,308 @@
     <!-- Main application logic (must be last) -->
     <script src="app.js"></script>
 
+    <!-- Wallet Connection Functions -->
+    <script>
+        // Global wallet modal functions
+        window.openWalletModal = function() {
+            console.log('Opening wallet modal');
+            const modal = document.getElementById('walletModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                checkAvailableWallets();
+            }
+        };
+
+        window.closeWalletModal = function() {
+            console.log('Closing wallet modal');
+            const modal = document.getElementById('walletModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.selectWallet = async function(walletType) {
+            console.log('Selected wallet:', walletType);
+            
+            // Show connecting step
+            showWalletModalStep(2);
+            document.getElementById('selectedWalletName').textContent = 
+                walletType.charAt(0).toUpperCase() + walletType.slice(1);
+            
+            try {
+                // Get wallet service
+                const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
+                if (!walletService) {
+                    throw new Error('Wallet service not available');
+                }
+                
+                // Connect to wallet
+                const result = await walletService.connectWallet(walletType);
+                
+                if (result.success) {
+                    console.log('Wallet connected successfully:', result.publicKey);
+                    
+                    // Check if user exists in database
+                    const userProfile = walletService.getCurrentUserProfile();
+                    
+                    if (userProfile) {
+                        // User exists, skip profile creation
+                        console.log('Existing user found:', userProfile.username);
+                        await handleWalletConnectionSuccess();
+                    } else {
+                        // New user, show profile creation
+                        showWalletModalStep(3);
+                    }
+                } else {
+                    throw new Error(result.error || 'Connection failed');
+                }
+                
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                alert('Failed to connect wallet: ' + error.message);
+                showWalletModalStep(1);
+            }
+        };
+
+        window.showWalletModalStep = function(step) {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.step-indicator').forEach(indicator => {
+                indicator.classList.remove('active');
+            });
+            
+            // Show requested step
+            const stepContent = document.getElementById(`step${step}Content`);
+            const stepIndicator = document.getElementById(`step${step}Indicator`);
+            
+            if (stepContent) stepContent.classList.add('active');
+            if (stepIndicator) stepIndicator.classList.add('active');
+        };
+
+        window.checkAvailableWallets = function() {
+            // Check Phantom
+            if (window.phantom?.solana?.isPhantom) {
+                document.getElementById('phantomStatus').textContent = '✓ Installed';
+                document.getElementById('phantomStatus').style.color = '#22c55e';
+            } else {
+                document.getElementById('phantomStatus').textContent = '✗ Not installed';
+                document.getElementById('phantomStatus').style.color = '#ef4444';
+            }
+            
+            // Check Solflare
+            if (window.solflare?.isSolflare) {
+                document.getElementById('solflareStatus').textContent = '✓ Installed';
+                document.getElementById('solflareStatus').style.color = '#22c55e';
+            } else {
+                document.getElementById('solflareStatus').textContent = '✗ Not installed';
+                document.getElementById('solflareStatus').style.color = '#ef4444';
+            }
+            
+            // Check Backpack
+            if (window.backpack?.isBackpack) {
+                document.getElementById('backpackStatus').textContent = '✓ Installed';
+                document.getElementById('backpackStatus').style.color = '#22c55e';
+            } else {
+                document.getElementById('backpackStatus').textContent = '✗ Not installed';
+                document.getElementById('backpackStatus').style.color = '#ef4444';
+            }
+        };
+
+        window.handleWalletConnectionSuccess = async function() {
+            console.log('Handling successful wallet connection');
+            
+            // Close modal
+            closeWalletModal();
+            
+            // Update UI
+            updateUIAfterConnection();
+            
+            // Update navigation display
+            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
+            if (walletService) {
+                const userProfile = walletService.getCurrentUserProfile();
+                const balance = walletService.getBalance();
+                
+                // Update nav trader info
+                document.getElementById('navTraderName').textContent = userProfile?.username || 'Trader';
+                document.getElementById('navTraderBalance').textContent = `${balance.toFixed(2)} SOL`;
+                document.getElementById('navTraderAvatar').textContent = userProfile?.avatar || '🎯';
+                
+                // Update hero trader name
+                document.getElementById('heroTraderNameText').textContent = userProfile?.username || 'Trader';
+            }
+            
+            // Load competitions if on competitions page
+            const activePage = document.querySelector('.page-content.active');
+            if (activePage && activePage.id === 'competitionsPage') {
+                if (window.initializeCompetitionsPage) {
+                    window.initializeCompetitionsPage();
+                }
+            }
+            
+            // Notify app of connection
+            if (window.app && window.app.handleWalletConnection) {
+                window.app.handleWalletConnection();
+            }
+        };
+
+        window.disconnectWallet = async function() {
+            console.log('Disconnecting wallet');
+            
+            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
+            if (walletService) {
+                await walletService.disconnectWallet();
+            }
+            
+            // Update UI
+            updateUIAfterDisconnection();
+            
+            // Notify app of disconnection
+            if (window.app && window.app.handleWalletDisconnection) {
+                window.app.handleWalletDisconnection();
+            }
+        };
+
+        // Profile creation functions (for new users)
+        window.selectAvatar = function(avatar) {
+            document.querySelectorAll('.avatar-option-modern').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            document.getElementById('previewAvatar').textContent = avatar;
+        };
+
+        window.validateUsernameInput = function() {
+            const username = document.getElementById('traderUsername').value;
+            const createProfileBtn = document.getElementById('createProfileBtn');
+            const previewName = document.getElementById('previewName');
+            const inputStatus = document.getElementById('inputStatus');
+            
+            // Update preview
+            previewName.textContent = username || 'Trader Username';
+            
+            // Validate username
+            if (username.length >= 3 && username.length <= 20) {
+                createProfileBtn.disabled = false;
+                inputStatus.textContent = '✓';
+                inputStatus.style.color = '#22c55e';
+            } else {
+                createProfileBtn.disabled = true;
+                if (username.length > 0) {
+                    inputStatus.textContent = username.length < 3 ? 'Too short' : 'Too long';
+                    inputStatus.style.color = '#ef4444';
+                } else {
+                    inputStatus.textContent = '';
+                }
+            }
+        };
+
+        window.goToStep = function(step) {
+            showWalletModalStep(step);
+        };
+
+        window.toggleAgreement = function() {
+            const checkbox = document.getElementById('agreementCheckbox');
+            const finalizeBtn = document.getElementById('finalizeBtn');
+            
+            checkbox.classList.toggle('checked');
+            finalizeBtn.disabled = !checkbox.classList.contains('checked');
+        };
+
+        window.finalizeProfile = async function() {
+            // This would create the profile for new users
+            // Since you already have a user, this shouldn't be called
+            console.log('Finalizing profile...');
+            showWalletModalStep(5);
+        };
+
+        window.completedOnboarding = function() {
+            handleWalletConnectionSuccess();
+        };
+
+        // Competition modal functions
+        window.closeCompetitionModal = function() {
+            const modal = document.getElementById('competitionModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.selectToken = function(token) {
+            console.log('Selected token:', token);
+            
+            // Update UI
+            document.querySelectorAll('.token-choice-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const selectedButton = document.getElementById(`choiceToken${token}`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
+            }
+            
+            // Enable place bet button
+            const placeBetButton = document.getElementById('placeBetButton');
+            if (placeBetButton) {
+                placeBetButton.disabled = false;
+                placeBetButton.textContent = 'Place Bet';
+            }
+            
+            // Store selection
+            window.selectedToken = token;
+        };
+
+        window.placeBet = async function() {
+            console.log('Placing bet...');
+            
+            if (!window.selectedToken) {
+                alert('Please select a token first');
+                return;
+            }
+            
+            const betAmount = document.getElementById('betAmount').value;
+            console.log('Bet amount:', betAmount, 'SOL');
+            console.log('Selected token:', window.selectedToken);
+            
+            // Here you would integrate with your betting system
+            // For now, just close the modal
+            alert('Bet placement coming soon!');
+            closeCompetitionModal();
+        };
+
+        // Utility functions
+        window.scrollToLearnMore = function(event) {
+            if (event) event.preventDefault();
+            const element = document.getElementById('learnMoreSection');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+    </script>
+
     <!-- Page Navigation Helper Script -->
     <script>
         // Ensure navigation works immediately
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Setting up navigation and wallet handlers');
+            
+            // Initialize wallet service if available
+            if (window.getWalletService || window.walletService) {
+                const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
+                if (walletService && walletService.initialize) {
+                    walletService.initialize().then(() => {
+                        console.log('Wallet service initialized');
+                        // Check if already connected
+                        if (walletService.isConnected && walletService.isConnected()) {
+                            console.log('Wallet already connected, updating UI');
+                            handleWalletConnectionSuccess();
+                        }
+                    });
+                }
+            }
+            
             // Helper function to show page
             window.showPage = function(pageName) {
                 console.log('Navigating to:', pageName);
