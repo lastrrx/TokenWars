@@ -621,6 +621,221 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
     }
 }
 
+// Updated Competition Card Template with Vote Buttons
+// This should be integrated into competition.js where competition cards are created
+
+function createCompetitionCard(competition) {
+    const isVoting = competition.phase === 'voting';
+    const isActive = competition.phase === 'active';
+    
+    // Determine action button text and function
+    let actionButton = '';
+    if (isVoting) {
+        // For voting phase, we don't show the main action button
+        // Vote buttons are shown for each token instead
+        actionButton = '';
+    } else if (isActive) {
+        actionButton = `
+            <button class="action-button" onclick="openCompetitionModal('${competition.id}')">
+                View Live Competition
+            </button>
+        `;
+    } else {
+        actionButton = `
+            <button class="action-button" disabled>
+                Competition Ended
+            </button>
+        `;
+    }
+
+    // Vote buttons for each token (only shown during voting phase)
+    const voteButtonsHTML = isVoting ? `
+        <div class="vote-buttons-container">
+            <button class="vote-button" onclick="voteForToken('${competition.id}', 'A')" data-token="A">
+                <span class="vote-icon">🗳️</span>
+                Vote for ${competition.token_a_symbol}
+            </button>
+            <button class="vote-button" onclick="voteForToken('${competition.id}', 'B')" data-token="B">
+                <span class="vote-icon">🗳️</span>
+                Vote for ${competition.token_b_symbol}
+            </button>
+        </div>
+    ` : '';
+
+    return `
+        <div class="competition-card" onclick="openCompetitionModal('${competition.id}')">
+            <div class="card-status ${competition.phase}">${competition.phase.toUpperCase()}</div>
+            
+            <!-- Timer Section -->
+            <div class="timer enhanced-timer ${getTimerUrgencyClass(competition)}">
+                <div class="timer-content">
+                    <div class="timer-label">${getTimerLabel(competition.phase)}</div>
+                    <div class="time-remaining" data-end-time="${competition.end_time}">
+                        ${formatTimeRemaining(competition.end_time)}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token Battle Display -->
+            <div class="token-battle">
+                <div class="token-info">
+                    <img src="${competition.token_a_logo || '/api/placeholder/48/48'}" 
+                         alt="${competition.token_a_symbol}" 
+                         class="token-logo"
+                         onerror="this.src='/api/placeholder/48/48'">
+                    <div class="token-details">
+                        <h4>${competition.token_a_symbol}</h4>
+                        <div class="token-name">${competition.token_a_name}</div>
+                        <div class="token-price">$${parseFloat(competition.token_a_price || 0).toFixed(4)}</div>
+                        <div class="price-change ${parseFloat(competition.token_a_change || 0) >= 0 ? 'positive' : 'negative'}">
+                            ${parseFloat(competition.token_a_change || 0) >= 0 ? '+' : ''}${parseFloat(competition.token_a_change || 0).toFixed(2)}%
+                        </div>
+                    </div>
+                    ${isVoting ? `
+                        <button class="vote-button" onclick="event.stopPropagation(); voteForToken('${competition.id}', 'A')" data-token="A">
+                            <span class="vote-icon">🗳️</span>
+                            Vote ${competition.token_a_symbol}
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div class="vs-divider">
+                    <div class="vs-text">VS</div>
+                </div>
+                
+                <div class="token-info">
+                    <img src="${competition.token_b_logo || '/api/placeholder/48/48'}" 
+                         alt="${competition.token_b_symbol}" 
+                         class="token-logo"
+                         onerror="this.src='/api/placeholder/48/48'">
+                    <div class="token-details">
+                        <h4>${competition.token_b_symbol}</h4>
+                        <div class="token-name">${competition.token_b_name}</div>
+                        <div class="token-price">$${parseFloat(competition.token_b_price || 0).toFixed(4)}</div>
+                        <div class="price-change ${parseFloat(competition.token_b_change || 0) >= 0 ? 'positive' : 'negative'}">
+                            ${parseFloat(competition.token_b_change || 0) >= 0 ? '+' : ''}${parseFloat(competition.token_b_change || 0).toFixed(2)}%
+                        </div>
+                    </div>
+                    ${isVoting ? `
+                        <button class="vote-button" onclick="event.stopPropagation(); voteForToken('${competition.id}', 'B')" data-token="B">
+                            <span class="vote-icon">🗳️</span>
+                            Vote ${competition.token_b_symbol}
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Competition Stats -->
+            <div class="card-stats">
+                <div class="stat-item">
+                    <div class="stat-value">${competition.total_bets || 0}</div>
+                    <div class="stat-label">Participants</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${parseFloat(competition.total_pool || 0).toFixed(1)} SOL</div>
+                    <div class="stat-label">Prize Pool</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${parseFloat(competition.entry_fee || 0.1).toFixed(1)} SOL</div>
+                    <div class="stat-label">Entry Fee</div>
+                </div>
+            </div>
+
+            <!-- Action Button (not shown during voting) -->
+            ${actionButton}
+
+            <!-- Data Source Indicator -->
+            <div class="data-indicator">
+                <div class="data-dot live"></div>
+                <span>Live Data</span>
+            </div>
+        </div>
+    `;
+}
+
+// Vote function that needs to be implemented
+async function voteForToken(competitionId, tokenChoice) {
+    try {
+        console.log(`Voting for token ${tokenChoice} in competition ${competitionId}`);
+        
+        // Prevent event bubbling
+        event.stopPropagation();
+        
+        // Check if user is connected
+        if (!WalletState.isConnected) {
+            openWalletModal();
+            return;
+        }
+
+        // Disable the vote button to prevent double voting
+        const voteButtons = document.querySelectorAll(`[data-token="${tokenChoice}"]`);
+        voteButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="vote-icon">⏳</span> Voting...';
+        });
+
+        // Place the vote (integrate with existing betting system)
+        const result = await placeBetOnToken(competitionId, tokenChoice, 0.1); // Default 0.1 SOL
+        
+        if (result.success) {
+            // Show success feedback
+            showNotification('Vote placed successfully!', 'success');
+            
+            // Refresh the competition display
+            await loadActiveCompetitions();
+        } else {
+            throw new Error(result.error || 'Failed to place vote');
+        }
+        
+    } catch (error) {
+        console.error('Error voting for token:', error);
+        showNotification('Failed to place vote: ' + error.message, 'error');
+        
+        // Re-enable vote buttons
+        const voteButtons = document.querySelectorAll(`[data-token="${tokenChoice}"]`);
+        voteButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.innerHTML = `<span class="vote-icon">🗳️</span> Vote ${tokenChoice}`;
+        });
+    }
+}
+
+// Helper function to get timer urgency class
+function getTimerUrgencyClass(competition) {
+    const timeRemaining = new Date(competition.end_time) - new Date();
+    const hours = timeRemaining / (1000 * 60 * 60);
+    
+    if (timeRemaining <= 30 * 1000) { // 30 seconds
+        return 'timer-final-countdown';
+    } else if (hours <= 1) {
+        return 'timer-critical';
+    } else if (hours <= 6) {
+        return 'timer-warning';
+    } else if (hours <= 24) {
+        return 'timer-caution';
+    } else {
+        return 'timer-normal';
+    }
+}
+
+// Helper function to get timer label based on phase
+function getTimerLabel(phase) {
+    switch (phase) {
+        case 'voting':
+            return 'VOTING ENDS IN';
+        case 'active':
+            return 'COMPETITION ENDS IN';
+        default:
+            return 'ENDED';
+    }
+}
+
+// Helper function for notifications (implement as needed)
+function showNotification(message, type) {
+    // Implement notification system
+    console.log(`${type.toUpperCase()}: ${message}`);
+}
+
 // ==============================================
 // MODAL SYSTEM (Simplified)
 // ==============================================
