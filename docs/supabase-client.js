@@ -1,9 +1,15 @@
 // FIXED Supabase Client Initialization and Database Interface
-// CRITICAL FIX: Resolved window.supabase naming conflict
+// CRITICAL FIX: Added promise-based readiness system for dependency coordination
 
 // Global variables
 let supabaseClient = null;
 let currentUser = null;
+
+// SERVICE READINESS PROMISE - Resolves when Supabase client is ready
+window.SupabaseReady = new Promise((resolve, reject) => {
+    window._resolveSupabaseReady = resolve;
+    window._rejectSupabaseReady = reject;
+});
 
 // Immediately expose functions to prevent "function not defined" errors
 window.initializeSupabase = initializeSupabase;
@@ -106,6 +112,12 @@ async function initializeSupabase() {
             'window.supabase.channel exists': typeof window.supabase?.channel
         });
         
+        // RESOLVE THE READINESS PROMISE - Signal to other services
+        if (window._resolveSupabaseReady) {
+            window._resolveSupabaseReady(supabaseClient);
+            console.log('✅ SupabaseReady promise resolved');
+        }
+        
         updateDbStatus('connected', '✅ Database: Connected');
         
         // Test connection with improved error handling
@@ -121,6 +133,12 @@ async function initializeSupabase() {
     } catch (error) {
         console.error('❌ Failed to initialize Supabase:', error);
         updateDbStatus('disconnected', `❌ Database: ${error.message}`);
+        
+        // REJECT THE READINESS PROMISE on failure
+        if (window._rejectSupabaseReady) {
+            window._rejectSupabaseReady(error);
+        }
+        
         throw error;
     }
 }
@@ -761,10 +779,11 @@ if (document.readyState === 'loading') {
     autoInitialize();
 }
 
-console.log('✅ FIXED Supabase client module loaded - RESOLVED NAMING CONFLICT');
+console.log('✅ FIXED Supabase client module loaded - WITH READINESS PROMISE');
 console.log('🔧 CRITICAL FIXES:');
-console.log('   ✅ FIXED: Resolved window.supabase naming conflict');
-console.log('   ✅ FIXED: Client exposed immediately and synchronously');
-console.log('   ✅ FIXED: Proper separation of library vs client instance');
-console.log('   ✅ FIXED: Race condition eliminated');
-console.log('🎯 window.supabase is now ALWAYS the client instance with .from() and .channel()');
+console.log('   ✅ FIXED: Added SupabaseReady promise for dependency coordination');
+console.log('   ✅ FIXED: Promise resolves when client is ready');
+console.log('   ✅ FIXED: Other services can await window.SupabaseReady');
+console.log('   ✅ FIXED: Maintains all existing functionality');
+console.log('🎯 window.supabase is the client instance with .from() and .channel()');
+console.log('🎯 window.SupabaseReady is the promise that resolves when ready');
