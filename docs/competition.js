@@ -1,12 +1,12 @@
 // Enhanced Competition.js - VOTING/ACTIVE ONLY VERSION
 // Integrates competitions page with main app and Supabase database
-// FIXED: Proper Supabase client reference
+// FIXED: Proper dependency coordination with SupabaseReady promise
 
 // Global state for competitions
 const CompetitionState = {
     activeCompetitions: [],
     votingCompetitions: [],
-    supabaseClient: null,
+    // REMOVED direct supabaseClient assignment - will get it when needed
     walletService: null,
     tokenService: null,
     lastUpdate: null,
@@ -19,19 +19,32 @@ const CompetitionState = {
 };
 
 /**
+ * FIXED: Get Supabase client when needed (after it's ready)
+ */
+function getSupabaseClient() {
+    return window.supabase;
+}
+
+/**
  * Initialize Competition System with Real Database Integration
  */
 async function initializeCompetitionSystem() {
     console.log('🏁 Initializing competition system for VOTING/ACTIVE competitions...');
     
     try {
-        // FIXED: Get direct Supabase client instead of wrapper
-        CompetitionState.supabaseClient = window.supabase;
+        // FIXED: Wait for Supabase to be ready before proceeding
+        console.log('⏳ Waiting for Supabase client to be ready...');
+        await window.SupabaseReady;
+        console.log('✅ Supabase client is ready');
+        
+        // Get wallet and token services
         CompetitionState.walletService = window.getWalletService?.();
         CompetitionState.tokenService = window.getTokenService?.();
         
-        if (!CompetitionState.supabaseClient) {
-            console.error('❌ Supabase client not available - cannot load competitions');
+        // Verify Supabase client is available
+        const supabaseClient = getSupabaseClient();
+        if (!supabaseClient) {
+            console.error('❌ Supabase client not available after waiting');
             showEmptyState('No database connection available');
             return;
         }
@@ -426,7 +439,9 @@ async function loadActiveCompetitions() {
         
         console.log('📊 Loading VOTING and ACTIVE competitions from database...');
         
-        if (!CompetitionState.supabaseClient) {
+        // FIXED: Get Supabase client when needed
+        const supabaseClient = getSupabaseClient();
+        if (!supabaseClient) {
             console.error('❌ No Supabase client available');
             CompetitionState.activeCompetitions = [];
             CompetitionState.votingCompetitions = [];
@@ -435,7 +450,7 @@ async function loadActiveCompetitions() {
         }
         
         // FIXED: Only load VOTING and ACTIVE competitions
-        const { data: competitions, error } = await CompetitionState.supabaseClient
+        const { data: competitions, error } = await supabaseClient
             .from('competitions')
             .select('*')
             .in('status', ['VOTING', 'ACTIVE'])
@@ -488,6 +503,13 @@ async function enhanceCompetitionsWithTokenCache(competitions) {
     console.log('🔗 Enhancing competitions with token cache data...');
     const enhanced = [];
     
+    // FIXED: Get Supabase client when needed
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) {
+        console.error('❌ No Supabase client available for token enhancement');
+        return competitions; // Return unenhanced competitions
+    }
+    
     // Get all unique token addresses
     const tokenAddresses = new Set();
     competitions.forEach(comp => {
@@ -496,7 +518,7 @@ async function enhanceCompetitionsWithTokenCache(competitions) {
     });
     
     // Fetch token cache data for all tokens at once
-    const { data: tokenCacheData, error: tokenError } = await CompetitionState.supabaseClient
+    const { data: tokenCacheData, error: tokenError } = await supabaseClient
         .from('token_cache')
         .select('*')
         .in('token_address', Array.from(tokenAddresses));
@@ -695,8 +717,15 @@ async function loadUserBets() {
             return;
         }
         
+        // FIXED: Get Supabase client when needed
+        const supabaseClient = getSupabaseClient();
+        if (!supabaseClient) {
+            console.error('❌ No Supabase client available for loading user bets');
+            return;
+        }
+        
         // Get user bets from database
-        const { data: bets, error } = await CompetitionState.supabaseClient
+        const { data: bets, error } = await supabaseClient
             .from('bets')
             .select('*')
             .eq('user_wallet', walletAddress)
@@ -1140,12 +1169,14 @@ function openEnhancedCompetitionModal(competitionId) {
  */
 function setupRealTimeSubscriptions() {
     try {
-        if (!CompetitionState.supabaseClient) {
+        // FIXED: Get Supabase client when needed
+        const supabaseClient = getSupabaseClient();
+        if (!supabaseClient) {
             console.log('Real-time subscriptions not available - no database connection');
             return;
         }
         
-        CompetitionState.realTimeSubscription = CompetitionState.supabaseClient
+        CompetitionState.realTimeSubscription = supabaseClient
             .channel('competitions_changes')
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'competitions' },
@@ -1365,7 +1396,7 @@ window.cleanupCompetitionsPage = cleanupCompetitionsPage;
 // For debugging
 window.CompetitionState = CompetitionState;
 
-console.log('✅ FIXED Competition.js loaded - VOTING/ACTIVE ONLY');
+console.log('✅ FIXED Competition.js loaded - WITH DEPENDENCY COORDINATION');
 console.log('🚀 Features:');
 console.log('   ✅ Only loads VOTING and ACTIVE competitions');
 console.log('   ✅ Token cache data integration (price, volume, market cap)');
@@ -1375,4 +1406,5 @@ console.log('   ✅ Real-time updates and subscriptions');
 console.log('   ❌ REMOVED: All fallback/demo data');
 console.log('   ❌ REMOVED: SETUP/CANCELLED/CLOSED status handling');
 console.log('   🎯 NEW: Pure VOTING/ACTIVE database experience');
-console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
+console.log('🔧 FIXED: Waits for SupabaseReady promise before using client');
+console.log('🔧 FIXED: Uses getSupabaseClient() function instead of direct assignment');
