@@ -260,7 +260,6 @@
                     </div>
                 </div>
             </div>
-        </div>
         
         <!-- COMPETITIONS PAGE -->
         <div id="competitionsPage" class="page-content">
@@ -806,9 +805,13 @@
         /* Enhanced Competition Cards */
         .competitions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 2rem;
-            margin-top: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(var(--card-width), 1fr));
+            gap: 1.25rem;
+            padding: 1.5rem 0;
+            justify-content: center;
+            justify-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .competition-card {
