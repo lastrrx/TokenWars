@@ -1057,7 +1057,7 @@ async function placeBetFixed() {
         
         // Refresh competitions display
         setTimeout(() => {
-            updateCompetitionsDisplayFixed();
+            loadActiveCompetitionsFixed();  // ✅ reload + display updated competiion card data
         }, 1000);
         
     } catch (error) {
