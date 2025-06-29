@@ -1,11 +1,5 @@
-// FIXED Main Application Logic - PARALLEL INITIALIZATION & LAZY LOADING
-// 🚀 PERFORMANCE OPTIMIZATIONS:
-// ✅ 80% faster startup with parallel service initialization
-// ✅ 60% faster navigation with lazy page loading
-// ✅ Instant UI updates with skeleton screens
-// ✅ Non-blocking wallet connection
-// ✅ Progressive enhancement as services become available
-// 🔧 FIXED: Proper dependency coordination with SupabaseReady promise
+// ENHANCED Main Application Logic - PARALLEL INITIALIZATION & LAZY LOADING
+// Complete overhaul with removed balance display and platform guide modal
 
 // Global state
 let walletService = null;
@@ -23,7 +17,7 @@ let dataRefreshInterval = null;
 let currentPage = 'home';
 let pageHistory = ['home'];
 
-// OPTIMIZED: Service initialization state tracking
+// Service initialization state tracking
 let serviceStates = {
     wallet: { initialized: false, loading: false, error: null },
     supabase: { initialized: false, loading: false, error: null },
@@ -31,7 +25,7 @@ let serviceStates = {
     competition: { initialized: false, loading: false, error: null }
 };
 
-// OPTIMIZED: Page content loading state
+// Page content loading state
 let pageStates = {
     home: { loaded: false, loading: false, error: null },
     competitions: { loaded: false, loading: false, error: null },
@@ -46,13 +40,15 @@ let dataStatus = {
     supabaseReady: false
 };
 
+// Loading timeout tracking
+let loadingTimeouts = new Map();
+
 // ==============================================
-// OPTIMIZED PARALLEL SERVICE INITIALIZATION WITH COORDINATION
+// OPTIMIZED PARALLEL SERVICE INITIALIZATION
 // ==============================================
 
 /**
- * 🚀 OPTIMIZED: Parallel service initialization with dependency coordination
- * Services initialize in parallel but coordinate critical dependencies
+ * Parallel service initialization with dependency coordination
  */
 async function initializeServicesParallel() {
     console.log('🚀 Starting PARALLEL service initialization with dependency coordination...');
@@ -66,7 +62,6 @@ async function initializeServicesParallel() {
         await ensureConfigurationReady();
         
         // Step 2: Initialize services with proper dependency coordination
-        // Phase 1: Independent services (Supabase and Wallet can start immediately)
         const phase1Promises = [
             initializeSupabaseParallel(),
             initializeWalletServiceParallel()
@@ -75,7 +70,6 @@ async function initializeServicesParallel() {
         console.log('⚡ Phase 1: Initializing independent services...');
         const phase1Results = await Promise.allSettled(phase1Promises);
         
-        // Phase 2: Dependent services (Portfolio and Competition need dependencies)
         const phase2Promises = [
             initializePortfolioSystemParallel(),
             initializeCompetitionSystemParallel()
@@ -164,21 +158,17 @@ function processParallelResults(results) {
 }
 
 /**
- * 🚀 OPTIMIZED: Non-blocking Supabase initialization
- * FIXED: Resolves SupabaseReady promise that dependent services wait for
+ * Non-blocking Supabase initialization
  */
 async function initializeSupabaseParallel() {
     try {
         serviceStates.supabase.loading = true;
         console.log('🔄 Supabase: Starting parallel initialization...');
         
-        // Quick availability check
         if (!window.SUPABASE_CONFIG?.url) {
             throw new Error('Supabase configuration not available');
         }
         
-        // FIXED: Wait for proper Supabase client (window.supabase for database operations)
-        // This will also resolve the global SupabaseReady promise when complete
         const supabaseClient = await waitForSupabaseWithTimeout(5000);
         
         if (!supabaseClient) {
@@ -210,7 +200,7 @@ async function initializeSupabaseParallel() {
 }
 
 /**
- * 🚀 OPTIMIZED: Non-blocking wallet service initialization
+ * Non-blocking wallet service initialization
  */
 async function initializeWalletServiceParallel() {
     try {
@@ -244,22 +234,19 @@ async function initializeWalletServiceParallel() {
 }
 
 /**
- * 🚀 OPTIMIZED: Non-blocking portfolio initialization
+ * Non-blocking portfolio initialization
  */
 async function initializePortfolioSystemParallel() {
     try {
         serviceStates.portfolio.loading = true;
         console.log('🔄 Portfolio: Starting parallel initialization...');
         
-        // Portfolio system can initialize without wallet connection
         if (window.initializePortfolio && typeof window.initializePortfolio === 'function') {
-            // Initialize portfolio system (this might fail if wallet not connected, that's OK)
             try {
                 await window.initializePortfolio();
                 console.log('✅ Portfolio: System ready');
                 return { success: true, service: 'portfolio' };
             } catch (portfolioError) {
-                // Portfolio failure is not critical - user might not be connected
                 console.log('ℹ️ Portfolio: Will initialize when wallet connects');
                 return { success: true, service: 'portfolio', note: 'Deferred until wallet connection' };
             }
@@ -277,18 +264,14 @@ async function initializePortfolioSystemParallel() {
 }
 
 /**
- * 🚀 OPTIMIZED: Competition system initialization with dependency coordination
- * FIXED: Waits for Supabase to be ready before initializing
+ * Competition system initialization with dependency coordination
  */
 async function initializeCompetitionSystemParallel() {
     try {
         serviceStates.competition.loading = true;
         console.log('🔄 Competition: Starting initialization with dependency check...');
         
-        // Competition system needs to wait for Supabase to be ready
         if (window.initializeCompetitionSystem && typeof window.initializeCompetitionSystem === 'function') {
-            // The competition system will internally wait for SupabaseReady promise
-            // This is non-blocking here but coordinated internally
             await window.initializeCompetitionSystem();
             console.log('✅ Competition: System ready');
             return { success: true, service: 'competition' };
@@ -299,7 +282,6 @@ async function initializeCompetitionSystemParallel() {
         
     } catch (error) {
         console.error('❌ Competition parallel initialization failed:', error);
-        // Competition failure is not critical for basic app functionality
         console.log('ℹ️ Competition: Will retry when accessed');
         return { success: true, service: 'competition', note: 'Will retry on access' };
     } finally {
@@ -308,18 +290,16 @@ async function initializeCompetitionSystemParallel() {
 }
 
 /**
- * FIXED: Wait for Supabase with proper client reference checking
+ * Wait for Supabase with proper client reference checking
  */
 async function waitForSupabaseWithTimeout(timeoutMs = 5000) {
     const startTime = Date.now();
     
     while (Date.now() - startTime < timeoutMs) {
-        // FIXED: Check for window.supabase (the actual client with .from() method)
         if (window.supabase && window.supabase.from) {
             return window.supabase;
         }
         
-        // FIXED: Also check the wrapper's getter method as fallback
         if (window.supabaseClient && window.supabaseClient.getSupabaseClient) {
             const client = window.supabaseClient.getSupabaseClient();
             if (client && client.from) {
@@ -359,8 +339,7 @@ async function ensureConfigurationReady() {
 // ==============================================
 
 /**
- * 🚀 OPTIMIZED: Instant page switching with lazy content loading
- * 60% faster navigation - pages show immediately, content loads in background
+ * Instant page switching with lazy content loading
  */
 function showPageOptimized(pageName, updateHash = true) {
     console.log(`📄 Optimized navigation to: ${pageName}`);
@@ -376,13 +355,19 @@ function showPageOptimized(pageName, updateHash = true) {
         return;
     }
     
-    // INSTANT: Update navigation immediately
+    // Clear any existing loading timeouts for the previous page
+    if (loadingTimeouts.has(currentPage)) {
+        clearTimeout(loadingTimeouts.get(currentPage));
+        loadingTimeouts.delete(currentPage);
+    }
+    
+    // Update navigation immediately
     updateActiveNavLink(pageName);
     
-    // INSTANT: Show page with skeleton screen
+    // Show page with skeleton screen
     showPageWithSkeleton(pageName);
     
-    // INSTANT: Update URL
+    // Update URL
     if (updateHash) {
         window.location.hash = pageName;
     }
@@ -397,7 +382,7 @@ function showPageOptimized(pageName, updateHash = true) {
     
     currentPage = pageName;
     
-    // BACKGROUND: Load content asynchronously
+    // Load content asynchronously
     loadPageContentAsync(pageName);
     
     console.log(`✅ Instant navigation to ${pageName} complete`);
@@ -423,7 +408,7 @@ function showPageWithSkeleton(pageName) {
 }
 
 /**
- * 🚀 OPTIMIZED: Asynchronous page content loading
+ * Asynchronous page content loading with timeout handling
  */
 async function loadPageContentAsync(pageName) {
     // Prevent duplicate loading
@@ -443,11 +428,27 @@ async function loadPageContentAsync(pageName) {
         pageStates[pageName].loading = true;
         console.log(`🔄 Loading ${pageName} content asynchronously...`);
         
+        // Set loading timeout
+        const timeoutId = setTimeout(() => {
+            if (pageStates[pageName].loading) {
+                console.warn(`⚠️ ${pageName} loading timeout`);
+                showPageError(pageName, 'Loading is taking longer than expected. Please check your connection.');
+            }
+        }, 10000); // 10 second timeout
+        
+        loadingTimeouts.set(pageName, timeoutId);
+        
         // Show loading state
         updatePageLoadingState(pageName, true);
         
         // Load content based on page type
         await loadSpecificPageContent(pageName);
+        
+        // Clear timeout
+        if (loadingTimeouts.has(pageName)) {
+            clearTimeout(loadingTimeouts.get(pageName));
+            loadingTimeouts.delete(pageName);
+        }
         
         // Mark as loaded
         pageStates[pageName].loaded = true;
@@ -461,6 +462,12 @@ async function loadPageContentAsync(pageName) {
         
     } catch (error) {
         console.error(`❌ Failed to load ${pageName} content:`, error);
+        
+        // Clear timeout
+        if (loadingTimeouts.has(pageName)) {
+            clearTimeout(loadingTimeouts.get(pageName));
+            loadingTimeouts.delete(pageName);
+        }
         
         pageStates[pageName].error = error.message;
         pageStates[pageName].loaded = false;
@@ -521,7 +528,7 @@ async function loadSpecificPageContent(pageName) {
 }
 
 /**
- * 🚀 OPTIMIZED: Portfolio page initialization
+ * Portfolio page initialization
  */
 async function initializePortfolioPageOptimized() {
     console.log('📊 Optimized portfolio initialization...');
@@ -675,7 +682,6 @@ function generateCompetitionsSkeleton() {
                 <div class="skeleton-filters">
                     <div class="skeleton-filter"></div>
                     <div class="skeleton-filter"></div>
-                    <div class="skeleton-button"></div>
                 </div>
             </div>
             <div class="skeleton-stats">
@@ -853,7 +859,7 @@ function retryPageLoad(pageName) {
 // ==============================================
 
 /**
- * 🚀 OPTIMIZED: Main app initialization with parallel services
+ * Main app initialization with parallel services
  */
 async function initializeApp() {
     console.log('🚀 Starting OPTIMIZED TokenWars initialization...');
@@ -887,7 +893,7 @@ async function initializeApp() {
 }
 
 // ==============================================
-// PRESERVED EXISTING FUNCTIONS (Required for compatibility)
+// PRESERVED EXISTING FUNCTIONS
 // ==============================================
 
 // Keep all existing navigation functions for backward compatibility
@@ -967,7 +973,7 @@ function updatePageFromHash() {
 }
 
 // ==============================================
-// WALLET INTEGRATION (Preserved from original)
+// WALLET INTEGRATION (WITHOUT BALANCE DISPLAY)
 // ==============================================
 
 /**
@@ -1011,10 +1017,7 @@ function setupWalletEventListeners() {
                 updateUIForDisconnectedUser();
             }
             
-            if (eventType === 'balanceUpdated') {
-                console.log('💰 Balance updated:', data);
-                updateBalanceDisplay(data);
-            }
+            // REMOVED: Balance update handling
         });
         
         console.log('✅ Wallet event listeners set up successfully');
@@ -1148,22 +1151,13 @@ function handleUserProfileNeeded(data) {
     }
 }
 
-function updateBalanceDisplay(data) {
-    try {
-        const balanceElement = document.getElementById('navTraderBalance');
-        if (balanceElement && data.formatted) {
-            balanceElement.textContent = `${data.formatted} SOL`;
-        }
-    } catch (error) {
-        console.error('❌ Error updating balance display:', error);
-    }
-}
+// REMOVED: updateBalanceDisplay function
 
 // ==============================================
-// UTILITY AND HELPER FUNCTIONS (Preserved)
+// UTILITY AND HELPER FUNCTIONS
 // ==============================================
 
-// All existing utility functions preserved...
+// Update UI functions WITHOUT balance display
 function updateUIForConnectedUser() {
     try {
         const connectBtn = document.getElementById('connectWalletBtn');
@@ -1215,6 +1209,7 @@ function updateUIForDisconnectedUser() {
     }
 }
 
+// Updated trader display WITHOUT balance
 function updateTraderDisplayElements(profile) {
     try {
         const elements = [
@@ -1230,11 +1225,7 @@ function updateTraderDisplayElements(profile) {
             }
         });
         
-        const balanceElement = document.getElementById('navTraderBalance');
-        if (balanceElement && walletService) {
-            const status = walletService.getConnectionStatus();
-            balanceElement.textContent = `${status.formattedBalance || '0.00'} SOL`;
-        }
+        // REMOVED: Balance display update
         
     } catch (error) {
         console.error('❌ Error updating trader display elements:', error);
@@ -1260,11 +1251,7 @@ function updateTraderDisplayElementsNoProfile(user) {
             }
         });
         
-        const balanceElement = document.getElementById('navTraderBalance');
-        if (balanceElement && walletService) {
-            const status = walletService.getConnectionStatus();
-            balanceElement.textContent = `${status.formattedBalance || '0.00'} SOL`;
-        }
+        // REMOVED: Balance display update
         
     } catch (error) {
         console.error('❌ Error updating trader display elements (no profile):', error);
@@ -1395,11 +1382,11 @@ function startDataRefreshMonitoring() {
 }
 
 // ==============================================
-// FIXED DATABASE FUNCTIONS
+// DATABASE FUNCTIONS
 // ==============================================
 
 /**
- * FIXED: Refresh data from tables using correct Supabase client
+ * Refresh data from tables using correct Supabase client
  */
 async function refreshDataFromTables() {
     console.log('🔄 Refreshing data from tables...');
@@ -1410,7 +1397,6 @@ async function refreshDataFromTables() {
             tokens: { success: false, error: null }
         };
         
-        // FIXED: Use window.supabase (the actual client) for database operations
         if (dataStatus.supabaseReady && window.supabase) {
             try {
                 const { data: competitions, error } = await window.supabase
@@ -1442,11 +1428,10 @@ async function refreshDataFromTables() {
 }
 
 /**
- * FIXED: Test basic table access using correct Supabase client
+ * Test basic table access using correct Supabase client
  */
 async function testBasicTableAccess() {
     try {
-        // FIXED: Use window.supabase (the actual client) for database operations
         if (!window.supabase) {
             throw new Error('Supabase client not available');
         }
@@ -1465,6 +1450,100 @@ async function testBasicTableAccess() {
     } catch (error) {
         console.error('❌ Basic table access test failed:', error);
         return { success: false, error: error.message };
+    }
+}
+
+// ==============================================
+// PLATFORM GUIDE MODAL
+// ==============================================
+
+/**
+ * Open platform guide in modal instead of new window
+ */
+function openPlatformGuide() {
+    console.log('📖 Opening platform guide modal...');
+    
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('platformGuideModal');
+    if (!modal) {
+        modal = createPlatformGuideModal();
+        document.body.appendChild(modal);
+    }
+    
+    // Load content
+    loadPlatformGuideContent();
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Create platform guide modal
+ */
+function createPlatformGuideModal() {
+    const modal = document.createElement('div');
+    modal.id = 'platformGuideModal';
+    modal.className = 'platform-guide-modal hidden';
+    modal.innerHTML = `
+        <div class="guide-modal-content">
+            <button class="guide-close-button" onclick="closePlatformGuide()">×</button>
+            <div id="guideContent" class="guide-content">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading platform guide...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    return modal;
+}
+
+/**
+ * Load platform guide content
+ */
+async function loadPlatformGuideContent() {
+    try {
+        // Fetch the how-it-works.html content
+        const response = await fetch('how-it-works.html');
+        if (!response.ok) {
+            throw new Error('Failed to load guide content');
+        }
+        
+        const html = await response.text();
+        
+        // Extract body content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const bodyContent = doc.querySelector('body').innerHTML;
+        
+        // Update modal content
+        const guideContent = document.getElementById('guideContent');
+        if (guideContent) {
+            guideContent.innerHTML = bodyContent;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error loading platform guide:', error);
+        const guideContent = document.getElementById('guideContent');
+        if (guideContent) {
+            guideContent.innerHTML = `
+                <div class="error-state">
+                    <h2>Failed to Load Guide</h2>
+                    <p>Unable to load the platform guide. Please try again later.</p>
+                    <button class="btn-primary" onclick="closePlatformGuide()">Close</button>
+                </div>
+            `;
+        }
+    }
+}
+
+/**
+ * Close platform guide modal
+ */
+function closePlatformGuide() {
+    const modal = document.getElementById('platformGuideModal');
+    if (modal) {
+        modal.classList.add('hidden');
     }
 }
 
@@ -1491,6 +1570,14 @@ function setupUIEventListeners() {
                         window.closeCompetitionModal();
                     }
                 }
+            });
+        });
+        
+        // Update platform guide links to use modal
+        document.querySelectorAll('a[href="how-it-works.html"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                openPlatformGuide();
             });
         });
         
@@ -1523,7 +1610,7 @@ function showNotification(message, type = 'info') {
     notification.className = `notification ${type}`;
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: 100px;
         right: 20px;
         background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
         color: white;
@@ -1533,6 +1620,7 @@ function showNotification(message, type = 'info') {
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         max-width: 400px;
         word-wrap: break-word;
+        animation: slideIn 0.3s ease;
     `;
     notification.textContent = message;
     
@@ -1540,7 +1628,8 @@ function showNotification(message, type = 'info') {
     
     setTimeout(() => {
         if (notification.parentElement) {
-            notification.remove();
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
         }
     }, 5000);
 }
@@ -1657,7 +1746,6 @@ function loadHomePageContent() {
 
 async function loadPortfolioSummaryForHome() {
     try {
-        // FIXED: Use window.supabase for database operations
         if (!isWalletConnectedSync() || !window.supabase) {
             return;
         }
@@ -1711,6 +1799,10 @@ function cleanup() {
         }
     });
     
+    // Clear loading timeouts
+    loadingTimeouts.forEach(timeout => clearTimeout(timeout));
+    loadingTimeouts.clear();
+    
     if (walletService && typeof walletService.cleanup === 'function') {
         walletService.cleanup();
     }
@@ -1719,7 +1811,7 @@ function cleanup() {
 }
 
 // ==============================================
-// WALLET MODAL FUNCTIONS (Missing from optimization - RESTORED)
+// WALLET MODAL FUNCTIONS
 // ==============================================
 
 /**
@@ -2379,17 +2471,17 @@ window.handleWalletConnectionRestored = handleWalletConnectionRestored;
 window.handleWalletConnected = handleWalletConnected;
 window.handleUserProfileLoaded = handleUserProfileLoaded;
 window.handleUserProfileNeeded = handleUserProfileNeeded;
-window.updateBalanceDisplay = updateBalanceDisplay;
+// REMOVED: window.updateBalanceDisplay
 
-// FIXED: Database functions using correct client
+// Database functions
 window.testBasicTableAccess = testBasicTableAccess;
 window.refreshDataFromTables = refreshDataFromTables;
 
 // Filter functions
 window.handleCompetitionFilterChange = function() {
     console.log('🔄 Competition filter changed');
-    if (window.initializeCompetitionsPage) {
-        window.initializeCompetitionsPage();
+    if (window.clearAllFilters) {
+        // Filter is handled in competition.js
     }
 };
 
@@ -2438,6 +2530,11 @@ window.toggleAgreement = toggleAgreement;
 window.finalizeProfile = finalizeProfile;
 window.completedOnboarding = completedOnboarding;
 window.disconnectWallet = disconnectWallet;
+window.validateUsernameInput = validateUsernameInput;
+
+// Platform guide functions
+window.openPlatformGuide = openPlatformGuide;
+window.closePlatformGuide = closePlatformGuide;
 
 // Global app object
 window.app = {
@@ -2466,7 +2563,9 @@ window.app = {
     getWalletStatus: () => walletService?.getConnectionStatus() || { isConnected: false },
     getDataStatus: () => dataStatus,
     getServiceStates: () => serviceStates,
-    getPageStates: () => pageStates
+    getPageStates: () => pageStates,
+    openPlatformGuide,
+    closePlatformGuide
 };
 
 window.addEventListener('beforeunload', cleanup);
@@ -2492,7 +2591,7 @@ if (document.readyState === 'loading') {
     }, 100);
 }
 
-console.log('📱 FIXED App.js - Proper Dependency Coordination!');
+console.log('📱 Enhanced App.js loaded!');
 console.log('🚀 Performance Optimizations:');
 console.log('   ✅ 80% faster startup with parallel service initialization');
 console.log('   ✅ 60% faster navigation with lazy page loading');
@@ -2500,10 +2599,9 @@ console.log('   ✅ Instant UI updates with skeleton screens');
 console.log('   ✅ Non-blocking wallet connection');
 console.log('   ✅ Progressive enhancement as services become available');
 console.log('   ✅ Background data loading and health monitoring');
-console.log('   ✅ All existing functionality preserved');
-console.log('🔧 FIXES:');
-console.log('   ✅ FIXED: Proper dependency coordination with SupabaseReady promise');
-console.log('   ✅ FIXED: Competition system waits for Supabase before initializing');
-console.log('   ✅ FIXED: Two-phase initialization (independent then dependent services)');
-console.log('   ✅ FIXED: No race conditions between services');
-console.log('🎯 Ready for production deployment!');
+console.log('🎯 New Features:');
+console.log('   ✅ REMOVED: SOL balance display from navigation');
+console.log('   ✅ Platform guide opens in modal instead of new window');
+console.log('   ✅ Loading timeouts with user feedback');
+console.log('   ✅ Enhanced error handling and recovery');
+console.log('🔧 Ready for production deployment!');
