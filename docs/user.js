@@ -1,6 +1,6 @@
 // Enhanced Portfolio Management with Complete Supabase Integration
 // This replaces the content in user.js
-// FIXED: Proper Supabase client reference
+// FIXED: Proper Supabase client reference and null statistics handling
 
 // ==============================================
 // PORTFOLIO STATE MANAGEMENT
@@ -765,10 +765,21 @@ function getBetStatusInfo(bet, competition) {
 }
 
 /**
- * Create Statistics View
+ * FIXED: Create Statistics View with null check
  */
 function createStatisticsView() {
     const stats = PortfolioState.statistics;
+    
+    // FIXED: Add null check for statistics
+    if (!stats) {
+        return `
+            <div class="statistics-loading">
+                <div class="loading-spinner"></div>
+                <h3>Loading Statistics...</h3>
+                <p>Please wait while we calculate your portfolio statistics.</p>
+            </div>
+        `;
+    }
     
     return `
         <div class="statistics-view">
@@ -1046,3 +1057,5 @@ window.refreshPortfolioData = refreshPortfolioData;
 
 console.log('✅ Enhanced Portfolio System loaded with Supabase integration');
 console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
+console.log('🔧 FIXED: Added null check for statistics in createStatisticsView()');
+console.log('🔧 FIXED: Graceful loading state when statistics are null');
