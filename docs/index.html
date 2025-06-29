@@ -29,20 +29,27 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#home" class="logo" onclick="showPage('home')">
+            <a href="#home" class="logo" onclick="showPage('home'); return false;">
                 <span>TokenWars</span>
             </a>
             
             <ul class="nav-links">
-                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home')">Home</a></li>
-                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions')">Competitions</a></li>
-                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard')">Leaderboard</a></li>
-                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio')">Portfolio</a></li>
-                <li><a href="how-it-works.html" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
+                <li><a href="#home" class="nav-link active" data-page="home" onclick="showPage('home'); return false;">Home</a></li>
+                <li><a href="#competitions" class="nav-link" data-page="competitions" onclick="showPage('competitions'); return false;">Competitions</a></li>
+                <li><a href="#leaderboard" class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard'); return false;">Leaderboard</a></li>
+                <li><a href="#portfolio" class="nav-link" data-page="portfolio" onclick="showPage('portfolio'); return false;">Portfolio</a></li>
+                <li><a href="#guide" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
             </ul>
             
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
             <!-- Wallet Connection -->
-            <button id="connectWalletBtn" class="btn-primary">
+            <button id="connectWalletBtn" class="btn-primary" onclick="openWalletModal()">
                 <i class="fas fa-wallet"></i> Connect Wallet
             </button>
             
@@ -280,6 +287,20 @@
                 <div class="section-header">
                     <h2 class="section-title">Portfolio</h2>
                     <p class="section-description">Your trading history and statistics</p>
+                    
+                    <!-- Portfolio View Selector -->
+                    <div class="portfolio-controls" style="display: none;">
+                        <select id="portfolio-view" class="filter-select" onchange="handlePortfolioViewChange()">
+                            <option value="overview">Overview</option>
+                            <option value="history">Betting History</option>
+                            <option value="statistics">Statistics</option>
+                            <option value="achievements">Achievements</option>
+                        </select>
+                        
+                        <button class="btn-secondary" onclick="refreshPortfolioData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="portfolio-content">
@@ -413,7 +434,9 @@
                                        id="traderUsername" 
                                        placeholder="Enter username" 
                                        maxlength="20"
-                                       autocomplete="off">
+                                       autocomplete="off"
+                                       oninput="validateUsernameInput()"
+                                       onblur="validateUsernameInput()">
                                 <span class="input-status" id="inputStatus"></span>
                             </div>
                             <small>3-20 characters, letters, numbers, and underscores only</small>
@@ -458,7 +481,7 @@
                             <div class="checkbox-mark">✓</div>
                         </div>
                         <div class="agreement-text">
-                            <p>I agree to the <a href="#" onclick="openPlatformGuide()">Terms of Service</a> and understand that:</p>
+                            <p>I agree to the <a href="#" onclick="openPlatformGuide(); return false;">Terms of Service</a> and understand that:</p>
                             <ul>
                                 <li>Trading involves risk and I can lose my investment</li>
                                 <li>Platform takes a 15% fee from prize pools</li>
@@ -496,7 +519,7 @@
     <div id="competitionModal" class="competition-modal hidden">
         <div class="competition-modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">Competition Details</h2>
+                <h2 id="competitionModalTitle">Competition Details</h2>
                 <button class="close-button" onclick="closeCompetitionModal()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -586,16 +609,36 @@
         </div>
     </div>
 
+    <!-- System Status Indicators (for debugging) -->
+    <div id="systemStatus" class="system-status" style="display: none;">
+        <div id="dbStatus" class="db-status disconnected">❌ Database: Connecting...</div>
+        <div id="tokenStatus" class="db-status disconnected">❌ Tokens: Loading...</div>
+    </div>
+
     <!-- External Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Application Scripts -->
+    <!-- Application Scripts - CORRECTED ORDER -->
     <script src="config.js"></script>
     <script src="supabase-client.js"></script>
     <script src="wallet-service.js"></script>
+    <script src="user.js"></script>
     <script src="competition.js"></script>
-    <script src="portfolio.js"></script>
-    <script src="leaderboard.js"></script>
     <script src="app.js"></script>
+    
+    <!-- Initialize Application -->
+    <script>
+        // Ensure proper initialization order
+        console.log('🚀 TokenWars starting...');
+        
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('📱 DOM loaded, initializing TokenWars...');
+            });
+        } else {
+            console.log('📱 DOM already loaded');
+        }
+    </script>
 </body>
 </html>
