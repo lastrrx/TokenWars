@@ -1111,36 +1111,90 @@ async function placeBetInDatabase(betAmount, walletAddress) {
 
 async function updateCompetitionStats(competitionId, betAmount) {
     try {
-        if (!CompetitionState.supabaseClient) return;
+        console.log('🔍 updateCompetitionStats called - client exists:', !!CompetitionState.supabaseClient);
         
-        // Get current competition data
-        const { data: competition, error: fetchError } = await CompetitionState.supabaseClient
+        if (!CompetitionState.supabaseClient) {
+            console.error('❌ No Supabase client available');
+            return;
+        }
+        
+        console.log('🔍 About to fetch competition:', competitionId);
+        console.log('🔍 About to query competitions table...');
+        
+        // Create query promise with timeout to catch hanging queries
+        const queryPromise = CompetitionState.supabaseClient
             .from('competitions')
             .select('total_pool, total_bets')
             .eq('competition_id', competitionId)
             .single();
         
+        // Timeout promise to catch hanging queries
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
+        );
+        
+        // Race the query against timeout
+        const { data: competition, error: fetchError } = await Promise.race([
+            queryPromise,
+            timeoutPromise
+        ]);
+        
+        console.log('🔍 Query completed - data:', competition, 'error:', fetchError);
+        
         if (fetchError) {
-            console.error('Error fetching competition for update:', fetchError);
+            console.error('❌ Error fetching competition for update:', fetchError);
             return;
         }
         
-        // Update competition stats
-        const { error: updateError } = await CompetitionState.supabaseClient
+        if (!competition) {
+            console.error('❌ Competition not found:', competitionId);
+            return;
+        }
+        
+        console.log('🔍 Current competition data:', competition);
+        
+        // Calculate new values
+        const newTotalPool = (parseFloat(competition.total_pool || 0) + betAmount).toFixed(2);
+        const newTotalBets = (competition.total_bets || 0) + 1;
+        
+        console.log('🔍 Updating to:', { 
+            total_pool: newTotalPool, 
+            total_bets: newTotalBets 
+        });
+        
+        // Create update promise with timeout
+        const updatePromise = CompetitionState.supabaseClient
             .from('competitions')
             .update({
-                total_pool: (parseFloat(competition.total_pool || 0) + betAmount).toFixed(2),
-                total_bets: (competition.total_bets || 0) + 1
+                total_pool: newTotalPool,
+                total_bets: newTotalBets
             })
             .eq('competition_id', competitionId);
         
+        // Race update against timeout
+        const { error: updateError } = await Promise.race([
+            updatePromise,
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Update timeout after 5 seconds')), 5000)
+            )
+        ]);
+        
         if (updateError) {
-            console.error('Error updating competition stats:', updateError);
+            console.error('❌ Error updating competition stats:', updateError);
+            throw updateError;
         } else {
-            console.log('✅ Competition stats updated');
+            console.log('✅ Competition stats updated successfully');
+            console.log(`✅ Pool: ${competition.total_pool} → ${newTotalPool}`);
+            console.log(`✅ Bets: ${competition.total_bets} → ${newTotalBets}`);
         }
+        
     } catch (error) {
-        console.error('Error updating competition stats:', error);
+        if (error.message.includes('timeout')) {
+            console.error('⏰ Database query timed out:', error);
+        } else {
+            console.error('❌ Error updating competition stats:', error);
+        }
+        throw error;
     }
 }
 
@@ -1314,7 +1368,6 @@ function getFilteredCompetitions() {
 
 function updateCompetitionStats() {
     try {
-        console.log('🔍 updateCompetitionStats called - client exists:', !!CompetitionState.supabaseClient);
         const totalCompetitions = CompetitionState.competitions.length;
         const votingCount = CompetitionState.votingCompetitions.length;
         const activeCount = CompetitionState.activeCompetitions.length;
@@ -1332,7 +1385,7 @@ function updateCompetitionStats() {
         updateStat('totalParticipants', totalParticipants.toLocaleString());
         updateStat('totalPrizePool', `${totalPrizePool.toFixed(1)} SOL`);
         updateStat('activeCompetitions', activeCount);
-        
+
     } catch (error) {
         console.error('❌ Error updating competition stats:', error);
     }
