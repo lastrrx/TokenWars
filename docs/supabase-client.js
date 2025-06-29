@@ -1,21 +1,25 @@
-// FIXED Supabase Client Initialization and Database Interface
-// CRITICAL FIX: Added promise-based readiness system for dependency coordination
+// FIXED Supabase Client Initialization with Service Readiness System
+// ✅ Added promise-based readiness tracking for dependency coordination
 
 // Global variables
 let supabaseClient = null;
 let currentUser = null;
 
-// SERVICE READINESS PROMISE - Resolves when Supabase client is ready
+// SERVICE READINESS SYSTEM - Global promise that resolves when Supabase is ready
 window.SupabaseReady = new Promise((resolve, reject) => {
     window._resolveSupabaseReady = resolve;
     window._rejectSupabaseReady = reject;
 });
 
+// Service status for monitoring
+window.ServiceReadiness = window.ServiceReadiness || {};
+window.ServiceReadiness.supabase = window.SupabaseReady;
+
 // Immediately expose functions to prevent "function not defined" errors
 window.initializeSupabase = initializeSupabase;
 window.testConnection = testConnection;
 
-// FIXED: Wait for Supabase library without conflicting with client exposure
+// Wait for Supabase library without conflicting with client exposure
 async function waitForSupabaseLibrary() {
     console.log('⏳ Waiting for Supabase library to load...');
     
@@ -23,27 +27,21 @@ async function waitForSupabaseLibrary() {
     const maxAttempts = 50; // 5 seconds total
     
     while (attempts < maxAttempts) {
-        // FIXED: Check for Supabase library without using window.supabase
-        // (since we need window.supabase for the client instance later)
-        
         if (window.Supabase && window.Supabase.createClient) {
             console.log('✅ Found Supabase library at window.Supabase');
             return window.Supabase;
         }
         
-        // Check for global createClient function from CDN
         if (typeof createClient !== 'undefined') {
             console.log('✅ Found global createClient function');
             return { createClient };
         }
         
-        // FIXED: Check for different CDN loading patterns
         if (window.supabase && typeof window.supabase.createClient === 'function') {
             console.log('✅ Found Supabase library at window.supabase (will be overwritten with client)');
-            return window.supabase; // Return the library, we'll overwrite this later
+            return window.supabase;
         }
         
-        // Wait a bit and try again
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
@@ -51,7 +49,7 @@ async function waitForSupabaseLibrary() {
     throw new Error('Supabase library not loaded after 5 seconds. Please check if the Supabase CDN script is properly included.');
 }
 
-// FIXED: Initialize Supabase connection with proper client exposure
+// Initialize Supabase connection with proper client exposure and readiness signaling
 async function initializeSupabase() {
     try {
         console.log('🚀 Starting Supabase initialization...');
@@ -72,7 +70,7 @@ async function initializeSupabase() {
             hasKey: !!config.anonKey
         });
 
-        // FIXED: Wait for Supabase library to be available
+        // Wait for Supabase library to be available
         const supabaseLib = await waitForSupabaseLibrary();
         
         if (!supabaseLib || !supabaseLib.createClient) {
@@ -84,7 +82,7 @@ async function initializeSupabase() {
         // Initialize Supabase client with the detected library
         supabaseClient = supabaseLib.createClient(config.url, config.anonKey);
         
-        // CRITICAL FIX: Properly expose client instance IMMEDIATELY and SYNCHRONOUSLY
+        // CRITICAL: Properly expose client instance IMMEDIATELY and SYNCHRONOUSLY
         window.supabase = supabaseClient; // ← This is the ACTUAL CLIENT for .from() calls
         window.supabaseClient = {
             // Wrapper object with helper methods
@@ -105,18 +103,19 @@ async function initializeSupabase() {
             isConnected: () => !!supabaseClient
         };
         
+        // RESOLVE THE READINESS PROMISE - This signals other services that Supabase is ready
+        if (window._resolveSupabaseReady) {
+            window._resolveSupabaseReady(supabaseClient);
+            console.log('✅ Supabase readiness promise resolved');
+        }
+        
         console.log('✅ Supabase client initialized and exposed successfully');
         console.log('🔍 Client verification:', {
             'window.supabase exists': !!window.supabase,
             'window.supabase.from exists': typeof window.supabase?.from,
-            'window.supabase.channel exists': typeof window.supabase?.channel
+            'window.supabase.channel exists': typeof window.supabase?.channel,
+            'ServiceReadiness.supabase': 'Promise resolved'
         });
-        
-        // RESOLVE THE READINESS PROMISE - Signal to other services
-        if (window._resolveSupabaseReady) {
-            window._resolveSupabaseReady(supabaseClient);
-            console.log('✅ SupabaseReady promise resolved');
-        }
         
         updateDbStatus('connected', '✅ Database: Connected');
         
@@ -143,7 +142,7 @@ async function initializeSupabase() {
     }
 }
 
-// FIXED: Test database connection with graceful degradation
+// Test database connection with graceful degradation
 async function testConnection() {
     try {
         if (!supabaseClient) {
@@ -153,9 +152,6 @@ async function testConnection() {
         console.log('🧪 Testing database connection...');
         
         // Test with a simple query that doesn't depend on specific tables
-        // Try multiple approaches to find a working table
-        
-        // First, try a very basic query
         try {
             const { data, error } = await supabaseClient
                 .from('users')
@@ -165,10 +161,9 @@ async function testConnection() {
             if (error) {
                 if (error.code === 'PGRST106' || error.message.includes('relation') || error.message.includes('does not exist')) {
                     console.warn('Users table may not exist yet, but connection works:', error.message);
-                    return true; // Connection works, just missing tables
+                    return true;
                 } else {
                     console.warn('Users table query failed:', error);
-                    // Try another table
                 }
             } else {
                 console.log('✅ Users table accessible');
@@ -223,7 +218,7 @@ async function testConnection() {
         }
         
         console.log('ℹ️ Database connection established, but tables may need setup');
-        return true; // Connection is working even if tables don't exist
+        return true;
         
     } catch (error) {
         console.error('❌ Database connection test failed:', error);
@@ -248,6 +243,9 @@ function updateDbStatus(status, message) {
 // Get cached token data with fallback
 async function getCachedTokenData(limit = 50, category = null) {
     try {
+        // Wait for Supabase to be ready before any database operation
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             throw new Error('Database not available');
         }
@@ -258,7 +256,7 @@ async function getCachedTokenData(limit = 50, category = null) {
         let query = supabaseClient
             .from('token_cache')
             .select('*')
-            .gte('cache_expires_at', new Date().toISOString()) // Only fresh cache
+            .gte('cache_expires_at', new Date().toISOString())
             .eq('cache_status', 'FRESH')
             .order('market_cap_usd', { ascending: false })
             .limit(limit);
@@ -336,6 +334,9 @@ async function getCachedTokenData(limit = 50, category = null) {
 // Get cached price data
 async function getCachedPriceData(tokenAddresses) {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient || !tokenAddresses || tokenAddresses.length === 0) {
             return { success: false, prices: [] };
         }
@@ -429,6 +430,9 @@ async function getCachedPriceData(tokenAddresses) {
 // Set user context for RLS policies
 async function setUserContext(walletAddress, role = 'user') {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             console.warn('Supabase not initialized for user context');
             return;
@@ -459,6 +463,9 @@ async function setUserContext(walletAddress, role = 'user') {
 // Get or create user by wallet address (with graceful degradation)
 async function getOrCreateUser(walletAddress) {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             throw new Error('Database not available');
         }
@@ -521,6 +528,9 @@ async function getOrCreateUser(walletAddress) {
 // Create new user profile (with graceful degradation)
 async function createUserProfile(walletAddress, username, avatar = '🎯') {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             throw new Error('Database not available');
         }
@@ -599,6 +609,9 @@ async function createUserProfile(walletAddress, username, avatar = '🎯') {
 // Check username availability (with graceful degradation)
 async function checkUsernameAvailability(username) {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             console.warn('Database not available for username check');
             return true; // Allow any username if DB not available
@@ -644,6 +657,9 @@ function generateReferralCode() {
 // Get active competitions with graceful degradation
 async function getActiveCompetitions() {
     try {
+        // Wait for Supabase to be ready
+        await window.SupabaseReady;
+        
         if (!supabaseClient) {
             console.warn('Database not available for competitions');
             return [];
@@ -666,124 +682,4 @@ async function getActiveCompetitions() {
             console.warn('⚠️ Active competitions view not available, trying basic query...');
         }
 
-        // Fallback to basic competitions table
-        const { data, error } = await supabaseClient
-            .from('competitions')
-            .select('*')
-            .in('status', ['SETUP', 'VOTING', 'ACTIVE'])
-            .order('start_time', { ascending: true });
-
-        if (error) {
-            if (error.code === 'PGRST106') {
-                console.warn('⚠️ Competitions table does not exist');
-                return [];
-            }
-            throw error;
-        }
-        
-        console.log(`✅ Found ${data?.length || 0} competitions`);
-        return data || [];
-    } catch (error) {
-        console.error('❌ Error fetching competitions:', error);
-        return [];
-    }
-}
-
-// ==============================================
-// ERROR HANDLING AND UTILITIES
-// ==============================================
-
-// Handle Supabase errors with improved messaging
-function handleSupabaseError(error) {
-    console.error('Supabase error:', error);
-    
-    // Map common error codes to user-friendly messages
-    const errorMessages = {
-        'PGRST116': 'No data found',
-        'PGRST106': 'Database table not found - some features may be limited',
-        'PGRST200': 'Database relationship error - using fallback data',
-        '23505': 'This username is already taken',
-        '23503': 'Invalid reference - please try again',
-        'row_security_violation': 'Access denied - please check your permissions'
-    };
-    
-    const userMessage = errorMessages[error.code] || error.message || 'An unexpected error occurred';
-    
-    return userMessage;
-}
-
-// Clear user context (for logout)
-async function clearUserContext() {
-    try {
-        if (supabaseClient) {
-            try {
-                await supabaseClient.rpc('clear_user_context');
-            } catch (rpcError) {
-                console.warn('clear_user_context function not available');
-            }
-        }
-        currentUser = null;
-        console.log('User context cleared');
-    } catch (error) {
-        console.error('Failed to clear user context:', error);
-    }
-}
-
-// ==============================================
-// FIXED AUTO-INITIALIZATION WITH PROPER TIMING
-// ==============================================
-
-// FIXED: Auto-initialize with better timing and client exposure
-async function autoInitialize() {
-    try {
-        // Wait a bit for DOM and config to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Check if config is available
-        if (!window.SUPABASE_CONFIG) {
-            console.log('⏳ Waiting for SUPABASE_CONFIG...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        if (window.SUPABASE_CONFIG) {
-            console.log('🚀 Auto-initializing Supabase...');
-            await initializeSupabase();
-            
-            // CRITICAL: Verify client is properly exposed
-            console.log('🔍 Post-initialization verification:', {
-                'window.supabase available': !!window.supabase,
-                'window.supabase.from available': typeof window.supabase?.from,
-                'window.supabase.channel available': typeof window.supabase?.channel,
-                'Client instance type': typeof window.supabase
-            });
-            
-        } else {
-            console.warn('⚠️ SUPABASE_CONFIG not available, skipping auto-initialization');
-        }
-    } catch (error) {
-        console.warn('⚠️ Auto-initialization failed, manual initialization required:', error.message);
-        
-        // Even if initialization fails, ensure we have some client reference
-        if (!window.supabase) {
-            console.log('⚠️ Creating fallback client reference');
-            window.supabase = null;
-        }
-    }
-}
-
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autoInitialize);
-} else {
-    // DOM already loaded
-    autoInitialize();
-}
-
-console.log('✅ FIXED Supabase client module loaded - WITH READINESS PROMISE');
-console.log('🔧 CRITICAL FIXES:');
-console.log('   ✅ FIXED: Added SupabaseReady promise for dependency coordination');
-console.log('   ✅ FIXED: Promise resolves when client is ready');
-console.log('   ✅ FIXED: Other services can await window.SupabaseReady');
-console.log('   ✅ FIXED: Maintains all existing functionality');
-console.log('🎯 window.supabase is the client instance with .from() and .channel()');
-console.log('🎯 window.SupabaseReady is the promise that resolves when ready');
+        //
