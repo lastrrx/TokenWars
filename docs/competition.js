@@ -406,7 +406,7 @@ function updateCompetitionsDisplayFixed() {
         }
         
         // Update stats
-        updateCompetitionStats();
+        updateCompetitionStatsDisplay();
         
         console.log('✅ Competitions display updated successfully');
         
@@ -1366,7 +1366,7 @@ function getFilteredCompetitions() {
     return competitions;
 }
 
-function updateCompetitionStats() {
+function updateCompetitionStatsDisplay() {
     try {
         const totalCompetitions = CompetitionState.competitions.length;
         const votingCount = CompetitionState.votingCompetitions.length;
