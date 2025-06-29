@@ -35,7 +35,8 @@
         
         /* Modal visibility */
         .wallet-modal:not(.hidden),
-        .competition-modal:not(.hidden) {
+        .competition-modal:not(.hidden),
+        .platform-guide-modal:not(.hidden) {
             display: flex !important;
             align-items: center;
             justify-content: center;
@@ -125,6 +126,29 @@
         .view-state.hidden {
             display: none !important;
         }
+        
+        /* Animation keyframes */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -152,17 +176,17 @@
                 <li><a href="#competitions" class="nav-link" data-page="competitions">Competitions</a></li>
                 <li><a href="#leaderboard" class="nav-link" data-page="leaderboard">Leaderboard</a></li>
                 <li><a href="#portfolio" class="nav-link" data-page="portfolio">Portfolio</a></li>
-                <li><a href="how-it-works.html" class="nav-link" target="_blank">Platform Guide</a></li>
+                <li><a href="#" class="nav-link" onclick="openPlatformGuide(); return false;">Platform Guide</a></li>
             </ul>
 
             <!-- Wallet Connection State -->
             <button id="connectWalletBtn" class="btn-primary wallet-connect-btn">Connect Wallet</button>
             
+            <!-- UPDATED: Trader info without balance -->
             <div id="traderInfo" class="trader-info-display hidden">
                 <div id="navTraderAvatar" class="trader-avatar">🎯</div>
                 <div class="trader-details">
                     <span id="navTraderName" class="trader-name">Trader</span>
-                    <span id="navTraderBalance" class="trader-balance">0.00 SOL</span>
                 </div>
                 <button class="nav-disconnect" title="Disconnect Wallet">⏻</button>
             </div>
@@ -215,7 +239,7 @@
                 </div>
             </div>
 
-            <!-- Learn More Section -->
+            <!-- ENHANCED Learn More Section -->
             <div class="learn-more-section" id="learnMoreSection">
                 <div class="container">
                     <div class="section-header">
@@ -227,24 +251,24 @@
                         <div class="info-card">
                             <div class="card-icon">📊</div>
                             <h3>Simple Predictions</h3>
-                            <p>Pick which tokens will outperform over the competition period. Entry opens before each competition starts.</p>
+                            <p>Pick which token will outperform during the competition period. Place your bet during the voting phase before the competition starts.</p>
                         </div>
                         <div class="info-card">
                             <div class="card-icon">💰</div>
                             <h3>Fixed Stakes</h3>
-                            <p>0.1 SOL entry fee. Winners split the pool (minus 15% platform fee). Fair and transparent.</p>
+                            <p>Everyone bets the same amount (0.1 SOL). Winners split the prize pool minus a 15% platform fee. Fair and transparent for all participants.</p>
                         </div>
                         <div class="info-card">
                             <div class="card-icon">🔐</div>
                             <h3>Automated Payouts</h3>
-                            <p>Smart contracts handle everything. Escrow opens, competition runs, winners get paid automatically.</p>
+                            <p>Smart contracts handle everything automatically. When voting ends, the competition runs, and winners receive their payouts directly.</p>
                         </div>
                     </div>
 
                     <div class="detailed-guide-cta">
                         <h3>Want More Details?</h3>
                         <p>Check out our comprehensive guide covering competition phases, smart contracts, and winning strategies.</p>
-                        <a href="how-it-works.html" class="btn-hero-primary" target="_blank">
+                        <a href="#" class="btn-hero-primary" onclick="openPlatformGuide(); return false;">
                             📖 Complete Platform Guide →
                         </a>
                     </div>
@@ -284,7 +308,7 @@
                                 <h2 class="section-title">LIVE COMPETITIONS</h2>
                                 <p class="section-description">Predict token performance and earn SOL rewards</p>
                                 
-                                <!-- Competition Filters -->
+                                <!-- Competition Filters (NO REFRESH BUTTON) -->
                                 <div class="section-filters">
                                     <select id="competition-phase" class="filter-select">
                                         <option value="all">All Competitions</option>
@@ -298,10 +322,6 @@
                                         <option value="total_bets">Participants</option>
                                         <option value="created_at">Newest First</option>
                                     </select>
-                                    
-                                    <button class="btn-refresh" id="refreshCompetitionsBtn" title="Refresh competitions">
-                                        <span class="refresh-icon">🔄</span> Refresh
-                                    </button>
                                 </div>
                             </div>
                             
@@ -406,9 +426,6 @@
                                     <option value="current_streak">Current Streak</option>
                                     <option value="total_bets">Total Competitions</option>
                                 </select>
-                                <button class="btn-refresh" id="refreshLeaderboardBtn">
-                                    <span class="refresh-icon">🔄</span> Refresh
-                                </button>
                             </div>
                         </div>
 
@@ -442,9 +459,6 @@
                                     <option value="statistics">Statistics</option>
                                     <option value="achievements">Achievements</option>
                                 </select>
-                                <button class="btn-refresh" id="refreshPortfolioBtn">
-                                    <span class="refresh-icon">🔄</span> Refresh
-                                </button>
                             </div>
                         </div>
 
@@ -731,287 +745,6 @@
     <!-- Main application logic (must be last) -->
     <script src="app.js"></script>
 
-    <!-- Wallet Connection Functions -->
-    <script>
-        // Global wallet modal functions
-        window.openWalletModal = function() {
-            console.log('Opening wallet modal');
-            const modal = document.getElementById('walletModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                checkAvailableWallets();
-            }
-        };
-
-        window.closeWalletModal = function() {
-            console.log('Closing wallet modal');
-            const modal = document.getElementById('walletModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        };
-
-        window.selectWallet = async function(walletType) {
-            console.log('Selected wallet:', walletType);
-            
-            // Show connecting step
-            showWalletModalStep(2);
-            document.getElementById('selectedWalletName').textContent = 
-                walletType.charAt(0).toUpperCase() + walletType.slice(1);
-            
-            try {
-                // Get wallet service
-                const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
-                if (!walletService) {
-                    throw new Error('Wallet service not available');
-                }
-                
-                // Connect to wallet
-                const result = await walletService.connectWallet(walletType);
-                
-                if (result.success) {
-                    console.log('Wallet connected successfully:', result.publicKey);
-                    
-                    // Check if user exists in database
-                    const userProfile = walletService.getCurrentUserProfile();
-                    
-                    if (userProfile) {
-                        // User exists, skip profile creation
-                        console.log('Existing user found:', userProfile.username);
-                        await handleWalletConnectionSuccess();
-                    } else {
-                        // New user, show profile creation
-                        showWalletModalStep(3);
-                    }
-                } else {
-                    throw new Error(result.error || 'Connection failed');
-                }
-                
-            } catch (error) {
-                console.error('Wallet connection error:', error);
-                alert('Failed to connect wallet: ' + error.message);
-                showWalletModalStep(1);
-            }
-        };
-
-        window.showWalletModalStep = function(step) {
-            // Hide all steps
-            document.querySelectorAll('.step-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.querySelectorAll('.step-indicator').forEach(indicator => {
-                indicator.classList.remove('active');
-            });
-            
-            // Show requested step
-            const stepContent = document.getElementById(`step${step}Content`);
-            const stepIndicator = document.getElementById(`step${step}Indicator`);
-            
-            if (stepContent) stepContent.classList.add('active');
-            if (stepIndicator) stepIndicator.classList.add('active');
-        };
-
-        window.checkAvailableWallets = function() {
-            // Check Phantom
-            if (window.phantom?.solana?.isPhantom) {
-                document.getElementById('phantomStatus').textContent = '✓ Installed';
-                document.getElementById('phantomStatus').style.color = '#22c55e';
-            } else {
-                document.getElementById('phantomStatus').textContent = '✗ Not installed';
-                document.getElementById('phantomStatus').style.color = '#ef4444';
-            }
-            
-            // Check Solflare
-            if (window.solflare?.isSolflare) {
-                document.getElementById('solflareStatus').textContent = '✓ Installed';
-                document.getElementById('solflareStatus').style.color = '#22c55e';
-            } else {
-                document.getElementById('solflareStatus').textContent = '✗ Not installed';
-                document.getElementById('solflareStatus').style.color = '#ef4444';
-            }
-            
-            // Check Backpack
-            if (window.backpack?.isBackpack) {
-                document.getElementById('backpackStatus').textContent = '✓ Installed';
-                document.getElementById('backpackStatus').style.color = '#22c55e';
-            } else {
-                document.getElementById('backpackStatus').textContent = '✗ Not installed';
-                document.getElementById('backpackStatus').style.color = '#ef4444';
-            }
-        };
-
-        window.handleWalletConnectionSuccess = async function() {
-            console.log('Handling successful wallet connection');
-            
-            // Close modal
-            closeWalletModal();
-            
-            // Update UI
-            updateUIAfterConnection();
-            
-            // Update navigation display
-            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
-            if (walletService) {
-                const userProfile = walletService.getCurrentUserProfile();
-                const balance = walletService.getBalance();
-                
-                // Update nav trader info
-                document.getElementById('navTraderName').textContent = userProfile?.username || 'Trader';
-                document.getElementById('navTraderBalance').textContent = `${balance.toFixed(2)} SOL`;
-                document.getElementById('navTraderAvatar').textContent = userProfile?.avatar || '🎯';
-                
-                // Update hero trader name
-                document.getElementById('heroTraderNameText').textContent = userProfile?.username || 'Trader';
-            }
-            
-            // Load competitions if on competitions page
-            const activePage = document.querySelector('.page-content.active');
-            if (activePage && activePage.id === 'competitionsPage') {
-                if (window.initializeCompetitionsPage) {
-                    window.initializeCompetitionsPage();
-                }
-            }
-            
-            // Notify app of connection
-            if (window.app && window.app.handleWalletConnection) {
-                window.app.handleWalletConnection();
-            }
-        };
-
-        window.disconnectWallet = async function() {
-            console.log('Disconnecting wallet');
-            
-            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
-            if (walletService) {
-                await walletService.disconnectWallet();
-            }
-            
-            // Update UI
-            updateUIAfterDisconnection();
-            
-            // Notify app of disconnection
-            if (window.app && window.app.handleWalletDisconnection) {
-                window.app.handleWalletDisconnection();
-            }
-        };
-
-        // Profile creation functions (for new users)
-        window.selectAvatar = function(avatar) {
-            document.querySelectorAll('.avatar-option-modern').forEach(option => {
-                option.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-            document.getElementById('previewAvatar').textContent = avatar;
-        };
-
-        window.validateUsernameInput = function() {
-            const username = document.getElementById('traderUsername').value;
-            const createProfileBtn = document.getElementById('createProfileBtn');
-            const previewName = document.getElementById('previewName');
-            const inputStatus = document.getElementById('inputStatus');
-            
-            // Update preview
-            previewName.textContent = username || 'Trader Username';
-            
-            // Validate username
-            if (username.length >= 3 && username.length <= 20) {
-                createProfileBtn.disabled = false;
-                inputStatus.textContent = '✓';
-                inputStatus.style.color = '#22c55e';
-            } else {
-                createProfileBtn.disabled = true;
-                if (username.length > 0) {
-                    inputStatus.textContent = username.length < 3 ? 'Too short' : 'Too long';
-                    inputStatus.style.color = '#ef4444';
-                } else {
-                    inputStatus.textContent = '';
-                }
-            }
-        };
-
-        window.goToStep = function(step) {
-            showWalletModalStep(step);
-        };
-
-        window.toggleAgreement = function() {
-            const checkbox = document.getElementById('agreementCheckbox');
-            const finalizeBtn = document.getElementById('finalizeBtn');
-            
-            checkbox.classList.toggle('checked');
-            finalizeBtn.disabled = !checkbox.classList.contains('checked');
-        };
-
-        window.finalizeProfile = async function() {
-            // This would create the profile for new users
-            // Since you already have a user, this shouldn't be called
-            console.log('Finalizing profile...');
-            showWalletModalStep(5);
-        };
-
-        window.completedOnboarding = function() {
-            handleWalletConnectionSuccess();
-        };
-
-        // Competition modal functions
-        window.closeCompetitionModal = function() {
-            const modal = document.getElementById('competitionModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        };
-
-        window.selectToken = function(token) {
-            console.log('Selected token:', token);
-            
-            // Update UI
-            document.querySelectorAll('.token-choice-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            const selectedButton = document.getElementById(`choiceToken${token}`);
-            if (selectedButton) {
-                selectedButton.classList.add('selected');
-            }
-            
-            // Enable place bet button
-            const placeBetButton = document.getElementById('placeBetButton');
-            if (placeBetButton) {
-                placeBetButton.disabled = false;
-                placeBetButton.textContent = 'Place Bet';
-            }
-            
-            // Store selection
-            window.selectedToken = token;
-        };
-
-        window.placeBet = async function() {
-            console.log('Placing bet...');
-            
-            if (!window.selectedToken) {
-                alert('Please select a token first');
-                return;
-            }
-            
-            const betAmount = document.getElementById('betAmount').value;
-            console.log('Bet amount:', betAmount, 'SOL');
-            console.log('Selected token:', window.selectedToken);
-            
-            // Here you would integrate with your betting system
-            // For now, just close the modal
-            alert('Bet placement coming soon!');
-            closeCompetitionModal();
-        };
-
-        // Utility functions
-        window.scrollToLearnMore = function(event) {
-            if (event) event.preventDefault();
-            const element = document.getElementById('learnMoreSection');
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-            }
-        };
-    </script>
-
     <!-- Page Navigation Helper Script -->
     <script>
         // Ensure navigation works immediately
@@ -1115,35 +848,33 @@
                 });
             });
 
-            // Refresh button handlers
-            document.getElementById('refreshCompetitionsBtn')?.addEventListener('click', function() {
-                if (window.loadActiveCompetitions) {
-                    window.loadActiveCompetitions();
-                }
-            });
-
-            document.getElementById('refreshLeaderboardBtn')?.addEventListener('click', function() {
-                if (window.refreshLeaderboard) {
-                    window.refreshLeaderboard();
-                }
-            });
-
-            document.getElementById('refreshPortfolioBtn')?.addEventListener('click', function() {
-                if (window.refreshPortfolioData) {
-                    window.refreshPortfolioData();
-                }
-            });
-
             // Filter change handlers
             document.getElementById('competition-phase')?.addEventListener('change', function() {
-                if (window.handleCompetitionFilterChange) {
-                    window.handleCompetitionFilterChange();
-                }
+                console.log('Competition phase filter changed');
+                // Auto-refresh handled in competition.js
+            });
+
+            document.getElementById('sort-by')?.addEventListener('change', function() {
+                console.log('Sort by filter changed');
+                // Auto-refresh handled in competition.js
             });
 
             document.getElementById('portfolio-view')?.addEventListener('change', function() {
                 if (window.handlePortfolioViewChange) {
                     window.handlePortfolioViewChange();
+                }
+            });
+
+            // Leaderboard filter handlers
+            document.getElementById('leaderboard-period')?.addEventListener('change', function() {
+                if (window.handleLeaderboardFilterChange) {
+                    window.handleLeaderboardFilterChange();
+                }
+            });
+
+            document.getElementById('leaderboard-sort')?.addEventListener('change', function() {
+                if (window.handleLeaderboardFilterChange) {
+                    window.handleLeaderboardFilterChange();
                 }
             });
         });
@@ -1186,6 +917,54 @@
             
             // Go to home page
             window.showPage('home');
+        };
+
+        // Handle wallet connection success
+        window.handleWalletConnectionSuccess = async function() {
+            console.log('Handling successful wallet connection');
+            
+            // Close modal
+            if (window.closeWalletModal) {
+                window.closeWalletModal();
+            }
+            
+            // Update UI
+            updateUIAfterConnection();
+            
+            // Update navigation display
+            const walletService = window.getWalletService ? window.getWalletService() : window.walletService;
+            if (walletService) {
+                const userProfile = walletService.getCurrentUserProfile ? walletService.getCurrentUserProfile() : walletService.getUserProfile();
+                
+                // Update nav trader info (WITHOUT BALANCE)
+                document.getElementById('navTraderName').textContent = userProfile?.username || 'Trader';
+                document.getElementById('navTraderAvatar').textContent = userProfile?.avatar || '🎯';
+                
+                // Update hero trader name
+                document.getElementById('heroTraderNameText').textContent = userProfile?.username || 'Trader';
+            }
+            
+            // Load competitions if on competitions page
+            const activePage = document.querySelector('.page-content.active');
+            if (activePage && activePage.id === 'competitionsPage') {
+                if (window.initializeCompetitionsPage) {
+                    window.initializeCompetitionsPage();
+                }
+            }
+            
+            // Notify app of connection
+            if (window.app && window.app.handleWalletConnection) {
+                window.app.handleWalletConnection();
+            }
+        };
+
+        // Scroll to learn more
+        window.scrollToLearnMore = function(event) {
+            if (event) event.preventDefault();
+            const element = document.getElementById('learnMoreSection');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
         };
     </script>
 </body>
