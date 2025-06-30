@@ -299,109 +299,58 @@ class BlacklistManager {
         `;
     }
 
-    /**
-     * Whitelist Token (Remove from blacklist and add to approval queue)
-     */
-    async whitelistToken(tokenAddress) {
-        try {
-            // Debug: Log the token address being searched for
-            console.log('🔍 Searching for token with address:', tokenAddress);
-
-            const token = this.findTokenByAddress(tokenAddress);
-            if (!token) {
-                console.error('❌ Token not found with address:', tokenAddress);
-                throw new Error(`Token not found with address: ${tokenAddress}`);
-            }
-
-            const confirmed = confirm(`Whitelist ${token.token_symbol || token.token_address}?\n\nThis will:\n1. Remove from blacklist\n2. Add to approval queue for review`);
-            if (!confirmed) return;
-
-            console.log(`🔄 Whitelisting token: ${token.token_symbol} (${tokenAddress})`);
-
-            const supabase = this.getSupabase();
-
-            // Start transaction-like operations
-            // 1. Deactivate blacklist entry
-            const { error: blacklistError } = await supabase
-                .from('token_blacklist')
-                .update({ 
-                    is_active: false,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('token_address', tokenAddress);
-
-            if (blacklistError) {
-                throw new Error(`Failed to update blacklist: ${blacklistError.message}`);
-            }
-
-            // 2. Add to approval queue (token_cache with pending status)
-            const approvalData = {
-                token_address: token.token_address,
-                symbol: token.token_symbol,
-                name: token.token_name,
-                cache_status: 'PENDING_APPROVAL',
-                data_source: 'WHITELIST',
-                cache_created_at: new Date().toISOString(),
-                cache_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-                data_quality_score: 0.5, // Lower score for whitelisted tokens
-                last_updated: new Date().toISOString()
-            };
-
-            // Check if token already exists in cache
-            const { data: existingToken } = await supabase
-                .from('token_cache')
-                .select('id')
-                .eq('token_address', token.token_address)
-                .single();
-
-            if (existingToken) {
-                // Update existing token
-                const { error: updateError } = await supabase
-                    .from('token_cache')
-                    .update(approvalData)
-                    .eq('token_address', token.token_address);
-
-                if (updateError) {
-                    throw new Error(`Failed to update token cache: ${updateError.message}`);
+        /**
+         * Whitelist Token (Remove from blacklist)
+         */
+        async whitelistToken(tokenAddress) {
+            try {
+                // Debug: Log the token address being searched for
+                console.log('🔍 Searching for token with address:', tokenAddress);
+        
+                const token = this.findTokenByAddress(tokenAddress);
+                if (!token) {
+                    console.error('❌ Token not found with address:', tokenAddress);
+                    throw new Error(`Token not found with address: ${tokenAddress}`);
                 }
-            } else {
-                // Insert new token
-                const { error: insertError } = await supabase
-                    .from('token_cache')
-                    .insert([approvalData]);
-
-                if (insertError) {
-                    throw new Error(`Failed to insert to token cache: ${insertError.message}`);
+        
+                const confirmed = confirm(`Whitelist ${token.token_symbol || token.token_address}?\n\nThis will remove the token from blacklist.`);
+                if (!confirmed) return;
+        
+                console.log(`🔄 Whitelisting token: ${token.token_symbol} (${tokenAddress})`);
+        
+                const supabase = this.getSupabase();
+        
+                // Remove blacklist entry completely
+                const { error: blacklistError } = await supabase
+                    .from('token_blacklist')
+                    .delete()
+                    .eq('token_address', tokenAddress);
+        
+                if (blacklistError) {
+                    throw new Error(`Failed to remove from blacklist: ${blacklistError.message}`);
                 }
+        
+                // Log admin action
+                await this.logAdminAction('whitelist_token', {
+                    token_address: token.token_address,
+                    token_symbol: token.token_symbol,
+                    original_blacklist_reason: token.reason,
+                    original_category: token.category
+                });
+        
+                // Update local data and display
+                await this.loadBlacklistData();
+                this.calculateStatistics();
+                this.updateBlacklistDisplay();
+        
+                this.showNotification(`Token ${token.token_symbol} successfully removed from blacklist`, 'success');
+        
+                console.log(`✅ Token whitelisted: ${token.token_symbol}`);
+            } catch (error) {
+                console.error('Failed to whitelist token:', error);
+                this.showNotification(`Failed to whitelist token: ${error.message}`, 'error');
             }
-
-            // 3. Log admin action
-            await this.logAdminAction('whitelist_token', {
-                token_address: token.token_address,
-                token_symbol: token.token_symbol,
-                original_blacklist_reason: token.reason,
-                original_category: token.category
-            });
-
-            // Update local data
-            await this.loadBlacklistData();
-            this.calculateStatistics();
-            this.updateBlacklistDisplay();
-
-            // Refresh token approval component if available
-            if (this.adminState.components && this.adminState.components.tokenApproval) {
-                await this.adminState.components.tokenApproval.loadPendingApprovals();
-            }
-
-            this.showNotification(`Token ${token.token_symbol} successfully whitelisted and added to approval queue`, 'success');
-
-            console.log(`✅ Token whitelisted: ${token.token_symbol}`);
-        } catch (error) {
-            console.error('Failed to whitelist token:', error);
-            this.showNotification(`Failed to whitelist token: ${error.message}`, 'error');
         }
-    }
-
     /**
      * Bulk Whitelist Selected Tokens
      */
