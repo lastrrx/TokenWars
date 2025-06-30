@@ -449,55 +449,127 @@ class CacheMonitor {
         }
     }
 
-    /**
-     * Clear Stale Cache
-     */
-    async clearStaleCache() {
-        try {
-            console.log('🗑️ Clearing stale cache...');
-            this.showAdminNotification('Clearing stale cache...', 'info');
-            
-            const supabase = this.getSupabase();
-            if (!supabase) {
-                throw new Error('Database connection not available');
+          /**
+         * Updated clearStaleCache() - Triggers edge function instead of deleting data
+         */
+        async clearStaleCache() {
+            try {
+                console.log('🔄 Refreshing stale cache via edge function...');
+                this.showAdminNotification('Triggering cache refresh via auto-update-tokens...', 'info');
+                
+                const supabase = this.getSupabase();
+                if (!supabase) {
+                    throw new Error('Database connection not available');
+                }
+        
+                // Call the auto-update-tokens edge function
+                console.log('📡 Calling auto-update-tokens edge function...');
+                
+                const edgeFunctionUrl = 'https://lavbfujrqmxiyfkfgcqy.supabase.co/functions/v1/auto-update-tokens';
+                
+                const response = await fetch(edgeFunctionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabase.supabaseKey || Deno.env.get('SUPABASE_ANON_KEY')}`,
+                        'apikey': supabase.supabaseKey || Deno.env.get('SUPABASE_ANON_KEY')
+                    },
+                    body: JSON.stringify({
+                        forceRun: true, // Force run regardless of threshold
+                        triggeredBy: 'admin_clear_stale_cache',
+                        adminWallet: sessionStorage.getItem('adminWallet') || 'admin'
+                    })
+                });
+        
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Edge function failed: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+        
+                const result = await response.json();
+                console.log('✅ Edge function response:', result);
+        
+                // Log admin action
+                await this.logAdminAction('cache_refresh_via_edge_function', {
+                    action: 'trigger_auto_update_tokens',
+                    edge_function_response: result,
+                    admin_wallet: sessionStorage.getItem('adminWallet') || 'admin',
+                    method: 'no_deletion_refresh'
+                });
+        
+                // Show success message with details
+                if (result.success) {
+                    const message = result.tokens_processed 
+                        ? `Cache refreshed: ${result.tokens_processed} tokens updated via edge function`
+                        : 'Cache refresh completed via edge function';
+                    
+                    this.showAdminNotification(message, 'success');
+                    
+                    console.log('🎉 Cache refresh completed:', {
+                        tokensProcessed: result.tokens_processed || 0,
+                        tokensAttempted: result.tokens_attempted || 0,
+                        method: 'edge_function_call'
+                    });
+                } else {
+                    throw new Error(result.error || 'Edge function returned success: false');
+                }
+        
+                // Refresh local cache data after edge function completes
+                setTimeout(async () => {
+                    console.log('🔄 Refreshing local cache display...');
+                    await this.refreshCacheData();
+                }, 3000); // Wait 3 seconds for edge function changes to propagate
+                
+            } catch (error) {
+                console.error('Error triggering cache refresh via edge function:', error);
+                this.showAdminNotification(`Failed to refresh cache: ${error.message}`, 'error');
             }
-
-            // Delete expired token cache entries
-            const { error: tokenError } = await supabase
-                .from('token_cache')
-                .delete()
-                .lt('cache_expires_at', new Date().toISOString());
-
-            if (tokenError) {
-                console.warn('Error clearing stale token cache:', tokenError);
-            }
-
-            // Delete expired price cache entries
-            const { error: priceError } = await supabase
-                .from('price_cache')
-                .delete()
-                .lt('cache_expires_at', new Date().toISOString());
-
-            if (priceError) {
-                console.warn('Error clearing stale price cache:', priceError);
-            }
-
-            // Log admin action
-            await this.logAdminAction('cache_clear', {
-                action: 'clear_stale_cache',
-                admin_wallet: sessionStorage.getItem('adminWallet') || 'admin'
-            });
-
-            this.showAdminNotification('Stale cache cleared successfully', 'success');
-            
-            // Refresh data
-            await this.refreshCacheData();
-            
-        } catch (error) {
-            console.error('Error clearing stale cache:', error);
-            this.showAdminNotification('Failed to clear stale cache: ' + error.message, 'error');
         }
-    }
+        
+        /**
+         * Alternative function to call edge function with different parameters
+         */
+        async refreshStaleTokensViaEdgeFunction(options = {}) {
+            try {
+                const {
+                    forceRun = false,
+                    maxTokens = 250,
+                    triggeredBy = 'admin_manual_refresh'
+                } = options;
+        
+                console.log(`🚀 Calling auto-update-tokens edge function with options:`, options);
+                
+                const supabase = this.getSupabase();
+                const edgeFunctionUrl = 'https://lavbfujrqmxiyfkfgcqy.supabase.co/functions/v1/auto-update-tokens';
+                
+                const response = await fetch(edgeFunctionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabase.supabaseKey || Deno.env.get('SUPABASE_ANON_KEY')}`,
+                        'apikey': supabase.supabaseKey || Deno.env.get('SUPABASE_ANON_KEY')
+                    },
+                    body: JSON.stringify({
+                        forceRun,
+                        maxTokens,
+                        triggeredBy,
+                        adminWallet: sessionStorage.getItem('adminWallet') || 'admin',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`Edge function call failed: ${response.status} ${response.statusText}`);
+                }
+        
+                const result = await response.json();
+                return result;
+                
+            } catch (error) {
+                console.error('Error calling auto-update-tokens edge function:', error);
+                throw error;
+            }
+        }
 
     /**
      * Optimize Cache Performance
