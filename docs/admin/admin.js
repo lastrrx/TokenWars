@@ -4077,36 +4077,105 @@ function generateRetentionReport() {
     showAdminNotification('Retention report generated', 'success');
 }
 
-// Export token management functions
-function exportTokenList() {
-    debugLog('export', '📤 Exporting token list...');
-    
-    const tokenData = AdminState.tokens.map(token => ({
-        address: token.token_address,
-        symbol: token.symbol,
-        name: token.name,
-        price: token.current_price,
-        market_cap: token.market_cap_usd,
-        cache_status: token.cache_status,
-        last_updated: token.last_updated
-    }));
-    
-    const csv = convertToCSV(tokenData);
-    downloadCSV(csv, 'token_list.csv');
-    
-    showAdminNotification(`Exported ${tokenData.length} tokens`, 'success');
-}
+        // Export token management functions
+        function exportTokenList() {
+            debugLog('export', '📤 Exporting token list...');
+            
+            const tokenData = AdminState.tokens.map(token => ({
+                address: token.token_address,
+                symbol: token.symbol,
+                name: token.name,
+                price: token.current_price,
+                market_cap: token.market_cap_usd,
+                cache_status: token.cache_status,
+                last_updated: token.last_updated
+            }));
+            
+            const csv = convertToCSV(tokenData);
+            downloadCSV(csv, 'token_list.csv');
+            
+            showAdminNotification(`Exported ${tokenData.length} tokens`, 'success');
+        }
+        
+        function viewTokenAnalytics() {
+            debugLog('analytics', '📊 Viewing token analytics...');
+            switchToSectionWithDiagnostics('analytics');
+        }
 
-function viewTokenAnalytics() {
-    debugLog('analytics', '📊 Viewing token analytics...');
-    switchToSectionWithDiagnostics('analytics');
-}
-
-// Cache management functions
-function refreshTokenCache() {
-    debugLog('cache', '🪙 Refreshing token cache...');
-    showAdminNotification('Token cache refresh initiated', 'info');
-}
+        async function refreshTokenCache() {
+            try {
+                debugLog('cache', '🪙 Refreshing token cache via Supabase client...');
+                showAdminNotification('Token cache refresh initiated...', 'info');
+                
+                // Get Supabase client
+                const supabase = getSupabase ? getSupabase() : window.supabase;
+                if (!supabase) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                // Show loading state
+                const refreshButton = document.querySelector('button[onclick="refreshTokenCache()"]');
+                if (refreshButton) {
+                    refreshButton.disabled = true;
+                    refreshButton.innerHTML = '⏳ Refreshing...';
+                }
+                
+                debugLog('cache', 'Invoking auto-update-tokens via Supabase client...');
+                
+                // Call edge function via Supabase client
+                const { data, error } = await supabase.functions.invoke('auto-update-tokens', {
+                    body: {
+                        source: 'admin_manual_refresh',
+                        priority: 'high',
+                        forceRefresh: true
+                    }
+                });
+                
+                if (error) {
+                    throw new Error(`Supabase function error: ${error.message}`);
+                }
+                
+                debugLog('cache', 'Supabase function response:', data);
+                
+                // Handle successful response
+                if (data && data.success) {
+                    const tokensUpdated = data.tokens_updated || 0;
+                    const tokensProcessed = data.tokens_processed || 0;
+                    const duration = data.execution_time_ms || 0;
+                    
+                    showAdminNotification(
+                        `Token cache refreshed successfully! Updated ${tokensUpdated}/${tokensProcessed} tokens in ${duration}ms`,
+                        'success'
+                    );
+                    
+                    debugLog('cache', `✅ Cache refresh completed: ${tokensUpdated} tokens updated`);
+                    
+                    // Reload cache data in admin state
+                    if (typeof loadAllTokensDataWithDiagnostics === 'function') {
+                        await loadAllTokensDataWithDiagnostics();
+                    }
+                    
+                    if (typeof loadComprehensiveCacheDataWithDiagnostics === 'function') {
+                        await loadComprehensiveCacheDataWithDiagnostics();
+                    }
+                    
+                } else {
+                    throw new Error(`Edge function returned error: ${data?.error || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                debugLog('error', 'Token cache refresh failed:', error);
+                showAdminNotification(`Token cache refresh failed: ${error.message}`, 'error');
+                
+            } finally {
+                // Reset button state
+                const refreshButton = document.querySelector('button[onclick="refreshTokenCache()"]');
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                    refreshButton.innerHTML = '🔄 Refresh Token Cache';
+                }
+            }
+        }
 
 function clearStaleCache() {
     debugLog('cache', '🗑️ Clearing stale cache...');
