@@ -83,10 +83,13 @@ window.handleCompetitionFilterChange = function() {
     }
 };
 
-window.refreshCompetitions = function() {
+window.refreshCompetitions = async function() {
     console.log('🔄 Refreshing competitions');
-    if (window.loadActiveCompetitions) {
-        window.loadActiveCompetitions();
+    try {
+        await loadActiveCompetitionsFixed();
+    } catch (error) {
+        console.error('❌ Failed to refresh competitions:', error);
+        showNotificationFixed('Failed to refresh competitions', 'error');
     }
 };
 
@@ -292,7 +295,11 @@ function loadPageContentProgressive(pageName) {
     
     switch (pageName) {
         case 'competitions':
-            loadCompetitionsPageProgressive();
+            // Use async loading for competitions
+            loadCompetitionsPageProgressive().catch(error => {
+                console.error('Error loading competitions page:', error);
+                hidePageLoadingState('competitions');
+            });
             break;
         case 'leaderboard':
             loadLeaderboardPageProgressive();
@@ -332,6 +339,7 @@ async function initializeCompetitionSystemFixed() {
                 console.log('✅ Supabase ready promise resolved');
             } catch (error) {
                 console.warn('⚠️ Supabase ready promise failed:', error);
+                // Try to get client anyway
             }
         }
         
@@ -340,31 +348,23 @@ async function initializeCompetitionSystemFixed() {
         CompetitionState.walletService = window.getWalletService?.();
         
         // Verify we have a proper Supabase client
-        if (!CompetitionState.supabaseClient || typeof CompetitionState.supabaseClient.from !== 'function') {
-            console.warn('⚠️ Supabase client not properly initialized, retrying...');
+        if (!CompetitionState.supabaseClient) {
+            console.warn('⚠️ No Supabase client found, retrying...');
             
             // Short retry with explicit check
             await new Promise(resolve => setTimeout(resolve, 1000));
             CompetitionState.supabaseClient = window.supabase;
             
-            if (!CompetitionState.supabaseClient || typeof CompetitionState.supabaseClient.from !== 'function') {
+            if (!CompetitionState.supabaseClient) {
                 throw new Error('Supabase client not available after retry');
             }
         }
         
+        if (typeof CompetitionState.supabaseClient.from !== 'function') {
+            throw new Error('Supabase client missing required methods');
+        }
+        
         console.log('✅ Supabase client verified and ready for competitions');
-        
-        // Show loading state immediately
-        showCompetitionsLoadingState();
-        
-        // Load real competitions from database
-        await loadRealCompetitionsFromDatabase();
-        
-        // Show competitions display
-        updateCompetitionsDisplayFixed();
-        
-        // Load user bets if wallet connected
-        await loadUserBetsIfConnected();
         
         console.log('✅ Competition system initialized successfully');
         return true;
@@ -372,7 +372,7 @@ async function initializeCompetitionSystemFixed() {
     } catch (error) {
         console.error('❌ Competition system initialization failed:', error);
         CompetitionState.error = error.message;
-        showCompetitionsErrorState(error.message);
+        CompetitionState.initialized = false; // Reset on failure
         return false;
     } finally {
         CompetitionState.loading = false;
@@ -384,13 +384,21 @@ async function loadRealCompetitionsFromDatabase() {
         console.log('📊 Loading competitions from Supabase...');
         
         if (!CompetitionState.supabaseClient) {
-            throw new Error('Supabase client not available');
+            console.log('⏳ Supabase client not available, waiting...');
+            await window.SupabaseReady;
+            CompetitionState.supabaseClient = window.supabase;
+        }
+        
+        if (!CompetitionState.supabaseClient) {
+            throw new Error('Supabase client still not available after waiting');
         }
         
         // Verify client has required methods
         if (typeof CompetitionState.supabaseClient.from !== 'function') {
             throw new Error('Supabase client missing .from() method');
         }
+        
+        console.log('✅ Supabase client verified, querying competitions...');
         
         const { data: competitions, error } = await CompetitionState.supabaseClient
             .from('competitions')
@@ -583,6 +591,19 @@ async function loadActiveCompetitionsFixed() {
     try {
         CompetitionState.loading = true;
         showCompetitionsLoadingState();
+        
+        // Ensure competition system is initialized first
+        if (!CompetitionState.initialized) {
+            console.log('🏁 Competition system not initialized, initializing now...');
+            await initializeCompetitionSystemFixed();
+        }
+        
+        // Double-check we have Supabase client
+        if (!CompetitionState.supabaseClient) {
+            console.log('⏳ Waiting for Supabase client...');
+            await window.SupabaseReady;
+            CompetitionState.supabaseClient = window.supabase;
+        }
         
         // Load competitions from database
         await loadRealCompetitionsFromDatabase();
@@ -1429,7 +1450,7 @@ async function disconnectWalletFixed() {
 // PAGE CONTENT LOADING (from app.js)
 // ==============================================
 
-function loadCompetitionsPageProgressive() {
+async function loadCompetitionsPageProgressive() {
     console.log('📊 Loading competitions page...');
     
     try {
@@ -1437,22 +1458,15 @@ function loadCompetitionsPageProgressive() {
         const isConnected = isWalletConnected();
         showCompetitionsView(isConnected);
         
-        // Load competition data if service available
-        if (servicesReady.competition && window.loadActiveCompetitions) {
-            window.loadActiveCompetitions().then(() => {
-                hidePageLoadingState('competitions');
-            }).catch(error => {
-                console.error('Competition loading failed:', error);
-                showBasicCompetitionsView();
-                hidePageLoadingState('competitions');
-            });
-        } else {
-            // Show basic view
-            setTimeout(() => {
-                showBasicCompetitionsView();
-                hidePageLoadingState('competitions');
-            }, 500);
+        // ALWAYS initialize competition system first
+        if (!CompetitionState.initialized) {
+            console.log('🏁 Initializing competition system for first time...');
+            await initializeCompetitionSystemFixed();
         }
+        
+        // Load competitions
+        await loadActiveCompetitionsFixed();
+        hidePageLoadingState('competitions');
         
     } catch (error) {
         console.error('❌ Error loading competitions page:', error);
@@ -2398,11 +2412,11 @@ function initializeServicesProgressive() {
     // Initialize competition service
     setTimeout(async () => {
         try {
-            if (window.initializeCompetitionSystem) {
-                await window.initializeCompetitionSystem();
-                servicesReady.competition = true;
-                console.log('✅ Competition service ready');
-            }
+            // Wait for Supabase to be ready first
+            await window.SupabaseReady;
+            await initializeCompetitionSystemFixed();
+            servicesReady.competition = true;
+            console.log('✅ Competition service ready');
         } catch (error) {
             console.warn('⚠️ Competition service initialization failed:', error);
         }
