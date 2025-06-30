@@ -75,21 +75,43 @@ window.placeBet = function() {
     return placeBetFixed();
 };
 
-// Filter and refresh functions (from app.js)
 window.handleCompetitionFilterChange = function() {
     console.log('🔄 Competition filter changed');
-    if (window.updateCompetitionsDisplay) {
-        window.updateCompetitionsDisplay();
+    
+    // Read current filter values from HTML dropdowns
+    const phaseSelect = document.getElementById('competition-phase');
+    const sortSelect = document.getElementById('sort-by');
+    
+    // Update filter state
+    if (phaseSelect) {
+        CompetitionState.currentFilters.phase = phaseSelect.value;
+        console.log('📊 Phase filter set to:', phaseSelect.value);
     }
+    if (sortSelect) {
+        CompetitionState.currentFilters.sortBy = sortSelect.value;
+        console.log('📊 Sort filter set to:', sortSelect.value);
+    }
+    
+    // Refresh display with new filters
+    updateCompetitionsDisplayFixed();
 };
 
 window.refreshCompetitions = async function() {
     console.log('🔄 Refreshing competitions');
     try {
+        // Show loading state
+        showCompetitionsLoadingState();
+        
+        // Reload data from database
         await loadActiveCompetitionsFixed();
+        
+        // Apply current filters to the refreshed data
+        updateCompetitionsDisplayFixed();
+        
     } catch (error) {
         console.error('❌ Failed to refresh competitions:', error);
         showNotificationFixed('Failed to refresh competitions', 'error');
+        showCompetitionsErrorState(error.message);
     }
 };
 
