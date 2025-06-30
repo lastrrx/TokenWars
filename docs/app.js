@@ -664,40 +664,81 @@ function loadCompetitionsPageProgressive() {
 /**
  * Load portfolio page progressively
  */
-function loadPortfolioPageProgressive() {
-    console.log('💼 Loading portfolio page...');
+function loadLeaderboardPageProgressive() {
+    console.log('🏆 Loading leaderboard page...');
     
-    try {
-        if (!isWalletConnected()) {
-            showConnectWalletPrompt('portfolio-content');
-            hidePageLoadingState('portfolio');
-            return;
-        }
-        
-        // Load portfolio if service available
-        if (servicesReady.portfolio && window.initializePortfolio) {
-            window.initializePortfolio().then(() => {
-                hidePageLoadingState('portfolio');
-            }).catch(error => {
-                console.error('Portfolio loading failed:', error);
-                showBasicPortfolioView();
-                hidePageLoadingState('portfolio');
-            });
-        } else {
-            // Show basic view
-            setTimeout(() => {
-                showBasicPortfolioView();
-                hidePageLoadingState('portfolio');
-            }, 500);
-        }
-        
-    } catch (error) {
-        console.error('❌ Error loading portfolio page:', error);
-        showBasicPortfolioView();
-        hidePageLoadingState('portfolio');
+    const leaderboardContent = document.getElementById('leaderboard-content');
+    if (!leaderboardContent) {
+        hidePageLoadingState('leaderboard');
+        return;
     }
+    
+    // Show loading
+    leaderboardContent.innerHTML = `
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading leaderboard...</p>
+        </div>
+    `;
+    
+    window.supabase
+        .from('leaderboards')
+        .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking')
+        .order('total_winnings', { ascending: false })
+        .limit(50)
+        .then(({ data, error }) => {
+            if (error) throw error;
+            
+            console.log(`✅ Loaded ${data.length} leaderboard entries`);
+            
+            if (data && data.length > 0) {
+                const html = `
+                    <div class="leaderboard-table">
+                        <div class="leaderboard-header">
+                            <div>Rank</div>
+                            <div>Username</div>
+                            <div>Winnings</div>
+                            <div>Win Rate</div>
+                            <div>Streak</div>
+                            <div>Games</div>
+                        </div>
+                        ${data.map((user, index) => `
+                            <div class="leaderboard-row">
+                                <div>${index + 1}</div>
+                                <div>${user.username || 'Anonymous'}</div>
+                                <div>${(user.total_winnings || 0).toFixed(2)} SOL</div>
+                                <div>${(user.win_percentage || 0).toFixed(1)}%</div>
+                                <div>${user.current_streak || 0}</div>
+                                <div>${user.competitions_participated || 0}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                leaderboardContent.innerHTML = html;
+            } else {
+                leaderboardContent.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                        <h3>No Leaderboard Data</h3>
+                        <p>No statistics available yet.</p>
+                    </div>
+                `;
+            }
+            
+            hidePageLoadingState('leaderboard');
+        })
+        .catch(error => {
+            console.error('❌ Leaderboard loading failed:', error);
+            leaderboardContent.innerHTML = `
+                <div class="error-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                    <h3>Error</h3>
+                    <p>${error.message}</p>
+                </div>
+            `;
+            hidePageLoadingState('leaderboard');
+        });
 }
-
 /**
  * Load leaderboard page progressively
  */
