@@ -749,6 +749,7 @@ function loadLeaderboardPageProgressive() {
         if (window.initializeLeaderboard) {
             window.initializeLeaderboard().then(() => {
                 hidePageLoadingState('leaderboard');
+                refreshLeaderboard();
             }).catch(error => {
                 console.error('Leaderboard loading failed:', error);
                 showBasicLeaderboardView();
