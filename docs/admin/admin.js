@@ -3237,51 +3237,263 @@ async function initializeServiceReferences() {
     try {
         debugLog('services', '🔧 Initializing service references...');
         
-        // Get Supabase client
+        // ✅ FIXED: Check all possible Supabase client global variables
         if (window.supabaseClient) {
             AdminState.supabaseClient = window.supabaseClient;
+            debugLog('services', '✅ Found window.supabaseClient');
         } else if (window.getSupabaseClient) {
             AdminState.supabaseClient = { getSupabaseClient: window.getSupabaseClient };
+            debugLog('services', '✅ Found window.getSupabaseClient');
+        } else if (window.supabase) {
+            // ✅ NEW: Check for window.supabase (most common)
+            AdminState.supabaseClient = window.supabase;
+            debugLog('services', '✅ Found window.supabase');
+        } else if (window.createClient) {
+            // ✅ NEW: Check for Supabase createClient function
+            AdminState.supabaseClient = window.createClient;
+            debugLog('services', '✅ Found window.createClient');
         } else {
-            throw new Error('Supabase client not available');
+            // ✅ ENHANCED: Better error message with available globals
+            const availableGlobals = Object.keys(window).filter(key => 
+                key.toLowerCase().includes('supabase') || 
+                key.toLowerCase().includes('client')
+            );
+            
+            debugLog('error', 'Available Supabase-related globals:', availableGlobals);
+            debugLog('error', 'Expected one of: window.supabaseClient, window.getSupabaseClient, window.supabase, window.createClient');
+            
+            throw new Error(`Supabase client not available. Found globals: ${availableGlobals.join(', ')}`);
         }
         
-        // Wait for services to be available
+        // ✅ ENHANCED: Wait for services with better detection
         let attempts = 0;
-        while ((!window.tokenService || !window.priceService || !window.competitionManager) && attempts < 50) {
+        const maxAttempts = 50;
+        
+        while ((!window.tokenService || !window.priceService || !window.competitionManager) && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 200));
             attempts++;
+            
+            if (attempts % 10 === 0) {
+                debugLog('services', `Waiting for services... attempt ${attempts}/${maxAttempts}`);
+                debugLog('services', {
+                    tokenService: !!window.tokenService,
+                    priceService: !!window.priceService,
+                    competitionManager: !!window.competitionManager
+                });
+            }
         }
         
-        // Get services
+        // Get services (these might not be critical)
         if (window.getTokenService) {
-            AdminState.tokenService = window.getTokenService();
-            if (!AdminState.tokenService.isReady()) {
-                await AdminState.tokenService.initialize();
+            try {
+                AdminState.tokenService = window.getTokenService();
+                if (AdminState.tokenService && !AdminState.tokenService.isReady()) {
+                    await AdminState.tokenService.initialize();
+                }
+                debugLog('services', '✅ TokenService initialized');
+            } catch (error) {
+                debugLog('error', 'TokenService initialization failed (non-critical):', error);
             }
         }
         
         if (window.getPriceService) {
-            AdminState.priceService = window.getPriceService();
-            if (!AdminState.priceService.isReady()) {
-                await AdminState.priceService.initialize();
+            try {
+                AdminState.priceService = window.getPriceService();
+                if (AdminState.priceService && !AdminState.priceService.isReady()) {
+                    await AdminState.priceService.initialize();
+                }
+                debugLog('services', '✅ PriceService initialized');
+            } catch (error) {
+                debugLog('error', 'PriceService initialization failed (non-critical):', error);
             }
         }
         
         if (window.getCompetitionManager) {
-            AdminState.competitionManager = window.getCompetitionManager();
-            if (!AdminState.competitionManager.isReady()) {
-                await AdminState.competitionManager.initialize();
+            try {
+                AdminState.competitionManager = window.getCompetitionManager();
+                if (AdminState.competitionManager && !AdminState.competitionManager.isReady()) {
+                    await AdminState.competitionManager.initialize();
+                }
+                debugLog('services', '✅ CompetitionManager initialized');
+            } catch (error) {
+                debugLog('error', 'CompetitionManager initialization failed (non-critical):', error);
             }
         }
         
-        debugLog('services', '✅ Service references initialized');
+        debugLog('services', '✅ Service references initialized successfully');
         
     } catch (error) {
         debugLog('error', 'Failed to initialize service references:', error);
         throw error;
     }
 }
+
+/**
+ * FIXED: Enhanced getSupabase function with better detection
+ */
+function getSupabase() {
+    // ✅ FIXED: Check all possible Supabase client sources
+    if (AdminState.supabaseClient) {
+        if (typeof AdminState.supabaseClient.getSupabaseClient === 'function') {
+            return AdminState.supabaseClient.getSupabaseClient();
+        } else if (AdminState.supabaseClient.from) {
+            return AdminState.supabaseClient;
+        }
+    }
+    
+    // ✅ NEW: Check all possible global Supabase variables
+    if (window.supabase) {
+        return window.supabase;
+    }
+    
+    if (window.supabaseClient) {
+        return window.supabaseClient;
+    }
+    
+    if (window.getSupabaseClient) {
+        return window.getSupabaseClient();
+    }
+    
+    if (window.createClient) {
+        return window.createClient;
+    }
+    
+    // ✅ ENHANCED: Better error message
+    const availableGlobals = Object.keys(window).filter(key => 
+        key.toLowerCase().includes('supabase') || 
+        key.toLowerCase().includes('client')
+    );
+    
+    debugLog('error', 'getSupabase() failed - Available globals:', availableGlobals);
+    throw new Error(`Supabase client not available in getSupabase(). Available: ${availableGlobals.join(', ')}`);
+}
+
+/**
+ * ALTERNATIVE: Initialize Admin Panel with Retry Logic
+ */
+async function initializeAdminPanelWithRetry(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            debugLog('init', `🚀 Admin Panel initialization attempt ${attempt}/${maxRetries}...`);
+            
+            // Wait a bit longer for scripts to load
+            if (attempt > 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+            
+            await initializeAdminPanel();
+            return; // Success!
+            
+        } catch (error) {
+            debugLog('error', `❌ Admin panel initialization attempt ${attempt} failed:`, error);
+            
+            if (attempt === maxRetries) {
+                // Final attempt failed
+                hideLoadingState();
+                showAdminNotification(
+                    `Failed to initialize admin panel after ${maxRetries} attempts: ${error.message}`, 
+                    'error'
+                );
+                
+                // Show diagnostic information
+                showSupabaseDebugInfo();
+            } else {
+                debugLog('init', `⏰ Retrying in ${attempt} second(s)...`);
+            }
+        }
+    }
+}
+
+/**
+ * DEBUG: Show Supabase diagnostic information
+ */
+function showSupabaseDebugInfo() {
+    const debugInfo = {
+        availableGlobals: Object.keys(window).filter(key => 
+            key.toLowerCase().includes('supabase') || 
+            key.toLowerCase().includes('client') ||
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('price') ||
+            key.toLowerCase().includes('competition')
+        ),
+        scriptsLoaded: {
+            config: !!window.APP_CONFIG,
+            supabaseLib: !!window.createClient,
+            services: {
+                tokenService: !!window.tokenService,
+                priceService: !!window.priceService,
+                competitionManager: !!window.competitionManager
+            }
+        },
+        currentURL: window.location.href,
+        timestamp: new Date().toISOString()
+    };
+    
+    console.log('🔍 SUPABASE DEBUG INFO:', debugInfo);
+    
+    // Show debug modal
+    const debugModal = document.createElement('div');
+    debugModal.className = 'modal-overlay';
+    debugModal.innerHTML = `
+        <div class="modal-content" style="
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 1001;
+            color: #f3f4f6;
+        ">
+            <h3 style="margin-bottom: 1rem; color: #ef4444;">🔍 Supabase Client Debug Information</h3>
+            <div style="background: #111827; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <h4>Available Globals:</h4>
+                <pre style="font-size: 0.875rem; color: #94a3b8;">${debugInfo.availableGlobals.join(', ') || 'None found'}</pre>
+            </div>
+            <div style="background: #111827; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <h4>Expected Globals:</h4>
+                <pre style="font-size: 0.875rem; color: #94a3b8;">window.supabase, window.supabaseClient, window.getSupabaseClient</pre>
+            </div>
+            <div style="background: #111827; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <h4>Scripts Status:</h4>
+                <pre style="font-size: 0.875rem; color: #94a3b8;">${JSON.stringify(debugInfo.scriptsLoaded, null, 2)}</pre>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="location.reload()" style="
+                    flex: 1; padding: 0.75rem; background: #3b82f6; color: white; 
+                    border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
+                ">🔄 Reload Page</button>
+                <button onclick="this.closest('.modal-overlay').remove()" style="
+                    flex: 1; padding: 0.75rem; background: #6b7280; color: white; 
+                    border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
+                ">Close</button>
+            </div>
+        </div>
+        <div class="modal-backdrop" onclick="this.closest('.modal-overlay').remove()" style="
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(0, 0, 0, 0.75); z-index: 1000;
+        "></div>
+    `;
+    
+    document.body.appendChild(debugModal);
+}
+
+// ✅ EXPORT FIXED FUNCTIONS
+window.initializeAdminPanelWithRetry = initializeAdminPanelWithRetry;
+window.showSupabaseDebugInfo = showSupabaseDebugInfo;
+
+debugLog('init', '🔧 SUPABASE CLIENT FIXES APPLIED:');
+debugLog('init', '   ✅ Enhanced Supabase client detection (window.supabase, window.supabaseClient, etc.)');
+debugLog('init', '   ✅ Added retry logic with progressive delays');
+debugLog('init', '   ✅ Better error messages with available globals');
+debugLog('init', '   ✅ Debug information modal for troubleshooting');
+debugLog('init', '   ✅ Non-critical service initialization (won\'t fail if services missing)');
 
 async function initializeComponents() {
     try {
