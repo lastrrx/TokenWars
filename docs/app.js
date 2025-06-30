@@ -117,10 +117,74 @@ window.handleLeaderboardFilterChange = function() {
     }
 };
 
-window.refreshLeaderboard = function() {
+window.refreshLeaderboard = async function() {
     console.log('🔄 Refreshing leaderboard');
-    if (window.initializeLeaderboard) {
-        window.initializeLeaderboard();
+    
+    const leaderboardContent = document.getElementById('leaderboard-content');
+    if (!leaderboardContent) return;
+    
+    // Show loading
+    leaderboardContent.innerHTML = `
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading leaderboard...</p>
+        </div>
+    `;
+    
+    try {
+        const { data, error } = await window.supabase
+            .from('leaderboards')
+            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking')
+            .order('total_winnings', { ascending: false })
+            .limit(50);
+            
+        if (error) throw error;
+        
+        console.log(`✅ Loaded ${data.length} leaderboard entries`);
+        
+        if (data && data.length > 0) {
+            const html = `
+                <div class="leaderboard-table">
+                    <div class="leaderboard-header">
+                        <div>Rank</div>
+                        <div>Username</div>
+                        <div>Winnings</div>
+                        <div>Win Rate</div>
+                        <div>Streak</div>
+                        <div>Games</div>
+                    </div>
+                    ${data.map((user, index) => `
+                        <div class="leaderboard-row">
+                            <div>${index + 1}</div>
+                            <div>${user.username || 'Anonymous'}</div>
+                            <div>${(user.total_winnings || 0).toFixed(2)} SOL</div>
+                            <div>${(user.win_percentage || 0).toFixed(1)}%</div>
+                            <div>${user.current_streak || 0}</div>
+                            <div>${user.competitions_participated || 0}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            leaderboardContent.innerHTML = html;
+        } else {
+            leaderboardContent.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <h3>No Leaderboard Data</h3>
+                    <p>No statistics available yet.</p>
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('❌ Leaderboard error:', error);
+        leaderboardContent.innerHTML = `
+            <div class="error-state">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3>Error</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
     }
 };
 
