@@ -801,31 +801,6 @@
                     </div>
                 </div>
 
-                <!-- Batch Operations -->
-                <div class="batch-selector">
-                    <h3>🔄 Batch Operations</h3>
-                    <div class="batch-controls">
-                        <button class="btn btn-success" onclick="batchApprove()">
-                            ✅ Approve Selected
-                        </button>
-                        <button class="btn btn-danger" onclick="batchReject()">
-                            ❌ Reject Selected
-                        </button>
-                        <button class="btn btn-secondary" onclick="selectAll()">
-                            🗂️ Select All
-                        </button>
-                        <button class="btn btn-secondary" onclick="clearSelection()">
-                            🗑️ Clear Selection
-                        </button>
-                        <button class="btn btn-primary" onclick="bulkAnalyze()">
-                            🔍 Bulk Analyze
-                        </button>
-                    </div>
-                    <div class="selected-count">
-                        Selected: <span id="selected-count">0</span> tokens
-                    </div>
-                </div>
-
                 <!-- Pending Approval Queue -->
                 <div class="production-section">
                     <h3>⏳ Pending Approval Queue</h3>
@@ -882,9 +857,6 @@
                     <h3>✅ Whitelist Operations</h3>
                     <p>Remove tokens from blacklist and optionally add to approval queue.</p>
                     <div class="cache-controls">
-                        <button class="btn btn-success" onclick="bulkWhitelist()">
-                            ✅ Bulk Whitelist Selected
-                        </button>
                         <button class="btn btn-info" onclick="whitelistWithApproval()">
                             🔄 Whitelist → Approval Queue
                         </button>
@@ -1480,11 +1452,6 @@
         }
 
         // Blacklist Functions
-        function bulkWhitelist() {
-            console.log('✅ Bulk whitelist operation...');
-            showAdminNotification('Bulk whitelist feature coming soon', 'info');
-        }
-        
         function whitelistWithApproval() {
             console.log('🔄 Whitelist with approval...');
             showAdminNotification('Whitelist to approval queue feature coming soon', 'info');
