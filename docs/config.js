@@ -1,4 +1,4 @@
-// TokenWars Configuration - Phase 1 Basic Setup
+// TokenWars Configuration - Fixed Version with No Duplicates
 // Essential configuration for navigation and basic functionality
 
 // Supabase Configuration
@@ -93,15 +93,6 @@ const NAVIGATION_CONFIG = {
     }
 };
 
-// Wallet configuration
-const WALLET_CONFIG = {
-    SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack', 'demo'],
-    DEFAULT_WALLET: 'phantom',
-    DEMO_MODE_ENABLED: true,
-    AUTO_RECONNECT: true,
-    CONNECTION_TIMEOUT: 10000 // 10 seconds
-};
-
 // UI Configuration
 const UI_CONFIG = {
     THEME: 'dark',
@@ -110,16 +101,6 @@ const UI_CONFIG = {
     MODAL_ANIMATION: true,
     MOBILE_BREAKPOINT: 768, // px
     TABLET_BREAKPOINT: 1024 // px
-};
-
-// Add smart contract configuration
-
-const BLOCKCHAIN_CONFIG = {
-    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4',
-    SOLANA_NETWORK: 'devnet',
-    PYTH_NETWORK_CLUSTER: 'devnet',
-    SMART_CONTRACT_ENABLED: true,
-    FALLBACK_TO_DATABASE: true
 };
 
 // Phase tracking configuration
@@ -155,7 +136,7 @@ const PHASE_CONFIG = {
 };
 
 // ==============================================
-// BLOCKCHAIN CONFIGURATION
+// BLOCKCHAIN CONFIGURATION (SINGLE DEFINITION)
 // ==============================================
 
 const BLOCKCHAIN_CONFIG = {
@@ -168,6 +149,7 @@ const BLOCKCHAIN_CONFIG = {
     SMART_CONTRACT_ENABLED: true,
     SMART_CONTRACT_COMPETITIONS: true,
     SMART_CONTRACT_ESCROW: true,
+    FALLBACK_TO_DATABASE: true,
     
     // Pyth Network Configuration
     PYTH_NETWORK_CLUSTER: 'devnet',
@@ -196,11 +178,15 @@ const BLOCKCHAIN_CONFIG = {
         MAX_COMPETITION_DURATION: 172800000 // 48 hours
     },
     
-    // Wallet Integration
+    // Wallet Integration (SINGLE DEFINITION)
     WALLET_CONFIG: {
+        SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack', 'demo'],
+        DEFAULT_WALLET: 'phantom',
+        DEMO_MODE_ENABLED: true,
         AUTO_CONNECT: false,
+        AUTO_RECONNECT: true,
         PERSIST_CONNECTION: true,
-        SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack'],
+        CONNECTION_TIMEOUT: 10000, // 10 seconds
         REQUIRED_PERMISSIONS: ['signTransaction', 'signAllTransactions']
     },
     
@@ -222,9 +208,9 @@ const SERVICE_CONFIG = {
     SERVICES: {
         SMART_CONTRACT_SERVICE: true,
         WALLET_SERVICE: true,
-        PRICE_SERVICE: true,
-        TOKEN_SERVICE: true,
-        COMPETITION_MANAGER: false // ← Set to false since removed
+        PRICE_SERVICE: false, // Set to false since not required
+        TOKEN_SERVICE: false, // Set to false since not required
+        COMPETITION_MANAGER: false // Set to false since removed
     },
     
     // Service initialization timeouts
@@ -238,7 +224,8 @@ const SERVICE_CONFIG = {
     FALLBACKS: {
         USE_DATABASE_ONLY: true, // Fallback to database if smart contract fails
         GRACEFUL_DEGRADATION: true,
-        SHOW_SERVICE_STATUS: true
+        SHOW_SERVICE_STATUS: true,
+        SKIP_MISSING_SERVICES: true // Skip services that don't exist
     }
 };
 
@@ -246,9 +233,22 @@ const SERVICE_CONFIG = {
 // EXPORTS & GLOBAL ASSIGNMENT
 // ==============================================
 
-// Export configurations
+// Export for use in other files
+window.SUPABASE_CONFIG = SUPABASE_CONFIG;
+window.APP_CONFIG = APP_CONFIG;
+window.COMPETITION_STATUS = COMPETITION_STATUS;
+window.TOKEN_VALIDATION = TOKEN_VALIDATION;
+window.TOKEN_ERROR_CODES = TOKEN_ERROR_CODES;
+window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
+window.UI_CONFIG = UI_CONFIG;
+window.PHASE_CONFIG = PHASE_CONFIG;
+
+// Export blockchain configurations
 window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG;
 window.SERVICE_CONFIG = SERVICE_CONFIG;
+
+// Use wallet config from blockchain config to avoid conflicts
+window.WALLET_CONFIG = BLOCKCHAIN_CONFIG.WALLET_CONFIG;
 
 // Blockchain feature checker
 window.isBlockchainFeatureEnabled = function(feature) {
@@ -258,7 +258,8 @@ window.isBlockchainFeatureEnabled = function(feature) {
         'smart_contract_escrow': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ESCROW,
         'pyth_integration': !!BLOCKCHAIN_CONFIG.PYTH_NETWORK_CLUSTER,
         'transaction_signing': BLOCKCHAIN_CONFIG.WALLET_CONFIG.REQUIRED_PERMISSIONS.length > 0,
-        'sol_transfers': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED && !BLOCKCHAIN_CONFIG.DEVELOPMENT.MOCK_TRANSACTIONS
+        'sol_transfers': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED && !BLOCKCHAIN_CONFIG.DEVELOPMENT.MOCK_TRANSACTIONS,
+        'fallback_to_database': BLOCKCHAIN_CONFIG.FALLBACK_TO_DATABASE
     };
     
     return blockchainFeatures[feature] || false;
@@ -266,12 +267,23 @@ window.isBlockchainFeatureEnabled = function(feature) {
 
 // Smart contract availability checker
 window.isSmartContractAvailable = function() {
-    // Check if smart contract service exists and is enabled
-    const serviceExists = !!(window.smartContractService || window.getSmartContractService);
-    const configEnabled = BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED;
-    const serviceEnabled = SERVICE_CONFIG.SERVICES.SMART_CONTRACT_SERVICE;
-    
-    return serviceExists && configEnabled && serviceEnabled;
+    try {
+        // Check if smart contract service exists and is enabled
+        const serviceExists = !!(window.smartContractService || window.getSmartContractService);
+        const configEnabled = BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED;
+        const serviceEnabled = SERVICE_CONFIG.SERVICES.SMART_CONTRACT_SERVICE;
+        
+        return serviceExists && configEnabled && serviceEnabled;
+    } catch (error) {
+        console.warn('Error checking smart contract availability:', error);
+        return false;
+    }
+};
+
+// Service availability checker
+window.isServiceAvailable = function(serviceName) {
+    const serviceKey = serviceName.toUpperCase() + '_SERVICE';
+    return SERVICE_CONFIG.SERVICES[serviceKey] || false;
 };
 
 // Configuration summary for debugging
@@ -280,26 +292,15 @@ window.getBlockchainConfigSummary = function() {
         programId: BLOCKCHAIN_CONFIG.SOLANA_PROGRAM_ID,
         network: BLOCKCHAIN_CONFIG.SOLANA_NETWORK,
         smartContractsEnabled: BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED,
+        fallbackToDatabase: BLOCKCHAIN_CONFIG.FALLBACK_TO_DATABASE,
         pythFeeds: Object.keys(BLOCKCHAIN_CONFIG.PYTH_PRICE_FEEDS).length,
         servicesAvailable: Object.entries(SERVICE_CONFIG.SERVICES)
             .filter(([key, value]) => value)
             .map(([key]) => key),
+        walletSupport: BLOCKCHAIN_CONFIG.WALLET_CONFIG.SUPPORTED_WALLETS,
         development: BLOCKCHAIN_CONFIG.DEVELOPMENT
     };
 };
-
-console.log('✅ Blockchain configuration loaded:', window.getBlockchainConfigSummary());
-
-// Export for use in other files
-window.SUPABASE_CONFIG = SUPABASE_CONFIG;
-window.APP_CONFIG = APP_CONFIG;
-window.COMPETITION_STATUS = COMPETITION_STATUS;
-window.TOKEN_VALIDATION = TOKEN_VALIDATION;
-window.TOKEN_ERROR_CODES = TOKEN_ERROR_CODES;
-window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
-window.WALLET_CONFIG = WALLET_CONFIG;
-window.UI_CONFIG = UI_CONFIG;
-window.PHASE_CONFIG = PHASE_CONFIG;
 
 // Phase 1: Feature availability checker
 window.isFeatureEnabled = function(feature) {
@@ -331,7 +332,7 @@ window.isFeatureEnabled = function(feature) {
 
 // Configuration validation
 window.validateConfig = function() {
-    const required = ['SUPABASE_CONFIG', 'APP_CONFIG', 'NAVIGATION_CONFIG', 'PHASE_CONFIG'];
+    const required = ['SUPABASE_CONFIG', 'APP_CONFIG', 'NAVIGATION_CONFIG', 'PHASE_CONFIG', 'BLOCKCHAIN_CONFIG'];
     const missing = required.filter(config => !window[config]);
     
     if (missing.length > 0) {
@@ -378,17 +379,20 @@ window.getConfigSummary = function() {
             wallet_connection: window.isFeatureEnabled('wallet_connection')
         },
         wallet: {
-            supported: WALLET_CONFIG.SUPPORTED_WALLETS.length,
-            demoEnabled: WALLET_CONFIG.DEMO_MODE_ENABLED
+            supported: BLOCKCHAIN_CONFIG.WALLET_CONFIG.SUPPORTED_WALLETS.length,
+            demoEnabled: BLOCKCHAIN_CONFIG.WALLET_CONFIG.DEMO_MODE_ENABLED
         },
         navigation: {
             sections: NAVIGATION_CONFIG.SECTIONS.length,
             default: NAVIGATION_CONFIG.DEFAULT_SECTION
-        }
+        },
+        blockchain: window.getBlockchainConfigSummary()
     };
 };
 
-console.log('⚙️ TokenWars configuration loaded - Phase 1 setup complete');
+// Initialize and log configuration
+console.log('⚙️ TokenWars configuration loaded - Fixed version with no duplicates');
 console.log('📊 Current Phase:', window.getPhaseStatus().current, '-', window.getPhaseStatus().name);
 console.log('🎯 Available Features:', Object.keys(window.getConfigSummary().features).filter(f => window.isFeatureEnabled(f)));
-console.log('📋 Config summary:', window.getConfigSummary());
+console.log('🔗 Blockchain Config:', window.getBlockchainConfigSummary());
+console.log('📋 Full Config Summary:', window.getConfigSummary());
