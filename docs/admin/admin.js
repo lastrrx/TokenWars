@@ -31,18 +31,12 @@ const AdminState = {
     
     // Real-time monitoring
     systemHealth: {
-        tokenService: 'unknown',
-        priceService: 'unknown',
-        competitionManager: 'unknown',
         database: 'unknown',
         priceUpdates: 'unknown',
         lastUpdate: null
     },
     
     // Service references
-    tokenService: null,
-    priceService: null,
-    competitionManager: null,
     supabaseClient: null,
     
     // UI state
