@@ -4180,9 +4180,6 @@ async function updateSystemHealthDisplay() {
     
     const healthItems = [
         { name: 'Database', status: AdminState.systemHealth.database },
-        { name: 'Token Service', status: AdminState.systemHealth.tokenService },
-        { name: 'Price Service', status: AdminState.systemHealth.priceService },
-        { name: 'Competition Manager', status: AdminState.systemHealth.competitionManager }
     ];
     
     statusGrid.innerHTML = healthItems.map(item => `
