@@ -937,78 +937,114 @@ function updateCompetitionModalContent(competition) {
 
 // Add these functions to app.js for smart contract betting integration
 
-/**
- * Place bet with smart contract integration
- * Handles both on-chain escrow and database recording
- */
-async function placeBetWithSmartContract() {
-    try {
-        console.log('🎯 Placing bet with smart contract integration...');
-        
-        // Validate inputs
-        if (!CompetitionState.selectedToken || !CompetitionState.selectedCompetition) {
-            showNotificationFixed('Please select a token first', 'error');
-            return;
-        }
-        
-        const betAmountInput = document.getElementById('betAmount');
-        const betAmount = parseFloat(betAmountInput?.value || 0.1);
-        
-        if (betAmount < 0.1) {
-            showNotificationFixed('Minimum bet amount is 0.1 SOL', 'error');
-            return;
-        }
-        
-        // Check wallet connection
-        const walletAddress = getWalletAddress();
-        if (!walletAddress) {
-            showNotificationFixed('Wallet not connected', 'error');
-            return;
-        }
-
-        // Check if competition has smart contract integration
-        const competition = CompetitionState.selectedCompetition;
-        const hasSmartContract = competition.escrow_account && window.smartContractService?.isAvailable();
-        
-        console.log('🔗 Smart contract integration:', hasSmartContract ? 'enabled' : 'disabled');
-        
-        // Show loading state
-        const placeBetButton = document.getElementById('placeBetButton');
-        if (placeBetButton) {
-            placeBetButton.disabled = true;
-            placeBetButton.textContent = hasSmartContract ? 'Placing bet on-chain...' : 'Placing bet...';
-        }
-
-        let transactionSignature = null;
-
-        if (hasSmartContract) {
+        /**
+         * UPDATED: Place bet with smart contract (Full Blockchain Implementation)
+         * Location: Replace existing placeBetWithSmartContract() function in app.js
+         */
+        async function placeBetWithSmartContract(competitionId, selectedToken) {
             try {
-                // 1. Place bet on-chain first
-                console.log('📊 Placing bet on-chain...');
-                showNotificationFixed('Placing bet on-chain...', 'info');
+                console.log('🚀 Placing bet with smart contract...', { competitionId, selectedToken });
                 
-                transactionSignature = await window.smartContractService.placeBet(
-                    competition.competitionId,
-                    walletAddress,
-                    CompetitionState.selectedToken, // 'A' or 'B'
-                    betAmount
+                // 1. Check prerequisites
+                if (!window.smartContractService?.isAvailable()) {
+                    throw new Error('Smart contract service not available');
+                }
+                
+                const walletAddress = window.walletService?.getWalletAddress();
+                if (!walletAddress) {
+                    throw new Error('Wallet not connected');
+                }
+                
+                // 2. Show loading state
+                showBettingLoader(true, 'Preparing blockchain transaction...');
+                
+                // 3. Get competition details
+                const competition = await window.supabaseClient
+                    .from('competitions')
+                    .select('*')
+                    .eq('competition_id', competitionId)
+                    .single();
+                    
+                if (!competition.data) {
+                    throw new Error('Competition not found');
+                }
+                
+                // 4. Check if user already has a bet
+                const existingBet = await window.supabaseClient
+                    .from('bets')
+                    .select('bet_id')
+                    .eq('competition_id', competitionId)
+                    .eq('user_wallet', walletAddress)
+                    .single();
+                    
+                if (existingBet.data) {
+                    throw new Error('You have already placed a bet in this competition');
+                }
+                
+                // 5. Validate bet amount and wallet balance
+                const betAmount = competition.data.bet_amount;
+                const walletBalance = await window.walletService.getBalance();
+                
+                if (walletBalance < betAmount) {
+                    throw new Error(`Insufficient balance. Required: ${betAmount} SOL`);
+                }
+                
+                // 6. Update UI status
+                showBettingLoader(true, 'Waiting for transaction approval...');
+                
+                // 7. Execute blockchain transaction
+                const transactionResult = await window.smartContractService.placeBet(
+                    competitionId,
+                    selectedToken,
+                    betAmount,
+                    walletAddress
                 );
                 
-                console.log('✅ On-chain bet placed:', transactionSignature);
-                showNotificationFixed('Bet placed on-chain, saving to database...', 'info');
+                console.log('✅ Blockchain transaction successful:', transactionResult);
                 
-            } catch (onChainError) {
-                console.error('❌ On-chain bet placement failed:', onChainError);
-                showNotificationFixed(`On-chain bet failed: ${onChainError.message}`, 'error');
+                // 8. Update UI status
+                showBettingLoader(true, 'Logging transaction to database...');
                 
-                // Reset button and exit - don't proceed with database if on-chain fails
-                if (placeBetButton) {
-                    placeBetButton.disabled = false;
-                    placeBetButton.textContent = 'Place Bet';
+                // 9. Log transaction to database
+                const betData = {
+                    competition_id: competitionId,
+                    user_wallet: walletAddress,
+                    selected_token: selectedToken,
+                    bet_amount: betAmount,
+                    transaction_signature: transactionResult.signature,
+                    escrow_account: transactionResult.escrowAccount,
+                    placed_at: new Date().toISOString(),
+                    status: 'active'
+                };
+                
+                const dbResult = await window.supabaseClient
+                    .from('bets')
+                    .insert([betData])
+                    .select()
+                    .single();
+                    
+                if (dbResult.error) {
+                    console.error('⚠️ Database logging failed:', dbResult.error);
+                    // Don't throw error - blockchain transaction succeeded
                 }
-                return;
+                
+                // 10. Update competition UI
+                showBettingLoader(false);
+                showTransactionSuccess(transactionResult.signature, betAmount);
+                await loadActiveCompetitionsFixed();
+                closeModal('competition-modal');
+                
+                console.log('🎉 Bet placed successfully!');
+                return transactionResult;
+                
+            } catch (error) {
+                console.error('❌ Error placing bet:', error);
+                showBettingLoader(false);
+                showTransactionError(error.message);
+                throw error;
             }
         }
+
 
         // 2. Record bet in database (whether on-chain succeeded or not)
         console.log('💾 Recording bet in database...');
@@ -1087,90 +1123,86 @@ async function placeBetWithSmartContract() {
 }
 
 /**
- * Withdraw winnings from smart contract
+ * UPDATED: Withdraw winnings with smart contract
+ * Location: Replace existing withdrawWinningsWithSmartContract() function in app.js
  */
 async function withdrawWinningsWithSmartContract(competitionId) {
     try {
-        console.log('💰 Withdrawing winnings with smart contract:', competitionId);
+        console.log('💰 Withdrawing winnings with smart contract...', competitionId);
         
-        const walletAddress = getWalletAddress();
+        // 1. Check prerequisites
+        if (!window.smartContractService?.isAvailable()) {
+            throw new Error('Smart contract service not available');
+        }
+        
+        const walletAddress = window.walletService?.getWalletAddress();
         if (!walletAddress) {
-            showNotificationFixed('Wallet not connected', 'error');
-            return;
+            throw new Error('Wallet not connected');
         }
-
-        // Check if user has winning bet
-        const { data: bet, error: betError } = await window.supabase
-            .from('bets')
-            .select('*, competitions(*)')
-            .eq('user_wallet', walletAddress)
-            .eq('competition_id', competitionId)
-            .eq('status', 'WON')
-            .eq('is_withdrawn', false)
-            .single();
-
-        if (betError || !bet) {
-            throw new Error('No winning bet found or already withdrawn');
-        }
-
-        // Check if competition has smart contract integration
-        const hasSmartContract = bet.competitions.escrow_account && window.smartContractService?.isAvailable();
         
-        let withdrawSignature = null;
-
-        if (hasSmartContract) {
-            try {
-                // Withdraw from smart contract
-                console.log('📊 Withdrawing from smart contract...');
-                showNotificationFixed('Processing withdrawal on-chain...', 'info');
-                
-                withdrawSignature = await window.smartContractService.withdrawWinnings(
-                    competitionId,
-                    walletAddress
-                );
-                
-                console.log('✅ On-chain withdrawal successful:', withdrawSignature);
-                showNotificationFixed('Withdrawal successful, updating records...', 'info');
-                
-            } catch (withdrawError) {
-                console.error('❌ On-chain withdrawal failed:', withdrawError);
-                showNotificationFixed(`Withdrawal failed: ${withdrawError.message}`, 'error');
-                return;
-            }
-        }
-
-        // Update database record
-        const updateData = {
-            is_withdrawn: true,
-            status: 'CLAIMED'
-        };
-
-        if (withdrawSignature) {
-            updateData.withdraw_transaction_signature = withdrawSignature;
-        }
-
-        await window.supabase
+        // 2. Show loading state
+        showWithdrawalLoader(true, 'Preparing withdrawal transaction...');
+        
+        // 3. Get user's bet for this competition
+        const userBet = await window.supabaseClient
             .from('bets')
-            .update(updateData)
-            .eq('bet_id', bet.bet_id);
-
-        const successMessage = hasSmartContract 
-            ? 'Winnings withdrawn successfully from smart contract!'
-            : 'Winnings withdrawal recorded successfully!';
+            .select('*')
+            .eq('competition_id', competitionId)
+            .eq('user_wallet', walletAddress)
+            .eq('status', 'won')
+            .single();
             
-        showNotificationFixed(successMessage, 'success');
-
-        // Refresh portfolio/competitions display
-        if (window.refreshPortfolioData) {
-            window.refreshPortfolioData();
+        if (!userBet.data) {
+            throw new Error('No winning bet found for this competition');
         }
-
+        
+        if (userBet.data.is_withdrawn) {
+            throw new Error('Winnings already withdrawn');
+        }
+        
+        // 4. Update UI status
+        showWithdrawalLoader(true, 'Waiting for transaction approval...');
+        
+        // 5. Execute blockchain withdrawal
+        const withdrawalResult = await window.smartContractService.withdrawWinnings(
+            competitionId,
+            walletAddress
+        );
+        
+        console.log('✅ Withdrawal transaction successful:', withdrawalResult);
+        
+        // 6. Update UI status
+        showWithdrawalLoader(true, 'Updating records...');
+        
+        // 7. Update database records
+        const updateResult = await window.supabaseClient
+            .from('bets')
+            .update({
+                is_withdrawn: true,
+                withdraw_transaction_signature: withdrawalResult.signature,
+                withdrawn_at: new Date().toISOString()
+            })
+            .eq('bet_id', userBet.data.bet_id);
+            
+        if (updateResult.error) {
+            console.error('⚠️ Database update failed:', updateResult.error);
+        }
+        
+        // 8. Update UI
+        showWithdrawalLoader(false);
+        showWithdrawalSuccess(withdrawalResult.signature, withdrawalResult.amount);
+        await loadActiveCompetitionsFixed();
+        
+        console.log('🎉 Withdrawal successful!');
+        return withdrawalResult;
+        
     } catch (error) {
-        console.error('❌ Withdrawal failed:', error);
-        showNotificationFixed(`Withdrawal failed: ${error.message}`, 'error');
+        console.error('❌ Error withdrawing winnings:', error);
+        showWithdrawalLoader(false);
+        showWithdrawalError(error.message);
+        throw error;
     }
 }
-
 /**
  * Enhanced competition display with smart contract status
  */
@@ -1322,14 +1354,18 @@ function createCompetitionCardWithSmartContract(competition, isWalletConnected) 
 }
 
 /**
- * Check if smart contract integration is available
+ * UPDATED: Check if smart contract is available and update UI accordingly
+ * Location: Replace existing isSmartContractAvailable() function in app.js
  */
 function isSmartContractAvailable() {
-    return !!(window.smartContractService && 
-              window.smartContractService.isAvailable && 
-              window.smartContractService.isAvailable());
+    const isAvailable = window.smartContractService?.isAvailable() && 
+                       window.walletService?.isConnected();
+    
+    // Update UI indicators
+    updateSmartContractStatus(isAvailable);
+    
+    return isAvailable;
 }
-
 /**
  * Get smart contract status for competition
  */
@@ -2911,6 +2947,109 @@ function setupWalletEventListeners() {
         console.error('❌ Error setting up wallet event listeners:', error);
     }
 }
+
+/**
+ * NEW: Update smart contract status in UI
+ * Location: Add this new function to app.js
+ */
+function updateSmartContractStatus(isAvailable) {
+    const statusElements = document.querySelectorAll('.smart-contract-status');
+    const betButtons = document.querySelectorAll('.bet-button');
+    
+    statusElements.forEach(element => {
+        if (isAvailable) {
+            element.textContent = '🟢 Blockchain Active';
+            element.className = 'smart-contract-status active';
+        } else {
+            element.textContent = '🔴 Blockchain Unavailable';
+            element.className = 'smart-contract-status inactive';
+        }
+    });
+    
+    betButtons.forEach(button => {
+        if (isAvailable) {
+            button.disabled = false;
+            button.textContent = button.dataset.originalText || 'Place Bet';
+        } else {
+            button.disabled = true;
+            button.textContent = 'Blockchain Unavailable';
+        }
+    });
+}
+
+/**
+ * NEW: Show betting transaction loader
+ * Location: Add this new function to app.js
+ */
+function showBettingLoader(show, message = 'Processing transaction...') {
+    const loader = document.getElementById('betting-loader');
+    const loaderMessage = document.getElementById('betting-loader-message');
+    
+    if (show) {
+        if (loader) loader.style.display = 'flex';
+        if (loaderMessage) loaderMessage.textContent = message;
+    } else {
+        if (loader) loader.style.display = 'none';
+    }
+}
+
+/**
+ * NEW: Show transaction success message
+ * Location: Add this new function to app.js
+ */
+function showTransactionSuccess(signature, amount) {
+    const message = `✅ Bet placed successfully!\nTransaction: ${signature.substring(0, 20)}...\nAmount: ${amount} SOL`;
+    alert(message); // Replace with better UI notification
+    console.log('Transaction success:', { signature, amount });
+}
+
+/**
+ * NEW: Show transaction error message
+ * Location: Add this new function to app.js
+ */
+function showTransactionError(errorMessage) {
+    const message = `❌ Transaction failed: ${errorMessage}`;
+    alert(message); // Replace with better UI notification
+    console.error('Transaction error:', errorMessage);
+}
+
+/**
+ * NEW: Show withdrawal loader
+ * Location: Add this new function to app.js
+ */
+function showWithdrawalLoader(show, message = 'Processing withdrawal...') {
+    const loader = document.getElementById('withdrawal-loader');
+    const loaderMessage = document.getElementById('withdrawal-loader-message');
+    
+    if (show) {
+        if (loader) loader.style.display = 'flex';
+        if (loaderMessage) loaderMessage.textContent = message;
+    } else {
+        if (loader) loader.style.display = 'none';
+    }
+}
+
+/**
+ * NEW: Show withdrawal success message
+ * Location: Add this new function to app.js
+ */
+function showWithdrawalSuccess(signature, amount) {
+    const message = `💰 Withdrawal successful!\nTransaction: ${signature.substring(0, 20)}...\nAmount: ${amount} SOL`;
+    alert(message); // Replace with better UI notification
+    console.log('Withdrawal success:', { signature, amount });
+}
+
+/**
+ * NEW: Show withdrawal error message
+ * Location: Add this new function to app.js
+ */
+function showWithdrawalError(errorMessage) {
+    const message = `❌ Withdrawal failed: ${errorMessage}`;
+    alert(message); // Replace with better UI notification
+    console.error('Withdrawal error:', errorMessage);
+}
+
+
 
 // ==============================================
 // GLOBAL APP OBJECT (from app.js)
