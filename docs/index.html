@@ -450,10 +450,17 @@
                                 <button class="btn-refresh-stylized" onclick="refreshPortfolioData()">
                                     <span class="refresh-icon">🔄</span> Refresh
                                 </button>
-                                <button onclick="withdrawWinningsWithSmartContract('COMPETITION_ID')" 
-                                        class="btn btn-success">
+                                <!-- Current (shows always) -->
+                                <button onclick="withdrawWinningsWithSmartContract('COMPETITION_ID')" class="btn btn-success">
                                     💰 Withdraw Winnings
                                 </button>
+                                
+                                <!-- Should be (conditional) -->
+                                <div id="withdrawSection" style="display: none;">
+                                    <button onclick="withdrawWinningsWithSmartContract(competitionId)" class="btn btn-success">
+                                        💰 Withdraw Winnings
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
