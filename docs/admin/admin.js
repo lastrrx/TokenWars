@@ -38,13 +38,7 @@ const AdminState = {
         priceUpdates: 'unknown',
         lastUpdate: null
     },
-    
-    // Service references
-    tokenService: null,
-    priceService: null,
-    competitionManager: null,
-    supabaseClient: null,
-    
+
     // UI state
     charts: {},
     updateIntervals: [],
@@ -1111,29 +1105,6 @@ async function initializeCompetitionManagementWithDiagnostics() {
         
     } catch (error) {
         debugLog('error', 'Failed to initialize competition management:', error);
-    }
-}
-
-/**
- * Load Automation Status with Diagnostics
- */
-async function loadAutomationStatusWithDiagnostics() {
-    try {
-        debugLog('automation', '🤖 Loading automation status...');
-        
-        if (AdminState.competitionManager) {
-            const status = AdminState.competitionManager.getAutomationStatus();
-            AdminState.automationState.enabled = status.enabled;
-            AdminState.automationState.config = status.config;
-            AdminState.automationState.status = status.status;
-            
-            debugLog('automation', 'Automation status loaded:', status);
-        } else {
-            debugLog('automation', 'Competition manager not available');
-        }
-        
-    } catch (error) {
-        debugLog('error', 'Error loading automation status:', error);
     }
 }
 
@@ -2690,44 +2661,6 @@ async function startCompetitionAutomationEnhanced() {
 
         // Show startup progress
         showAutomationStartupProgress();
-
-        // Enable automation in competition manager with enhanced config
-        if (AdminState.competitionManager) {
-            const success = AdminState.competitionManager.enableAutomatedCreation(automationConfig);
-            if (success) {
-                AdminState.automationState.enabled = true;
-                AdminState.automationState.config = automationConfig;
-                AdminState.automationState.status.lastStarted = new Date().toISOString();
-                
-                // Calculate next competition time
-                await calculateNextCompetitionTime();
-                
-                // Update UI with enhanced status
-                await updateAutomationStatusDisplayEnhanced();
-                
-                // Start real-time monitoring
-                startAutomationMonitoring();
-                
-                showAdminNotification('Competition automation started successfully', 'success');
-                
-                // Log admin action with enhanced details
-                await logAdminActionEnhanced('automation_start', {
-                    action: 'start_competition_automation',
-                    config: automationConfig,
-                    admin_wallet: adminWallet,
-                    admin_role: authResult.role,
-                    timestamp: new Date().toISOString()
-                });
-                
-                debugLog('automation', '✅ Competition automation started with enhanced controls');
-            } else {
-                hideAutomationStartupProgress();
-                showAdminNotification('Failed to start automation', 'error');
-            }
-        } else {
-            hideAutomationStartupProgress();
-            showAdminNotification('Competition manager not available', 'error');
-        }
         
     } catch (error) {
         hideAutomationStartupProgress();
@@ -2776,40 +2709,6 @@ async function stopCompetitionAutomationEnhanced() {
         const confirmed = await showEnhancedConfirmDialog('Stop Automation', confirmationHtml);
         if (!confirmed) {
             return;
-        }
-
-        // Disable automation in competition manager
-        if (AdminState.competitionManager) {
-            const success = AdminState.competitionManager.disableAutomatedCreation();
-            if (success) {
-                AdminState.automationState.enabled = false;
-                AdminState.automationState.status.lastStopped = new Date().toISOString();
-                AdminState.automationState.status.nextScheduled = null;
-                
-                // Stop real-time monitoring
-                stopAutomationMonitoring();
-                
-                // Update UI
-                await updateAutomationStatusDisplayEnhanced();
-                
-                showAdminNotification('Competition automation stopped', 'warning');
-                
-                // Log admin action
-                await logAdminActionEnhanced('automation_stop', {
-                    action: 'stop_competition_automation',
-                    admin_wallet: adminWallet,
-                    admin_role: authResult.role,
-                    duration: AdminState.automationState.status.lastStarted ? 
-                        Date.now() - new Date(AdminState.automationState.status.lastStarted).getTime() : 0,
-                    timestamp: new Date().toISOString()
-                });
-                
-                debugLog('automation', '✅ Competition automation stopped');
-            } else {
-                showAdminNotification('Failed to stop automation', 'error');
-            }
-        } else {
-            showAdminNotification('Competition manager not available', 'error');
         }
         
     } catch (error) {
@@ -3783,18 +3682,6 @@ async function initializeServiceReferences() {
             }
         }
         
-        if (window.getCompetitionManager) {
-            try {
-                AdminState.competitionManager = window.getCompetitionManager();
-                if (AdminState.competitionManager && !AdminState.competitionManager.isReady()) {
-                    await AdminState.competitionManager.initialize();
-                }
-                debugLog('services', '✅ CompetitionManager initialized');
-            } catch (error) {
-                debugLog('error', 'CompetitionManager initialization failed (non-critical):', error);
-            }
-        }
-        
         debugLog('services', '✅ Service references initialized successfully');
         
     } catch (error) {
@@ -4163,7 +4050,6 @@ async function updateSystemHealth() {
         AdminState.systemHealth.database = getSupabase() ? 'healthy' : 'error';
         AdminState.systemHealth.tokenService = AdminState.tokenService?.isReady() ? 'healthy' : 'error';
         AdminState.systemHealth.priceService = AdminState.priceService?.isReady() ? 'healthy' : 'error';
-        AdminState.systemHealth.competitionManager = AdminState.competitionManager?.isReady() ? 'healthy' : 'error';
         AdminState.systemHealth.lastUpdate = new Date().toISOString();
         
         updateSystemHealthDisplay();
@@ -4181,7 +4067,6 @@ async function updateSystemHealthDisplay() {
         { name: 'Database', status: AdminState.systemHealth.database },
         { name: 'Token Service', status: AdminState.systemHealth.tokenService },
         { name: 'Price Service', status: AdminState.systemHealth.priceService },
-        { name: 'Competition Manager', status: AdminState.systemHealth.competitionManager }
     ];
     
     statusGrid.innerHTML = healthItems.map(item => `
