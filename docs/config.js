@@ -112,6 +112,16 @@ const UI_CONFIG = {
     TABLET_BREAKPOINT: 1024 // px
 };
 
+// Add smart contract configuration
+
+const BLOCKCHAIN_CONFIG = {
+    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4',
+    SOLANA_NETWORK: 'devnet',
+    PYTH_NETWORK_CLUSTER: 'devnet',
+    SMART_CONTRACT_ENABLED: true,
+    FALLBACK_TO_DATABASE: true
+};
+
 // Phase tracking configuration
 const PHASE_CONFIG = {
     CURRENT_PHASE: 1,
