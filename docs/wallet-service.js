@@ -631,6 +631,11 @@ class WalletService {
         }
     }
 
+        // In wallet-service.js - Add transaction signing
+        async function signTransaction(transaction) {
+            return await this.walletProvider.signTransaction(transaction);
+        }
+
     // ==============================================
     // DISCONNECTION (Simplified)
     // ==============================================
