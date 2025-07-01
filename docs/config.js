@@ -154,6 +154,142 @@ const PHASE_CONFIG = {
     }
 };
 
+// ==============================================
+// BLOCKCHAIN CONFIGURATION
+// ==============================================
+
+const BLOCKCHAIN_CONFIG = {
+    // Solana Program Configuration
+    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4',
+    SOLANA_NETWORK: 'devnet', // 'mainnet-beta' for production
+    SOLANA_RPC_URL: 'https://api.devnet.solana.com',
+    
+    // Smart Contract Features
+    SMART_CONTRACT_ENABLED: true,
+    SMART_CONTRACT_COMPETITIONS: true,
+    SMART_CONTRACT_ESCROW: true,
+    
+    // Pyth Network Configuration
+    PYTH_NETWORK_CLUSTER: 'devnet',
+    PYTH_PRICE_FEEDS: {
+        // Common Solana tokens with Pyth price feed IDs
+        'So11111111111111111111111111111111111111112': '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d', // SOL
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e6f94a', // USDC
+        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221'  // USDT
+    },
+    
+    // Transaction Configuration
+    TRANSACTION_CONFIG: {
+        CONFIRMATION_TIMEOUT: 30000, // 30 seconds
+        MAX_RETRIES: 3,
+        RETRY_DELAY: 1000, // 1 second
+        GAS_BUFFER: 1.2 // 20% gas buffer
+    },
+    
+    // Competition Smart Contract Settings
+    COMPETITION_CONFIG: {
+        MIN_BET_AMOUNT: 0.1, // SOL
+        MAX_BET_AMOUNT: 10.0, // SOL
+        PLATFORM_FEE_PERCENTAGE: 15,
+        TWAP_UPDATE_INTERVAL: 300000, // 5 minutes in milliseconds
+        MIN_COMPETITION_DURATION: 3600000, // 1 hour
+        MAX_COMPETITION_DURATION: 172800000 // 48 hours
+    },
+    
+    // Wallet Integration
+    WALLET_CONFIG: {
+        AUTO_CONNECT: false,
+        PERSIST_CONNECTION: true,
+        SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack'],
+        REQUIRED_PERMISSIONS: ['signTransaction', 'signAllTransactions']
+    },
+    
+    // Development Settings
+    DEVELOPMENT: {
+        ENABLE_CONSOLE_LOGS: true,
+        MOCK_TRANSACTIONS: false, // Set to true for testing without real SOL
+        BYPASS_WALLET_CHECKS: false,
+        TEST_MODE: false
+    }
+};
+
+// ==============================================
+// SERVICE AVAILABILITY CONFIGURATION
+// ==============================================
+
+const SERVICE_CONFIG = {
+    // Service availability flags
+    SERVICES: {
+        SMART_CONTRACT_SERVICE: true,
+        WALLET_SERVICE: true,
+        PRICE_SERVICE: true,
+        TOKEN_SERVICE: true,
+        COMPETITION_MANAGER: false // ← Set to false since removed
+    },
+    
+    // Service initialization timeouts
+    TIMEOUTS: {
+        SMART_CONTRACT_INIT: 10000, // 10 seconds
+        WALLET_CONNECT: 15000, // 15 seconds
+        SERVICE_DISCOVERY: 5000 // 5 seconds
+    },
+    
+    // Fallback behavior
+    FALLBACKS: {
+        USE_DATABASE_ONLY: true, // Fallback to database if smart contract fails
+        GRACEFUL_DEGRADATION: true,
+        SHOW_SERVICE_STATUS: true
+    }
+};
+
+// ==============================================
+// EXPORTS & GLOBAL ASSIGNMENT
+// ==============================================
+
+// Export configurations
+window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG;
+window.SERVICE_CONFIG = SERVICE_CONFIG;
+
+// Blockchain feature checker
+window.isBlockchainFeatureEnabled = function(feature) {
+    const blockchainFeatures = {
+        'smart_contracts': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED,
+        'smart_contract_competitions': BLOCKCHAIN_CONFIG.SMART_CONTRACT_COMPETITIONS,
+        'smart_contract_escrow': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ESCROW,
+        'pyth_integration': !!BLOCKCHAIN_CONFIG.PYTH_NETWORK_CLUSTER,
+        'transaction_signing': BLOCKCHAIN_CONFIG.WALLET_CONFIG.REQUIRED_PERMISSIONS.length > 0,
+        'sol_transfers': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED && !BLOCKCHAIN_CONFIG.DEVELOPMENT.MOCK_TRANSACTIONS
+    };
+    
+    return blockchainFeatures[feature] || false;
+};
+
+// Smart contract availability checker
+window.isSmartContractAvailable = function() {
+    // Check if smart contract service exists and is enabled
+    const serviceExists = !!(window.smartContractService || window.getSmartContractService);
+    const configEnabled = BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED;
+    const serviceEnabled = SERVICE_CONFIG.SERVICES.SMART_CONTRACT_SERVICE;
+    
+    return serviceExists && configEnabled && serviceEnabled;
+};
+
+// Configuration summary for debugging
+window.getBlockchainConfigSummary = function() {
+    return {
+        programId: BLOCKCHAIN_CONFIG.SOLANA_PROGRAM_ID,
+        network: BLOCKCHAIN_CONFIG.SOLANA_NETWORK,
+        smartContractsEnabled: BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED,
+        pythFeeds: Object.keys(BLOCKCHAIN_CONFIG.PYTH_PRICE_FEEDS).length,
+        servicesAvailable: Object.entries(SERVICE_CONFIG.SERVICES)
+            .filter(([key, value]) => value)
+            .map(([key]) => key),
+        development: BLOCKCHAIN_CONFIG.DEVELOPMENT
+    };
+};
+
+console.log('✅ Blockchain configuration loaded:', window.getBlockchainConfigSummary());
+
 // Export for use in other files
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.APP_CONFIG = APP_CONFIG;
