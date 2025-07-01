@@ -1491,6 +1491,339 @@ async function createCompetitionWithSmartContract(config) {
     }
 }
 
+// Add these functions to admin.js for smart contract integration
+
+/**
+ * Create competition with smart contract integration
+ * Replaces database-only competition creation with on-chain escrow
+ */
+async function createCompetitionWithSmartContract(config) {
+    try {
+        console.log('🏗️ Creating competition with smart contract integration...');
+        
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            throw new Error('Admin wallet not connected');
+        }
+
+        // Verify admin authorization
+        const authResult = await verifyAdminWalletEnhanced(adminWallet);
+        if (!authResult.authorized) {
+            throw new Error(`Unauthorized: ${authResult.reason}`);
+        }
+
+        // Validate selected pair
+        if (!config.selectedPair) {
+            throw new Error('No token pair selected');
+        }
+
+        // Generate unique competition ID
+        const competitionId = generateCompetitionId();
+        console.log('🆔 Generated competition ID:', competitionId);
+        
+        // Get Pyth price feed IDs for tokens
+        console.log('🔍 Getting Pyth price feed IDs...');
+        const pythIds = await window.smartContractService.getPythPriceFeedIds(
+            config.selectedPair.token_a_address,
+            config.selectedPair.token_b_address
+        );
+
+        // Show creation progress
+        showAdminNotification('Creating on-chain escrow...', 'info');
+
+        // 1. Create on-chain escrow first
+        console.log('📊 Creating on-chain escrow...');
+        const escrowResult = await window.smartContractService.createCompetitionEscrow(
+            competitionId,
+            pythIds.tokenA,
+            pythIds.tokenB,
+            adminWallet
+        );
+
+        console.log('✅ Escrow created:', escrowResult);
+        showAdminNotification('Escrow created successfully, saving to database...', 'info');
+
+        // 2. Calculate timing
+        const now = new Date();
+        const startTime = new Date(now.getTime() + (config.startDelay || 5 * 60 * 1000));
+        const votingEndTime = new Date(startTime.getTime() + (config.votingDuration || 15) * 60 * 1000);
+        const endTime = new Date(votingEndTime.getTime() + (config.activeDuration || 24) * 60 * 60 * 1000);
+
+        // 3. Create database record with escrow info
+        console.log('💾 Creating database record...');
+        const competitionData = {
+            competition_id: competitionId,
+            token_a_address: config.selectedPair.token_a_address,
+            token_b_address: config.selectedPair.token_b_address,
+            token_a_symbol: config.selectedPair.token_a_symbol,
+            token_b_symbol: config.selectedPair.token_b_symbol,
+            token_a_name: config.selectedPair.token_a_name,
+            token_b_name: config.selectedPair.token_b_name,
+            pair_id: config.selectedPair.id,
+            status: 'SETUP',
+            start_time: startTime.toISOString(),
+            voting_end_time: votingEndTime.toISOString(),
+            end_time: endTime.toISOString(),
+            bet_amount: config.betAmount || 0.1,
+            platform_fee_percentage: config.platformFee || 15,
+            total_pool: 0,
+            total_bets: 0,
+            is_auto_created: !config.isManual,
+            created_by: adminWallet,
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+            
+            // Smart contract fields
+            escrow_account: escrowResult.escrowAccount,
+            escrow_bump: escrowResult.bump,
+            pyth_token_a_id: Buffer.from(pythIds.tokenA).toString('hex'),
+            pyth_token_b_id: Buffer.from(pythIds.tokenB).toString('hex'),
+            program_id: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4'
+        };
+
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+            .from('competitions')
+            .insert([competitionData])
+            .select()
+            .single();
+
+        if (error) {
+            throw new Error(`Database insert failed: ${error.message}`);
+        }
+
+        console.log('✅ Competition created with smart contract integration');
+
+        // 4. Update token pair usage
+        await supabase
+            .from('token_pairs')
+            .update({
+                usage_count: (config.selectedPair.usage_count || 0) + 1,
+                last_used: now.toISOString(),
+                last_competition_id: data.competition_id,
+                updated_at: now.toISOString()
+            })
+            .eq('id', config.selectedPair.id);
+
+        // 5. Log admin action
+        await logAdminActionEnhanced('competition_create_smart_contract', {
+            competition_id: data.competition_id,
+            token_pair: `${config.selectedPair.token_a_symbol} vs ${config.selectedPair.token_b_symbol}`,
+            escrow_account: escrowResult.escrowAccount,
+            config: config,
+            admin_wallet: adminWallet,
+            admin_role: authResult.role
+        });
+
+        showAdminNotification('Competition created successfully with smart contract!', 'success');
+        return data;
+
+    } catch (error) {
+        console.error('❌ Failed to create competition with smart contract:', error);
+        showAdminNotification(`Failed to create competition: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+/**
+ * Generate unique competition ID
+ */
+function generateCompetitionId() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    return `COMP-${timestamp}-${random}`;
+}
+
+/**
+ * Enhanced manual competition submission with smart contract option
+ * Updates the existing submitManualCompetition function
+ */
+async function submitManualCompetitionWithSmartContract() {
+    try {
+        debugLog('competitionSubmit', '🚀 Submitting manual competition with smart contract option...');
+        
+        if (!AdminState.selectedTokens.selectedPairId) {
+            showAdminNotification('Please select a token pair first', 'error');
+            return;
+        }
+        
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            showAdminNotification('Admin wallet not connected', 'error');
+            return;
+        }
+        
+        // Get selected pair from AdminState
+        const selectedPair = AdminState.pairState.allPairs.find(p => p.id === AdminState.selectedTokens.selectedPairId);
+        if (!selectedPair) {
+            showAdminNotification('Selected token pair not found', 'error');
+            return;
+        }
+        
+        // Get form configuration
+        const config = {
+            votingDuration: parseInt(document.getElementById('manual-voting-period')?.value || 15),
+            activeDuration: parseInt(document.getElementById('manual-performance-period')?.value || 24),
+            betAmount: parseFloat(document.getElementById('manual-bet-amount')?.value || 0.1),
+            platformFee: parseInt(document.getElementById('manual-platform-fee')?.value || 15),
+            startDelay: getStartDelay(document.getElementById('manual-start-time')?.value || 'immediate'),
+            priority: document.getElementById('manual-priority')?.value || 'normal',
+            isManual: true,
+            selectedPair: selectedPair
+        };
+        
+        debugLog('competitionSubmit', 'Competition config:', config);
+        
+        // Show loading state
+        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
+        if (submitButton) {
+            submitButton.textContent = '⏳ Creating...';
+            submitButton.disabled = true;
+        }
+        
+        // Check if smart contracts are available
+        const useSmartContract = window.smartContractService && window.smartContractService.isAvailable();
+        
+        let competition;
+        if (useSmartContract) {
+            console.log('🔗 Using smart contract integration');
+            competition = await createCompetitionWithSmartContract(config);
+        } else {
+            console.log('🗄️ Using database-only approach');
+            competition = await createCompetitionDirectDatabase(config);
+        }
+        
+        if (competition) {
+            // Close modal
+            closeCompetitionModal();
+            
+            // Reload competitions data and UI
+            await loadAllCompetitionsDataWithDiagnostics();
+            await loadCompetitionsManagementWithDiagnostics();
+            
+            showAdminNotification(
+                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}${useSmartContract ? ' (with smart contract)' : ''}`,
+                'success'
+            );
+            
+            debugLog('competitionSubmit', `✅ Competition created: ${competition.competition_id}`);
+        }
+        
+    } catch (error) {
+        debugLog('error', 'Error submitting manual competition:', error);
+        showAdminNotification('Failed to create competition: ' + error.message, 'error');
+    } finally {
+        // Reset submit button
+        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
+        if (submitButton) {
+            submitButton.textContent = '🚀 Create Competition';
+            submitButton.disabled = false;
+        }
+    }
+}
+
+/**
+ * Start competition and begin TWAP price tracking
+ */
+async function startCompetitionWithTwap(competitionId) {
+    try {
+        console.log('🚀 Starting competition with TWAP tracking:', competitionId);
+        
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            throw new Error('Admin wallet not connected');
+        }
+
+        // Get competition details from database
+        const supabase = getSupabase();
+        const { data: competition, error } = await supabase
+            .from('competitions')
+            .select('*')
+            .eq('competition_id', competitionId)
+            .single();
+
+        if (error) {
+            throw new Error(`Competition not found: ${error.message}`);
+        }
+
+        // Check if competition has smart contract integration
+        if (!competition.escrow_account) {
+            throw new Error('Competition does not have smart contract integration');
+        }
+
+        // Start competition on-chain
+        const signature = await window.smartContractService.startCompetition(
+            competitionId,
+            competition.token_a_address,
+            competition.token_b_address,
+            adminWallet
+        );
+
+        // Update competition status in database
+        await supabase
+            .from('competitions')
+            .update({
+                status: 'ACTIVE',
+                updated_at: new Date().toISOString()
+            })
+            .eq('competition_id', competitionId);
+
+        console.log('✅ Competition started with TWAP tracking:', signature);
+        showAdminNotification('Competition started with TWAP price tracking!', 'success');
+
+        return signature;
+
+    } catch (error) {
+        console.error('❌ Error starting competition with TWAP:', error);
+        showAdminNotification(`Failed to start competition: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+/**
+ * Update TWAP sample during competition
+ */
+async function updateCompetitionTwap(competitionId) {
+    try {
+        console.log('📊 Updating TWAP sample for competition:', competitionId);
+        
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (!adminWallet) {
+            throw new Error('Admin wallet not connected');
+        }
+
+        // Get competition details
+        const supabase = getSupabase();
+        const { data: competition, error } = await supabase
+            .from('competitions')
+            .select('*')
+            .eq('competition_id', competitionId)
+            .single();
+
+        if (error) {
+            throw new Error(`Competition not found: ${error.message}`);
+        }
+
+        // Update TWAP sample on-chain
+        const signature = await window.smartContractService.updateTwapSample(
+            competitionId,
+            competition.token_a_address,
+            competition.token_b_address,
+            adminWallet
+        );
+
+        console.log('✅ TWAP sample updated:', signature);
+        showAdminNotification('TWAP sample updated successfully!', 'info');
+
+        return signature;
+
+    } catch (error) {
+        console.error('❌ Error updating TWAP sample:', error);
+        showAdminNotification(`Failed to update TWAP: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
 /**
  * FIXED: Submit Manual Competition
  * Updated to use database-centric approach
@@ -4507,6 +4840,15 @@ window.saveAutomationSettings = saveAutomationSettingsEnhanced;
 window.testAutomationSettings = testAutomationConfigurationEnhanced;
 window.resetAutomationSettings = resetAutomationSettingsEnhanced;
 window.updateParameterValue = updateParameterValueEnhanced;
+
+// Update the existing submitManualCompetition function to use smart contract integration
+window.submitManualCompetition = submitManualCompetitionWithSmartContract;
+
+// Export new functions
+window.createCompetitionWithSmartContract = createCompetitionWithSmartContract;
+window.generateCompetitionId = generateCompetitionId;
+window.startCompetitionWithTwap = startCompetitionWithTwap;
+window.updateCompetitionTwap = updateCompetitionTwap;
 
 // Backward compatibility functions
 window.verifyAdminWallet = verifyAdminWallet;
