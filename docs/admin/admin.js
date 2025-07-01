@@ -1805,12 +1805,11 @@ async function updateCompetitionTwap(competitionId) {
 }
 
 /**
- * FIXED: Submit Manual Competition
- * Updated to use database-centric approach
+ * FIXED: Submit Manual Competition with Smart Contract Priority
  */
 async function submitManualCompetition() {
     try {
-        debugLog('competitionSubmit', '🚀 Submitting manual competition with smart contract integration...');
+        debugLog('competitionSubmit', '🚀 Submitting manual competition with smart contract priority...');
         
         if (!AdminState.selectedTokens.selectedPairId) {
             showAdminNotification('Please select a token pair first', 'error');
@@ -1842,6 +1841,8 @@ async function submitManualCompetition() {
             selectedPair: selectedPair
         };
         
+        debugLog('competitionSubmit', 'Competition config:', config);
+        
         // Show loading state
         const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
         if (submitButton) {
@@ -1849,8 +1850,45 @@ async function submitManualCompetition() {
             submitButton.disabled = true;
         }
         
-        // ✅ FIXED: Use smart contract integration instead of database-only
-        const competition = await createCompetitionWithSmartContract(config);
+        let competition;
+        let creationMethod = 'unknown';
+        
+        // 🎯 PRIORITY 1: Try Smart Contract Integration
+        if (window.isSmartContractAvailable && window.isSmartContractAvailable()) {
+            try {
+                debugLog('competitionSubmit', '🔗 Attempting smart contract competition creation...');
+                competition = await createCompetitionWithSmartContract(config);
+                creationMethod = 'smart_contract';
+                debugLog('competitionSubmit', '✅ Smart contract competition created successfully');
+            } catch (smartContractError) {
+                debugLog('error', '❌ Smart contract creation failed:', smartContractError);
+                
+                // Check if fallback is enabled
+                if (window.BLOCKCHAIN_CONFIG?.FALLBACK_TO_DATABASE) {
+                    debugLog('competitionSubmit', '🔄 Falling back to database-only creation...');
+                    showAdminNotification('Smart contract unavailable, using database mode', 'warning');
+                    competition = await createCompetitionDirectDatabase(config);
+                    creationMethod = 'database_fallback';
+                } else {
+                    throw smartContractError;
+                }
+            }
+        } 
+        // 🎯 PRIORITY 2: Database-Only Mode
+        else {
+            debugLog('competitionSubmit', '🗄️ Smart contract not available, using database-only mode...');
+            
+            // Check why smart contract isn't available
+            const availability = checkSmartContractAvailability();
+            debugLog('competitionSubmit', 'Smart contract availability check:', availability);
+            
+            if (!availability.available) {
+                showAdminNotification(`Smart contract unavailable: ${availability.reason}`, 'warning');
+            }
+            
+            competition = await createCompetitionDirectDatabase(config);
+            creationMethod = 'database_only';
+        }
         
         if (competition) {
             // Close modal
@@ -1860,18 +1898,25 @@ async function submitManualCompetition() {
             await loadAllCompetitionsDataWithDiagnostics();
             await loadCompetitionsManagementWithDiagnostics();
             
+            // Show success with creation method
+            const methodLabel = {
+                'smart_contract': '(with smart contract)',
+                'database_fallback': '(database fallback)',
+                'database_only': '(database only)'
+            }[creationMethod];
+            
             showAdminNotification(
-                `Competition created successfully with smart contract: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
-                'success'
+                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol} ${methodLabel}`,
+                creationMethod === 'smart_contract' ? 'success' : 'warning'
             );
             
-            debugLog('competitionSubmit', `✅ Competition created: ${competition.competition_id}`);
+            debugLog('competitionSubmit', `✅ Competition created via ${creationMethod}: ${competition.competition_id}`);
         }
         
     } catch (error) {
         debugLog('error', 'Error submitting manual competition:', error);
         showAdminNotification('Failed to create competition: ' + error.message, 'error');
-        
+    } finally {
         // Reset submit button
         const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
         if (submitButton) {
