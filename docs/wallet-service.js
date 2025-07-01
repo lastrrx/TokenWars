@@ -24,6 +24,9 @@ class WalletService {
         this.isDemo = false;
         this.userProfile = null;
         this.connectionListeners = [];
+        this.balance = 0;
+        this.transactions = [];
+        this.lastBalanceUpdate = null;
         
         // Demo session data
         this.demoSession = null;
@@ -144,49 +147,100 @@ class WalletService {
     // WALLET CONNECTION (Fixed & Simplified)
     // ==============================================
 
-    async connectWallet(walletType) {
-        try {
-            console.log(`🔗 Connecting to ${walletType} wallet...`);
-            
-            if (walletType === 'demo') {
-                return await this.connectDemoWallet();
-            }
-            
-            const availableWallets = this.detectAvailableWallets();
-            const selectedWallet = availableWallets[walletType];
-            
-            if (!selectedWallet?.isInstalled) {
-                throw new Error(`${selectedWallet?.name || walletType} is not installed`);
-            }
-            
-            // Connect based on wallet type
-            let connection;
-            switch (walletType) {
-                case 'phantom':
-                    connection = await this.connectPhantom();
-                    break;
-                case 'solflare':
-                    connection = await this.connectSolflare();
-                    break;
-                case 'backpack':
-                    connection = await this.connectBackpack();
-                    break;
-                default:
-                    throw new Error(`Unsupported wallet type: ${walletType}`);
-            }
-            
-            if (connection.success) {
-                await this.handleSuccessfulConnection(walletType, connection);
-                return { success: true, publicKey: this.publicKey };
-            } else {
-                throw new Error(connection.error);
-            }
-            
-        } catch (error) {
-            console.error(`❌ Failed to connect ${walletType}:`, error);
-            return { success: false, error: error.message };
+/**
+ * UPDATED: Enhanced wallet connection with transaction capabilities
+ * Location: Update existing connectWallet() function in wallet-service.js
+ */
+async function connectWallet(walletType = 'phantom') {
+    try {
+        console.log(`🔌 Connecting to ${walletType} wallet with transaction support...`);
+        
+        let wallet;
+        
+        // Get wallet adapter based on type
+        switch (walletType.toLowerCase()) {
+            case 'phantom':
+                if (window.solana?.isPhantom) {
+                    wallet = window.solana;
+                } else {
+                    throw new Error('Phantom wallet not installed');
+                }
+                break;
+                
+            case 'solflare':
+                if (window.solflare?.isSolflare) {
+                    wallet = window.solflare;
+                } else {
+                    throw new Error('Solflare wallet not installed');
+                }
+                break;
+                
+            case 'backpack':
+                if (window.backpack?.isBackpack) {
+                    wallet = window.backpack;
+                } else {
+                    throw new Error('Backpack wallet not installed');
+                }
+                break;
+                
+            case 'demo':
+                // Demo mode for testing
+                wallet = createDemoWallet();
+                break;
+                
+            default:
+                throw new Error(`Unsupported wallet type: ${walletType}`);
         }
+        
+        // Connect to wallet
+        const response = await wallet.connect();
+        const publicKey = response.publicKey || wallet.publicKey;
+        
+        if (!publicKey) {
+            throw new Error('Failed to get wallet public key');
+        }
+        
+        // Update wallet state
+        walletState = {
+            isConnected: true,
+            walletType,
+            publicKey: publicKey.toString(),
+            wallet: wallet,
+            connectedAt: new Date().toISOString()
+        };
+        
+        // Verify transaction signing capability
+        if (!wallet.signTransaction && !wallet.signAndSendTransaction && walletType !== 'demo') {
+            console.warn('⚠️ Wallet may not support transaction signing');
+        }
+        
+        // Get initial balance
+        const balance = await getBalance();
+        walletState.balance = balance;
+        
+        console.log('✅ Wallet connected successfully with transaction support:', {
+            walletType,
+            publicKey: publicKey.toString(),
+            balance: `${balance} SOL`,
+            hasSigningSupport: !!(wallet.signTransaction || wallet.signAndSendTransaction)
+        });
+        
+        // Update UI
+        updateWalletUI();
+        broadcastWalletEvent('walletConnected', walletState);
+        
+        // Create or update user profile
+        await createOrUpdateUserProfile();
+        
+        return walletState;
+        
+    } catch (error) {
+        console.error('❌ Error connecting wallet:', error);
+        walletState.isConnected = false;
+        updateWalletUI();
+        throw error;
     }
+}
 
     // ==============================================
     // INDIVIDUAL WALLET CONNECTIONS (Simplified)
@@ -538,6 +592,8 @@ class WalletService {
         }
     }
 
+
+
     // ==============================================
     // SESSION PERSISTENCE (Fixed)
     // ==============================================
@@ -721,6 +777,219 @@ class WalletService {
         }
     }
 
+/**
+ * NEW: Refresh wallet balance
+ * Location: Add this new function to wallet-service.js
+ */
+async function refreshBalance() {
+    if (walletState.isConnected) {
+        try {
+            const balance = await getBalance();
+            walletState.balance = balance;
+            broadcastWalletEvent('balanceUpdated', { balance });
+            return balance;
+        } catch (error) {
+            console.error('❌ Error refreshing balance:', error);
+            return walletState.balance;
+        }
+    }
+    return 0;
+}
+
+/**
+ * NEW: Create demo wallet for testing
+ * Location: Add this new function to wallet-service.js
+ */
+function createDemoWallet() {
+    const demoKeypair = solanaWeb3.Keypair.generate();
+    
+    return {
+        publicKey: demoKeypair.publicKey,
+        signTransaction: async (transaction) => {
+            // Demo signing - just return the transaction
+            transaction.partialSign(demoKeypair);
+            return transaction;
+        },
+        signAndSendTransaction: async (transaction) => {
+            // Demo transaction - return fake signature
+            return 'demo_transaction_' + Date.now();
+        },
+        isDemo: true
+    };
+}
+
+ * NEW: Get connection to Solana network
+ * Location: Add this new function to wallet-service.js
+ */
+function getConnection() {
+    return new solanaWeb3.Connection(
+        'https://api.devnet.solana.com',
+        'confirmed'
+    );
+}
+
+/**
+ * NEW: Sign and send transaction
+ * Location: Add this new function to wallet-service.js
+ */
+async function signAndSendTransaction(transaction, description = 'Transaction') {
+    try {
+        console.log(`🔐 Signing transaction: ${description}`);
+        
+        if (!walletState.isConnected || !walletState.wallet) {
+            throw new Error('Wallet not connected');
+        }
+        
+        // Get the current wallet adapter
+        const wallet = walletState.wallet;
+        
+        if (!wallet.signAndSendTransaction) {
+            throw new Error('Wallet does not support transaction signing');
+        }
+        
+        console.log('📝 Requesting transaction signature...');
+        
+        // Sign and send the transaction
+        const signature = await wallet.signAndSendTransaction(transaction);
+        
+        console.log(`✅ Transaction signed and sent: ${signature}`);
+        
+        // Wait for confirmation
+        const connection = new solanaWeb3.Connection(
+            'https://api.devnet.solana.com',
+            'confirmed'
+        );
+        
+        console.log('⏳ Waiting for transaction confirmation...');
+        
+        const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+        
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
+        
+        console.log('🎉 Transaction confirmed!');
+        
+        return {
+            signature,
+            confirmation,
+            success: true
+        };
+        
+    } catch (error) {
+        console.error('❌ Error signing transaction:', error);
+        
+        // Handle user rejection gracefully
+        if (error.message?.includes('User rejected') || error.code === 4001) {
+            throw new Error('Transaction was cancelled by user');
+        }
+        
+        throw error;
+    }
+}
+
+/**
+ * NEW: Get wallet balance in SOL
+ * Location: Add this new function to wallet-service.js
+ */
+async function getBalance() {
+    try {
+        if (!walletState.isConnected || !walletState.publicKey) {
+            throw new Error('Wallet not connected');
+        }
+        
+        const connection = new solanaWeb3.Connection(
+            'https://api.devnet.solana.com',
+            'confirmed'
+        );
+        
+        const publicKey = new solanaWeb3.PublicKey(walletState.publicKey);
+        const balance = await connection.getBalance(publicKey);
+        
+        // Convert lamports to SOL
+        const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+        
+        console.log(`💰 Wallet balance: ${solBalance} SOL`);
+        return solBalance;
+        
+    } catch (error) {
+        console.error('❌ Error getting wallet balance:', error);
+        return 0;
+    }
+}
+
+/**
+ * NEW: Sign transaction without sending (for multi-step transactions)
+ * Location: Add this new function to wallet-service.js
+ */
+async function signTransaction(transaction, description = 'Transaction') {
+    try {
+        console.log(`🔐 Signing transaction (no send): ${description}`);
+        
+        if (!walletState.isConnected || !walletState.wallet) {
+            throw new Error('Wallet not connected');
+        }
+        
+        const wallet = walletState.wallet;
+        
+        if (!wallet.signTransaction) {
+            throw new Error('Wallet does not support transaction signing');
+        }
+        
+        console.log('📝 Requesting transaction signature...');
+        
+        const signedTransaction = await wallet.signTransaction(transaction);
+        
+        console.log('✅ Transaction signed successfully');
+        
+        return signedTransaction;
+        
+    } catch (error) {
+        console.error('❌ Error signing transaction:', error);
+        
+        if (error.message?.includes('User rejected') || error.code === 4001) {
+            throw new Error('Transaction was cancelled by user');
+        }
+        
+        throw error;
+    }
+
+/**
+ * NEW: Get wallet public key as PublicKey object
+ * Location: Add this new function to wallet-service.js
+ */
+function getPublicKey() {
+    if (!walletState.isConnected || !walletState.publicKey) {
+        return null;
+    }
+    
+    try {
+        return new solanaWeb3.PublicKey(walletState.publicKey);
+    } catch (error) {
+        console.error('❌ Error creating PublicKey:', error);
+        return null;
+    }
+}
+
+/**
+ * NEW: Add transaction to history
+ * Location: Add this new function to wallet-service.js
+ */
+function addTransactionToHistory(transaction) {
+    walletState.transactions.unshift({
+        ...transaction,
+        timestamp: new Date().toISOString()
+    });
+    
+    // Keep only last 50 transactions
+    if (walletState.transactions.length > 50) {
+        walletState.transactions = walletState.transactions.slice(0, 50);
+    }
+    
+    // Broadcast update
+    broadcastWalletEvent('transactionAdded', transaction);
+}
+
     // ==============================================
     // EVENT HANDLING (Simplified)
     // ==============================================
@@ -835,6 +1104,7 @@ function getWalletService() {
 // Expose WalletService globally immediately
 window.WalletService = WalletService;
 window.getWalletService = getWalletService;
+window.walletService = getWalletService();
 
 // Create and expose singleton instance immediately
 window.walletService = getWalletService();
