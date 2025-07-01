@@ -1438,6 +1438,59 @@ async function createManualCompetitionWithConfig(config = {}) {
     }
 }
 
+async function createCompetitionWithSmartContract(config) {
+    try {
+        console.log('🏗️ Creating competition with smart contract integration...');
+        
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        const competitionId = generateCompetitionId();
+        
+        // Get Pyth price feed IDs for tokens
+        const pythIds = await getPythPriceFeedIds(
+            config.selectedPair.token_a_address,
+            config.selectedPair.token_b_address
+        );
+
+        // 1. Create on-chain escrow first
+        console.log('📊 Creating on-chain escrow...');
+        const escrowResult = await window.smartContractService.createCompetitionEscrow(
+            competitionId,
+            pythIds.tokenA,
+            pythIds.tokenB,
+            adminWallet
+        );
+
+        // 2. Create database record with escrow info
+        console.log('💾 Creating database record...');
+        const competitionData = {
+            competition_id: competitionId,
+            token_a_address: config.selectedPair.token_a_address,
+            token_b_address: config.selectedPair.token_b_address,
+            // ... other fields ...
+            escrow_account: escrowResult.escrowAccount,
+            escrow_bump: escrowResult.bump,
+            pyth_token_a_id: pythIds.tokenA,
+            pyth_token_b_id: pythIds.tokenB,
+            program_id: window.smartContractService.programId.toString()
+        };
+
+        const { data, error } = await supabase
+            .from('competitions')
+            .insert([competitionData])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        console.log('✅ Competition created with smart contract integration');
+        return data;
+
+    } catch (error) {
+        console.error('❌ Failed to create competition with smart contract:', error);
+        throw error;
+    }
+}
+
 /**
  * FIXED: Submit Manual Competition
  * Updated to use database-centric approach
