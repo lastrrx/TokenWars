@@ -836,18 +836,6 @@
                             <div class="cache-metric warning" id="total-blacklisted">0</div>
                             <div class="label">Total Blacklisted</div>
                         </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="auto-detected">0</div>
-                            <div class="label">Auto-Detected</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric excellent" id="detection-accuracy">0%</div>
-                            <div class="label">Detection Accuracy</div>
-                        </div>
-                        <div class="cache-health-card">
-                            <div class="cache-metric good" id="appeals-pending">0</div>
-                            <div class="label">Appeals Pending</div>
-                        </div>
                     </div>
                 </div>
 
@@ -863,9 +851,6 @@
                         <button class="btn btn-secondary" onclick="exportBlacklist()">
                             📤 Export Blacklist
                         </button>
-                        <button class="btn btn-primary" onclick="scanForThreats()">
-                            🔍 Scan for New Threats
-                        </button>
                     </div>
                 </div>
 
@@ -880,28 +865,6 @@
                             <div class="blacklist-count" id="manual-blacklist-count">0</div>
                         </div>
                         <div class="blacklist-items" id="manual-blacklist">
-                            <!-- Items will be populated here -->
-                        </div>
-                    </div>
-
-                    <!-- Automatic Blacklist -->
-                    <div class="blacklist-category">
-                        <div class="blacklist-header">
-                            <h4>🤖 Auto-Detected</h4>
-                            <div class="blacklist-count" id="auto-blacklist-count">0</div>
-                        </div>
-                        <div class="blacklist-items" id="auto-blacklist">
-                            <!-- Items will be populated here -->
-                        </div>
-                    </div>
-
-                    <!-- Community Reports -->
-                    <div class="blacklist-category">
-                        <div class="blacklist-header">
-                            <h4>👥 Community Reported</h4>
-                            <div class="blacklist-count" id="community-blacklist-count">0</div>
-                        </div>
-                        <div class="blacklist-items" id="community-blacklist">
                             <!-- Items will be populated here -->
                         </div>
                     </div>
