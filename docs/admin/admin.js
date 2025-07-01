@@ -1839,7 +1839,7 @@ async function updateCompetitionTwap(competitionId) {
  */
 async function submitManualCompetition() {
     try {
-        debugLog('competitionSubmit', '🚀 Submitting manual competition with fixed approach...');
+        debugLog('competitionSubmit', '🚀 Submitting manual competition with smart contract integration...');
         
         if (!AdminState.selectedTokens.selectedPairId) {
             showAdminNotification('Please select a token pair first', 'error');
@@ -1871,8 +1871,6 @@ async function submitManualCompetition() {
             selectedPair: selectedPair
         };
         
-        debugLog('competitionSubmit', 'Competition config:', config);
-        
         // Show loading state
         const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
         if (submitButton) {
@@ -1880,8 +1878,8 @@ async function submitManualCompetition() {
             submitButton.disabled = true;
         }
         
-        // ✅ FIXED: Create competition using database-centric approach (without custom UUID)
-        const competition = await createCompetitionDirectDatabase(config);
+        // ✅ FIXED: Use smart contract integration instead of database-only
+        const competition = await createCompetitionWithSmartContract(config);
         
         if (competition) {
             // Close modal
@@ -1892,17 +1890,9 @@ async function submitManualCompetition() {
             await loadCompetitionsManagementWithDiagnostics();
             
             showAdminNotification(
-                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
+                `Competition created successfully with smart contract: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
                 'success'
             );
-            
-            // Log admin action
-            await logAdminAction('competition_create_manual', {
-                competition_id: competition.competition_id,
-                token_pair: `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
-                config: config,
-                admin_wallet: adminWallet
-            });
             
             debugLog('competitionSubmit', `✅ Competition created: ${competition.competition_id}`);
         }
