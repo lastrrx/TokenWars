@@ -703,6 +703,34 @@ body {
     background: linear-gradient(135deg, #16a34a, var(--accent-green));
 }
 
+.smart-contract-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+}
+
+.competition-card.smart-contract-enabled {
+    border: 2px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.data-dot.smart-contract {
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 .vote-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
