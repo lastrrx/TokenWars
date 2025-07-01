@@ -1422,18 +1422,27 @@ async function createCompetitionDirectDatabase(config = {}) {
  */
 async function createManualCompetitionWithConfig(config = {}) {
     try {
-        debugLog('manualCompetition', '🎯 Creating manual competition with fixed database approach...');
+        debugLog('manualCompetition', '🎯 Creating manual competition with smart contract integration...');
         
-        // Use database-centric creation
-        const competition = await createCompetitionDirectDatabase({
+        // ✅ Check if smart contract service is available
+        if (!window.smartContractService || !window.smartContractService.isAvailable()) {
+            throw new Error('Smart contract service not available. Check console for details.');
+        }
+        
+        const competition = await createCompetitionWithSmartContract({
             ...config,
             isManual: true
         });
         
         return competition;
-        
     } catch (error) {
         debugLog('error', 'Error in createManualCompetitionWithConfig:', error);
+        
+        // ✅ Fallback with clear error message
+        if (error.message.includes('Smart contract service not available')) {
+            showAdminNotification('Blockchain service unavailable. Competition creation requires smart contract integration.', 'error');
+        }
+        
         throw error;
     }
 }
