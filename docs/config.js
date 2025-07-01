@@ -1,51 +1,28 @@
-// TokenWars Configuration - Fixed Version with No Duplicates
-// Essential configuration for navigation and basic functionality
+// config.js - TokenWars Configuration
+// Updated with blockchain smart contract integration
 
 // Supabase Configuration
 const SUPABASE_CONFIG = {
     url: 'https://lavbfujrqmxiyfkfgcqy.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NjYwNjIsImV4cCI6MjA2NjM0MjA2Mn0.hlDZzchNyhcEX4KW5YNXwcaq3WYDWkc7IeSdflmAYbs'
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdmJmdWpycW14aXlma2ZnY3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzMTU2ODIsImV4cCI6MjA1MDg5MTY4Mn0.q-w6zI9QNnX0Q_Yj2X0W8rF7wZ8U1V2rH6dZ8pL9mU4'
 };
 
-// Basic App Configuration
+// Application Configuration
 const APP_CONFIG = {
-    // Competition settings
     BET_AMOUNT: 0.1, // SOL
-    PLATFORM_FEE: 15, // Percentage
-    COMPETITION_DURATION: 24, // Hours
-    VOTING_DURATION: 1, // Hours
-    
-    // Solana configuration
-    SOLANA_NETWORK: 'devnet',
-    
-    // Update intervals (Phase 1: Basic settings)
-    UPDATE_INTERVALS: {
-        TOKEN_LIST_REFRESH: 3600000, // 1 hour
-        PRICE_UPDATES: 60000, // 1 minute
-        COMPETITION_STATUS: 30000, // 30 seconds
-        LEADERBOARD_REFRESH: 300000 // 5 minutes
+    PLATFORM_FEE_PERCENTAGE: 15, // 15%
+    COMPETITION_DURATION: {
+        VOTING_PHASE: 15, // minutes
+        ACTIVE_PHASE: 24, // hours
+        SETUP_PHASE: 5   // minutes delay before start
     },
-    
-    // Basic token selection (Phase 1: Placeholder values)
-    TOKEN_SELECTION: {
-        MIN_MARKET_CAP: 5000000, // $5M minimum
-        MIN_AGE_DAYS: 30, // 1 month minimum
-        MARKET_CAP_TOLERANCE: 0.10, // 10% tolerance for pairing
-        BLACKLISTED_TOKENS: []
+    TOKEN_REQUIREMENTS: {
+        MIN_MARKET_CAP: 100000, // $100k USD
+        MIN_AGE_HOURS: 24,      // 24 hours old
+        MIN_LIQUIDITY: 50000,   // $50k liquidity
+        MAX_TOKENS_PER_REQUEST: 50
     },
-    
-    // Basic cache configuration (Phase 1: Basic settings)
-    CACHE_CONFIG: {
-        TOKEN_CACHE_DURATION: 300000, // 5 minutes
-        PRICE_CACHE_DURATION: 120000, // 2 minutes
-        CACHE_FRESH_THRESHOLD: 180000, // 3 minutes
-        ENABLE_STATIC_FALLBACK: true
-    },
-    
-    // Display configuration
-    DISPLAY_CONFIG: {
-        MAX_TOKENS_PER_CATEGORY: 50,
-        COMPETITION_CARDS_PER_PAGE: 12,
+    DISPLAY: {
         PRICE_DECIMAL_PLACES: 6,
         PERCENTAGE_DECIMAL_PLACES: 2
     }
@@ -93,6 +70,15 @@ const NAVIGATION_CONFIG = {
     }
 };
 
+// Wallet configuration
+const WALLET_CONFIG = {
+    SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack', 'demo'],
+    DEFAULT_WALLET: 'phantom',
+    DEMO_MODE_ENABLED: true,
+    AUTO_RECONNECT: true,
+    CONNECTION_TIMEOUT: 10000 // 10 seconds
+};
+
 // UI Configuration
 const UI_CONFIG = {
     THEME: 'dark',
@@ -103,296 +89,132 @@ const UI_CONFIG = {
     TABLET_BREAKPOINT: 1024 // px
 };
 
+// 🚀 NEW: Blockchain Smart Contract Configuration
+const BLOCKCHAIN_CONFIG = {
+    // Solana Program Configuration
+    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4', // TokenWars deployed program
+    SOLANA_NETWORK: 'devnet', // devnet for testing, mainnet for production
+    SOLANA_RPC_URL: 'https://api.devnet.solana.com',
+    
+    // Pyth Network Configuration for Price Feeds
+    PYTH_NETWORK_CLUSTER: 'devnet',
+    PYTH_PROGRAM_ID: 'FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH', // Pyth Program ID
+    
+    // Smart Contract Feature Flags
+    SMART_CONTRACT_ENABLED: true, // 🔑 Main flag to enable blockchain features
+    FALLBACK_TO_DATABASE: true,   // Allow fallback to database if blockchain fails
+    
+    // Platform Configuration
+    PLATFORM_WALLET: 'HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv', // Platform fee collection wallet
+    
+    // Transaction Settings
+    TRANSACTION_TIMEOUT: 30000, // 30 seconds
+    CONFIRMATION_COMMITMENT: 'confirmed', // confirmed, finalized
+    MAX_TRANSACTION_RETRIES: 3,
+    
+    // TWAP Configuration (Time-Weighted Average Price)
+    TWAP_SETTINGS: {
+        SAMPLE_INTERVAL: 300, // 5 minutes between samples
+        MIN_SAMPLES: 12,      // Minimum samples for valid TWAP (1 hour)
+        MAX_PRICE_DEVIATION: 0.1 // 10% max deviation between samples
+    },
+    
+    // Escrow Configuration
+    ESCROW_SETTINGS: {
+        MIN_BET_AMOUNT: 0.001, // 0.001 SOL minimum bet
+        MAX_BET_AMOUNT: 100,   // 100 SOL maximum bet
+        PLATFORM_FEE_BPS: 1500 // 15% platform fee (basis points)
+    }
+};
+
 // Phase tracking configuration
 const PHASE_CONFIG = {
-    CURRENT_PHASE: 1,
+    CURRENT_PHASE: 5, // Updated to Phase 5 - Smart Contract Integration
     PHASES: {
         1: {
             name: 'Navigation & UI Framework',
             features: ['navigation', 'ui_framework', 'wallet_modal_ui', 'responsive_design'],
-            description: 'Basic navigation and user interface components'
+            description: 'Basic navigation and user interface components',
+            status: 'completed'
         },
         2: {
             name: 'Database & Backend Services',
             features: ['database_schema', 'real_token_data', 'price_tracking', 'backend_services'],
-            description: 'Database integration and backend service implementation'
+            description: 'Database integration and backend service implementation',
+            status: 'completed'
         },
         3: {
             name: 'Wallet Connection System',
             features: ['wallet_connection', 'user_profiles', 'authentication', 'session_management'],
-            description: 'Complete wallet integration and user management'
+            description: 'Complete wallet integration and user management',
+            status: 'completed'
         },
         4: {
             name: 'Admin Panel & Deployment',
             features: ['admin_panel', 'token_management', 'system_monitoring', 'admin_controls'],
-            description: 'Administrative interface and system management'
+            description: 'Administrative interface and system management',
+            status: 'completed'
         },
         5: {
-            name: 'System Integration & Testing',
-            features: ['end_to_end_testing', 'performance_optimization', 'production_deployment'],
-            description: 'Final integration, testing, and production readiness'
+            name: 'Smart Contract Integration',
+            features: ['blockchain_transactions', 'smart_contract_escrow', 'twap_integration', 'trustless_betting'],
+            description: 'Complete blockchain integration with smart contracts',
+            status: 'in_progress'
         }
     }
 };
 
-// ==============================================
-// BLOCKCHAIN CONFIGURATION (SINGLE DEFINITION)
-// ==============================================
+// 🚀 NEW: Smart Contract Function Availability Check
+function isSmartContractEnabled() {
+    return BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED && 
+           window.smartContractService && 
+           window.smartContractService.isAvailable &&
+           window.smartContractService.isAvailable();
+}
 
-const BLOCKCHAIN_CONFIG = {
-    // Solana Program Configuration
-    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4',
-    SOLANA_NETWORK: 'devnet', // 'mainnet-beta' for production
-    SOLANA_RPC_URL: 'https://api.devnet.solana.com',
-    
-    // Smart Contract Features
-    SMART_CONTRACT_ENABLED: true,
-    SMART_CONTRACT_COMPETITIONS: true,
-    SMART_CONTRACT_ESCROW: true,
-    FALLBACK_TO_DATABASE: true,
-    
-    // Pyth Network Configuration
-    PYTH_NETWORK_CLUSTER: 'devnet',
-    PYTH_PRICE_FEEDS: {
-        // Common Solana tokens with Pyth price feed IDs
-        'So11111111111111111111111111111111111111112': '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d', // SOL
-        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e6f94a', // USDC
-        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221'  // USDT
-    },
-    
-    // Transaction Configuration
-    TRANSACTION_CONFIG: {
-        CONFIRMATION_TIMEOUT: 30000, // 30 seconds
-        MAX_RETRIES: 3,
-        RETRY_DELAY: 1000, // 1 second
-        GAS_BUFFER: 1.2 // 20% gas buffer
-    },
-    
-    // Competition Smart Contract Settings
-    COMPETITION_CONFIG: {
-        MIN_BET_AMOUNT: 0.1, // SOL
-        MAX_BET_AMOUNT: 10.0, // SOL
-        PLATFORM_FEE_PERCENTAGE: 15,
-        TWAP_UPDATE_INTERVAL: 300000, // 5 minutes in milliseconds
-        MIN_COMPETITION_DURATION: 3600000, // 1 hour
-        MAX_COMPETITION_DURATION: 172800000 // 48 hours
-    },
-    
-    // Wallet Integration (SINGLE DEFINITION)
-    WALLET_CONFIG: {
-        SUPPORTED_WALLETS: ['phantom', 'solflare', 'backpack', 'demo'],
-        DEFAULT_WALLET: 'phantom',
-        DEMO_MODE_ENABLED: true,
-        AUTO_CONNECT: false,
-        AUTO_RECONNECT: true,
-        PERSIST_CONNECTION: true,
-        CONNECTION_TIMEOUT: 10000, // 10 seconds
-        REQUIRED_PERMISSIONS: ['signTransaction', 'signAllTransactions']
-    },
-    
-    // Development Settings
-    DEVELOPMENT: {
-        ENABLE_CONSOLE_LOGS: true,
-        MOCK_TRANSACTIONS: false, // Set to true for testing without real SOL
-        BYPASS_WALLET_CHECKS: false,
-        TEST_MODE: false
+// 🚀 NEW: Get appropriate service based on configuration
+function getCompetitionService() {
+    if (isSmartContractEnabled()) {
+        console.log('🔗 Using smart contract service');
+        return 'smart_contract';
+    } else {
+        console.log('🗄️ Using database service');
+        return 'database';
+    }
+}
+
+// Development and Debug Configuration
+const DEBUG_CONFIG = {
+    ENABLED: true,
+    LOG_LEVELS: ['error', 'warn', 'info', 'debug'],
+    MODULES: {
+        WALLET: true,
+        COMPETITION: true,
+        SMART_CONTRACT: true,
+        DATABASE: true,
+        UI: true
     }
 };
 
-// ==============================================
-// SERVICE AVAILABILITY CONFIGURATION
-// ==============================================
-
-const SERVICE_CONFIG = {
-    // Service availability flags
-    SERVICES: {
-        SMART_CONTRACT_SERVICE: true,
-        WALLET_SERVICE: true,
-        PRICE_SERVICE: false, // Set to false since not required
-        TOKEN_SERVICE: false, // Set to false since not required
-        COMPETITION_MANAGER: false // Set to false since removed
-    },
-    
-    // Service initialization timeouts
-    TIMEOUTS: {
-        SMART_CONTRACT_INIT: 10000, // 10 seconds
-        WALLET_CONNECT: 15000, // 15 seconds
-        SERVICE_DISCOVERY: 5000 // 5 seconds
-    },
-    
-    // Fallback behavior
-    FALLBACKS: {
-        USE_DATABASE_ONLY: true, // Fallback to database if smart contract fails
-        GRACEFUL_DEGRADATION: true,
-        SHOW_SERVICE_STATUS: true,
-        SKIP_MISSING_SERVICES: true // Skip services that don't exist
-    }
-};
-
-// ==============================================
-// EXPORTS & GLOBAL ASSIGNMENT
-// ==============================================
-
-// Export for use in other files
+// Export all configurations for use in other files
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.APP_CONFIG = APP_CONFIG;
 window.COMPETITION_STATUS = COMPETITION_STATUS;
 window.TOKEN_VALIDATION = TOKEN_VALIDATION;
 window.TOKEN_ERROR_CODES = TOKEN_ERROR_CODES;
 window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
+window.WALLET_CONFIG = WALLET_CONFIG;
 window.UI_CONFIG = UI_CONFIG;
+window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG; // 🚀 NEW
 window.PHASE_CONFIG = PHASE_CONFIG;
+window.DEBUG_CONFIG = DEBUG_CONFIG;
 
-// Export blockchain configurations
-window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG;
-window.SERVICE_CONFIG = SERVICE_CONFIG;
+// 🚀 NEW: Helper functions
+window.isSmartContractEnabled = isSmartContractEnabled;
+window.getCompetitionService = getCompetitionService;
 
-// Use wallet config from blockchain config to avoid conflicts
-window.WALLET_CONFIG = BLOCKCHAIN_CONFIG.WALLET_CONFIG;
-
-// Blockchain feature checker
-window.isBlockchainFeatureEnabled = function(feature) {
-    const blockchainFeatures = {
-        'smart_contracts': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED,
-        'smart_contract_competitions': BLOCKCHAIN_CONFIG.SMART_CONTRACT_COMPETITIONS,
-        'smart_contract_escrow': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ESCROW,
-        'pyth_integration': !!BLOCKCHAIN_CONFIG.PYTH_NETWORK_CLUSTER,
-        'transaction_signing': BLOCKCHAIN_CONFIG.WALLET_CONFIG.REQUIRED_PERMISSIONS.length > 0,
-        'sol_transfers': BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED && !BLOCKCHAIN_CONFIG.DEVELOPMENT.MOCK_TRANSACTIONS,
-        'fallback_to_database': BLOCKCHAIN_CONFIG.FALLBACK_TO_DATABASE
-    };
-    
-    return blockchainFeatures[feature] || false;
-};
-
-// Smart contract availability checker
-window.isSmartContractAvailable = function() {
-    try {
-        // Check if smart contract service exists and is enabled
-        const serviceExists = !!(window.smartContractService || window.getSmartContractService);
-        const configEnabled = BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED;
-        const serviceEnabled = SERVICE_CONFIG.SERVICES.SMART_CONTRACT_SERVICE;
-        
-        return serviceExists && configEnabled && serviceEnabled;
-    } catch (error) {
-        console.warn('Error checking smart contract availability:', error);
-        return false;
-    }
-};
-
-// Service availability checker
-window.isServiceAvailable = function(serviceName) {
-    const serviceKey = serviceName.toUpperCase() + '_SERVICE';
-    return SERVICE_CONFIG.SERVICES[serviceKey] || false;
-};
-
-// Configuration summary for debugging
-window.getBlockchainConfigSummary = function() {
-    return {
-        programId: BLOCKCHAIN_CONFIG.SOLANA_PROGRAM_ID,
-        network: BLOCKCHAIN_CONFIG.SOLANA_NETWORK,
-        smartContractsEnabled: BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED,
-        fallbackToDatabase: BLOCKCHAIN_CONFIG.FALLBACK_TO_DATABASE,
-        pythFeeds: Object.keys(BLOCKCHAIN_CONFIG.PYTH_PRICE_FEEDS).length,
-        servicesAvailable: Object.entries(SERVICE_CONFIG.SERVICES)
-            .filter(([key, value]) => value)
-            .map(([key]) => key),
-        walletSupport: BLOCKCHAIN_CONFIG.WALLET_CONFIG.SUPPORTED_WALLETS,
-        development: BLOCKCHAIN_CONFIG.DEVELOPMENT
-    };
-};
-
-// Phase 1: Feature availability checker
-window.isFeatureEnabled = function(feature) {
-    const phase1Features = {
-        // Phase 1 ✅ Available
-        'navigation': true,
-        'ui_framework': true,
-        'wallet_modal_ui': true,
-        'responsive_design': true,
-        'demo_mode': true,
-        'basic_sections': true,
-        
-        // Phase 2+ 🚧 Coming Soon
-        'wallet_connection': false,
-        'token_system': false,
-        'real_competitions': false,
-        'database_integration': false,
-        'price_tracking': false,
-        'backend_services': false,
-        
-        // Phase 3+ 🚧 Future
-        'admin_panel': false,
-        'smart_contracts': false,
-        'production_features': false
-    };
-    
-    return phase1Features[feature] || false;
-};
-
-// Configuration validation
-window.validateConfig = function() {
-    const required = ['SUPABASE_CONFIG', 'APP_CONFIG', 'NAVIGATION_CONFIG', 'PHASE_CONFIG', 'BLOCKCHAIN_CONFIG'];
-    const missing = required.filter(config => !window[config]);
-    
-    if (missing.length > 0) {
-        console.error('❌ Missing required configuration:', missing);
-        return false;
-    }
-    
-    console.log('✅ Configuration validation passed');
-    return true;
-};
-
-// Phase status checker
-window.getPhaseStatus = function() {
-    const currentPhase = PHASE_CONFIG.CURRENT_PHASE;
-    const phaseInfo = PHASE_CONFIG.PHASES[currentPhase];
-    
-    return {
-        current: currentPhase,
-        name: phaseInfo.name,
-        description: phaseInfo.description,
-        features: phaseInfo.features,
-        nextPhase: currentPhase < 5 ? currentPhase + 1 : null
-    };
-};
-
-// Debug helper
-window.getConfigSummary = function() {
-    const phaseStatus = window.getPhaseStatus();
-    
-    return {
-        phase: {
-            current: phaseStatus.current,
-            name: phaseStatus.name,
-            features: phaseStatus.features.length
-        },
-        supabase: {
-            url: SUPABASE_CONFIG.url,
-            hasKey: !!SUPABASE_CONFIG.anonKey
-        },
-        features: {
-            navigation: window.isFeatureEnabled('navigation'),
-            ui_framework: window.isFeatureEnabled('ui_framework'),
-            demo_mode: window.isFeatureEnabled('demo_mode'),
-            wallet_connection: window.isFeatureEnabled('wallet_connection')
-        },
-        wallet: {
-            supported: BLOCKCHAIN_CONFIG.WALLET_CONFIG.SUPPORTED_WALLETS.length,
-            demoEnabled: BLOCKCHAIN_CONFIG.WALLET_CONFIG.DEMO_MODE_ENABLED
-        },
-        navigation: {
-            sections: NAVIGATION_CONFIG.SECTIONS.length,
-            default: NAVIGATION_CONFIG.DEFAULT_SECTION
-        },
-        blockchain: window.getBlockchainConfigSummary()
-    };
-};
-
-// Initialize and log configuration
-console.log('⚙️ TokenWars configuration loaded - Fixed version with no duplicates');
-console.log('📊 Current Phase:', window.getPhaseStatus().current, '-', window.getPhaseStatus().name);
-console.log('🎯 Available Features:', Object.keys(window.getConfigSummary().features).filter(f => window.isFeatureEnabled(f)));
-console.log('🔗 Blockchain Config:', window.getBlockchainConfigSummary());
-console.log('📋 Full Config Summary:', window.getConfigSummary());
+// Log configuration load
+console.log('⚙️ TokenWars configuration loaded - Updated with blockchain integration');
+console.log('🔗 Smart contract enabled:', BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED);
+console.log('📊 Program ID:', BLOCKCHAIN_CONFIG.SOLANA_PROGRAM_ID);
+console.log('🌐 Network:', BLOCKCHAIN_CONFIG.SOLANA_NETWORK);
