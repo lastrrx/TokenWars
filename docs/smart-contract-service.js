@@ -1,5 +1,5 @@
 // =============================================================================
-// FIXED Smart Contract Service - Buffer Polyfill + Complete Implementation
+// FIXED Smart Contract Service - Resolved isAvailable function error
 // =============================================================================
 
 // CRITICAL FIX: Buffer polyfill for browser compatibility
@@ -42,9 +42,9 @@ class SmartContractService {
             'confirmed'
         );
         
-        // Service state
+        // Service state - FIXED: Renamed property to avoid conflicts
         this.isInitialized = false;
-        this.isAvailable = false;
+        this.serviceAvailable = false; // CHANGED: Was this.isAvailable
         
         // Initialize
         this.initialize();
@@ -70,7 +70,7 @@ class SmartContractService {
             await this.connection.getLatestBlockhash();
             
             this.isInitialized = true;
-            this.isAvailable = true;
+            this.serviceAvailable = true; // CHANGED: Was this.isAvailable
             
             console.log('✅ Smart contract service initialized successfully');
             console.log(`🎯 Program ID: ${this.programId}`);
@@ -78,16 +78,16 @@ class SmartContractService {
             
         } catch (error) {
             console.error('❌ Smart contract service initialization failed:', error);
-            this.isAvailable = false;
+            this.serviceAvailable = false; // CHANGED: Was this.isAvailable
         }
     }
 
     // =============================================================================
-    // SERVICE AVAILABILITY CHECKS
+    // SERVICE AVAILABILITY CHECKS - FIXED METHOD NAME
     // =============================================================================
 
-    isServiceAvailable() {
-        return this.isInitialized && this.isAvailable;
+    isAvailable() {
+        return this.isInitialized && this.serviceAvailable;
     }
 
     // =============================================================================
@@ -121,7 +121,7 @@ class SmartContractService {
         try {
             console.log('🏗️ Creating competition escrow on-chain...');
             
-            if (!this.isServiceAvailable()) {
+            if (!this.isAvailable()) {
                 throw new Error('Smart contract service not available');
             }
 
@@ -182,7 +182,7 @@ class SmartContractService {
                 userPublicKey
             });
 
-            if (!this.isServiceAvailable()) {
+            if (!this.isAvailable()) {
                 throw new Error('Smart contract service not available');
             }
 
@@ -267,7 +267,7 @@ class SmartContractService {
         try {
             console.log('📊 Updating TWAP sample on-chain...');
 
-            if (!this.isServiceAvailable()) {
+            if (!this.isAvailable()) {
                 throw new Error('Smart contract service not available');
             }
 
@@ -332,7 +332,7 @@ class SmartContractService {
                 userPublicKey
             });
 
-            if (!this.isServiceAvailable()) {
+            if (!this.isAvailable()) {
                 throw new Error('Smart contract service not available');
             }
 
@@ -413,7 +413,7 @@ class SmartContractService {
                 winningToken
             });
 
-            if (!this.isServiceAvailable()) {
+            if (!this.isAvailable()) {
                 throw new Error('Smart contract service not available');
             }
 
@@ -566,7 +566,7 @@ class SmartContractService {
     getServiceStatus() {
         return {
             isInitialized: this.isInitialized,
-            isAvailable: this.isAvailable,
+            isAvailable: this.serviceAvailable, // CHANGED: Was this.isAvailable
             programId: this.programId,
             network: this.network,
             connectionEndpoint: this.connection.rpcEndpoint
@@ -575,19 +575,33 @@ class SmartContractService {
 }
 
 // =============================================================================
-// GLOBAL SERVICE INSTANCE
+// GLOBAL SERVICE INSTANCE - FIXED INITIALIZATION
 // =============================================================================
 
-// Create and expose smart contract service globally
-window.smartContractService = new SmartContractService();
-
-// Expose service availability check
-window.smartContractService.isAvailable = function() {
-    return window.smartContractService.isServiceAvailable();
-};
+// Create and expose smart contract service globally with error handling
+try {
+    window.smartContractService = new SmartContractService();
+    console.log('✅ Smart Contract Service instance created successfully');
+} catch (error) {
+    console.error('❌ Failed to create Smart Contract Service:', error);
+    // Create a fallback object with the isAvailable method
+    window.smartContractService = {
+        isAvailable: function() {
+            return false;
+        },
+        getServiceStatus: function() {
+            return {
+                isInitialized: false,
+                isAvailable: false,
+                error: error.message
+            };
+        }
+    };
+}
 
 console.log('✅ Smart Contract Service loaded and ready!');
 console.log('🔧 FEATURES:');
+console.log('   ✅ FIXED isAvailable() method naming conflict');
 console.log('   ✅ FIXED Buffer compatibility for browser');
 console.log('   ✅ Competition escrow creation');
 console.log('   ✅ On-chain bet placement');
@@ -596,4 +610,5 @@ console.log('   ✅ Automated winnings withdrawal');
 console.log('   ✅ Competition resolution');
 console.log('   ✅ Pyth price feed integration');
 console.log('   ✅ Connection health monitoring');
+console.log('   ✅ Robust error handling and fallback');
 console.log('🚀 Ready for blockchain integration!');
