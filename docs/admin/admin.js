@@ -3643,17 +3643,27 @@ async function initializeServiceReferences() {
         let attempts = 0;
         const maxAttempts = 50;
         
-        while ((!window.tokenService || !window.priceService || !window.competitionManager) && attempts < maxAttempts) {
+        const servicesNeeded = Object.entries(window.SERVICE_CONFIG.SERVICES)
+            .filter(([name, enabled]) => enabled)
+            .map(([name]) => name.toLowerCase().replace('_', ''));
+        
+        while (attempts < maxAttempts) {
+            const servicesReady = servicesNeeded.every(service => {
+                if (service === 'smartcontractservice') return !!(window.smartContractService || window.getSmartContractService);
+                if (service === 'walletservice') return !!(window.walletService || window.getWalletService);
+                if (service === 'priceservice') return !!window.priceService;
+                if (service === 'tokenservice') return !!window.tokenService;
+                return true; // Skip unavailable services
+            });
+            
+            if (servicesReady) break;
+            
             await new Promise(resolve => setTimeout(resolve, 200));
             attempts++;
             
             if (attempts % 10 === 0) {
-                debugLog('services', `Waiting for services... attempt ${attempts}/${maxAttempts}`);
-                debugLog('services', {
-                    tokenService: !!window.tokenService,
-                    priceService: !!window.priceService,
-                    competitionManager: !!window.competitionManager
-                });
+                debugLog('services', `Waiting for available services... attempt ${attempts}/${maxAttempts}`);
+                debugLog('services', `Services needed: ${servicesNeeded.join(', ')}`);
             }
         }
         
