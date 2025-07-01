@@ -2728,6 +2728,96 @@ function updateParameterValueEnhanced(input) {
     }
 }
 
+// Modified bet placement in app.js
+async function placeBetWithSmartContract() {
+    try {
+        console.log('🎯 Placing bet with smart contract...');
+        
+        const walletAddress = getWalletAddress();
+        const competition = CompetitionState.selectedCompetition;
+        const betAmount = parseFloat(document.getElementById('betAmount').value);
+        
+        // 1. Place bet on-chain first
+        console.log('📊 Placing bet on-chain...');
+        const signature = await window.smartContractService.placeBet(
+            competition.competitionId,
+            walletAddress,
+            CompetitionState.selectedToken, // 'A' or 'B'
+            betAmount
+        );
+
+        // 2. Record bet in database
+        console.log('💾 Recording bet in database...');
+        const betData = {
+            user_wallet: walletAddress,
+            competition_id: competition.competitionId,
+            chosen_token: `token_${CompetitionState.selectedToken.toLowerCase()}`,
+            amount: betAmount,
+            status: 'PLACED',
+            escrow_transaction_signature: signature,
+            timestamp: new Date().toISOString()
+        };
+
+        const { data, error } = await CompetitionState.supabaseClient
+            .from('bets')
+            .insert([betData])
+            .select();
+
+        if (error) throw error;
+
+        showNotificationFixed('Bet placed successfully on-chain!', 'success');
+        closeCompetitionModalFixed();
+
+    } catch (error) {
+        console.error('❌ On-chain bet placement failed:', error);
+        showNotificationFixed(`Failed to place bet: ${error.message}`, 'error');
+    }
+}
+
+// Add to portfolio/user interface
+async function withdrawWinnings(competitionId) {
+    try {
+        console.log('💰 Withdrawing winnings...');
+        
+        const walletAddress = getWalletAddress();
+        
+        // Check if user has winning bet
+        const { data: bet } = await window.supabase
+            .from('bets')
+            .select('*, competitions(*)')
+            .eq('user_wallet', walletAddress)
+            .eq('competition_id', competitionId)
+            .eq('status', 'WON')
+            .eq('is_withdrawn', false)
+            .single();
+
+        if (!bet) {
+            throw new Error('No winning bet found or already withdrawn');
+        }
+
+        // Withdraw from smart contract
+        const signature = await window.smartContractService.withdrawWinnings(
+            competitionId,
+            walletAddress
+        );
+
+        // Update database
+        await window.supabase
+            .from('bets')
+            .update({
+                is_withdrawn: true,
+                withdraw_transaction_signature: signature,
+                status: 'CLAIMED'
+            })
+            .eq('bet_id', bet.bet_id);
+
+        showNotificationFixed('Winnings withdrawn successfully!', 'success');
+
+    } catch (error) {
+        console.error('❌ Withdrawal failed:', error);
+        showNotificationFixed(`Withdrawal failed: ${error.message}`, 'error');
+    }
+}
 /**
  * Update All Parameter Displays with Enhanced Info
  */
