@@ -766,25 +766,55 @@
     </div>
 
     <!-- JavaScript Files in Proper Dependency Order -->
-    <!-- Configuration first -->
-    <script src="config.js"></script>
+    <script>
+    // Wait for all CDN scripts to load before loading our scripts
+    window.addEventListener('load', function() {
+        console.log('🚀 Loading application scripts...');
+        
+        // Check dependencies first
+        if (typeof supabase === 'undefined') {
+            console.error('❌ Supabase not loaded');
+        }
+        if (typeof solanaWeb3 === 'undefined') {
+            console.error('❌ Solana Web3.js not loaded');
+        }
+        
+        // Load our scripts in order
+        const scripts = [
+            'config.js',
+            'supabase-client.js',
+            'utils.js',
+            'wallet-service.js',
+            'user.js',
+            'smart-contract-service.js',  // Load AFTER dependencies are confirmed
+            'app.js'  // Load app.js last so it can use all services
+        ];
+        
+        loadScriptsSequentially(scripts);
+    });
     
-    <!-- Database client setup -->
-    <script src="supabase-client.js"></script>
-    
-    <!-- Utility functions -->
-    <script src="utils.js"></script>
-    
-    <!-- Wallet services -->
-    <script src="wallet-service.js"></script>
-    
-    <!-- User/portfolio system -->
-    <script src="user.js"></script>
-    
-    <!-- Main application logic (including competitions) -->
-    <script src="app.js"></script>
-
-    <!-- Smart contract integration-->
-    <script src="smart-contract-service.js"></script>
+    function loadScriptsSequentially(scripts) {
+        if (scripts.length === 0) {
+            console.log('✅ All application scripts loaded');
+            return;
+        }
+        
+        const script = scripts.shift();
+        const scriptElement = document.createElement('script');
+        scriptElement.src = script;
+        
+        scriptElement.onload = function() {
+            console.log(`✅ Loaded: ${script}`);
+            loadScriptsSequentially(scripts); // Load next script
+        };
+        
+        scriptElement.onerror = function() {
+            console.error(`❌ Failed to load: ${script}`);
+            loadScriptsSequentially(scripts); // Continue anyway
+        };
+        
+        document.head.appendChild(scriptElement);
+    }
+    </script>
 </body>
 </html>
