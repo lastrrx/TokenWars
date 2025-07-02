@@ -8,9 +8,31 @@
 
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Solanaw web3 js -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Blockchain Dependency Validation - ADD THIS -->
+    <script>
+    window.addEventListener('load', function() {
+        // Check if blockchain dependencies loaded
+        if (typeof solanaWeb3 !== 'undefined') {
+            console.log('✅ [ADMIN] Solana Web3.js loaded successfully');
+            window.adminBlockchainAvailable = true;
+        } else {
+            console.error('❌ [ADMIN] Solana Web3.js failed to load');
+            window.adminBlockchainAvailable = false;
+        }
+        
+        if (typeof supabase !== 'undefined') {
+            console.log('✅ [ADMIN] Supabase loaded successfully');
+        } else {
+            console.error('❌ [ADMIN] Supabase failed to load');
+        }
+    });
+    </script>
 
     <style>
         /* CSS Variables for Admin Theme */
@@ -1228,38 +1250,115 @@
         </main>
     </div>
 
-    <!-- Scripts -->
-    <script src="../config.js"></script>
-    <script src="../supabase-client.js"></script>
-    <script src="../wallet-service.js"></script>
-    <script src="../smart-contract-service.js"></script>
-    <script src="auth.js"></script>
-    <script src="admin.js"></script>
-    
-    <!-- Component Scripts -->
-    <script src="components/cache-monitor.js"></script>
-    <script src="components/token-approval.js"></script>
-    <script src="components/blacklist-manager.js"></script>
-    <script src="components/pair-optimizer.js"></script>
-    
+    <!-- Blockchain dependencies loaded with proper sequencing -->
     <script>
-        // Initialize admin panel on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Starting TokenWars Production Admin Panel');
+    // Wait for blockchain dependencies before loading admin scripts
+    window.addEventListener('load', function() {
+        console.log('🚀 [ADMIN] Loading admin scripts with blockchain support...');
+        
+        // Load scripts in proper order
+        const adminScripts = [
+            '../config.js',                    // Configuration first
+            '../supabase-client.js',           // Database client
+            '../wallet-service.js',            // Wallet integration
+            '../smart-contract-service.js',    // Blockchain service
+            'auth.js',                         // Admin authentication
+            'components/cache-monitor.js',     // Admin components
+            'components/token-approval.js',
+            'components/blacklist-manager.js',
+            'components/pair-optimizer.js', 
+            'admin.js'                         // Main admin logic last
+        ];
+        
+        loadAdminScriptsSequentially(adminScripts);
+    });
+    
+    function loadAdminScriptsSequentially(scripts) {
+        if (scripts.length === 0) {
+            console.log('✅ [ADMIN] All admin scripts loaded with blockchain support');
+            // Initialize blockchain services after all scripts loaded
+            initializeAdminBlockchainServices();
+            return;
+        }
+        
+        const script = scripts.shift();
+        const scriptElement = document.createElement('script');
+        scriptElement.src = script;
+        
+        scriptElement.onload = function() {
+            console.log(`✅ [ADMIN] Loaded: ${script}`);
+            loadAdminScriptsSequentially(scripts);
+        };
+        
+        scriptElement.onerror = function() {
+            console.error(`❌ [ADMIN] Failed to load: ${script}`);
+            loadAdminScriptsSequentially(scripts); // Continue anyway
+        };
+        
+        document.head.appendChild(scriptElement);
+    }
+    
+    // Initialize blockchain services for admin
+    async function initializeAdminBlockchainServices() {
+        try {
+            console.log('🔗 [ADMIN] Initializing blockchain services...');
             
-            // Check if we're authenticated
-            const adminToken = sessionStorage.getItem('adminToken');
-            if (adminToken) {
-                // Skip auth and go straight to admin panel
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('admin-panel').classList.remove('hidden');
+            // Initialize smart contract service
+            if (window.SmartContractService) {
+                window.adminSmartContractService = new SmartContractService();
+                const success = await window.adminSmartContractService.initialize();
                 
-                // Initialize admin panel
-                initializeAdminPanel().catch(error => {
+                window.adminBlockchainReady = success;
+                console.log(success ? '✅ [ADMIN] Blockchain services ready' : '⚠️ [ADMIN] Blockchain services unavailable');
+            } else {
+                window.adminBlockchainReady = false;
+                console.log('⚠️ [ADMIN] Smart contract service not available');
+            }
+            
+            // Update admin UI to show blockchain status
+            if (typeof updateAdminBlockchainStatus === 'function') {
+                updateAdminBlockchainStatus();
+            }
+            
+            // Initialize admin panel after blockchain setup
+            initializeAdminPanelAfterBlockchain();
+            
+        } catch (error) {
+            console.error('❌ [ADMIN] Blockchain initialization failed:', error);
+            window.adminBlockchainReady = false;
+            if (typeof updateAdminBlockchainStatus === 'function') {
+                updateAdminBlockchainStatus();
+            }
+            // Still initialize admin panel even if blockchain fails
+            initializeAdminPanelAfterBlockchain();
+        }
+    }
+
+    // Admin panel initialization (moved here and updated)
+    function initializeAdminPanelAfterBlockchain() {
+        console.log('🚀 Starting TokenWars Production Admin Panel');
+        
+        // Check if we're authenticated
+        const adminToken = sessionStorage.getItem('adminToken');
+        if (adminToken) {
+            // Skip auth and go straight to admin panel
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            
+            // Initialize admin panel
+            if (window.initializeAdminPanel) {
+                window.initializeAdminPanel().catch(error => {
                     console.error('Failed to initialize admin panel:', error);
                 });
             }
-        });
+        }
+    }
+
+    // DOM ready listener to start the process
+    document.addEventListener('DOMContentLoaded', () => {
+        // The blockchain loading process will handle admin panel initialization
+        console.log('📋 [ADMIN] DOM ready, blockchain initialization will handle the rest');
+    });
 
         // Quick Action Functions
         function quickCacheRefresh() {
