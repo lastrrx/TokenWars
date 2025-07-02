@@ -1754,6 +1754,28 @@
                 
                 console.log('✅ [FORCE] Admin panel shown');
                 
+                // Initialize admin panel properly
+                setTimeout(() => {
+                    console.log('🔧 [FORCE] Initializing admin panel...');
+                    
+                    if (window.initializeAdminPanel) {
+                        window.initializeAdminPanel().then(() => {
+                            console.log('✅ [FORCE] Admin panel initialized successfully');
+                        }).catch(error => {
+                            console.error('❌ [FORCE] Admin panel initialization failed:', error);
+                        });
+                    } else {
+                        console.error('❌ [FORCE] initializeAdminPanel function not available');
+                        console.log('🔍 Available functions:', Object.keys(window).filter(k => k.includes('admin')));
+                    }
+                    
+                    // Also update blockchain status
+                    if (typeof updateAdminBlockchainStatus === 'function') {
+                        updateAdminBlockchainStatus();
+                    }
+                    
+                }, 1000);
+                
             } else {
                 console.error('❌ [FORCE] Authentication failed:', data.message);
                 alert('Authentication failed: ' + (data.message || 'Invalid credentials'));
@@ -1765,6 +1787,84 @@
         }
     }
     
+// Debug section switching
+    function debugSectionSwitching() {
+        console.log('🔍 [DEBUG] Testing section switching...');
+        
+        // Check if navigation elements exist
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.admin-section');
+        
+        console.log('🔍 [DEBUG] Found:', {
+            navItems: navItems.length,
+            sections: sections.length
+        });
+        
+        // Add click listeners to nav items
+        navItems.forEach((item, index) => {
+            console.log(`🔗 [DEBUG] Adding listener to nav item ${index}:`, item.textContent);
+            
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = item.getAttribute('href');
+                const sectionName = href ? href.substring(1) : 'dashboard';
+                
+                console.log(`🔘 [DEBUG] Nav item clicked: ${sectionName}`);
+                
+                // Manual section switching
+                sections.forEach(section => {
+                    section.classList.add('hidden');
+                });
+                
+                const targetSection = document.getElementById(sectionName);
+                if (targetSection) {
+                    targetSection.classList.remove('hidden');
+                    console.log(`✅ [DEBUG] Switched to section: ${sectionName}`);
+                } else {
+                    console.error(`❌ [DEBUG] Section not found: ${sectionName}`);
+                }
+                
+                // Update active nav
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    }
+    
+// Debug database connection
+    async function debugDatabaseConnection() {
+        console.log('🔍 [DEBUG] Testing database connection...');
+        
+        try {
+            if (window.supabase) {
+                console.log('✅ [DEBUG] Supabase client available');
+                
+                // Test a simple query
+                const { data, error } = await window.supabase
+                    .from('users')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ [DEBUG] Database query failed:', error);
+                } else {
+                    console.log('✅ [DEBUG] Database query successful:', data);
+                }
+                
+            } else {
+                console.error('❌ [DEBUG] Supabase client not available');
+            }
+        } catch (error) {
+            console.error('❌ [DEBUG] Database test error:', error);
+        }
+    }
+    
+    // Test database after authentication
+    setTimeout(debugDatabaseConnection, 4000);
+
+    // Call debug function after admin panel is shown
+    setTimeout(debugSectionSwitching, 3000);
+
     // Force setup after everything loads
     setTimeout(forceAuthSetup, 2000);
     
