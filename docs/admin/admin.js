@@ -1377,7 +1377,7 @@ async function createCompetitionDirectDatabase(config = {}) {
         
         // Insert competition into database - let it auto-generate UUID
         const supabase = getSupabase();
-        const { data, error } = await supabase
+        const { data, error } = await window.supabase.from('competitions').select('*');
             .from('competitions')
             .insert([competitionData])
             .select()
