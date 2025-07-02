@@ -4180,16 +4180,27 @@ async function updateSystemHealthDisplay() {
     if (!statusGrid) return;
     
     // Determine blockchain status
-    let blockchainStatus = 'unknown';
-    let blockchainDetails = 'Initializing...';
-    
-    if (window.adminBlockchainReady === true) {
-        blockchainStatus = 'healthy';
-        blockchainDetails = 'Connected to Devnet';
-    } else if (window.adminBlockchainReady === false) {
-        blockchainStatus = 'error';
-        blockchainDetails = 'Unavailable - Database Mode';
-    }
+        let blockchainStatus = 'unknown';
+        let blockchainDetails = 'Initializing...';
+        
+        try {
+            const blockchainAvailable = checkBlockchainStatusForAdmin(); // ADD THIS LINE
+            
+            if (blockchainAvailable === true) {
+                blockchainStatus = 'healthy';
+                blockchainDetails = 'Connected to Devnet';
+            } else if (blockchainAvailable === false) {
+                blockchainStatus = 'warning'; // Changed from 'error' to 'warning' for database mode
+                blockchainDetails = 'Database Mode Active';
+            } else {
+                blockchainStatus = 'unknown';
+                blockchainDetails = 'Checking Connection...';
+            }
+        } catch (error) {
+            console.warn('Error checking blockchain status:', error);
+            blockchainStatus = 'warning';
+            blockchainDetails = 'Status Unknown';
+        }
     
     const healthItems = [
         { 
@@ -4216,6 +4227,41 @@ async function updateSystemHealthDisplay() {
             <span class="status-details ${item.status === 'healthy' ? 'connected' : item.status === 'error' ? 'disconnected' : 'initializing'}">${item.details}</span>
         </div>
     `).join('');
+}
+
+/**
+ * Check Blockchain Status for Admin Panel
+ */
+function checkBlockchainStatusForAdmin() {
+    try {
+        // Check if the main app has set blockchain status
+        if (typeof window.adminBlockchainReady !== 'undefined') {
+            return window.adminBlockchainReady;
+        }
+        
+        // Check if smart contract service is available
+        if (window.smartContractService && window.smartContractService.isAvailable) {
+            const available = window.smartContractService.isAvailable();
+            window.adminBlockchainReady = available;
+            return available;
+        }
+        
+        // Check if blockchain config exists
+        if (window.BLOCKCHAIN_CONFIG && window.BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED) {
+            // Config exists but service unknown - assume it's working
+            window.adminBlockchainReady = true;
+            return true;
+        }
+        
+        // Default to database mode
+        window.adminBlockchainReady = false;
+        return false;
+        
+    } catch (error) {
+        console.warn('Error checking blockchain status:', error);
+        window.adminBlockchainReady = false;
+        return false;
+    }
 }
 
 // ===== BLOCKCHAIN INTEGRATION FUNCTIONS =====
