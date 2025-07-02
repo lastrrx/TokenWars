@@ -131,6 +131,52 @@
         .status-indicator.stale { background: #f59e0b; }
         .status-indicator.unknown { background: #6b7280; }
 
+        /* Enhanced Status Items */
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-item:hover {
+            background: rgba(139, 92, 246, 0.05);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .status-text {
+            flex: 1;
+            font-weight: 500;
+            color: var(--admin-text);
+        }
+        
+        .status-details {
+            font-size: 0.875rem;
+            color: var(--admin-text-secondary);
+            font-weight: 400;
+        }
+        
+        .status-details.connected {
+            color: var(--admin-success);
+        }
+        
+        .status-details.disconnected {
+            color: var(--admin-error);
+        }
+        
+        .status-details.initializing {
+            color: var(--admin-warning);
+        }
+        
         /* Enhanced Metrics Grid */
         .metrics-grid {
             display: grid;
