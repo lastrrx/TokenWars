@@ -17,9 +17,41 @@
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
-    <!-- Buffer polyfill compatibility -->
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.js"></script>
-    <script>window.Buffer = buffer.Buffer;</script>
+    <!-- Browser-compatible Buffer polyfill -->
+    <script>
+    // Simple Buffer polyfill for browser
+    if (typeof Buffer === 'undefined') {
+        window.Buffer = {
+            from: function(data, encoding) {
+                if (typeof data === 'string') {
+                    const encoder = new TextEncoder();
+                    return new Uint8Array(encoder.encode(data));
+                }
+                if (Array.isArray(data)) {
+                    return new Uint8Array(data);
+                }
+                return new Uint8Array(data);
+            },
+            alloc: function(size, fill) {
+                const buffer = new Uint8Array(size);
+                if (fill !== undefined) {
+                    buffer.fill(fill);
+                }
+                return buffer;
+            },
+            concat: function(arrays) {
+                const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+                const result = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const arr of arrays) {
+                    result.set(arr, offset);
+                    offset += arr.length;
+                }
+                return result;
+            }
+        };
+    }
+    </script>
 
     <!-- Solana Web3.js -->
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
