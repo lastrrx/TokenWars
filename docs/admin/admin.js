@@ -3848,13 +3848,12 @@ async function initializeServiceReferences() {
         
         debugLog('services', '✅ Service references initialized successfully');
         
-    } catch (error) {
-        debugLog('error', 'Failed to initialize service references:', error);
-        throw error;
-    }
-}
+            } catch (error) {
+                debugLog('error', 'Failed to initialize service references:', error);
+                throw error;
+            }
+        }
 
-        
         // Check if it's available now
         if (window.smartContractService?.isAvailable?.()) {
             console.log('✅ [ADMIN] Smart contract service is available');
