@@ -3854,23 +3854,6 @@ async function initializeServiceReferences() {
             }
         }
 
-        // Check if it's available now
-        if (window.smartContractService?.isAvailable?.()) {
-            console.log('✅ [ADMIN] Smart contract service is available');
-            window.adminBlockchainReady = true;
-            return true;
-        }
-        
-        console.log('⚠️ [ADMIN] Smart contract service initialization failed or not available');
-        window.adminBlockchainReady = false;
-        return false;
-        
-    } catch (error) {
-        console.error('❌ [ADMIN] Smart contract service initialization error:', error);
-        window.adminBlockchainReady = false;
-        return false;
-    }
-}
 
 /**
  * FIXED: Enhanced getSupabase function with better detection
