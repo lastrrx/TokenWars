@@ -263,7 +263,7 @@ class SmartContractService {
             
             // Create and send transaction
             const transaction = new solanaWeb3.Transaction().add(instruction);
-            const { blockhash } = await this.connection.getRecentBlockhash('confirmed');
+            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
             
@@ -334,7 +334,7 @@ class SmartContractService {
             
             // Create and send transaction
             const transaction = new solanaWeb3.Transaction().add(instruction);
-            const { blockhash } = await this.connection.getRecentBlockhash('confirmed');
+            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
             
