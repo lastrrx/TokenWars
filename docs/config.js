@@ -119,7 +119,8 @@ const BLOCKCHAIN_CONFIG = {
     SOLANA_NETWORK: 'devnet',
     PYTH_NETWORK_CLUSTER: 'devnet',
     SMART_CONTRACT_ENABLED: true,
-    FALLBACK_TO_DATABASE: true
+    FALLBACK_TO_DATABASE: true,
+    RPC_URL: 'https://api.devnet.solana.com'  // ← ADD THIS LINE
 };
 
 // Phase tracking configuration
@@ -164,6 +165,7 @@ window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
 window.WALLET_CONFIG = WALLET_CONFIG;
 window.UI_CONFIG = UI_CONFIG;
 window.PHASE_CONFIG = PHASE_CONFIG;
+window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG;
 
 // Phase 1: Feature availability checker
 window.isFeatureEnabled = function(feature) {
