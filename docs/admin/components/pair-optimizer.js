@@ -172,7 +172,7 @@ class PairOptimizer {
             const { data: competitions, error: compError } = await supabase
                 .from('competitions')
                 .select('*')
-                .in('status', ['COMPLETED', 'RESOLVED'])
+                .in('status', ['CLOSED', 'RESOLVED'])
                 .order('created_at', { ascending: false })
                 .limit(100);
 
@@ -182,7 +182,7 @@ class PairOptimizer {
             }
 
             if (competitions && competitions.length > 0) {
-                // Calculate performance metrics from completed competitions
+                // Calculate performance metrics from closed competitions
                 const totalCompetitions = competitions.length;
                 const successfulCompetitions = competitions.filter(c => c.winner_token).length;
                 
