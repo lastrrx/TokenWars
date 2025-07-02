@@ -567,23 +567,30 @@ class SmartContractService {
         }
     }
 
-    // Serialization helpers
+    // Browser-compatible serialization helpers
     serializeString(str) {
-        const strBytes = Buffer.from(str, 'utf8');
-        const lengthBuffer = Buffer.alloc(4);
-        lengthBuffer.writeUInt32LE(strBytes.length, 0);
-        return Buffer.concat([lengthBuffer, strBytes]);
+        const strBytes = new TextEncoder().encode(str);
+        const lengthArray = new Uint8Array(4);
+        const dataView = new DataView(lengthArray.buffer);
+        dataView.setUint32(0, strBytes.length, true); // true = little endian
+        
+        const result = new Uint8Array(4 + strBytes.length);
+        result.set(lengthArray, 0);
+        result.set(strBytes, 4);
+        return result;
     }
-
+    
     serializeU64(value) {
-        const buffer = Buffer.alloc(8);
-        buffer.writeBigUInt64LE(BigInt(value), 0);
+        const buffer = new Uint8Array(8);
+        const dataView = new DataView(buffer.buffer);
+        dataView.setBigUint64(0, BigInt(value), true); // true = little endian
         return buffer;
     }
-
+    
     serializeU16(value) {
-        const buffer = Buffer.alloc(2);
-        buffer.writeUInt16LE(value, 0);
+        const buffer = new Uint8Array(2);
+        const dataView = new DataView(buffer.buffer);
+        dataView.setUint16(0, value, true); // true = little endian
         return buffer;
     }
 
