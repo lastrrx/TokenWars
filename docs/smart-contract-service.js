@@ -3,22 +3,57 @@
 
 class SmartContractService {
     constructor() {
-        this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
-        this.programId = new solanaWeb3.PublicKey('95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4');
-        this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
+        // Check if Solana Web3.js is available
+        if (typeof solanaWeb3 === 'undefined') {
+            console.error('❌ Solana Web3.js not available - smart contract features disabled');
+            this.available = false;
+            return;
+        }
         
-        // Instruction discriminators (computed from instruction names)
-        this.instructions = {
-            createEscrow: this.computeInstructionDiscriminator('global:create_escrow'),
-            placeBet: this.computeInstructionDiscriminator('global:place_bet'),
-            startCompetition: this.computeInstructionDiscriminator('global:start_competition'),
-            updateTwapSample: this.computeInstructionDiscriminator('global:update_twap_sample'),
-            finalizeStartTwap: this.computeInstructionDiscriminator('global:finalize_start_twap'),
-            resolveCompetition: this.computeInstructionDiscriminator('global:resolve_competition'),
-            withdrawWinnings: this.computeInstructionDiscriminator('global:withdraw_winnings'),
-            collectPlatformFee: this.computeInstructionDiscriminator('global:collect_platform_fee')
-        };
+        try {
+            this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
+            this.programId = new solanaWeb3.PublicKey('95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4');
+            this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
+            this.available = true;
+            
+            // Instruction discriminators (computed from instruction names)
+            this.instructions = {
+                createEscrow: this.computeInstructionDiscriminator('global:create_escrow'),
+                placeBet: this.computeInstructionDiscriminator('global:place_bet'),
+                startCompetition: this.computeInstructionDiscriminator('global:start_competition'),
+                updateTwapSample: this.computeInstructionDiscriminator('global:update_twap_sample'),
+                finalizeStartTwap: this.computeInstructionDiscriminator('global:finalize_start_twap'),
+                resolveCompetition: this.computeInstructionDiscriminator('global:resolve_competition'),
+                withdrawWinnings: this.computeInstructionDiscriminator('global:withdraw_winnings'),
+                collectPlatformFee: this.computeInstructionDiscriminator('global:collect_platform_fee')
+            };
+            
+            console.log('✅ Smart Contract Service initialized successfully');
+        } catch (error) {
+            console.error('❌ Smart Contract Service initialization failed:', error);
+            this.available = false;
+        }
     }
+
+        static async waitForDependencies(timeout = 5000) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+                
+                const check = () => {
+                    if (typeof solanaWeb3 !== 'undefined') {
+                        console.log('✅ Smart contract dependencies loaded');
+                        resolve(true);
+                    } else if (Date.now() - start > timeout) {
+                        console.error('❌ Smart contract dependencies failed to load within timeout');
+                        reject(new Error('Dependencies timeout'));
+                    } else {
+                        setTimeout(check, 100); // Check every 100ms
+                    }
+                };
+                
+                check();
+            });
+        }
 
     // Compute instruction discriminator (Anchor-style)
     computeInstructionDiscriminator(name) {
@@ -537,9 +572,8 @@ class SmartContractService {
 
     // Check if smart contract features are available
     isAvailable() {
-        return !!(window.solanaWeb3 && this.connection && this.programId);
+        return this.available === true && typeof solanaWeb3 !== 'undefined';
     }
-
     // Get escrow account data
     async getEscrowData(competitionId) {
         try {
