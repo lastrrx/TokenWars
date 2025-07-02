@@ -3,11 +3,28 @@
 
 class SmartContractService {
     constructor() {
+        // Don't initialize immediately - wait for manual initialization
+        this.available = false;
+        this.initialized = false;
+        
+        console.log('🔗 Smart Contract Service created (not initialized)');
+    }
+    
+    // Manual initialization method
+    async initialize() {
+        if (this.initialized) {
+            console.log('✅ Smart Contract Service already initialized');
+            return this.available;
+        }
+        
+        console.log('🔗 Initializing Smart Contract Service...');
+        this.initialized = true;
+        
         // Check if Solana Web3.js is available
         if (typeof solanaWeb3 === 'undefined') {
             console.error('❌ Solana Web3.js not available - smart contract features disabled');
             this.available = false;
-            return;
+            return false;
         }
         
         try {
@@ -29,9 +46,12 @@ class SmartContractService {
             };
             
             console.log('✅ Smart Contract Service initialized successfully');
+            return true;
+            
         } catch (error) {
             console.error('❌ Smart Contract Service initialization failed:', error);
             this.available = false;
+            return false;
         }
     }
 
