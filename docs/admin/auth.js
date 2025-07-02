@@ -16,15 +16,14 @@ const AuthState = {
  * Initialize authentication
  */
 async function initializeAuth() {
-    console.log('Initializing admin authentication...');
+    console.log('🔐 Initializing admin authentication...');
     
-    // Check for existing session
-    const existingToken = sessionStorage.getItem('adminToken');
-    if (existingToken) {
-        console.log('Found existing admin token, showing admin panel...');
-        showAdminPanel();
-        return;
-    }
+    // SECURITY: Always require fresh authentication
+    // Clear any existing tokens to force re-authentication
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminWallet');
+    
+    console.log('🔒 Cleared existing session, requiring fresh authentication');
     
     // Set up authentication event listeners
     setupAuthEventListeners();
@@ -243,7 +242,7 @@ async function verifyPin() {
  * Show admin panel
  */
 function showAdminPanel() {
-    console.log('Showing admin panel...');
+    console.log('🔐 Authentication successful, showing admin panel...');
     
     // Hide auth screen
     const authScreen = document.getElementById('auth-screen');
@@ -260,16 +259,21 @@ function showAdminPanel() {
         adminWalletElement.textContent = truncateAddress(adminWallet);
     }
     
-    // Initialize admin panel
-    if (window.initializeAdminPanel) {
-        console.log('Initializing admin panel...');
-        window.initializeAdminPanel().catch(error => {
-            console.error('Failed to initialize admin panel:', error);
-            showAuthError('Failed to initialize admin panel: ' + error.message);
-        });
-    } else {
-        console.warn('initializeAdminPanel function not available');
-    }
+    // Wait for blockchain services to be ready before initializing admin panel
+    const initializeWhenReady = () => {
+        if (window.adminPanelReady && window.initializeAdminPanel) {
+            console.log('✅ Initializing authenticated admin panel...');
+            window.initializeAdminPanel().catch(error => {
+                console.error('Failed to initialize admin panel:', error);
+                showAuthError('Failed to initialize admin panel: ' + error.message);
+            });
+        } else {
+            console.log('⏳ Waiting for admin panel to be ready...');
+            setTimeout(initializeWhenReady, 100);
+        }
+    };
+    
+    initializeWhenReady();
 }
 
 /**
