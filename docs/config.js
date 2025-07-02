@@ -122,7 +122,7 @@ const BLOCKCHAIN_CONFIG = {
     TWAP_SAMPLING_INTERVAL: 5000, // 5 seconds
     TWAP_WINDOW_DURATION: 300000, // 5 minutes
     FALLBACK_TO_DATABASE: true,
-    PLATFORM_WALLET: 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv'
+    PLATFORM_WALLET: 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv',
     RPC_URL: 'https://api.devnet.solana.com'  // ← ADD THIS LINE
 };
 
