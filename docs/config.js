@@ -115,7 +115,7 @@ const UI_CONFIG = {
 // Add smart contract configuration
 
 const BLOCKCHAIN_CONFIG = {
-    SOLANA_PROGRAM_ID: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4',
+    SOLANA_PROGRAM_ID: 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5',
     SOLANA_NETWORK: 'devnet',
     PYTH_NETWORK_CLUSTER: 'devnet',
     SMART_CONTRACT_ENABLED: true,
