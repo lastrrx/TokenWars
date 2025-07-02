@@ -2808,26 +2808,26 @@ async function initializeSmartContract() {
     try {
         console.log('🔗 Initializing smart contract service...');
         
-        // Wait for dependencies
-        await SmartContractService.waitForDependencies(5000);
-        
         // Create service instance
         window.smartContractService = new SmartContractService();
-        servicesReady.smartContract = true;
         
-        console.log('✅ Smart contract service ready');
+        // Initialize it manually
+        const success = await window.smartContractService.initialize();
         
-        // Update UI to show smart contract features are available
-        updateSmartContractStatus(true);
+        servicesReady.smartContract = success;
+        
+        if (success) {
+            console.log('✅ Smart contract service ready');
+            updateSmartContractStatus(true);
+        } else {
+            console.log('⚠️ Smart contract service unavailable - using database mode');
+            updateSmartContractStatus(false);
+        }
         
     } catch (error) {
-        console.error('❌ Smart contract service unavailable:', error);
+        console.error('❌ Smart contract service initialization failed:', error);
         servicesReady.smartContract = false;
-        
-        // Show fallback notification
         showNotificationFixed('Smart contract features unavailable - using database mode', 'warning');
-        
-        // Update UI to show fallback mode
         updateSmartContractStatus(false);
     }
 }
