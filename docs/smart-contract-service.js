@@ -55,26 +55,6 @@ class SmartContractService {
         }
     }
 
-        static async waitForDependencies(timeout = 5000) {
-            return new Promise((resolve, reject) => {
-                const start = Date.now();
-                
-                const check = () => {
-                    if (typeof solanaWeb3 !== 'undefined') {
-                        console.log('✅ Smart contract dependencies loaded');
-                        resolve(true);
-                    } else if (Date.now() - start > timeout) {
-                        console.error('❌ Smart contract dependencies failed to load within timeout');
-                        reject(new Error('Dependencies timeout'));
-                    } else {
-                        setTimeout(check, 100); // Check every 100ms
-                    }
-                };
-                
-                check();
-            });
-        }
-
     // Compute instruction discriminator (Anchor-style)
     computeInstructionDiscriminator(name) {
         const hash = solanaWeb3.Keypair.generate().publicKey.toBytes().slice(0, 8);
