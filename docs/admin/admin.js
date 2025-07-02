@@ -4167,6 +4167,7 @@ async function updateSystemHealth() {
         AdminState.systemHealth.tokenService = AdminState.tokenService?.isReady() ? 'healthy' : 'error';
         AdminState.systemHealth.priceService = AdminState.priceService?.isReady() ? 'healthy' : 'error';
         AdminState.systemHealth.competitionManager = AdminState.competitionManager?.isReady() ? 'healthy' : 'error';
+        AdminState.systemHealth.cache = (window.cacheMonitor?.monitoringState?.systemHealth?.overallScore >= 70) ? 'healthy' : 'warning';
         AdminState.systemHealth.lastUpdate = new Date().toISOString();
         
         updateSystemHealthDisplay();
