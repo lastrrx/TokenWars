@@ -543,11 +543,28 @@ class SmartContractService {
 
     // Helper: Get connected wallet
     async getConnectedWallet() {
-        const walletService = window.getWalletService && window.getWalletService();
-        if (!walletService || !walletService.isConnected()) {
+        try {
+            // Check for admin wallet first (for competition creation)
+            const adminWallet = sessionStorage.getItem('adminWallet');
+            if (adminWallet && window.solana && window.solana.isConnected) {
+                console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
+                return window.solana;
+            }
+            
+            // Check for regular user wallet (for betting)
+            const walletService = window.getWalletService && window.getWalletService();
+            if (walletService && walletService.isConnected()) {
+                console.log('👤 Using user wallet for blockchain operation');
+                return walletService.walletProvider || walletService;
+            }
+            
+            // No wallet connected
+            throw new Error('Wallet not connected');
+            
+        } catch (error) {
+            console.error('❌ getConnectedWallet error:', error);
             throw new Error('Wallet not connected');
         }
-        return walletService.walletProvider || walletService;
     }
 
     // Serialization helpers
