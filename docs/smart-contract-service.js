@@ -189,8 +189,33 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
         // Re-throw with more context
         throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
     }
-} // ← IMPORTANT: This closes the createCompetitionEscrow method
+} // ← CRITICAL: This closes createCompetitionEscrow method
 
+// Build create_escrow instruction (SEPARATE METHOD)
+async buildCreateEscrowInstruction(accounts) {
+    const keys = [
+        { pubkey: accounts.escrow, isSigner: false, isWritable: true },
+        { pubkey: accounts.authority, isSigner: true, isWritable: true },
+        { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
+    ];
+    
+    // Serialize instruction data WITHOUT Pyth feed IDs
+    const data = Buffer.concat([
+        this.instructions.createEscrow,
+        this.serializeString(accounts.competitionId),
+        this.serializeString(accounts.tokenAAddress),
+        this.serializeString(accounts.tokenBAddress),
+        this.serializeU64(accounts.votingEndTime),
+        this.serializeU64(accounts.competitionEndTime),
+        this.serializeU16(accounts.platformFeeBps)
+    ]);
+    
+    return new solanaWeb3.TransactionInstruction({
+        keys,
+        programId: this.programId,
+        data
+    });
+}
 // Build create_escrow instruction (SEPARATE METHOD)
 async buildCreateEscrowInstruction(accounts) {
     const keys = [
