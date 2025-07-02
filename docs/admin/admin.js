@@ -1675,8 +1675,16 @@ async function submitManualCompetitionWithSmartContract() {
             submitButton.disabled = true;
         }
         
-        // Check if smart contracts are available
-        const useSmartContract = window.smartContractService && window.smartContractService.isAvailable();
+        // Check if smart contracts are available and decide how to create competition (db or onchain)
+        const useSmartContract = isAdminBlockchainAvailable();
+        
+        if (useSmartContract) {
+            console.log('🔗 [ADMIN] Using smart contract integration');
+            showAdminNotification('Creating on-chain competition...', 'info');
+        } else {
+            console.log('🗄️ [ADMIN] Using database-only approach');
+            showAdminNotification('Creating database competition...', 'info');
+        }
         
         let competition;
         if (useSmartContract) {
@@ -4167,21 +4175,113 @@ async function updateSystemHealth() {
         debugLog('error', 'Error updating system health:', error);
     }
 }
-
 async function updateSystemHealthDisplay() {
     const statusGrid = document.querySelector('.status-grid');
     if (!statusGrid) return;
     
+    // Determine blockchain status
+    let blockchainStatus = 'unknown';
+    let blockchainDetails = 'Initializing...';
+    
+    if (window.adminBlockchainReady === true) {
+        blockchainStatus = 'healthy';
+        blockchainDetails = 'Connected to Devnet';
+    } else if (window.adminBlockchainReady === false) {
+        blockchainStatus = 'error';
+        blockchainDetails = 'Unavailable - Database Mode';
+    }
+    
     const healthItems = [
-        { name: 'Database', status: AdminState.systemHealth.database },
+        { 
+            name: 'Database', 
+            status: AdminState.systemHealth.database || 'healthy',
+            details: AdminState.systemHealth.database === 'healthy' ? 'Connected' : 'Connection Issues'
+        },
+        { 
+            name: 'Blockchain Services', 
+            status: blockchainStatus,
+            details: blockchainDetails
+        },
+        {
+            name: 'Cache System',
+            status: AdminState.systemHealth.cache || 'healthy',
+            details: AdminState.systemHealth.cache === 'healthy' ? 'Operational' : 'Issues Detected'
+        }
     ];
     
     statusGrid.innerHTML = healthItems.map(item => `
         <div class="status-item">
             <span class="status-indicator ${item.status}"></span>
-            <span>${item.name}</span>
+            <span class="status-text">${item.name}</span>
+            <span class="status-details ${item.status === 'healthy' ? 'connected' : item.status === 'error' ? 'disconnected' : 'initializing'}">${item.details}</span>
         </div>
     `).join('');
+}
+
+// ===== BLOCKCHAIN INTEGRATION FUNCTIONS =====
+
+/**
+ * Update Admin Blockchain Status Display
+ */
+function updateAdminBlockchainStatus() {
+    try {
+        console.log('🔗 [ADMIN] Updating blockchain status display');
+        
+        // Update the system health display to include blockchain status
+        updateSystemHealthDisplay();
+        
+        // Optional: Add a specific blockchain status card if you want a separate indicator
+        const blockchainCard = document.getElementById('blockchain-status-card');
+        if (blockchainCard) {
+            if (window.adminBlockchainReady === true) {
+                blockchainCard.innerHTML = `
+                    <div class="status-indicator healthy"></div>
+                    <div>
+                        <div class="status-text">Blockchain Connected</div>
+                        <div class="status-details connected">Solana Devnet Ready</div>
+                    </div>
+                `;
+            } else if (window.adminBlockchainReady === false) {
+                blockchainCard.innerHTML = `
+                    <div class="status-indicator error"></div>
+                    <div>
+                        <div class="status-text">Blockchain Unavailable</div>
+                        <div class="status-details disconnected">Using Database Mode</div>
+                    </div>
+                `;
+            } else {
+                blockchainCard.innerHTML = `
+                    <div class="status-indicator unknown"></div>
+                    <div>
+                        <div class="status-text">Blockchain Services</div>
+                        <div class="status-details initializing">Initializing...</div>
+                    </div>
+                `;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error updating blockchain status:', error);
+    }
+}
+
+/**
+ * Check if admin has blockchain access
+ */
+function isAdminBlockchainAvailable() {
+    return window.adminBlockchainReady === true && 
+           window.adminSmartContractService && 
+           window.adminSmartContractService.isAvailable();
+}
+
+/**
+ * Get admin smart contract service
+ */
+function getAdminSmartContractService() {
+    if (isAdminBlockchainAvailable()) {
+        return window.adminSmartContractService;
+    }
+    return null;
 }
 
 function updateActivityFeed() {
@@ -4813,6 +4913,11 @@ window.switchToSection = switchToSectionWithDiagnostics;
 window.loadCompetitionsManagement = loadCompetitionsManagementWithDiagnostics;
 window.loadPairOptimization = loadPairOptimizationWithDiagnostics;
 window.generateTokenPairs = generateTokenPairs;
+
+// Export blockchain functions globally
+window.updateAdminBlockchainStatus = updateAdminBlockchainStatus;
+window.isAdminBlockchainAvailable = isAdminBlockchainAvailable;
+window.getAdminSmartContractService = getAdminSmartContractService;
 
 // STEP 2: Manual Competition Creation Interface
 window.createManualCompetitionWithInterface = createManualCompetitionWithInterface;
