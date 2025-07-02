@@ -816,6 +816,74 @@ class WalletService {
 }
 
 // ==============================================
+// SMART CONTRACT INTEGRATION BRIDGE
+// ==============================================
+
+/**
+ * Get wallet provider for smart contract operations
+ * This bridges wallet-service with smart-contract-service
+ */
+getWalletProvider() {
+    if (!this.isConnected()) {
+        throw new Error('Wallet not connected');
+    }
+    
+    // Return the actual wallet provider for transaction signing
+    return this.walletProvider || this.connectedWallet;
+}
+
+/**
+ * Enhanced transaction sending with smart contract support
+ * Handles different wallet APIs uniformly
+ */
+async signAndSendTransaction(transaction, connection) {
+    try {
+        if (!this.isConnected()) {
+            throw new Error('Wallet not connected');
+        }
+        
+        if (this.isDemo) {
+            // Demo mode - simulate transaction
+            console.log('🎮 Demo transaction sending (simulated)');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate delay
+            return 'demo_signature_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        console.log('📤 Signing and sending transaction with', this.walletType);
+        
+        const provider = this.getWalletProvider();
+        
+        // Handle different wallet transaction methods
+        if (typeof provider.signAndSendTransaction === 'function') {
+            return await provider.signAndSendTransaction(transaction);
+        } else if (typeof provider.sendTransaction === 'function') {
+            return await provider.sendTransaction(transaction, connection);
+        } else {
+            throw new Error(`Transaction signing not supported for ${this.walletType}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Transaction signing failed:', error);
+        throw error;
+    }
+}
+
+/**
+ * Check if wallet supports smart contract transactions
+ */
+supportsSmartContracts() {
+    if (!this.isConnected()) return false;
+    if (this.isDemo) return true; // Demo mode supports everything
+    
+    const provider = this.walletProvider || this.connectedWallet;
+    return provider && (
+        typeof provider.sendTransaction === 'function' ||
+        typeof provider.signAndSendTransaction === 'function'
+    );
+}
+
+
+// ==============================================
 // SINGLETON INSTANCE MANAGEMENT
 // ==============================================
 
