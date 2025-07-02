@@ -29,7 +29,10 @@ class SmartContractService {
         
         try {
             this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
-            this.programId = new solanaWeb3.PublicKey(window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5');
+            // FIXED: Use correct deployed Program ID
+            this.programId = new solanaWeb3.PublicKey(
+                window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5'
+            );
             this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
             this.available = true;
             
@@ -46,6 +49,7 @@ class SmartContractService {
             };
             
             console.log('✅ Smart Contract Service initialized successfully');
+            console.log('📋 Program ID:', this.programId.toString());
             return true;
             
         } catch (error) {
@@ -57,7 +61,6 @@ class SmartContractService {
 
     // Compute instruction discriminator (Anchor-style)
     computeInstructionDiscriminator(name) {
-        const hash = solanaWeb3.Keypair.generate().publicKey.toBytes().slice(0, 8);
         // In production, this would use proper Anchor discriminator computation
         // For now, using placeholder values that match the deployed program
         const discriminators = {
@@ -73,123 +76,150 @@ class SmartContractService {
         return discriminators[name] || Buffer.alloc(8);
     }
 
-  async getTokenPriceInfo(tokenAAddress, tokenBAddress) {
-    try {
-        console.log('🔍 Getting token price info for Jupiter integration:', tokenAAddress, tokenBAddress);
-        
-        // Since you're using Jupiter now, return simplified token info
-        // Jupiter handles price discovery, so we don't need Pyth feed IDs
-        return {
-            tokenA: {
-                address: tokenAAddress,
-                source: 'jupiter'
-            },
-            tokenB: {
-                address: tokenBAddress,
-                source: 'jupiter'
-            }
-        };
-        
-    } catch (error) {
-        console.error('❌ Error getting token price info:', error);
-        throw error;
+    // FIXED: Jupiter integration for token price info
+    async getTokenPriceInfo(tokenAAddress, tokenBAddress) {
+        try {
+            console.log('🔍 Getting token price info for Jupiter integration:', tokenAAddress, tokenBAddress);
+            
+            // Since you're using Jupiter now, return simplified token info
+            // Jupiter handles price discovery, so we don't need Pyth feed IDs
+            return {
+                tokenA: {
+                    address: tokenAAddress,
+                    source: 'jupiter'
+                },
+                tokenB: {
+                    address: tokenBAddress,
+                    source: 'jupiter'
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Error getting token price info:', error);
+            throw error;
+        }
     }
-}
 
     // Create escrow for new competition
-async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
-    try {
-        console.log('📊 Creating competition escrow on-chain:', competitionId);
+    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+        try {
+            console.log('📊 Creating competition escrow on-chain:', competitionId);
+            
+            const wallet = await this.getConnectedWallet();
+            const tokenInfo = await this.getTokenPriceInfo(tokenAAddress, tokenBAddress);
+            console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
+            
+            // Generate escrow PDA
+            const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+            
+            console.log('🔑 Generated escrow PDA:', escrowAccount.toString());
+            
+            // Calculate competition timing
+            const now = Math.floor(Date.now() / 1000);
+            const votingEndTime = now + (15 * 60); // 15 minutes voting
+            const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours competition
+            
+            // Build create_escrow instruction
+            const instruction = await this.buildCreateEscrowInstruction({
+                escrow: escrowAccount,
+                authority: new solanaWeb3.PublicKey(adminWallet),
+                systemProgram: solanaWeb3.SystemProgram.programId,
+                competitionId: competitionId,
+                tokenAAddress: tokenAAddress,
+                tokenBAddress: tokenBAddress,
+                votingEndTime: votingEndTime,
+                competitionEndTime: competitionEndTime,
+                platformFeeBps: 1500 // 15%
+            });
+            
+            // Create transaction
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get fresh blockhash
+            console.log('⏳ Getting recent blockhash...');
+            const { blockhash, feeCalculator } = await this.connection.getRecentBlockhash('confirmed');
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = wallet.publicKey;
+            
+            console.log('📤 Sending create escrow transaction...');
+            console.log('🔍 Transaction details:', {
+                instructions: transaction.instructions.length,
+                feePayer: transaction.feePayer?.toString(),
+                recentBlockhash: transaction.recentBlockhash,
+                estimatedFee: feeCalculator ? feeCalculator.lamportsPerSignature : 'unknown'
+            });
+            
+            // Send transaction with proper error handling
+            const signature = await wallet.sendTransaction(transaction, this.connection);
+            console.log('✅ Transaction sent successfully, signature:', signature);
+            
+            // Wait for confirmation with timeout
+            console.log('⏳ Confirming transaction...');
+            const confirmation = await Promise.race([
+                this.connection.confirmTransaction(signature, 'confirmed'),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Transaction confirmation timeout')), 30000)
+                )
+            ]);
+            
+            console.log('📋 Transaction confirmation:', confirmation);
+            
+            if (confirmation.value?.err) {
+                console.error('❌ Transaction failed on-chain:', confirmation.value.err);
+                throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
+            }
+            
+            console.log('✅ Escrow created successfully');
+            
+            return {
+                escrowAccount: escrowAccount.toString(),
+                bump: bump,
+                signature: signature
+            };
+            
+        } catch (error) {
+            // Enhanced error logging with more details
+            console.error('❌ Detailed transaction error:', error);
+            
+            // Log additional error context
+            if (error.name) console.error('Error name:', error.name);
+            if (error.code) console.error('Error code:', error.code);
+            if (error.logs) console.error('Transaction logs:', error.logs);
+            if (error.message) console.error('Error message:', error.message);
+            
+            // Re-throw with more context
+            throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
+        }
+    }
+
+    // FIXED: Complete buildCreateEscrowInstruction method
+    async buildCreateEscrowInstruction(accounts) {
+        const keys = [
+            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
+            { pubkey: accounts.authority, isSigner: true, isWritable: true },
+            { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
+        ];
         
-        const wallet = await this.getConnectedWallet();
-        const tokenInfo = await this.getTokenPriceInfo(tokenAAddress, tokenBAddress);
-        console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
-        
-        // Generate escrow PDA
-        const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
-            [Buffer.from("escrow"), Buffer.from(competitionId)],
-            this.programId
-        );
-        
-        console.log('🔑 Generated escrow PDA:', escrowAccount.toString());
-        
-        // Calculate competition timing
-        const now = Math.floor(Date.now() / 1000);
-        const votingEndTime = now + (15 * 60); // 15 minutes voting
-        const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours competition
-        
-        // Build create_escrow instruction
-        const instruction = await this.buildCreateEscrowInstruction({
-            escrow: escrowAccount,
-            authority: new solanaWeb3.PublicKey(adminWallet),
-            systemProgram: solanaWeb3.SystemProgram.programId,
-            competitionId: competitionId,
-            tokenAAddress: tokenAAddress,
-            tokenBAddress: tokenBAddress,
-            votingEndTime: votingEndTime,
-            competitionEndTime: competitionEndTime,
-            platformFeeBps: 1500 // 15%
-        });
-        
-        // Create transaction
-        const transaction = new solanaWeb3.Transaction().add(instruction);
-        
-        // Get fresh blockhash
-        console.log('⏳ Getting recent blockhash...');
-        const { blockhash, feeCalculator } = await this.connection.getRecentBlockhash('confirmed');
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = wallet.publicKey;
-        
-        console.log('📤 Sending create escrow transaction...');
-        console.log('🔍 Transaction details:', {
-            instructions: transaction.instructions.length,
-            feePayer: transaction.feePayer?.toString(),
-            recentBlockhash: transaction.recentBlockhash,
-            estimatedFee: feeCalculator ? feeCalculator.lamportsPerSignature : 'unknown'
-        });
-        
-        // Send transaction with proper error handling
-        const signature = await wallet.sendTransaction(transaction, this.connection);
-        console.log('✅ Transaction sent successfully, signature:', signature);
-        
-        // Wait for confirmation with timeout
-        console.log('⏳ Confirming transaction...');
-        const confirmation = await Promise.race([
-            this.connection.confirmTransaction(signature, 'confirmed'),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Transaction confirmation timeout')), 30000)
-            )
+        // Serialize instruction data
+        const data = Buffer.concat([
+            this.instructions.createEscrow,
+            this.serializeString(accounts.competitionId),
+            this.serializeString(accounts.tokenAAddress),
+            this.serializeString(accounts.tokenBAddress),
+            this.serializeU64(accounts.votingEndTime),
+            this.serializeU64(accounts.competitionEndTime),
+            this.serializeU16(accounts.platformFeeBps)
         ]);
         
-        console.log('📋 Transaction confirmation:', confirmation);
-        
-        if (confirmation.value?.err) {
-            console.error('❌ Transaction failed on-chain:', confirmation.value.err);
-            throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
-        }
-        
-        console.log('✅ Escrow created successfully');
-        
-        return {
-            escrowAccount: escrowAccount.toString(),
-            bump: bump,
-            signature: signature
-        };
-        
-    } catch (error) {
-        // Enhanced error logging with more details
-        console.error('❌ Detailed transaction error:', error);
-        
-        // Log additional error context
-        if (error.name) console.error('Error name:', error.name);
-        if (error.code) console.error('Error code:', error.code);
-        if (error.logs) console.error('Transaction logs:', error.logs);
-        if (error.message) console.error('Error message:', error.message);
-        
-        // Re-throw with more context
-        throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
+        return new solanaWeb3.TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data
+        });
     }
-} // ← CRITICAL: This closes createCompetitionEscrow method
 
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
@@ -222,8 +252,25 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
                 amount: betAmount * solanaWeb3.LAMPORTS_PER_SOL
             });
             
+            // Create and send transaction
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            const { blockhash } = await this.connection.getRecentBlockhash('confirmed');
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = wallet.publicKey;
+            
+            const signature = await wallet.sendTransaction(transaction, this.connection);
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Bet placed successfully, signature:', signature);
+            return { signature, userBetAccount: userBetAccount.toString() };
+            
+        } catch (error) {
+            console.error('❌ Error placing bet:', error);
+            throw new Error(`Bet placement failed: ${error.message}`);
+        }
+    }
 
-    // Build place_bet instruction
+    // FIXED: Complete buildPlaceBetInstruction method
     async buildPlaceBetInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
@@ -276,8 +323,25 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
                 competitionId: competitionId
             });
             
+            // Create and send transaction
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            const { blockhash } = await this.connection.getRecentBlockhash('confirmed');
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = wallet.publicKey;
+            
+            const signature = await wallet.sendTransaction(transaction, this.connection);
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Winnings withdrawn successfully, signature:', signature);
+            return { signature };
+            
+        } catch (error) {
+            console.error('❌ Error withdrawing winnings:', error);
+            throw new Error(`Withdrawal failed: ${error.message}`);
+        }
+    }
 
-    // Build withdraw_winnings instruction
+    // FIXED: Complete buildWithdrawInstruction method
     async buildWithdrawInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
@@ -298,81 +362,81 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
         });
     }
 
-    // Helper: Get connected wallet
-async getConnectedWallet() {
-    try {
-        console.log('🔍 Getting connected wallet for blockchain operation...');
-        
-        // First try to get wallet from WalletService
-        const walletService = window.getWalletService && window.getWalletService();
-        if (walletService && walletService.isConnected()) {
-            console.log('👤 Using WalletService connected wallet');
+    // FIXED: Complete getConnectedWallet method
+    async getConnectedWallet() {
+        try {
+            console.log('🔍 Getting connected wallet for blockchain operation...');
             
-            const provider = walletService.getWalletProvider();
-            if (provider && provider.publicKey) {
-                return {
-                    publicKey: provider.publicKey,
-                    sendTransaction: async (transaction, connection) => {
-                        try {
-                            // Ensure transaction is properly configured
-                            transaction.feePayer = provider.publicKey;
-                            
-                            // Use WalletService method for transaction signing
-                            console.log('📤 Using WalletService signAndSendTransaction');
-                            return await walletService.signAndSendTransaction(transaction, connection);
-                            
-                        } catch (error) {
-                            console.error('❌ WalletService transaction error:', error);
-                            throw new Error(`WalletService transaction failed: ${error.message}`);
-                        }
-                    }
-                };
-            }
-        }
-        
-        // Fallback: Check for admin wallet (direct window.solana access)
-        const adminWallet = sessionStorage.getItem('adminWallet');
-        if (adminWallet && window.solana && window.solana.isConnected) {
-            console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
-            
-            if (window.solana.publicKey) {
-                return {
-                    publicKey: window.solana.publicKey,
-                    sendTransaction: async (transaction, connection) => {
-                        try {
-                            // Ensure transaction is properly configured
-                            transaction.feePayer = window.solana.publicKey;
-                            
-                            // Try different wallet methods in order of preference
-                            if (typeof window.solana.signAndSendTransaction === 'function') {
-                                console.log('📤 Using admin wallet signAndSendTransaction');
-                                return await window.solana.signAndSendTransaction(transaction);
-                            } else if (typeof window.solana.sendTransaction === 'function') {
-                                console.log('📤 Using admin wallet sendTransaction');
-                                return await window.solana.sendTransaction(transaction, connection);
-                            } else {
-                                throw new Error('Admin wallet does not support transaction sending');
+            // First try to get wallet from WalletService
+            const walletService = window.getWalletService && window.getWalletService();
+            if (walletService && walletService.isConnected()) {
+                console.log('👤 Using WalletService connected wallet');
+                
+                const provider = walletService.getWalletProvider();
+                if (provider && provider.publicKey) {
+                    return {
+                        publicKey: provider.publicKey,
+                        sendTransaction: async (transaction, connection) => {
+                            try {
+                                // Ensure transaction is properly configured
+                                transaction.feePayer = provider.publicKey;
+                                
+                                // Use WalletService method for transaction signing
+                                console.log('📤 Using WalletService signAndSendTransaction');
+                                return await walletService.signAndSendTransaction(transaction, connection);
+                                
+                            } catch (error) {
+                                console.error('❌ WalletService transaction error:', error);
+                                throw new Error(`WalletService transaction failed: ${error.message}`);
                             }
-                            
-                        } catch (error) {
-                            console.error('❌ Admin wallet transaction error:', error);
-                            throw new Error(`Admin wallet transaction failed: ${error.message}`);
                         }
-                    }
-                };
-            } else {
-                throw new Error('Admin wallet publicKey not available');
+                    };
+                }
             }
+            
+            // Fallback: Check for admin wallet (direct window.solana access)
+            const adminWallet = sessionStorage.getItem('adminWallet');
+            if (adminWallet && window.solana && window.solana.isConnected) {
+                console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
+                
+                if (window.solana.publicKey) {
+                    return {
+                        publicKey: window.solana.publicKey,
+                        sendTransaction: async (transaction, connection) => {
+                            try {
+                                // Ensure transaction is properly configured
+                                transaction.feePayer = window.solana.publicKey;
+                                
+                                // Try different wallet methods in order of preference
+                                if (typeof window.solana.signAndSendTransaction === 'function') {
+                                    console.log('📤 Using admin wallet signAndSendTransaction');
+                                    return await window.solana.signAndSendTransaction(transaction);
+                                } else if (typeof window.solana.sendTransaction === 'function') {
+                                    console.log('📤 Using admin wallet sendTransaction');
+                                    return await window.solana.sendTransaction(transaction, connection);
+                                } else {
+                                    throw new Error('Admin wallet does not support transaction sending');
+                                }
+                                
+                            } catch (error) {
+                                console.error('❌ Admin wallet transaction error:', error);
+                                throw new Error(`Admin wallet transaction failed: ${error.message}`);
+                            }
+                        }
+                    };
+                } else {
+                    throw new Error('Admin wallet publicKey not available');
+                }
+            }
+            
+            // No wallet available
+            throw new Error('No connected wallet found. Please connect a wallet first.');
+            
+        } catch (error) {
+            console.error('❌ getConnectedWallet error:', error);
+            throw new Error(`Wallet connection failed: ${error.message}`);
         }
-        
-        // No wallet available
-        throw new Error('No connected wallet found. Please connect a wallet first.');
-        
-    } catch (error) {
-        console.error('❌ getConnectedWallet error:', error);
-        throw new Error(`Wallet connection failed: ${error.message}`);
     }
-}
 
     // Browser-compatible serialization helpers
     serializeString(str) {
@@ -405,6 +469,7 @@ async getConnectedWallet() {
     isAvailable() {
         return this.available === true && typeof solanaWeb3 !== 'undefined';
     }
+
     // Get escrow account data
     async getEscrowData(competitionId) {
         try {
@@ -430,6 +495,14 @@ async getConnectedWallet() {
             return null;
         }
     }
+}
+
+// Global instance
+window.smartContractService = new SmartContractService();
+
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SmartContractService;
 }
 
 // Global instance
