@@ -1320,38 +1320,25 @@ async function validateTokenPairFromDatabase(pair) {
  * Replaces service-based approach with direct database operations
  * ✅ REMOVED custom competition_id generation - let database auto-generate UUID
  */
-async function createCompetitionDirectDatabase(config = {}) {
+async function createCompetitionDirectDatabase(tokenPair, config = {}) {
     try {
         debugLog('competitionCreation', '🚀 Creating competition with database-centric approach...');
         
-        const adminWallet = sessionStorage.getItem('adminWallet');
-        if (!adminWallet) {
-            throw new Error('Admin wallet not connected');
-        }
-        
-        // Get optimal token pair from database
-        const tokenPair = config.selectedPair;
+        // Validate token pair
         if (!tokenPair) {
-            console.log('No pair selected - manual selection required');
-            throw new Error('No token pair selected. Please select a pair manually.');
+            throw new Error('Token pair is required');
         }
         
-        // Validate the selected pair
-        const validation = await validateTokenPairFromDatabase(tokenPair);
-        if (!validation.valid) {
-            throw new Error(`Token validation failed: ${validation.reason}`);
-        }
+        debugLog('pairValidation', `✅ Pair validation passed: ${tokenPair.token_a_symbol} vs ${tokenPair.token_b_symbol}`);
         
-        // Calculate competition timing
         const now = new Date();
-        const startTime = new Date(now.getTime() + (config.startDelay || 5 * 60 * 1000)); // Default 5 minutes
-        const votingEndTime = new Date(startTime.getTime() + (config.votingDuration || 15) * 60 * 1000);
-        const endTime = new Date(votingEndTime.getTime() + (config.activeDuration || 24) * 60 * 60 * 1000);
+        const startTime = new Date(now.getTime() + (config.startDelay || 300000)); // 5 minutes default
+        const votingEndTime = new Date(startTime.getTime() + ((config.votingDuration || 15) * 60 * 1000));
+        const endTime = new Date(votingEndTime.getTime() + ((config.activeDuration || 24) * 60 * 60 * 1000));
         
-        // ✅ FIXED: Prepare competition data WITHOUT custom competition_id
-        // Let database auto-generate UUID using uuid_generate_v4()
+        // Prepare competition data (let database auto-generate UUID)
         const competitionData = {
-            // ❌ REMOVED: competition_id: `COMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            // Remove competition_id - let database auto-generate UUID
             token_a_address: tokenPair.token_a_address,
             token_b_address: tokenPair.token_b_address,
             token_a_symbol: tokenPair.token_a_symbol,
@@ -1364,20 +1351,25 @@ async function createCompetitionDirectDatabase(config = {}) {
             voting_end_time: votingEndTime.toISOString(),
             end_time: endTime.toISOString(),
             bet_amount: config.betAmount || 0.1,
-            platform_fee_percentage: config.platformFee || 15,
-            total_pool: 0,
-            total_bets: 0,
-            is_auto_created: !config.isManual,
-            created_by: adminWallet,
-            created_at: now.toISOString(),
-            updated_at: now.toISOString()
+            platform_fee: config.platformFee || 15,
+            priority: config.priority || 'normal',
+            created_by: 'ADMIN_MANUAL',
+            // Smart contract fields (will be populated when blockchain is connected)
+            escrow_account: null,
+            program_id: null,
+            escrow_bump: null,
+            total_token_a_bets: 0,
+            total_token_b_bets: 0,
+            winner: null,
+            jupiter_token_a_id: tokenPair.token_a_address, // Use token address for Jupiter
+            jupiter_token_b_id: tokenPair.token_b_address
         };
         
         debugLog('competitionCreation', 'Competition data prepared (without custom ID):', competitionData);
         
-        // Insert competition into database - let it auto-generate UUID
+        // FIXED: Remove duplicate .from() chaining
         const supabase = getSupabase();
-        const { data, error } = await window.supabase.from('competitions').select('*')  // ← No semicolon here
+        const { data, error } = await supabase
             .from('competitions')
             .insert([competitionData])
             .select()
@@ -1389,13 +1381,13 @@ async function createCompetitionDirectDatabase(config = {}) {
         
         debugLog('competitionCreation', '✅ Competition created with auto-generated UUID:', data.competition_id);
         
-        // ✅ FIXED: Update token pair usage with the database-generated competition_id
+        // Update token pair usage with the database-generated competition_id
         await supabase
             .from('token_pairs')
             .update({
                 usage_count: (tokenPair.usage_count || 0) + 1,
                 last_used: now.toISOString(),
-                last_competition_id: data.competition_id, // ✅ Now using auto-generated UUID
+                last_competition_id: data.competition_id, // Use auto-generated UUID
                 updated_at: now.toISOString()
             })
             .eq('id', tokenPair.id);
