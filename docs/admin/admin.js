@@ -4197,27 +4197,24 @@ async function updateSystemHealthDisplay() {
         let blockchainDetails = 'Initializing...';
         
         try {
-            const blockchainAvailable = checkBlockchainStatusForAdmin(); // ADD THIS LINE
+            const blockchainAvailable = checkBlockchainStatusForAdmin();
             
-        if (blockchainAvailable === true) {
-            // Check if we're actually using blockchain features
-            const usingBlockchain = window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED && 
-                                   window.smartContractService?.isAvailable();
-            
-            if (usingBlockchain) {
-                blockchainStatus = 'healthy';
-                blockchainDetails = 'Connected to Devnet';
-                console.log('✅ [ADMIN] Blockchain primary mode active');
+            if (blockchainAvailable === true) {
+                // Check if we're actually using blockchain features
+                const usingBlockchain = window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED && 
+                                       window.smartContractService?.isAvailable();
+                
+                if (usingBlockchain) {
+                    blockchainStatus = 'healthy';
+                    blockchainDetails = 'Connected to Devnet';
+                    console.log('✅ [ADMIN] Blockchain primary mode active');
+                } else {
+                    blockchainStatus = 'warning';
+                    blockchainDetails = 'Database Mode Active';
+                }
             } else {
                 blockchainStatus = 'warning';
                 blockchainDetails = 'Database Mode Active';
-            }
-        } else {
-            blockchainStatus = 'warning';
-            blockchainDetails = 'Database Mode Active';
-        } else {
-                blockchainStatus = 'unknown';
-                blockchainDetails = 'Checking Connection...';
             }
         } catch (error) {
             console.warn('Error checking blockchain status:', error);
