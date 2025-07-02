@@ -3804,6 +3804,11 @@ async function initializeServiceReferences() {
             }
         }
         
+        if (window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED) {
+            console.log('🔗 [ADMIN] Blockchain enabled, initializing smart contract service...');
+            await initializeAdminSmartContractService();
+        }
+
         // Get services (these might not be critical)
         if (window.getTokenService) {
             try {
@@ -3815,11 +3820,6 @@ async function initializeServiceReferences() {
             } catch (error) {
                 debugLog('error', 'TokenService initialization failed (non-critical):', error);
             }
-        }
-        
-        if (window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED) {
-            console.log('🔗 [ADMIN] Blockchain enabled, initializing smart contract service...');
-            await initializeAdminSmartContractService();
         }
 
         if (window.getPriceService) {
