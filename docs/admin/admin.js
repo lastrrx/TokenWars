@@ -3979,9 +3979,20 @@ async function initializeComponents() {
         
         // Initialize Cache Monitor
         if (window.CacheMonitor) {
-            AdminState.components.cacheMonitor = new window.CacheMonitor(AdminState);
-            window.CacheMonitor.instance = AdminState.components.cacheMonitor;
-            await AdminState.components.cacheMonitor.initialize();
+            try {
+                AdminState.components.cacheMonitor = new window.CacheMonitor(AdminState);
+                window.CacheMonitor.instance = AdminState.components.cacheMonitor;
+                await AdminState.components.cacheMonitor.initialize();
+                
+                // Set global reference for easy access
+                window.cacheMonitor = AdminState.components.cacheMonitor;
+                
+                debugLog('components', '✅ Cache Monitor initialized and globally accessible');
+            } catch (error) {
+                debugLog('error', 'Cache Monitor initialization failed:', error);
+            }
+        } else {
+            debugLog('error', 'CacheMonitor class not available - check if cache-monitor.js loaded');
         }
         
         // Initialize Token Approval
