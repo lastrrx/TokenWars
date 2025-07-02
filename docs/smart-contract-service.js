@@ -191,82 +191,6 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
     }
 } // ← CRITICAL: This closes createCompetitionEscrow method
 
-// Build create_escrow instruction (SEPARATE METHOD)
-async buildCreateEscrowInstruction(accounts) {
-    const keys = [
-        { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-        { pubkey: accounts.authority, isSigner: true, isWritable: true },
-        { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
-    ];
-    
-    // Serialize instruction data WITHOUT Pyth feed IDs
-    const data = Buffer.concat([
-        this.instructions.createEscrow,
-        this.serializeString(accounts.competitionId),
-        this.serializeString(accounts.tokenAAddress),
-        this.serializeString(accounts.tokenBAddress),
-        this.serializeU64(accounts.votingEndTime),
-        this.serializeU64(accounts.competitionEndTime),
-        this.serializeU16(accounts.platformFeeBps)
-    ]);
-    
-    return new solanaWeb3.TransactionInstruction({
-        keys,
-        programId: this.programId,
-        data
-    });
-}
-// Build create_escrow instruction (SEPARATE METHOD)
-async buildCreateEscrowInstruction(accounts) {
-    const keys = [
-        { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-        { pubkey: accounts.authority, isSigner: true, isWritable: true },
-        { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
-    ];
-    
-    // Serialize instruction data WITHOUT Pyth feed IDs
-    const data = Buffer.concat([
-        this.instructions.createEscrow,
-        this.serializeString(accounts.competitionId),
-        this.serializeString(accounts.tokenAAddress),
-        this.serializeString(accounts.tokenBAddress),
-        this.serializeU64(accounts.votingEndTime),
-        this.serializeU64(accounts.competitionEndTime),
-        this.serializeU16(accounts.platformFeeBps)
-    ]);
-    
-    return new solanaWeb3.TransactionInstruction({
-        keys,
-        programId: this.programId,
-        data
-    });
-}
-    // Build create_escrow instruction
-    async buildCreateEscrowInstruction(accounts) {
-        const keys = [
-            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.authority, isSigner: true, isWritable: true },
-            { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
-        ];
-        
-        // Serialize instruction data WITHOUT Pyth feed IDs
-        const data = Buffer.concat([
-            this.instructions.createEscrow,
-            this.serializeString(accounts.competitionId),
-            this.serializeString(accounts.tokenAAddress),
-            this.serializeString(accounts.tokenBAddress),
-            this.serializeU64(accounts.votingEndTime),
-            this.serializeU64(accounts.competitionEndTime),
-            this.serializeU16(accounts.platformFeeBps)
-        ]);
-        
-        return new solanaWeb3.TransactionInstruction({
-            keys,
-            programId: this.programId,
-            data
-        });
-    }
-
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
         try {
@@ -298,25 +222,6 @@ async buildCreateEscrowInstruction(accounts) {
                 amount: betAmount * solanaWeb3.LAMPORTS_PER_SOL
             });
             
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending place bet transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Bet placed successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error placing bet:', error);
-            throw error;
-        }
-    }
 
     // Build place_bet instruction
     async buildPlaceBetInstruction(accounts) {
@@ -334,72 +239,6 @@ async buildCreateEscrowInstruction(accounts) {
             this.serializeString(accounts.competitionId),
             Buffer.from([tokenChoiceValue]),
             this.serializeU64(accounts.amount)
-        ]);
-        
-        return new solanaWeb3.TransactionInstruction({
-            keys,
-            programId: this.programId,
-            data
-        });
-    }
-
-
-    // Build start_competition instruction
-    async buildStartCompetitionInstruction(accounts) {
-        const keys = [
-            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.authority, isSigner: true, isWritable: false },
-            { pubkey: accounts.tokenAPriceFeed, isSigner: false, isWritable: false },
-            { pubkey: accounts.tokenBPriceFeed, isSigner: false, isWritable: false }
-        ];
-        
-        // Serialize instruction data
-        const data = Buffer.concat([
-            this.instructions.startCompetition,
-            this.serializeString(accounts.competitionId)
-        ]);
-        
-        return new solanaWeb3.TransactionInstruction({
-            keys,
-            programId: this.programId,
-            data
-        });
-    }
-
-
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending TWAP update transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ TWAP sample updated successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error updating TWAP sample:', error);
-            throw error;
-        }
-    }
-
-    // Build update_twap_sample instruction
-    async buildUpdateTwapInstruction(accounts) {
-        const keys = [
-            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.authority, isSigner: true, isWritable: false },
-            { pubkey: accounts.tokenAPriceFeed, isSigner: false, isWritable: false },
-            { pubkey: accounts.tokenBPriceFeed, isSigner: false, isWritable: false }
-        ];
-        
-        // Serialize instruction data
-        const data = Buffer.concat([
-            this.instructions.updateTwapSample,
-            this.serializeString(accounts.competitionId)
         ]);
         
         return new solanaWeb3.TransactionInstruction({
