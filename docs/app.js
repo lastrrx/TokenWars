@@ -208,6 +208,66 @@ window.refreshLeaderboard = async function() {
     }
 };
 
+// Add to window functions for Jupiter integration
+window.startJupiterCompetition = async function(competitionId, tokenAAddress, tokenBAddress) {
+    try {
+        console.log('🎯 Starting Jupiter-based competition:', competitionId);
+        
+        if (!window.jupiterSmartContractService?.isAvailable()) {
+            throw new Error('Jupiter Smart Contract Service not available');
+        }
+        
+        const adminWallet = sessionStorage.getItem('adminWallet') || 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv';
+        
+        const result = await window.jupiterSmartContractService.startCompetition(
+            competitionId,
+            tokenAAddress,
+            tokenBAddress,
+            adminWallet
+        );
+        
+        // Update database with start prices and market caps
+        if (window.supabaseClient) {
+            await window.supabaseClient.syncCompetitionWithJupiter(
+                competitionId, 
+                tokenAAddress, 
+                tokenBAddress
+            );
+        }
+        
+        console.log('✅ Jupiter competition started:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Error starting Jupiter competition:', error);
+        throw error;
+    }
+};
+
+window.collectJupiterPlatformFee = async function(competitionId) {
+    try {
+        console.log('💳 Collecting platform fee for Jupiter competition:', competitionId);
+        
+        if (!window.jupiterSmartContractService?.isAvailable()) {
+            throw new Error('Jupiter Smart Contract Service not available');
+        }
+        
+        const platformWallet = 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv';
+        
+        const signature = await window.jupiterSmartContractService.collectPlatformFee(
+            competitionId,
+            platformWallet
+        );
+        
+        console.log('✅ Platform fee collected:', signature);
+        return signature;
+        
+    } catch (error) {
+        console.error('❌ Error collecting platform fee:', error);
+        throw error;
+    }
+};
+
 // ==============================================
 // GLOBAL STATE
 // ==============================================
