@@ -92,6 +92,36 @@ async function connectAdminWallet() {
     }
 }
 
+async function ensureAdminWalletConnected() {
+    try {
+        const storedWallet = sessionStorage.getItem('adminWallet');
+        
+        if (storedWallet && window.solana) {
+            // Check if wallet is still connected
+            if (!window.solana.isConnected) {
+                console.log('🔄 Reconnecting admin wallet for blockchain operations...');
+                await window.solana.connect();
+            }
+            
+            // Verify the connected wallet matches stored wallet
+            const currentWallet = window.solana.publicKey?.toString();
+            if (currentWallet !== storedWallet) {
+                console.warn('⚠️ Wallet mismatch - requesting correct admin wallet');
+                await window.solana.connect();
+            }
+            
+            console.log('✅ Admin wallet ready for blockchain operations');
+            return true;
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('❌ Failed to ensure admin wallet connection:', error);
+        return false;
+    }
+}
+
 /**
  * Update wallet status display
  */
@@ -384,5 +414,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.AuthState = AuthState;
 window.verifyPin = verifyPin;
 window.connectAdminWallet = connectAdminWallet;
+window.ensureAdminWalletConnected = ensureAdminWalletConnected;
 
 console.log('✅ Admin authentication module loaded with enhanced error handling');
