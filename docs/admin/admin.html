@@ -1380,24 +1380,17 @@
         }
     }
 
-    // Admin panel initialization (moved here and updated)
+    // Admin panel initialization (proper authentication flow)
     function initializeAdminPanelAfterBlockchain() {
-        console.log('🚀 Starting TokenWars Production Admin Panel');
+        console.log('🔗 [ADMIN] Blockchain services initialized, waiting for authentication...');
         
-        // Check if we're authenticated
-        const adminToken = sessionStorage.getItem('adminToken');
-        if (adminToken) {
-            // Skip auth and go straight to admin panel
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('admin-panel').classList.remove('hidden');
-            
-            // Initialize admin panel
-            if (window.initializeAdminPanel) {
-                window.initializeAdminPanel().catch(error => {
-                    console.error('Failed to initialize admin panel:', error);
-                });
-            }
-        }
+        // Don't auto-show admin panel - let auth.js handle this
+        // The auth.js module will call showAdminPanel() after proper authentication
+        
+        // Just ensure we're ready to initialize when auth completes
+        window.adminPanelReady = true;
+        
+        console.log('✅ [ADMIN] Ready for authentication');
     }
 
     // DOM ready listener to start the process
