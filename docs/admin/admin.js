@@ -1442,6 +1442,11 @@ async function createCompetitionWithSmartContract(config) {
         }
 
         const adminWallet = sessionStorage.getItem('adminWallet');
+        const walletReady = await prepareAdminWalletForBlockchain();
+        if (!walletReady) {
+            throw new Error('Admin wallet not ready for blockchain operations');
+        }
+        
         const authResult = await verifyAdminWalletEnhanced(adminWallet);
         if (!authResult.authorized) {
             throw new Error(`Unauthorized: ${authResult.reason}`);
