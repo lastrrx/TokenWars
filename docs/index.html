@@ -20,6 +20,46 @@
     <!-- Solana Web3.js -->
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     
+    <!-- Script Loading Validation -->
+    <script>
+    // Wait for DOM and all scripts to load
+    window.addEventListener('load', function() {
+        // Check if Solana Web3.js loaded correctly
+        if (typeof solanaWeb3 !== 'undefined') {
+            console.log('✅ Solana Web3.js loaded successfully');
+            window.solanaweb3Available = true;
+        } else {
+            console.error('❌ Solana Web3.js failed to load');
+            window.solanaweb3Available = false;
+            
+            // Show user notification
+            setTimeout(() => {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; z-index: 10000;
+                    background: #ef4444; color: white; padding: 1rem; border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 300px;
+                `;
+                notification.innerHTML = `
+                    <strong>Connection Issue</strong><br>
+                    Blockchain features temporarily unavailable. Refresh page to retry.
+                `;
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => notification.remove(), 10000);
+            }, 2000);
+        }
+        
+        // Check Supabase
+        if (typeof supabase !== 'undefined') {
+            console.log('✅ Supabase client loaded successfully');
+        } else {
+            console.error('❌ Supabase client failed to load');
+        }
+    });
+    </script>
+    
     <!-- Chart.js for price charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
