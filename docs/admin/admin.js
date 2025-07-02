@@ -1436,7 +1436,16 @@ async function createCompetitionWithSmartContract(config) {
     try {
         console.log('🏗️ Creating competition with smart contract integration...');
         
+        const walletReady = await prepareAdminWalletForBlockchain();
+        if (!walletReady) {
+            throw new Error('Admin wallet not ready for blockchain operations');
+        }
+
         const adminWallet = sessionStorage.getItem('adminWallet');
+        const authResult = await verifyAdminWalletEnhanced(adminWallet);
+        if (!authResult.authorized) {
+            throw new Error(`Unauthorized: ${authResult.reason}`);
+        }
         const competitionId = generateCompetitionId();
         
         // Get Pyth price feed IDs for tokens
@@ -4342,6 +4351,34 @@ function checkBlockchainStatusForAdmin() {
     }
 }
 // ===== BLOCKCHAIN INTEGRATION FUNCTIONS =====
+
+/**
+ * Prepare admin wallet for blockchain operations
+ */
+async function prepareAdminWalletForBlockchain() {
+    try {
+        // Ensure wallet connection is maintained
+        if (window.ensureAdminWalletConnected) {
+            const connected = await window.ensureAdminWalletConnected();
+            if (!connected) {
+                throw new Error('Admin wallet not properly connected');
+            }
+        }
+        
+        // Verify smart contract service is available
+        if (!window.smartContractService || !window.smartContractService.isAvailable()) {
+            throw new Error('Smart contract service not available');
+        }
+        
+        console.log('✅ Admin wallet prepared for blockchain operations');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Failed to prepare admin wallet for blockchain:', error);
+        showAdminNotification(`Blockchain preparation failed: ${error.message}`, 'error');
+        return false;
+    }
+}
 
 /**
  * Update Admin Blockchain Status Display
