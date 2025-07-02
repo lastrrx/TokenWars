@@ -548,22 +548,48 @@ class SmartContractService {
             const adminWallet = sessionStorage.getItem('adminWallet');
             if (adminWallet && window.solana && window.solana.isConnected) {
                 console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
-                return window.solana;
+                
+                // Ensure window.solana has sendTransaction method
+                if (typeof window.solana.sendTransaction === 'function') {
+                    return window.solana;
+                } else if (typeof window.solana.signAndSendTransaction === 'function') {
+                    // Create adapter for wallets that use signAndSendTransaction
+                    return {
+                        ...window.solana,
+                        sendTransaction: async (transaction, connection) => {
+                            return await window.solana.signAndSendTransaction(transaction);
+                        }
+                    };
+                }
             }
             
             // Check for regular user wallet (for betting)
             const walletService = window.getWalletService && window.getWalletService();
             if (walletService && walletService.isConnected()) {
                 console.log('👤 Using user wallet for blockchain operation');
-                return walletService.walletProvider || walletService;
+                
+                // Get the actual wallet provider
+                const provider = walletService.walletProvider || walletService.connectedWallet;
+                
+                if (provider && typeof provider.sendTransaction === 'function') {
+                    return provider;
+                } else if (provider && typeof provider.signAndSendTransaction === 'function') {
+                    // Create adapter for wallets that use signAndSendTransaction
+                    return {
+                        ...provider,
+                        sendTransaction: async (transaction, connection) => {
+                            return await provider.signAndSendTransaction(transaction);
+                        }
+                    };
+                }
             }
             
-            // No wallet connected
-            throw new Error('Wallet not connected');
+            // No wallet connected or no transaction method available
+            throw new Error('No wallet with transaction capability available');
             
         } catch (error) {
             console.error('❌ getConnectedWallet error:', error);
-            throw new Error('Wallet not connected');
+            throw new Error('Wallet not connected or transaction method unavailable');
         }
     }
 
