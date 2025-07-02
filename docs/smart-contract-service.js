@@ -219,7 +219,36 @@ class SmartContractService {
             transaction.feePayer = wallet.publicKey;
             
             console.log('📤 Sending create escrow transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
+            console.log('🔍 Transaction details:', {
+                instructions: transaction.instructions.length,
+                feePayer: transaction.feePayer?.toString(),
+                recentBlockhash: transaction.recentBlockhash
+            });
+            
+            try {
+                const signature = await wallet.sendTransaction(transaction, this.connection);
+                console.log('✅ Transaction sent, signature:', signature);
+                
+                console.log('⏳ Confirming transaction...');
+                const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
+                console.log('📋 Transaction confirmation:', confirmation);
+                
+                if (confirmation.value.err) {
+                    console.error('❌ Transaction failed on-chain:', confirmation.value.err);
+                    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+                }
+                
+                return signature;
+            } catch (error) {
+                console.error('❌ Detailed transaction error:', error);
+                
+                // Try to get more specific error info
+                if (error.logs) {
+                    console.error('📋 Transaction logs:', error.logs);
+                }
+                
+                throw error;
+            }
             await this.connection.confirmTransaction(signature);
             
             console.log('✅ Escrow created successfully:', signature);
