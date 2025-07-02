@@ -140,18 +140,27 @@ class SmartContractService {
             
             // Get fresh blockhash
             console.log('⏳ Getting recent blockhash...');
-            const { blockhash, feeCalculator } = await this.connection.getRecentBlockhash('confirmed');
+            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
+            
+            // Get fee estimate using modern API
+            let estimatedFee = 'unknown';
+            try {
+                const fee = await this.connection.getFeeForMessage(transaction.compileMessage());
+                estimatedFee = fee.value || 'unknown';
+            } catch (feeError) {
+                console.warn('Could not estimate fee:', feeError.message);
+            }
             
             console.log('📤 Sending create escrow transaction...');
             console.log('🔍 Transaction details:', {
                 instructions: transaction.instructions.length,
                 feePayer: transaction.feePayer?.toString(),
                 recentBlockhash: transaction.recentBlockhash,
-                estimatedFee: feeCalculator ? feeCalculator.lamportsPerSignature : 'unknown'
+                estimatedFee: estimatedFee
             });
-            
+                        
             // Send transaction with proper error handling
             const signature = await wallet.sendTransaction(transaction, this.connection);
             console.log('✅ Transaction sent successfully, signature:', signature);
