@@ -3710,6 +3710,48 @@ async function logAdminActionEnhanced(actionType, actionData) {
     }
 }
 
+/**
+ * FIXED: Initialize Smart Contract Service in Admin Panel
+ */
+async function initializeAdminSmartContractService() {
+    try {
+        console.log('🔗 [ADMIN] Initializing smart contract service for admin panel...');
+        
+        // Check if service exists but isn't initialized
+        if (window.smartContractService && !window.smartContractService.isAvailable()) {
+            console.log('🔧 [ADMIN] Smart contract service exists but not available, initializing...');
+            
+            // Try to initialize the service
+            if (typeof window.smartContractService.initialize === 'function') {
+                const success = await window.smartContractService.initialize(window.BLOCKCHAIN_CONFIG);
+                console.log('🔧 [ADMIN] Smart contract initialization result:', success);
+                
+                if (success) {
+                    console.log('✅ [ADMIN] Smart contract service initialized successfully');
+                    window.adminBlockchainReady = true;
+                    return true;
+                }
+            }
+        }
+        
+        // Check if it's available now
+        if (window.smartContractService?.isAvailable?.()) {
+            console.log('✅ [ADMIN] Smart contract service is available');
+            window.adminBlockchainReady = true;
+            return true;
+        }
+        
+        console.log('⚠️ [ADMIN] Smart contract service initialization failed or not available');
+        window.adminBlockchainReady = false;
+        return false;
+        
+    } catch (error) {
+        console.error('❌ [ADMIN] Smart contract service initialization error:', error);
+        window.adminBlockchainReady = false;
+        return false;
+    }
+}
+
 // ===== SERVICE INITIALIZATION (Keep existing functions) =====
 
 async function initializeServiceReferences() {
@@ -3775,6 +3817,11 @@ async function initializeServiceReferences() {
             }
         }
         
+        if (window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED) {
+            console.log('🔗 [ADMIN] Blockchain enabled, initializing smart contract service...');
+            await initializeAdminSmartContractService();
+        }
+
         if (window.getPriceService) {
             try {
                 AdminState.priceService = window.getPriceService();
@@ -3804,6 +3851,25 @@ async function initializeServiceReferences() {
     } catch (error) {
         debugLog('error', 'Failed to initialize service references:', error);
         throw error;
+    }
+}
+
+        
+        // Check if it's available now
+        if (window.smartContractService?.isAvailable?.()) {
+            console.log('✅ [ADMIN] Smart contract service is available');
+            window.adminBlockchainReady = true;
+            return true;
+        }
+        
+        console.log('⚠️ [ADMIN] Smart contract service initialization failed or not available');
+        window.adminBlockchainReady = false;
+        return false;
+        
+    } catch (error) {
+        console.error('❌ [ADMIN] Smart contract service initialization error:', error);
+        window.adminBlockchainReady = false;
+        return false;
     }
 }
 
