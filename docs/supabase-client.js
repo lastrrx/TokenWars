@@ -143,6 +143,46 @@ async function initializeSupabase() {
     }
 }
 
+// Add to SupabaseClient class
+async syncCompetitionWithJupiter(competitionId, tokenAAddress, tokenBAddress) {
+    try {
+        console.log('🔄 Syncing competition with Jupiter API data...');
+        
+        if (window.jupiterSmartContractService) {
+            const tokenData = await window.jupiterSmartContractService.fetchJupiterTokenData([
+                tokenAAddress, 
+                tokenBAddress
+            ]);
+            
+            const tokenAData = tokenData.find(t => t.address === tokenAAddress);
+            const tokenBData = tokenData.find(t => t.address === tokenBAddress);
+            
+            if (tokenAData && tokenBData) {
+                // Update database with Jupiter data
+                const { error } = await this.supabase
+                    .from('competitions')
+                    .update({
+                        token_a_start_price: tokenAData.price,
+                        token_b_start_price: tokenBData.price,
+                        token_a_start_market_cap: tokenAData.marketCap,
+                        token_b_start_market_cap: tokenBData.marketCap,
+                        twap_calculated_at: new Date().toISOString()
+                    })
+                    .eq('competition_id', competitionId);
+                
+                if (error) throw error;
+                console.log('✅ Competition synced with Jupiter data');
+                return { tokenAData, tokenBData };
+            }
+        }
+        
+        throw new Error('Jupiter data not available');
+    } catch (error) {
+        console.error('❌ Error syncing competition with Jupiter:', error);
+        throw error;
+    }
+}
+
 // FIXED: Test database connection with graceful degradation
 async function testConnection() {
     try {
