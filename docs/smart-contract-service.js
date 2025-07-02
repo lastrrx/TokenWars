@@ -276,25 +276,6 @@ async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, admin
                 competitionId: competitionId
             });
             
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending withdraw transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Winnings withdrawn successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error withdrawing winnings:', error);
-            throw error;
-        }
-    }
 
     // Build withdraw_winnings instruction
     async buildWithdrawInstruction(accounts) {
