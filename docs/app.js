@@ -246,7 +246,8 @@ let servicesReady = {
     wallet: false,
     supabase: false,
     competition: false,
-    portfolio: false
+    portfolio: false,
+    smartContract: false
 };
 
 // ==============================================
@@ -2803,6 +2804,66 @@ function toggleMobileMenu() {
     }
 }
 
+async function initializeSmartContract() {
+    try {
+        console.log('🔗 Initializing smart contract service...');
+        
+        // Wait for dependencies
+        await SmartContractService.waitForDependencies(5000);
+        
+        // Create service instance
+        window.smartContractService = new SmartContractService();
+        servicesReady.smartContract = true;
+        
+        console.log('✅ Smart contract service ready');
+        
+        // Update UI to show smart contract features are available
+        updateSmartContractStatus(true);
+        
+    } catch (error) {
+        console.error('❌ Smart contract service unavailable:', error);
+        servicesReady.smartContract = false;
+        
+        // Show fallback notification
+        showNotificationFixed('Smart contract features unavailable - using database mode', 'warning');
+        
+        // Update UI to show fallback mode
+        updateSmartContractStatus(false);
+    }
+}
+
+// Update UI based on smart contract availability
+function updateSmartContractStatus(available) {
+    try {
+        // Find any smart contract status indicators in your UI
+        const statusElements = document.querySelectorAll('[data-smart-contract-status]');
+        statusElements.forEach(element => {
+            if (available) {
+                element.textContent = '🔗 Blockchain Connected';
+                element.className = 'smart-contract-available';
+            } else {
+                element.textContent = '💾 Database Mode';
+                element.className = 'smart-contract-unavailable';
+            }
+        });
+        
+        // Update any smart contract feature buttons
+        const smartContractButtons = document.querySelectorAll('[data-requires-smart-contract]');
+        smartContractButtons.forEach(button => {
+            if (available) {
+                button.removeAttribute('disabled');
+                button.title = 'Smart contract features available';
+            } else {
+                button.setAttribute('disabled', 'true');
+                button.title = 'Smart contract features unavailable - using database fallback';
+            }
+        });
+        
+    } catch (error) {
+        console.warn('Could not update smart contract status UI:', error);
+    }
+}
+
 async function initializeApp() {
     console.log('🚀 Starting TokenWars initialization...');
     
@@ -2843,6 +2904,10 @@ function initializeServicesProgressive() {
         }
     }, 100);
     
+    setTimeout(async () => {
+        await initializeSmartContract();
+    }, 150);
+
     // Initialize competition service
     setTimeout(async () => {
         try {
@@ -2935,6 +3000,7 @@ window.app = {
     getCurrentPage: () => currentPage,
     getCurrentUser: () => connectedUser,
     getWalletService: () => walletService,
+    getSmartContractService: () => window.smartContractService, 
     isWalletConnected,
     showNotification: showNotificationFixed,
     getServicesReady: () => servicesReady
