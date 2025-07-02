@@ -1619,6 +1619,160 @@
         console.log('   📈 Pair analytics dashboard');
         console.log('   🤖 Competition automation system');
         console.log('   📊 Advanced analytics and reporting');
+
+// DIRECT DEBUG: Force authentication setup
+    function forceAuthSetup() {
+        console.log('🔧 [FORCE] Setting up authentication directly...');
+        
+        // Check if elements exist
+        const connectBtn = document.getElementById('connect-admin-wallet');
+        const pinInput = document.getElementById('admin-pin');
+        const verifyBtn = document.getElementById('verify-pin');
+        
+        console.log('🔍 [FORCE] Elements check:');
+        console.log('   - Connect button:', !!connectBtn);
+        console.log('   - PIN input:', !!pinInput);
+        console.log('   - Verify button:', !!verifyBtn);
+        console.log('   - window.solana:', !!window.solana);
+        
+        if (connectBtn) {
+            console.log('🔗 [FORCE] Adding click listener to connect button...');
+            
+            // Remove existing listeners and add new one
+            connectBtn.onclick = function() {
+                console.log('🔘 [FORCE] Connect wallet clicked!');
+                forceConnectWallet();
+            };
+            
+            // Also try addEventListener
+            connectBtn.addEventListener('click', function(e) {
+                console.log('🔘 [EVENT] Connect wallet clicked via addEventListener!');
+                e.preventDefault();
+                forceConnectWallet();
+            });
+            
+            console.log('✅ [FORCE] Listeners added to connect button');
+        } else {
+            console.error('❌ [FORCE] Connect button not found!');
+        }
+    }
+    
+    // Direct wallet connection function
+    async function forceConnectWallet() {
+        try {
+            console.log('🚀 [FORCE] Starting wallet connection...');
+            
+            // Check for Phantom wallet
+            if (!window.solana) {
+                console.error('❌ [FORCE] window.solana not available');
+                alert('Please install Phantom wallet to access admin panel');
+                return;
+            }
+            
+            console.log('✅ [FORCE] window.solana available');
+            
+            // Request connection
+            const response = await window.solana.connect();
+            const publicKey = response.publicKey.toString();
+            
+            console.log('✅ [FORCE] Wallet connected:', publicKey);
+            
+            // Update UI manually
+            const connectBtn = document.getElementById('connect-admin-wallet');
+            const walletStatus = document.getElementById('wallet-status');
+            const walletAddress = document.querySelector('.wallet-address');
+            const pinStep = document.getElementById('step-pin');
+            const pinInput = document.getElementById('admin-pin');
+            const verifyBtn = document.getElementById('verify-pin');
+            
+            if (connectBtn) connectBtn.style.display = 'none';
+            if (walletStatus) walletStatus.classList.remove('hidden');
+            if (walletAddress) walletAddress.textContent = publicKey.substring(0, 6) + '...' + publicKey.substring(publicKey.length - 4);
+            
+            // Enable PIN step
+            if (pinStep) pinStep.classList.remove('disabled');
+            if (pinInput) {
+                pinInput.disabled = false;
+                pinInput.focus();
+            }
+            if (verifyBtn) verifyBtn.disabled = false;
+            
+            // Store wallet info
+            sessionStorage.setItem('adminWallet', publicKey);
+            
+            console.log('✅ [FORCE] UI updated, PIN step enabled');
+            
+            // Add PIN verification listener
+            if (verifyBtn) {
+                verifyBtn.onclick = function() {
+                    console.log('🔘 [FORCE] Verify PIN clicked!');
+                    forceVerifyPin(publicKey);
+                };
+            }
+            
+        } catch (error) {
+            console.error('❌ [FORCE] Wallet connection failed:', error);
+            alert('Failed to connect wallet: ' + error.message);
+        }
+    }
+    
+    // Direct PIN verification
+    async function forceVerifyPin(walletAddress) {
+        try {
+            const pinInput = document.getElementById('admin-pin');
+            const pin = pinInput ? pinInput.value : '';
+            
+            console.log('🔐 [FORCE] Verifying PIN...', { pin: pin.length, wallet: walletAddress });
+            
+            if (!pin || pin.length !== 6) {
+                alert('Please enter a 6-digit PIN');
+                return;
+            }
+            
+            // Make API request
+            const apiUrl = `${window.location.origin}/api/admin/auth/verify`;
+            console.log('📡 [FORCE] Calling API:', apiUrl);
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletAddress, pin })
+            });
+            
+            const data = await response.json();
+            console.log('📡 [FORCE] API response:', data);
+            
+            if (response.ok && data.success) {
+                console.log('✅ [FORCE] Authentication successful!');
+                
+                // Store token
+                sessionStorage.setItem('adminToken', data.token);
+                
+                // Show admin panel
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                
+                console.log('✅ [FORCE] Admin panel shown');
+                
+            } else {
+                console.error('❌ [FORCE] Authentication failed:', data.message);
+                alert('Authentication failed: ' + (data.message || 'Invalid credentials'));
+            }
+            
+        } catch (error) {
+            console.error('❌ [FORCE] PIN verification error:', error);
+            alert('PIN verification failed: ' + error.message);
+        }
+    }
+    
+    // Force setup after everything loads
+    setTimeout(forceAuthSetup, 2000);
+    
+    // Also try on window load
+    window.addEventListener('load', () => {
+        setTimeout(forceAuthSetup, 1000);
+    });
+
     </script>
 </body>
 </html>
