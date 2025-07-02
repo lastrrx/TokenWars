@@ -3751,7 +3751,6 @@ async function initializeAdminSmartContractService() {
         return false;
     }
 }
-
 // ===== SERVICE INITIALIZATION (Keep existing functions) =====
 
 async function initializeServiceReferences() {
@@ -3804,11 +3803,12 @@ async function initializeServiceReferences() {
             }
         }
         
+        // ADD SMART CONTRACT INITIALIZATION HERE - CORRECT PLACEMENT
         if (window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED) {
             console.log('🔗 [ADMIN] Blockchain enabled, initializing smart contract service...');
             await initializeAdminSmartContractService();
         }
-
+        
         // Get services (these might not be critical)
         if (window.getTokenService) {
             try {
