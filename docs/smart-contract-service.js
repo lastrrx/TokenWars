@@ -549,17 +549,26 @@ class SmartContractService {
             if (adminWallet && window.solana && window.solana.isConnected) {
                 console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
                 
-                // Ensure window.solana has sendTransaction method
-                if (typeof window.solana.sendTransaction === 'function') {
-                    return window.solana;
-                } else if (typeof window.solana.signAndSendTransaction === 'function') {
-                    // Create adapter for wallets that use signAndSendTransaction
+                // CRITICAL FIX: Ensure publicKey is properly set
+                if (window.solana.publicKey) {
+                    // Create a proper wallet object with required methods
                     return {
-                        ...window.solana,
+                        publicKey: window.solana.publicKey,
                         sendTransaction: async (transaction, connection) => {
-                            return await window.solana.signAndSendTransaction(transaction);
+                            // Ensure fee payer is set correctly
+                            transaction.feePayer = window.solana.publicKey;
+                            
+                            if (typeof window.solana.sendTransaction === 'function') {
+                                return await window.solana.sendTransaction(transaction, connection);
+                            } else if (typeof window.solana.signAndSendTransaction === 'function') {
+                                return await window.solana.signAndSendTransaction(transaction);
+                            } else {
+                                throw new Error('Wallet does not support transaction sending');
+                            }
                         }
                     };
+                } else {
+                    throw new Error('Admin wallet publicKey not available');
                 }
             }
             
@@ -568,28 +577,30 @@ class SmartContractService {
             if (walletService && walletService.isConnected()) {
                 console.log('👤 Using user wallet for blockchain operation');
                 
-                // Get the actual wallet provider
-                const provider = walletService.walletProvider || walletService.connectedWallet;
-                
-                if (provider && typeof provider.sendTransaction === 'function') {
-                    return provider;
-                } else if (provider && typeof provider.signAndSendTransaction === 'function') {
-                    // Create adapter for wallets that use signAndSendTransaction
+                const provider = walletService.getWalletProvider();
+                if (provider && provider.publicKey) {
                     return {
-                        ...provider,
+                        publicKey: provider.publicKey,
                         sendTransaction: async (transaction, connection) => {
-                            return await provider.signAndSendTransaction(transaction);
+                            transaction.feePayer = provider.publicKey;
+                            
+                            if (typeof provider.sendTransaction === 'function') {
+                                return await provider.sendTransaction(transaction, connection);
+                            } else if (typeof provider.signAndSendTransaction === 'function') {
+                                return await provider.signAndSendTransaction(transaction);
+                            } else {
+                                throw new Error('Wallet provider does not support transactions');
+                            }
                         }
                     };
                 }
             }
             
-            // No wallet connected or no transaction method available
             throw new Error('No wallet with transaction capability available');
             
         } catch (error) {
             console.error('❌ getConnectedWallet error:', error);
-            throw new Error('Wallet not connected or transaction method unavailable');
+            throw new Error(`Wallet connection failed: ${error.message}`);
         }
     }
 
