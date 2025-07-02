@@ -97,12 +97,13 @@ class SmartContractService {
 }
 
     // Create escrow for new competition
-    async createCompetitionEscrow(competitionId, tokenAPythId, tokenBPythId, adminWallet) {
+    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
         try {
             console.log('📊 Creating competition escrow on-chain:', competitionId);
             
             const wallet = await this.getConnectedWallet();
-            
+            const tokenInfo = await this.getTokenPriceInfo(tokenAAddress, tokenBAddress);
+            console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
             // Generate escrow PDA
             const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
                 [Buffer.from("escrow"), Buffer.from(competitionId)],
@@ -144,44 +145,64 @@ class SmartContractService {
             });
             
             try {
-                const signature = await wallet.sendTransaction(transaction, this.connection);
-                console.log('✅ Transaction sent, signature:', signature);
+                // Create transaction
+                const transaction = new solanaWeb3.Transaction().add(instruction);
                 
+                // Get fresh blockhash
+                console.log('⏳ Getting recent blockhash...');
+                const { blockhash, feeCalculator } = await this.connection.getRecentBlockhash('confirmed');
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = wallet.publicKey;
+                
+                console.log('📤 Sending create escrow transaction...');
+                console.log('🔍 Transaction details:', {
+                    instructions: transaction.instructions.length,
+                    feePayer: transaction.feePayer?.toString(),
+                    recentBlockhash: transaction.recentBlockhash,
+                    estimatedFee: feeCalculator ? feeCalculator.lamportsPerSignature : 'unknown'
+                });
+                
+                // Send transaction with proper error handling
+                const signature = await wallet.sendTransaction(transaction, this.connection);
+                console.log('✅ Transaction sent successfully, signature:', signature);
+                
+                // Wait for confirmation with timeout
                 console.log('⏳ Confirming transaction...');
-                const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
+                const confirmation = await Promise.race([
+                    this.connection.confirmTransaction(signature, 'confirmed'),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Transaction confirmation timeout')), 30000)
+                    )
+                ]);
+                
                 console.log('📋 Transaction confirmation:', confirmation);
                 
-                if (confirmation.value.err) {
+                if (confirmation.value?.err) {
                     console.error('❌ Transaction failed on-chain:', confirmation.value.err);
-                    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+                    throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
                 }
                 
-                return signature;
+                console.log('✅ Escrow created successfully');
+                
+                return {
+                    escrowAccount: escrowAccount.toString(),
+                    bump: bump,
+                    signature: signature
+                };
+                
             } catch (error) {
+                // Enhanced error logging with more details
                 console.error('❌ Detailed transaction error:', error);
                 
-                // Try to get more specific error info
-                if (error.logs) {
-                    console.error('📋 Transaction logs:', error.logs);
-                }
+                // Log additional error context
+                if (error.name) console.error('Error name:', error.name);
+                if (error.code) console.error('Error code:', error.code);
+                if (error.logs) console.error('Transaction logs:', error.logs);
+                if (error.message) console.error('Error message:', error.message);
                 
-                throw error;
+                // Re-throw with more context
+                throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
             }
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Escrow created successfully:', signature);
-            
-            return {
-                escrowAccount: escrowAccount.toString(),
-                bump: bump,
-                signature: signature
-            };
-            
-        } catch (error) {
-            console.error('❌ Error creating competition escrow:', error);
-            throw error;
-        }
-    }
 
     // Build create_escrow instruction
     async buildCreateEscrowInstruction(accounts) {
@@ -191,12 +212,12 @@ class SmartContractService {
             { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
         ];
         
-        // Serialize instruction data
+        // Serialize instruction data WITHOUT Pyth feed IDs
         const data = Buffer.concat([
             this.instructions.createEscrow,
             this.serializeString(accounts.competitionId),
-            Buffer.from(accounts.tokenAPythId),
-            Buffer.from(accounts.tokenBPythId),
+            this.serializeString(accounts.tokenAAddress),
+            this.serializeString(accounts.tokenBAddress),
             this.serializeU64(accounts.votingEndTime),
             this.serializeU64(accounts.competitionEndTime),
             this.serializeU16(accounts.platformFeeBps)
@@ -285,50 +306,6 @@ class SmartContractService {
         });
     }
 
-    // Start competition and begin TWAP calculation
-    async startCompetition(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
-        try {
-            console.log('🚀 Starting competition with TWAP:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get Pyth price accounts
-            const priceAccounts = await this.getPythPriceAccounts(tokenAAddress, tokenBAddress);
-            
-            // Build start_competition instruction
-            const instruction = await this.buildStartCompetitionInstruction({
-                escrow: escrowAccount,
-                authority: new solanaWeb3.PublicKey(adminWallet),
-                tokenAPriceFeed: priceAccounts.tokenA,
-                tokenBPriceFeed: priceAccounts.tokenB,
-                competitionId: competitionId
-            });
-            
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending start competition transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Competition started successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error starting competition:', error);
-            throw error;
-        }
-    }
 
     // Build start_competition instruction
     async buildStartCompetitionInstruction(accounts) {
@@ -352,31 +329,7 @@ class SmartContractService {
         });
     }
 
-    // Update TWAP sample during 5-minute windows
-    async updateTwapSample(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
-        try {
-            console.log('📊 Updating TWAP sample:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get Pyth price accounts
-            const priceAccounts = await this.getPythPriceAccounts(tokenAAddress, tokenBAddress);
-            
-            // Build update_twap_sample instruction
-            const instruction = await this.buildUpdateTwapInstruction({
-                escrow: escrowAccount,
-                authority: new solanaWeb3.PublicKey(adminWallet),
-                tokenAPriceFeed: priceAccounts.tokenA,
-                tokenBPriceFeed: priceAccounts.tokenB,
-                competitionId: competitionId
-            });
-            
+
             const transaction = new solanaWeb3.Transaction().add(instruction);
             
             // Get recent blockhash
