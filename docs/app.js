@@ -2808,25 +2808,46 @@ async function initializeSmartContract() {
     try {
         console.log('🔗 Initializing smart contract service...');
         
+        // Check if blockchain config is available
+        if (!window.BLOCKCHAIN_CONFIG) {
+            console.error('❌ BLOCKCHAIN_CONFIG not found - check config.js');
+            servicesReady.smartContract = false;
+            window.adminBlockchainReady = false;
+            updateSmartContractStatus(false);
+            return;
+        }
+        
+        // Check if smart contract is enabled in config
+        if (!window.BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED) {
+            console.log('⚠️ Smart contract disabled in configuration');
+            servicesReady.smartContract = false;
+            window.adminBlockchainReady = false;
+            updateSmartContractStatus(false);
+            return;
+        }
+        
         // Create service instance
         window.smartContractService = new SmartContractService();
         
-        // Initialize it manually
-        const success = await window.smartContractService.initialize();
+        // Initialize with the configuration
+        const success = await window.smartContractService.initialize(window.BLOCKCHAIN_CONFIG);
         
         servicesReady.smartContract = success;
         
         if (success) {
             console.log('✅ Smart contract service ready');
+            window.adminBlockchainReady = true;
             updateSmartContractStatus(true);
         } else {
             console.log('⚠️ Smart contract service unavailable - using database mode');
+            window.adminBlockchainReady = false;
             updateSmartContractStatus(false);
         }
         
     } catch (error) {
         console.error('❌ Smart contract service initialization failed:', error);
         servicesReady.smartContract = false;
+        window.adminBlockchainReady = false;
         showNotificationFixed('Smart contract features unavailable - using database mode', 'warning');
         updateSmartContractStatus(false);
     }
@@ -2835,6 +2856,9 @@ async function initializeSmartContract() {
 // Update UI based on smart contract availability
 function updateSmartContractStatus(available) {
     try {
+        // Update blockchain status globally for admin panel
+        window.adminBlockchainReady = available;
+        
         // Find any smart contract status indicators in your UI
         const statusElements = document.querySelectorAll('[data-smart-contract-status]');
         statusElements.forEach(element => {
@@ -2847,20 +2871,20 @@ function updateSmartContractStatus(available) {
             }
         });
         
-        // Update any smart contract feature buttons
-        const smartContractButtons = document.querySelectorAll('[data-requires-smart-contract]');
-        smartContractButtons.forEach(button => {
+        // Update bet buttons to show which mode they're using
+        const betButtons = document.querySelectorAll('.place-bet-btn');
+        betButtons.forEach(button => {
             if (available) {
-                button.removeAttribute('disabled');
-                button.title = 'Smart contract features available';
+                button.setAttribute('title', 'Place bet using smart contract');
             } else {
-                button.setAttribute('disabled', 'true');
-                button.title = 'Smart contract features unavailable - using database fallback';
+                button.setAttribute('title', 'Place bet using database (demo mode)');
             }
         });
         
+        console.log(`📊 Smart contract status updated: ${available ? 'Available' : 'Database Mode'}`);
+        
     } catch (error) {
-        console.warn('Could not update smart contract status UI:', error);
+        console.error('Error updating smart contract status:', error);
     }
 }
 
