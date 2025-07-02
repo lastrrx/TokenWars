@@ -1460,7 +1460,7 @@ async function createCompetitionWithSmartContract(config) {
         
         // Get Pyth price feed IDs for tokens
         console.log('🔍 Getting Pyth price feed IDs...');
-        const pythIds = await window.smartContractService.getPythPriceFeedIds(
+        const tokenInfo = await window.smartContractService.getTokenPriceInfo(
             config.selectedPair.token_a_address,
             config.selectedPair.token_b_address
         );
@@ -1472,8 +1472,8 @@ async function createCompetitionWithSmartContract(config) {
         console.log('📊 Creating on-chain escrow...');
         const escrowResult = await window.smartContractService.createCompetitionEscrow(
             competitionId,
-            pythIds.tokenA,
-            pythIds.tokenB,
+            config.selectedPair.token_a_address,  // ← Correct
+            config.selectedPair.token_b_address,  // ← Correct
             adminWallet
         );
 
