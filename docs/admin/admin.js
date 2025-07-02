@@ -1705,7 +1705,7 @@ async function submitManualCompetitionWithSmartContract() {
             await loadCompetitionsManagementWithDiagnostics();
             
             showAdminNotification(
-                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}${useSmartContract ? ' (with smart contract)' : ''}`,
+                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}${blockchainAvailable ? ' (with smart contract)' : ''}`,
                 'success'
             );
             
