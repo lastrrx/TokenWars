@@ -92,6 +92,47 @@ async function connectAdminWallet() {
     }
 }
 
+/**
+ * Prepare admin wallet for blockchain operations
+ * Ensures wallet is ready for smart contract transactions
+ */
+async function prepareAdminWalletForBlockchain() {
+    try {
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        
+        if (!adminWallet) {
+            console.warn('No admin wallet stored');
+            return false;
+        }
+        
+        // Ensure Phantom/Solana wallet is connected and ready
+        if (window.solana) {
+            if (!window.solana.isConnected) {
+                console.log('🔄 Reconnecting admin wallet for blockchain operations...');
+                await window.solana.connect();
+            }
+            
+            // Verify the connected wallet matches stored admin wallet
+            const currentWallet = window.solana.publicKey?.toString();
+            if (currentWallet === adminWallet) {
+                console.log('✅ Admin wallet ready for blockchain operations');
+                return true;
+            } else {
+                console.warn('⚠️ Wallet mismatch - stored:', adminWallet, 'connected:', currentWallet);
+            }
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('❌ Failed to prepare admin wallet for blockchain:', error);
+        return false;
+    }
+}
+
+// Export the function globally
+window.prepareAdminWalletForBlockchain = prepareAdminWalletForBlockchain;
+
 async function ensureAdminWalletConnected() {
     try {
         const storedWallet = sessionStorage.getItem('adminWallet');
