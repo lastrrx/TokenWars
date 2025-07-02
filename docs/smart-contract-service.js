@@ -29,7 +29,7 @@ class SmartContractService {
         
         try {
             this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
-            this.programId = new solanaWeb3.PublicKey('95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4');
+            this.programId = new solanaWeb3.PublicKey(window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5');
             this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
             this.available = true;
             
@@ -73,110 +73,28 @@ class SmartContractService {
         return discriminators[name] || Buffer.alloc(8);
     }
 
-    // Get Pyth price feed mapping for Solana tokens
-    async getPythPriceFeedIds(tokenAAddress, tokenBAddress) {
-        try {
-            console.log('🔍 Getting Pyth price feed IDs for tokens:', tokenAAddress, tokenBAddress);
-            
-            // Comprehensive Pyth price feed mapping for Solana tokens
-            const pythMapping = {
-                // Major tokens
-                'So11111111111111111111111111111111111111112': '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', // SOL/USD
-                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a', // USDC/USD
-                'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': '0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca5ce37c56c00e96e4d68b1ba8', // USDT/USD
-                
-                // DeFi tokens
-                'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': '0x7a5bc1d2b56ad029048cd63964b3ad2776eadf812edc1a43a31406cb54bff592', // BONK/USD
-                'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': '0x6e3f3fa8253588df9326580180233eb791e03b443a3ba7a1d892e73874e5a52e', // PYTH/USD
-                'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': '0x17f7b7e28c8d5a9b7e5b5a5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e', // JTO/USD
-                
-                // Additional popular tokens - using placeholder IDs (in production, get actual Pyth feed IDs)
-                'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': '0x7d669ddcdd23cefd3f081c3a50a71c55c97e1e33bb9b6b5a7e5b5a5c5d5e5f5a', // JUP/USD (placeholder)
-                'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': '0x5b5a7e5b5a5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e', // mSOL/USD (placeholder)
-                'BKipkearSqAUdNKa1WDstvcMjoPsSKBuNyvKDQDDu9WE': '0x9c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d', // BKIP/USD (placeholder)
-                'RLBxxFkseAZ4RgJH3Sqn8jXxhmGoz9jWxDNJMh8pL7a': '0xf5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a', // RLB/USD (placeholder)
-                
-                // Add more tokens as needed with their actual Pyth feed IDs
-                // Get actual Pyth feed IDs from: https://pyth.network/price-feeds
-            };
-            
-            // Convert hex strings to 32-byte arrays
-            const tokenAFeedId = pythMapping[tokenAAddress];
-            const tokenBFeedId = pythMapping[tokenBAddress];
-            
-            if (!tokenAFeedId || !tokenBFeedId) {
-                console.warn('⚠️ Pyth feed ID not found for tokens:', {
-                    tokenA: tokenAAddress,
-                    tokenB: tokenBAddress,
-                    foundA: !!tokenAFeedId,
-                    foundB: !!tokenBFeedId
-                });
-                
-                // Use SOL as fallback if token not found
-                const solFeedId = pythMapping['So11111111111111111111111111111111111111112'];
-                return {
-                    tokenA: this.hexToBytes32Array(tokenAFeedId || solFeedId),
-                    tokenB: this.hexToBytes32Array(tokenBFeedId || solFeedId)
-                };
-            }
-            
-            console.log('✅ Found Pyth feed IDs:', {
-                tokenA: tokenAFeedId,
-                tokenB: tokenBFeedId
-            });
-            
-            return {
-                tokenA: this.hexToBytes32Array(tokenAFeedId),
-                tokenB: this.hexToBytes32Array(tokenBFeedId)
-            };
-            
-        } catch (error) {
-            console.error('❌ Error getting Pyth price feed IDs:', error);
-            // Return SOL feed IDs as fallback
-            const solFeedId = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
-            return {
-                tokenA: this.hexToBytes32Array(solFeedId),
-                tokenB: this.hexToBytes32Array(solFeedId)
-            };
-        }
-    }
-    
-    // Convert hex string to 32-byte array for Pyth feed IDs
-    hexToBytes32Array(hexString) {
-        if (!hexString) {
-            return new Array(32).fill(0);
-        }
+  async getTokenPriceInfo(tokenAAddress, tokenBAddress) {
+    try {
+        console.log('🔍 Getting token price info for Jupiter integration:', tokenAAddress, tokenBAddress);
         
-        // Remove 0x prefix if present
-        const cleanHex = hexString.replace('0x', '');
-        
-        // Pad to 64 characters (32 bytes)
-        const paddedHex = cleanHex.padStart(64, '0');
-        
-        // Convert to byte array
-        const bytes = [];
-        for (let i = 0; i < paddedHex.length; i += 2) {
-            bytes.push(parseInt(paddedHex.substr(i, 2), 16));
-        }
-        
-        return bytes;
-    }
-
-    // Get Pyth price account addresses (these would be provided by Pyth Network)
-    async getPythPriceAccounts(tokenAAddress, tokenBAddress) {
-        // In production, you would get these from Pyth Network's published account list
-        // For devnet, these are example addresses - replace with actual Pyth price accounts
-        const pythAccounts = {
-            'So11111111111111111111111111111111111111112': '7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE', // SOL/USD price account
-            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '6NpdXrQEpmDZ3jZKmM2rhdmkd3H6QAk23j2x8bkXcHKA', // USDC/USD price account
-            // Add more price accounts as needed
-        };
-        
+        // Since you're using Jupiter now, return simplified token info
+        // Jupiter handles price discovery, so we don't need Pyth feed IDs
         return {
-            tokenA: new solanaWeb3.PublicKey(pythAccounts[tokenAAddress] || pythAccounts['So11111111111111111111111111111111111111112']),
-            tokenB: new solanaWeb3.PublicKey(pythAccounts[tokenBAddress] || pythAccounts['So11111111111111111111111111111111111111112'])
+            tokenA: {
+                address: tokenAAddress,
+                source: 'jupiter'
+            },
+            tokenB: {
+                address: tokenBAddress,
+                source: 'jupiter'
+            }
         };
+        
+    } catch (error) {
+        console.error('❌ Error getting token price info:', error);
+        throw error;
     }
+}
 
     // Create escrow for new competition
     async createCompetitionEscrow(competitionId, tokenAPythId, tokenBPythId, adminWallet) {
@@ -204,8 +122,8 @@ class SmartContractService {
                 authority: new solanaWeb3.PublicKey(adminWallet),
                 systemProgram: solanaWeb3.SystemProgram.programId,
                 competitionId: competitionId,
-                tokenAPythId: tokenAPythId,
-                tokenBPythId: tokenBPythId,
+                tokenAAddress: tokenAAddress,
+                tokenBAddress: tokenBAddress,
                 votingEndTime: votingEndTime,
                 competitionEndTime: competitionEndTime,
                 platformFeeBps: 1500 // 15%
@@ -571,67 +489,80 @@ class SmartContractService {
     }
 
     // Helper: Get connected wallet
-    async getConnectedWallet() {
-        try {
-            // Check for admin wallet first (for competition creation)
-            const adminWallet = sessionStorage.getItem('adminWallet');
-            if (adminWallet && window.solana && window.solana.isConnected) {
-                console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
-                
-                // CRITICAL FIX: Ensure publicKey is properly set
-                if (window.solana.publicKey) {
-                    // Create a proper wallet object with required methods
-                    return {
-                        publicKey: window.solana.publicKey,
-                        sendTransaction: async (transaction, connection) => {
-                            // Ensure fee payer is set correctly
-                            transaction.feePayer = window.solana.publicKey;
-                            
-                            if (typeof window.solana.sendTransaction === 'function') {
-                                return await window.solana.sendTransaction(transaction, connection);
-                            } else if (typeof window.solana.signAndSendTransaction === 'function') {
-                                return await window.solana.signAndSendTransaction(transaction);
-                            } else {
-                                throw new Error('Wallet does not support transaction sending');
-                            }
-                        }
-                    };
-                } else {
-                    throw new Error('Admin wallet publicKey not available');
-                }
-            }
+async getConnectedWallet() {
+    try {
+        console.log('🔍 Getting connected wallet for blockchain operation...');
+        
+        // First try to get wallet from WalletService
+        const walletService = window.getWalletService && window.getWalletService();
+        if (walletService && walletService.isConnected()) {
+            console.log('👤 Using WalletService connected wallet');
             
-            // Check for regular user wallet (for betting)
-            const walletService = window.getWalletService && window.getWalletService();
-            if (walletService && walletService.isConnected()) {
-                console.log('👤 Using user wallet for blockchain operation');
-                
-                const provider = walletService.getWalletProvider();
-                if (provider && provider.publicKey) {
-                    return {
-                        publicKey: provider.publicKey,
-                        sendTransaction: async (transaction, connection) => {
+            const provider = walletService.getWalletProvider();
+            if (provider && provider.publicKey) {
+                return {
+                    publicKey: provider.publicKey,
+                    sendTransaction: async (transaction, connection) => {
+                        try {
+                            // Ensure transaction is properly configured
                             transaction.feePayer = provider.publicKey;
                             
-                            if (typeof provider.sendTransaction === 'function') {
-                                return await provider.sendTransaction(transaction, connection);
-                            } else if (typeof provider.signAndSendTransaction === 'function') {
-                                return await provider.signAndSendTransaction(transaction);
-                            } else {
-                                throw new Error('Wallet provider does not support transactions');
-                            }
+                            // Use WalletService method for transaction signing
+                            console.log('📤 Using WalletService signAndSendTransaction');
+                            return await walletService.signAndSendTransaction(transaction, connection);
+                            
+                        } catch (error) {
+                            console.error('❌ WalletService transaction error:', error);
+                            throw new Error(`WalletService transaction failed: ${error.message}`);
                         }
-                    };
-                }
+                    }
+                };
             }
-            
-            throw new Error('No wallet with transaction capability available');
-            
-        } catch (error) {
-            console.error('❌ getConnectedWallet error:', error);
-            throw new Error(`Wallet connection failed: ${error.message}`);
         }
+        
+        // Fallback: Check for admin wallet (direct window.solana access)
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (adminWallet && window.solana && window.solana.isConnected) {
+            console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
+            
+            if (window.solana.publicKey) {
+                return {
+                    publicKey: window.solana.publicKey,
+                    sendTransaction: async (transaction, connection) => {
+                        try {
+                            // Ensure transaction is properly configured
+                            transaction.feePayer = window.solana.publicKey;
+                            
+                            // Try different wallet methods in order of preference
+                            if (typeof window.solana.signAndSendTransaction === 'function') {
+                                console.log('📤 Using admin wallet signAndSendTransaction');
+                                return await window.solana.signAndSendTransaction(transaction);
+                            } else if (typeof window.solana.sendTransaction === 'function') {
+                                console.log('📤 Using admin wallet sendTransaction');
+                                return await window.solana.sendTransaction(transaction, connection);
+                            } else {
+                                throw new Error('Admin wallet does not support transaction sending');
+                            }
+                            
+                        } catch (error) {
+                            console.error('❌ Admin wallet transaction error:', error);
+                            throw new Error(`Admin wallet transaction failed: ${error.message}`);
+                        }
+                    }
+                };
+            } else {
+                throw new Error('Admin wallet publicKey not available');
+            }
+        }
+        
+        // No wallet available
+        throw new Error('No connected wallet found. Please connect a wallet first.');
+        
+    } catch (error) {
+        console.error('❌ getConnectedWallet error:', error);
+        throw new Error(`Wallet connection failed: ${error.message}`);
     }
+}
 
     // Browser-compatible serialization helpers
     serializeString(str) {
