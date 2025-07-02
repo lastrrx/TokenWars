@@ -1676,25 +1676,26 @@ async function submitManualCompetitionWithSmartContract() {
         }
         
         // Check if smart contracts are available and decide how to create competition (db or onchain)
-        const useSmartContract = isAdminBlockchainAvailable();
+        // BLOCKCHAIN FIRST: Always try smart contract if available
+        const blockchainAvailable = window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED && 
+                                   window.smartContractService?.isAvailable();
         
-        if (useSmartContract) {
-            console.log('🔗 [ADMIN] Using smart contract integration');
-            showAdminNotification('Creating on-chain competition...', 'info');
+        if (blockchainAvailable) {
+            console.log('🔗 [ADMIN] Blockchain-first mode: Creating on-chain competition with database logging');
+            showAdminNotification('Creating blockchain competition with database backup...', 'info');
         } else {
-            console.log('🗄️ [ADMIN] Using database-only approach');
-            showAdminNotification('Creating database competition...', 'info');
+            console.log('🗄️ [ADMIN] Blockchain unavailable: Using database-only approach');
+            showAdminNotification('Blockchain unavailable - creating database competition...', 'warning');
         }
         
         let competition;
-        if (useSmartContract) {
-            console.log('🔗 Using smart contract integration');
+        if (blockchainAvailable) {
+            console.log('🔗 Using blockchain-first with database logging');
             competition = await createCompetitionWithSmartContract(config);
         } else {
             console.log('🗄️ Using database-only approach');
             competition = await createCompetitionDirectDatabase(config);
-        }
-        
+        }    
         if (competition) {
             // Close modal
             closeCompetitionModal();
@@ -4198,13 +4199,23 @@ async function updateSystemHealthDisplay() {
         try {
             const blockchainAvailable = checkBlockchainStatusForAdmin(); // ADD THIS LINE
             
-            if (blockchainAvailable === true) {
+        if (blockchainAvailable === true) {
+            // Check if we're actually using blockchain features
+            const usingBlockchain = window.BLOCKCHAIN_CONFIG?.SMART_CONTRACT_ENABLED && 
+                                   window.smartContractService?.isAvailable();
+            
+            if (usingBlockchain) {
                 blockchainStatus = 'healthy';
                 blockchainDetails = 'Connected to Devnet';
-            } else if (blockchainAvailable === false) {
-                blockchainStatus = 'warning'; // Changed from 'error' to 'warning' for database mode
-                blockchainDetails = 'Database Mode Active';
+                console.log('✅ [ADMIN] Blockchain primary mode active');
             } else {
+                blockchainStatus = 'warning';
+                blockchainDetails = 'Database Mode Active';
+            }
+        } else {
+            blockchainStatus = 'warning';
+            blockchainDetails = 'Database Mode Active';
+        } else {
                 blockchainStatus = 'unknown';
                 blockchainDetails = 'Checking Connection...';
             }
@@ -4242,40 +4253,49 @@ async function updateSystemHealthDisplay() {
 }
 
 /**
- * Check Blockchain Status for Admin Panel
+ * Check Blockchain Status for Admin Panel - BLOCKCHAIN FIRST
  */
 function checkBlockchainStatusForAdmin() {
     try {
-        // Check if the main app has set blockchain status
+        // Check if blockchain config exists and is enabled
+        if (!window.BLOCKCHAIN_CONFIG || !window.BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED) {
+            console.log('🗄️ [ADMIN] Blockchain disabled in config - using database mode');
+            window.adminBlockchainReady = false;
+            return false;
+        }
+        
+        // Check if smart contract service is available and working
+        if (window.smartContractService && window.smartContractService.isAvailable) {
+            const available = window.smartContractService.isAvailable();
+            
+            if (available) {
+                console.log('🔗 [ADMIN] Smart contract service available - using blockchain primary mode');
+                window.adminBlockchainReady = true;
+                return true;
+            } else {
+                console.log('⚠️ [ADMIN] Smart contract service not available - falling back to database');
+                window.adminBlockchainReady = false;
+                return false;
+            }
+        }
+        
+        // Check if main app has blockchain working
         if (typeof window.adminBlockchainReady !== 'undefined') {
+            console.log(`🔍 [ADMIN] Using main app blockchain status: ${window.adminBlockchainReady}`);
             return window.adminBlockchainReady;
         }
         
-        // Check if smart contract service is available
-        if (window.smartContractService && window.smartContractService.isAvailable) {
-            const available = window.smartContractService.isAvailable();
-            window.adminBlockchainReady = available;
-            return available;
-        }
-        
-        // Check if blockchain config exists
-        if (window.BLOCKCHAIN_CONFIG && window.BLOCKCHAIN_CONFIG.SMART_CONTRACT_ENABLED) {
-            // Config exists but service unknown - assume it's working
-            window.adminBlockchainReady = true;
-            return true;
-        }
-        
-        // Default to database mode
+        // Default to database mode if uncertain
+        console.log('🗄️ [ADMIN] Blockchain status uncertain - defaulting to database mode');
         window.adminBlockchainReady = false;
         return false;
         
     } catch (error) {
-        console.warn('Error checking blockchain status:', error);
+        console.warn('❌ [ADMIN] Error checking blockchain status:', error);
         window.adminBlockchainReady = false;
         return false;
     }
 }
-
 // ===== BLOCKCHAIN INTEGRATION FUNCTIONS =====
 
 /**
