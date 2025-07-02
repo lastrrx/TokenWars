@@ -1778,13 +1778,9 @@ async function updateCompetitionTwap(competitionId) {
     }
 }
 
-/**
- * FIXED: Submit Manual Competition
- * Updated to use database-centric approach
- */
 async function submitManualCompetition() {
     try {
-        debugLog('competitionSubmit', '🚀 Submitting manual competition with fixed approach...');
+        debugLog('competitionSubmit', '🚀 Submitting manual competition with Jupiter integration...');
         
         if (!AdminState.selectedTokens.selectedPairId) {
             showAdminNotification('Please select a token pair first', 'error');
@@ -1804,19 +1800,54 @@ async function submitManualCompetition() {
             return;
         }
         
-        // Get form configuration
+        // Validate platform fee range (5% - 25% for Jupiter integration)
+        const platformFeeValue = parseInt(document.getElementById('manual-platform-fee')?.value || 15);
+        if (platformFeeValue < 5 || platformFeeValue > 25) {
+            showAdminNotification('Platform fee must be between 5% and 25% for Jupiter integration', 'error');
+            return;
+        }
+        
+        // Calculate competition timing
+        const now = new Date();
+        const votingDurationMinutes = parseInt(document.getElementById('manual-voting-period')?.value || 15);
+        const activeDurationHours = parseInt(document.getElementById('manual-performance-period')?.value || 24);
+        const startDelay = getStartDelay(document.getElementById('manual-start-time')?.value || 'immediate');
+        
+        const startTime = new Date(now.getTime() + startDelay);
+        const votingEndTime = new Date(startTime.getTime() + (votingDurationMinutes * 60 * 1000));
+        const competitionEndTime = new Date(votingEndTime.getTime() + (activeDurationHours * 60 * 60 * 1000));
+        
+        // Get form configuration with Jupiter enhancements
         const config = {
-            votingDuration: parseInt(document.getElementById('manual-voting-period')?.value || 15),
-            activeDuration: parseInt(document.getElementById('manual-performance-period')?.value || 24),
+            // Existing config structure (maintained for compatibility)
+            votingDuration: votingDurationMinutes,
+            activeDuration: activeDurationHours,
             betAmount: parseFloat(document.getElementById('manual-bet-amount')?.value || 0.1),
-            platformFee: parseInt(document.getElementById('manual-platform-fee')?.value || 15),
-            startDelay: getStartDelay(document.getElementById('manual-start-time')?.value || 'immediate'),
+            platformFee: platformFeeValue,
+            startDelay: startDelay,
             priority: document.getElementById('manual-priority')?.value || 'normal',
             isManual: true,
-            selectedPair: selectedPair
+            selectedPair: selectedPair,
+            
+            // New Jupiter integration fields
+            competition_id: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            token_a_address: selectedPair.token_a_address,
+            token_b_address: selectedPair.token_b_address,
+            token_a_symbol: selectedPair.token_a_symbol,
+            token_b_symbol: selectedPair.token_b_symbol,
+            token_a_name: selectedPair.token_a_name,
+            token_b_name: selectedPair.token_b_name,
+            start_time: startTime.toISOString(),
+            voting_end_time: votingEndTime.toISOString(),
+            end_time: competitionEndTime.toISOString(),
+            platform_fee_percentage: platformFeeValue,
+            status: 'VOTING',
+            created_by: adminWallet,
+            is_auto_created: false,
+            pair_id: selectedPair.id
         };
         
-        debugLog('competitionSubmit', 'Competition config:', config);
+        debugLog('competitionSubmit', 'Competition config with Jupiter integration:', config);
         
         // Show loading state
         const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
@@ -1825,35 +1856,96 @@ async function submitManualCompetition() {
             submitButton.disabled = true;
         }
         
-        // ✅ FIXED: Create competition using database-centric approach (without custom UUID)
+        // NEW: Jupiter Smart Contract Integration
+        let blockchainSuccess = false;
+        if (window.jupiterSmartContractService && window.jupiterSmartContractService.isAvailable()) {
+            try {
+                debugLog('competitionSubmit', '🔗 Creating on-chain escrow with Jupiter integration...');
+                
+                const votingEndTimestamp = Math.floor(votingEndTime.getTime() / 1000);
+                const competitionEndTimestamp = Math.floor(competitionEndTime.getTime() / 1000);
+                const platformFeeBps = Math.floor(platformFeeValue * 100); // Convert % to basis points
+                
+                const escrowResult = await window.jupiterSmartContractService.createCompetitionEscrow(
+                    config.competition_id,
+                    config.token_a_address,
+                    config.token_b_address,
+                    votingEndTimestamp,
+                    competitionEndTimestamp,
+                    platformFeeBps,
+                    adminWallet
+                );
+                
+                // Add blockchain data to config
+                config.escrow_account = escrowResult.escrowAccount;
+                config.program_id = window.jupiterSmartContractService.getProgramId();
+                config.escrow_bump = 255; // Determined by smart contract
+                config.blockchain_signature = escrowResult.signature;
+                
+                blockchainSuccess = true;
+                debugLog('competitionSubmit', '✅ On-chain escrow created:', escrowResult);
+                showAdminNotification('On-chain Jupiter escrow created successfully', 'success');
+                
+            } catch (blockchainError) {
+                debugLog('error', '⚠️ Blockchain escrow creation failed:', blockchainError);
+                showAdminNotification('Blockchain escrow failed, creating database-only competition', 'warning');
+                
+                // Continue with database creation even if blockchain fails
+                config.blockchain_error = blockchainError.message;
+                config.blockchain_fallback = true;
+            }
+        } else {
+            debugLog('competitionSubmit', '⚠️ Jupiter Smart Contract Service not available, creating database-only competition');
+            showAdminNotification('Creating database-only competition (Jupiter service unavailable)', 'warning');
+            config.blockchain_fallback = true;
+        }
+        
+        // Create competition in database (using your existing helper function)
         const competition = await createCompetitionDirectDatabase(config);
         
         if (competition) {
             // Close modal
             closeCompetitionModal();
             
-            // Reload competitions data and UI
+            // Reload competitions data and UI (using your existing functions)
             await loadAllCompetitionsDataWithDiagnostics();
             await loadCompetitionsManagementWithDiagnostics();
             
+            // Enhanced success notification
+            const integrationStatus = blockchainSuccess ? 'with Jupiter blockchain integration' : 'as database-only';
             showAdminNotification(
-                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
+                `Competition created successfully ${integrationStatus}: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
                 'success'
             );
             
-            // Log admin action
-            await logAdminAction('competition_create_manual', {
+            // Log admin action with Jupiter integration details
+            await logAdminAction('competition_create_manual_jupiter', {
                 competition_id: competition.competition_id,
                 token_pair: `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
+                jupiter_integration: blockchainSuccess,
+                platform_fee_percentage: platformFeeValue,
+                escrow_account: config.escrow_account || null,
+                program_id: config.program_id || null,
                 config: config,
                 admin_wallet: adminWallet
             });
             
-            debugLog('competitionSubmit', `✅ Competition created: ${competition.competition_id}`);
+            // Schedule automatic Jupiter competition start if blockchain integration succeeded
+            if (blockchainSuccess && config.escrow_account) {
+                scheduleJupiterCompetitionStart(
+                    config.competition_id,
+                    config.token_a_address,
+                    config.token_b_address,
+                    votingEndTime
+                );
+                debugLog('competitionSubmit', '⏰ Scheduled Jupiter competition auto-start');
+            }
+            
+            debugLog('competitionSubmit', `✅ Jupiter competition created: ${competition.competition_id}`);
         }
         
     } catch (error) {
-        debugLog('error', 'Error submitting manual competition:', error);
+        debugLog('error', 'Error submitting manual Jupiter competition:', error);
         showAdminNotification('Failed to create competition: ' + error.message, 'error');
         
         // Reset submit button
@@ -1862,6 +1954,83 @@ async function submitManualCompetition() {
             submitButton.textContent = '🚀 Create Competition';
             submitButton.disabled = false;
         }
+    }
+}
+
+/**
+ * Schedule Jupiter Competition Auto-Start
+ * This function schedules the competition to start automatically when voting ends
+ */
+function scheduleJupiterCompetitionStart(competitionId, tokenAAddress, tokenBAddress, votingEndTime) {
+    const timeUntilStart = votingEndTime.getTime() - Date.now();
+    
+    if (timeUntilStart > 0) {
+        debugLog('competitionSubmit', `⏰ Scheduling Jupiter auto-start in ${Math.round(timeUntilStart / 1000)}s for: ${competitionId}`);
+        
+        setTimeout(async () => {
+            try {
+                debugLog('competitionSubmit', '🚀 Auto-starting Jupiter competition:', competitionId);
+                
+                if (!window.jupiterSmartContractService?.isAvailable()) {
+                    debugLog('error', 'Jupiter service not available for auto-start:', competitionId);
+                    return;
+                }
+                
+                const adminWallet = sessionStorage.getItem('adminWallet') || 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv';
+                
+                const result = await window.jupiterSmartContractService.startCompetition(
+                    competitionId,
+                    tokenAAddress,
+                    tokenBAddress,
+                    adminWallet
+                );
+                
+                // Update database with start data using existing helper functions
+                await updateCompetitionStartData(competitionId, result);
+                
+                debugLog('competitionSubmit', '✅ Jupiter competition auto-started:', result);
+                showAdminNotification(`Competition auto-started: ${competitionId}`, 'success');
+                
+                // Refresh admin panel with your existing function
+                await loadAllCompetitionsDataWithDiagnostics();
+                
+            } catch (error) {
+                debugLog('error', 'Error auto-starting Jupiter competition:', error);
+                showAdminNotification(`Failed to auto-start competition ${competitionId}: ${error.message}`, 'error');
+            }
+        }, timeUntilStart);
+    }
+}
+
+/**
+ * Update Competition Start Data in Database
+ * Updates the database when a Jupiter competition starts
+ */
+async function updateCompetitionStartData(competitionId, startResult) {
+    try {
+        debugLog('competitionSubmit', '📊 Updating competition start data:', competitionId);
+        
+        if (window.supabaseClient) {
+            const { error } = await window.supabaseClient.supabase
+                .from('competitions')
+                .update({
+                    status: 'ACTIVE',
+                    token_a_start_price: startResult.tokenAPrice,
+                    token_b_start_price: startResult.tokenBPrice,
+                    token_a_start_twap: startResult.tokenAPrice, // Will be updated by TWAP finalization
+                    token_b_start_twap: startResult.tokenBPrice, // Will be updated by TWAP finalization
+                    token_a_start_market_cap: startResult.tokenAMarketCap,
+                    token_b_start_market_cap: startResult.tokenBMarketCap,
+                    twap_calculated_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('competition_id', competitionId);
+            
+            if (error) throw error;
+            debugLog('competitionSubmit', '✅ Competition start data updated in database');
+        }
+    } catch (error) {
+        debugLog('error', 'Error updating competition start data:', error);
     }
 }
 
