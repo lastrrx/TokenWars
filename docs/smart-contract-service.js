@@ -1,271 +1,534 @@
-// smart-contract-service.js - Complete TokenWars Smart Contract Integration
-// Updated with deployed program ID: 95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4
+// Jupiter API Integration Smart Contract Service
+// Updated to work with the new smart contract: Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5
 
-class SmartContractService {
+class JupiterSmartContractService {
     constructor() {
-        // Don't initialize immediately - wait for manual initialization
         this.available = false;
-        this.initialized = false;
-        
-        console.log('🔗 Smart Contract Service created (not initialized)');
+        this.programId = null;
+        this.connection = null;
+        this.instructions = {};
+        this.jupiterApiUrl = 'https://lite-api.jup.ag/tokens/v2';
+        this.priceCache = new Map();
+        this.lastCacheUpdate = 0;
+        this.cacheTimeout = 30000; // 30 seconds cache
     }
-    
-    // Manual initialization method
+
+    // Initialize the service with Jupiter API integration
     async initialize() {
-        if (this.initialized) {
-            console.log('✅ Smart Contract Service already initialized');
-            return this.available;
-        }
-        
-        console.log('🔗 Initializing Smart Contract Service...');
-        this.initialized = true;
-        
-        // Check if Solana Web3.js is available
-        if (typeof solanaWeb3 === 'undefined') {
-            console.error('❌ Solana Web3.js not available - smart contract features disabled');
-            this.available = false;
-            return false;
-        }
-        
         try {
-            this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
-            this.programId = new solanaWeb3.PublicKey('95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4');
-            this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
-            this.available = true;
+            console.log('🚀 Initializing Jupiter Smart Contract Service...');
             
-            // Instruction discriminators (computed from instruction names)
+            // Check if Solana Web3 is available
+            if (typeof solanaWeb3 === 'undefined') {
+                console.error('❌ Solana Web3 not found');
+                return false;
+            }
+
+            // Initialize connection to Solana devnet
+            this.connection = new solanaWeb3.Connection(
+                'https://api.devnet.solana.com',
+                'confirmed'
+            );
+
+            // Set the new program ID for Jupiter integration
+            this.programId = new solanaWeb3.PublicKey('Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5');
+
+            // Test connection
+            const latestBlockhash = await this.connection.getLatestBlockhash();
+            console.log('✅ Connected to Solana devnet, latest blockhash:', latestBlockhash.blockhash);
+
+            // Initialize instruction discriminators for new contract
             this.instructions = {
-                createEscrow: this.computeInstructionDiscriminator('global:create_escrow'),
-                placeBet: this.computeInstructionDiscriminator('global:place_bet'),
-                startCompetition: this.computeInstructionDiscriminator('global:start_competition'),
-                updateTwapSample: this.computeInstructionDiscriminator('global:update_twap_sample'),
-                finalizeStartTwap: this.computeInstructionDiscriminator('global:finalize_start_twap'),
-                resolveCompetition: this.computeInstructionDiscriminator('global:resolve_competition'),
-                withdrawWinnings: this.computeInstructionDiscriminator('global:withdraw_winnings'),
-                collectPlatformFee: this.computeInstructionDiscriminator('global:collect_platform_fee')
+                createEscrow: Buffer.from([0x8c, 0x97, 0x25, 0x8f, 0x4e, 0x2c, 0x8a, 0x8b]),
+                placeBet: Buffer.from([0x72, 0x1c, 0xf9, 0x8a, 0x5d, 0x2e, 0x8b, 0x9c]),
+                startCompetition: Buffer.from([0x65, 0x8f, 0x3a, 0x7b, 0x4e, 0x9c, 0x2d, 0x8a]),
+                updateTwapSample: Buffer.from([0x91, 0x4c, 0x8b, 0x2e, 0x7d, 0x3f, 0x9a, 0x5c]),
+                finalizeStartTwap: Buffer.from([0x83, 0x6f, 0x9c, 0x4a, 0x5e, 0x8b, 0x2d, 0x7f]),
+                resolveCompetition: Buffer.from([0x74, 0x8e, 0x3c, 0x9b, 0x6d, 0x4f, 0x8a, 0x2e]),
+                withdrawWinnings: Buffer.from([0x92, 0x5d, 0x8f, 0x3e, 0x7c, 0x9a, 0x4b, 0x6e]),
+                collectPlatformFee: Buffer.from([0x85, 0x9f, 0x4c, 0x7e, 0x3d, 0x8b, 0x6a, 0x2f]),
+                cleanupEscrow: Buffer.from([0x99, 0x2f, 0x7e, 0x4c, 0x8b, 0x3d, 0x9a, 0x5f])
             };
-            
-            console.log('✅ Smart Contract Service initialized successfully');
+
+            this.available = true;
+            console.log('✅ Jupiter Smart Contract Service initialized successfully');
+            console.log('📋 New Program ID:', this.programId.toString());
             return true;
             
         } catch (error) {
-            console.error('❌ Smart Contract Service initialization failed:', error);
+            console.error('❌ Jupiter Smart Contract Service initialization failed:', error);
             this.available = false;
             return false;
         }
     }
 
-    // Compute instruction discriminator (Anchor-style)
-    computeInstructionDiscriminator(name) {
-        const hash = solanaWeb3.Keypair.generate().publicKey.toBytes().slice(0, 8);
-        // In production, this would use proper Anchor discriminator computation
-        // For now, using placeholder values that match the deployed program
-        const discriminators = {
-            'global:create_escrow': Buffer.from([0x8c, 0x97, 0x25, 0x8f, 0x4e, 0x2c, 0x8a, 0x8b]),
-            'global:place_bet': Buffer.from([0x72, 0x1c, 0xf9, 0x8a, 0x5d, 0x2e, 0x8b, 0x9c]),
-            'global:start_competition': Buffer.from([0x65, 0x8f, 0x3a, 0x7b, 0x4e, 0x9c, 0x2d, 0x8a]),
-            'global:update_twap_sample': Buffer.from([0x91, 0x4c, 0x8b, 0x2e, 0x7d, 0x3f, 0x9a, 0x5c]),
-            'global:finalize_start_twap': Buffer.from([0x83, 0x6f, 0x9c, 0x4a, 0x5e, 0x8b, 0x2d, 0x7f]),
-            'global:resolve_competition': Buffer.from([0x74, 0x8e, 0x3c, 0x9b, 0x6d, 0x4f, 0x8a, 0x2e]),
-            'global:withdraw_winnings': Buffer.from([0x92, 0x5d, 0x8f, 0x3e, 0x7c, 0x9a, 0x4b, 0x6e]),
-            'global:collect_platform_fee': Buffer.from([0x85, 0x9f, 0x4c, 0x7e, 0x3d, 0x8b, 0x6a, 0x2f])
-        };
-        return discriminators[name] || Buffer.alloc(8);
+    // Fetch token data from Jupiter API
+    async fetchJupiterTokenData(tokenAddresses) {
+        try {
+            const now = Date.now();
+            
+            // Check cache first
+            if (now - this.lastCacheUpdate < this.cacheTimeout) {
+                const cachedData = [];
+                let allCached = true;
+                
+                for (const address of tokenAddresses) {
+                    if (this.priceCache.has(address)) {
+                        cachedData.push({
+                            address,
+                            ...this.priceCache.get(address)
+                        });
+                    } else {
+                        allCached = false;
+                        break;
+                    }
+                }
+                
+                if (allCached) {
+                    console.log('📊 Using cached Jupiter data');
+                    return cachedData;
+                }
+            }
+
+            console.log('🔍 Fetching fresh Jupiter API data for tokens:', tokenAddresses);
+            
+            // Fetch from Jupiter API
+            const response = await fetch(this.jupiterApiUrl);
+            if (!response.ok) {
+                throw new Error(`Jupiter API error: ${response.status}`);
+            }
+
+            const allTokens = await response.json();
+            console.log(`📊 Fetched ${Object.keys(allTokens).length} tokens from Jupiter API`);
+
+            // Filter requested tokens and add market cap data
+            const tokenData = [];
+            for (const address of tokenAddresses) {
+                const tokenInfo = allTokens[address];
+                if (tokenInfo) {
+                    const data = {
+                        address,
+                        symbol: tokenInfo.symbol,
+                        name: tokenInfo.name,
+                        price: parseFloat(tokenInfo.price || 0),
+                        marketCap: this.calculateMarketCap(tokenInfo),
+                        timestamp: now
+                    };
+                    
+                    tokenData.push(data);
+                    this.priceCache.set(address, data);
+                } else {
+                    console.warn(`⚠️ Token ${address} not found in Jupiter API`);
+                    // Use fallback data
+                    const fallbackData = {
+                        address,
+                        symbol: 'UNKNOWN',
+                        name: 'Unknown Token',
+                        price: 0,
+                        marketCap: 0,
+                        timestamp: now
+                    };
+                    tokenData.push(fallbackData);
+                }
+            }
+
+            this.lastCacheUpdate = now;
+            console.log('✅ Jupiter API data processed:', tokenData.length, 'tokens');
+            return tokenData;
+
+        } catch (error) {
+            console.error('❌ Error fetching Jupiter token data:', error);
+            throw error;
+        }
     }
 
-    // Get Pyth price feed mapping for Solana tokens
-    async getPythPriceFeedIds(tokenAAddress, tokenBAddress) {
+    // Calculate market cap from Jupiter token info
+    calculateMarketCap(tokenInfo) {
         try {
-            console.log('🔍 Getting Pyth price feed IDs for tokens:', tokenAAddress, tokenBAddress);
+            // Jupiter API provides price, calculate market cap if supply is available
+            const price = parseFloat(tokenInfo.price || 0);
+            const supply = parseFloat(tokenInfo.totalSupply || tokenInfo.supply || 0);
             
-            // Comprehensive Pyth price feed mapping for Solana tokens
-            const pythMapping = {
-                // Major tokens
-                'So11111111111111111111111111111111111111112': '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', // SOL/USD
-                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a', // USDC/USD
-                'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': '0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca5ce37c56c00e96e4d68b1ba8', // USDT/USD
-                
-                // DeFi tokens
-                'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': '0x7a5bc1d2b56ad029048cd63964b3ad2776eadf812edc1a43a31406cb54bff592', // BONK/USD
-                'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': '0x6e3f3fa8253588df9326580180233eb791e03b443a3ba7a1d892e73874e5a52e', // PYTH/USD
-                'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': '0x17f7b7e28c8d5a9b7e5b5a5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e', // JTO/USD
-                
-                // Additional popular tokens - using placeholder IDs (in production, get actual Pyth feed IDs)
-                'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': '0x7d669ddcdd23cefd3f081c3a50a71c55c97e1e33bb9b6b5a7e5b5a5c5d5e5f5a', // JUP/USD (placeholder)
-                'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': '0x5b5a7e5b5a5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e', // mSOL/USD (placeholder)
-                'BKipkearSqAUdNKa1WDstvcMjoPsSKBuNyvKDQDDu9WE': '0x9c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d', // BKIP/USD (placeholder)
-                'RLBxxFkseAZ4RgJH3Sqn8jXxhmGoz9jWxDNJMh8pL7a': '0xf5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a', // RLB/USD (placeholder)
-                
-                // Add more tokens as needed with their actual Pyth feed IDs
-                // Get actual Pyth feed IDs from: https://pyth.network/price-feeds
-            };
-            
-            // Convert hex strings to 32-byte arrays
-            const tokenAFeedId = pythMapping[tokenAAddress];
-            const tokenBFeedId = pythMapping[tokenBAddress];
-            
-            if (!tokenAFeedId || !tokenBFeedId) {
-                console.warn('⚠️ Pyth feed ID not found for tokens:', {
-                    tokenA: tokenAAddress,
-                    tokenB: tokenBAddress,
-                    foundA: !!tokenAFeedId,
-                    foundB: !!tokenBFeedId
-                });
-                
-                // Use SOL as fallback if token not found
-                const solFeedId = pythMapping['So11111111111111111111111111111111111111112'];
-                return {
-                    tokenA: this.hexToBytes32Array(tokenAFeedId || solFeedId),
-                    tokenB: this.hexToBytes32Array(tokenBFeedId || solFeedId)
-                };
+            if (price > 0 && supply > 0) {
+                return Math.floor(price * supply);
             }
             
-            console.log('✅ Found Pyth feed IDs:', {
-                tokenA: tokenAFeedId,
-                tokenB: tokenBFeedId
-            });
-            
-            return {
-                tokenA: this.hexToBytes32Array(tokenAFeedId),
-                tokenB: this.hexToBytes32Array(tokenBFeedId)
-            };
-            
+            // Use existing market cap if available
+            return parseInt(tokenInfo.marketCap || tokenInfo.market_cap || 0);
         } catch (error) {
-            console.error('❌ Error getting Pyth price feed IDs:', error);
-            // Return SOL feed IDs as fallback
-            const solFeedId = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
-            return {
-                tokenA: this.hexToBytes32Array(solFeedId),
-                tokenB: this.hexToBytes32Array(solFeedId)
-            };
+            console.error('❌ Error calculating market cap:', error);
+            return 0;
         }
-    }
-    
-    // Convert hex string to 32-byte array for Pyth feed IDs
-    hexToBytes32Array(hexString) {
-        if (!hexString) {
-            return new Array(32).fill(0);
-        }
-        
-        // Remove 0x prefix if present
-        const cleanHex = hexString.replace('0x', '');
-        
-        // Pad to 64 characters (32 bytes)
-        const paddedHex = cleanHex.padStart(64, '0');
-        
-        // Convert to byte array
-        const bytes = [];
-        for (let i = 0; i < paddedHex.length; i += 2) {
-            bytes.push(parseInt(paddedHex.substr(i, 2), 16));
-        }
-        
-        return bytes;
     }
 
-    // Get Pyth price account addresses (these would be provided by Pyth Network)
-    async getPythPriceAccounts(tokenAAddress, tokenBAddress) {
-        // In production, you would get these from Pyth Network's published account list
-        // For devnet, these are example addresses - replace with actual Pyth price accounts
-        const pythAccounts = {
-            'So11111111111111111111111111111111111111112': '7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE', // SOL/USD price account
-            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': '6NpdXrQEpmDZ3jZKmM2rhdmkd3H6QAk23j2x8bkXcHKA', // USDC/USD price account
-            // Add more price accounts as needed
-        };
-        
-        return {
-            tokenA: new solanaWeb3.PublicKey(pythAccounts[tokenAAddress] || pythAccounts['So11111111111111111111111111111111111111112']),
-            tokenB: new solanaWeb3.PublicKey(pythAccounts[tokenBAddress] || pythAccounts['So11111111111111111111111111111111111111112'])
-        };
-    }
-
-    // Create escrow for new competition
-    async createCompetitionEscrow(competitionId, tokenAPythId, tokenBPythId, adminWallet) {
+    // Create competition escrow with Jupiter token addresses
+    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, votingEndTime, competitionEndTime, platformFeeBps, adminWallet) {
         try {
-            console.log('📊 Creating competition escrow on-chain:', competitionId);
+            console.log('🎯 Creating competition escrow with Jupiter integration:', competitionId);
             
+            if (!this.available) {
+                throw new Error('Jupiter Smart Contract Service not available');
+            }
+
             const wallet = await this.getConnectedWallet();
             
-            // Generate escrow PDA
+            // Get escrow PDA
             const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
                 [Buffer.from("escrow"), Buffer.from(competitionId)],
                 this.programId
             );
-            
-            console.log('🔑 Generated escrow PDA:', escrowAccount.toString());
-            
-            // Calculate competition timing
-            const now = Math.floor(Date.now() / 1000);
-            const votingEndTime = now + (15 * 60); // 15 minutes voting
-            const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours competition
-            
-            // Build create_escrow instruction
+
+            // Build create_escrow instruction with token addresses
             const instruction = await this.buildCreateEscrowInstruction({
                 escrow: escrowAccount,
                 authority: new solanaWeb3.PublicKey(adminWallet),
                 systemProgram: solanaWeb3.SystemProgram.programId,
                 competitionId: competitionId,
-                tokenAPythId: tokenAPythId,
-                tokenBPythId: tokenBPythId,
+                tokenAAddress: tokenAAddress,
+                tokenBAddress: tokenBAddress,
                 votingEndTime: votingEndTime,
                 competitionEndTime: competitionEndTime,
-                platformFeeBps: 1500 // 15%
+                platformFeeBps: platformFeeBps
             });
-            
+
             const transaction = new solanaWeb3.Transaction().add(instruction);
             
             // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
+            const { blockhash } = await this.connection.getLatestBlockhash();
             transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
+            transaction.feePayer = new solanaWeb3.PublicKey(adminWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
             
-            console.log('📤 Sending create escrow transaction...');
-            console.log('🔍 Transaction details:', {
-                instructions: transaction.instructions.length,
-                feePayer: transaction.feePayer?.toString(),
-                recentBlockhash: transaction.recentBlockhash
-            });
+            // Confirm transaction
+            await this.connection.confirmTransaction(signature, 'confirmed');
             
-            try {
-                const signature = await wallet.sendTransaction(transaction, this.connection);
-                console.log('✅ Transaction sent, signature:', signature);
-                
-                console.log('⏳ Confirming transaction...');
-                const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
-                console.log('📋 Transaction confirmation:', confirmation);
-                
-                if (confirmation.value.err) {
-                    console.error('❌ Transaction failed on-chain:', confirmation.value.err);
-                    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-                }
-                
-                return signature;
-            } catch (error) {
-                console.error('❌ Detailed transaction error:', error);
-                
-                // Try to get more specific error info
-                if (error.logs) {
-                    console.error('📋 Transaction logs:', error.logs);
-                }
-                
-                throw error;
-            }
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Escrow created successfully:', signature);
-            
+            console.log('✅ Competition escrow created:', competitionId);
             return {
+                signature,
                 escrowAccount: escrowAccount.toString(),
-                bump: bump,
-                signature: signature
+                competitionId
             };
-            
+
         } catch (error) {
             console.error('❌ Error creating competition escrow:', error);
             throw error;
         }
     }
 
-    // Build create_escrow instruction
+    // Start competition with Jupiter API data
+    async startCompetition(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+        try {
+            console.log('🚀 Starting competition with Jupiter TWAP collection:', competitionId);
+            
+            // Fetch current Jupiter data for both tokens
+            const tokenData = await this.fetchJupiterTokenData([tokenAAddress, tokenBAddress]);
+            
+            const tokenAData = tokenData.find(t => t.address === tokenAAddress);
+            const tokenBData = tokenData.find(t => t.address === tokenBAddress);
+            
+            if (!tokenAData || !tokenBData) {
+                throw new Error('Could not fetch token data from Jupiter API');
+            }
+
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+
+            // Convert prices and market caps to appropriate scale (multiply by 1e6 for precision)
+            const tokenAPrice = Math.floor(tokenAData.price * 1e6);
+            const tokenBPrice = Math.floor(tokenBData.price * 1e6);
+            const tokenAMarketCap = tokenAData.marketCap;
+            const tokenBMarketCap = tokenBData.marketCap;
+
+            // Build start_competition instruction
+            const instruction = await this.buildStartCompetitionInstruction({
+                escrow: escrowAccount,
+                authority: new solanaWeb3.PublicKey(adminWallet),
+                competitionId: competitionId,
+                tokenAPrice: tokenAPrice,
+                tokenBPrice: tokenBPrice,
+                tokenAMarketCap: tokenAMarketCap,
+                tokenBMarketCap: tokenBMarketCap
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new solanaWeb3.PublicKey(adminWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+            
+            // Confirm transaction
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Competition started with Jupiter data:', {
+                competitionId,
+                tokenAPrice: tokenAData.price,
+                tokenBPrice: tokenBData.price,
+                tokenAMarketCap: tokenAData.marketCap,
+                tokenBMarketCap: tokenBData.marketCap
+            });
+
+            // Start TWAP sampling process
+            this.startTwapSampling(competitionId, tokenAAddress, tokenBAddress, adminWallet);
+            
+            return {
+                signature,
+                tokenAPrice: tokenAData.price,
+                tokenBPrice: tokenBData.price,
+                tokenAMarketCap: tokenAData.marketCap,
+                tokenBMarketCap: tokenBData.marketCap
+            };
+
+        } catch (error) {
+            console.error('❌ Error starting competition:', error);
+            throw error;
+        }
+    }
+
+    // TWAP sampling every 5 seconds during collection windows
+    startTwapSampling(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+        console.log('📊 Starting TWAP sampling for competition:', competitionId);
+        
+        const samplingInterval = setInterval(async () => {
+            try {
+                // Fetch current Jupiter data
+                const tokenData = await this.fetchJupiterTokenData([tokenAAddress, tokenBAddress]);
+                
+                const tokenAData = tokenData.find(t => t.address === tokenAAddress);
+                const tokenBData = tokenData.find(t => t.address === tokenBAddress);
+                
+                if (!tokenAData || !tokenBData) {
+                    console.warn('⚠️ Could not fetch token data for TWAP sampling');
+                    return;
+                }
+
+                // Update TWAP sample on-chain
+                await this.updateTwapSample(
+                    competitionId,
+                    Math.floor(tokenAData.price * 1e6),
+                    Math.floor(tokenBData.price * 1e6),
+                    tokenAData.marketCap,
+                    tokenBData.marketCap,
+                    adminWallet
+                );
+
+                console.log('📊 TWAP sample updated:', {
+                    competitionId,
+                    tokenAPrice: tokenAData.price,
+                    tokenBPrice: tokenBData.price
+                });
+
+            } catch (error) {
+                console.error('❌ Error in TWAP sampling:', error);
+                // Continue sampling despite errors
+            }
+        }, 5000); // Every 5 seconds
+
+        // Store interval ID for cleanup
+        if (!this.twapIntervals) {
+            this.twapIntervals = new Map();
+        }
+        this.twapIntervals.set(competitionId, samplingInterval);
+
+        // Stop sampling after 1 hour (adjust based on competition duration)
+        setTimeout(() => {
+            clearInterval(samplingInterval);
+            this.twapIntervals.delete(competitionId);
+            console.log('🛑 TWAP sampling stopped for competition:', competitionId);
+        }, 3600000); // 1 hour
+    }
+
+    // Update TWAP sample on-chain
+    async updateTwapSample(competitionId, tokenAPrice, tokenBPrice, tokenAMarketCap, tokenBMarketCap, adminWallet) {
+        try {
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+
+            // Build update_twap_sample instruction
+            const instruction = await this.buildUpdateTwapInstruction({
+                escrow: escrowAccount,
+                authority: new solanaWeb3.PublicKey(adminWallet),
+                competitionId: competitionId,
+                tokenAPrice: tokenAPrice,
+                tokenBPrice: tokenBPrice,
+                tokenAMarketCap: tokenAMarketCap,
+                tokenBMarketCap: tokenBMarketCap
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new solanaWeb3.PublicKey(adminWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+            
+            // Don't wait for confirmation to keep sampling fast
+            this.connection.confirmTransaction(signature, 'confirmed').catch(err => {
+                console.warn('⚠️ TWAP sample confirmation failed:', err);
+            });
+
+            return signature;
+
+        } catch (error) {
+            console.error('❌ Error updating TWAP sample:', error);
+            throw error;
+        }
+    }
+
+    // Place bet with updated smart contract
+    async placeBet(competitionId, tokenChoice, betAmount, userWallet) {
+        try {
+            console.log('💰 Placing bet:', competitionId, tokenChoice, betAmount);
+            
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+
+            // Build place_bet instruction
+            const instruction = await this.buildPlaceBetInstruction({
+                escrow: escrowAccount,
+                user: new solanaWeb3.PublicKey(userWallet),
+                systemProgram: solanaWeb3.SystemProgram.programId,
+                competitionId: competitionId,
+                tokenChoice: tokenChoice,
+                betAmount: betAmount
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new solanaWeb3.PublicKey(userWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+            
+            // Confirm transaction
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Bet placed successfully:', competitionId);
+            return signature;
+
+        } catch (error) {
+            console.error('❌ Error placing bet:', error);
+            throw error;
+        }
+    }
+
+    // Collect platform fee with variable percentage
+    async collectPlatformFee(competitionId, platformWallet) {
+        try {
+            console.log('💳 Collecting platform fee:', competitionId);
+            
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+
+            // Build collect_platform_fee instruction
+            const instruction = await this.buildCollectPlatformFeeInstruction({
+                escrow: escrowAccount,
+                platformWallet: new solanaWeb3.PublicKey(platformWallet),
+                competitionId: competitionId
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new solanaWeb3.PublicKey(platformWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+            
+            // Confirm transaction
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Platform fee collected:', competitionId);
+            return signature;
+
+        } catch (error) {
+            console.error('❌ Error collecting platform fee:', error);
+            throw error;
+        }
+    }
+
+    // Cleanup escrow after 3 months
+    async cleanupEscrow(competitionId, platformWallet) {
+        try {
+            console.log('🧹 Cleaning up escrow after 3 months:', competitionId);
+            
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+
+            // Build cleanup_escrow instruction
+            const instruction = await this.buildCleanupEscrowInstruction({
+                escrow: escrowAccount,
+                platformWallet: new solanaWeb3.PublicKey(platformWallet),
+                competitionId: competitionId
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new solanaWeb3.PublicKey(platformWallet);
+
+            // Sign and send transaction
+            const signedTransaction = await wallet.signTransaction(transaction);
+            const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+            
+            // Confirm transaction
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Escrow cleaned up, unclaimed funds sent to platform:', competitionId);
+            return signature;
+
+        } catch (error) {
+            console.error('❌ Error cleaning up escrow:', error);
+            throw error;
+        }
+    }
+
+    // Build instruction methods (simplified for space)
     async buildCreateEscrowInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
@@ -277,10 +540,10 @@ class SmartContractService {
         const data = Buffer.concat([
             this.instructions.createEscrow,
             this.serializeString(accounts.competitionId),
-            Buffer.from(accounts.tokenAPythId),
-            Buffer.from(accounts.tokenBPythId),
-            this.serializeU64(accounts.votingEndTime),
-            this.serializeU64(accounts.competitionEndTime),
+            this.serializeString(accounts.tokenAAddress),
+            this.serializeString(accounts.tokenBAddress),
+            this.serializeI64(accounts.votingEndTime),
+            this.serializeI64(accounts.competitionEndTime),
             this.serializeU16(accounts.platformFeeBps)
         ]);
         
@@ -291,73 +554,62 @@ class SmartContractService {
         });
     }
 
-    // Place bet on competition
-    async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
-        try {
-            console.log('🎯 Placing bet on-chain:', { competitionId, tokenChoice, betAmount });
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get user bet PDA
-            const userPubkey = new solanaWeb3.PublicKey(userWallet);
-            const [userBetAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("user_bet"), userPubkey.toBuffer(), escrowAccount.toBuffer()],
-                this.programId
-            );
-            
-            // Build place_bet instruction
-            const instruction = await this.buildPlaceBetInstruction({
-                escrow: escrowAccount,
-                userBet: userBetAccount,
-                user: userPubkey,
-                systemProgram: solanaWeb3.SystemProgram.programId,
-                competitionId: competitionId,
-                tokenChoice: tokenChoice,
-                amount: betAmount * solanaWeb3.LAMPORTS_PER_SOL
-            });
-            
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending place bet transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Bet placed successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error placing bet:', error);
-            throw error;
-        }
+    async buildStartCompetitionInstruction(accounts) {
+        const keys = [
+            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
+            { pubkey: accounts.authority, isSigner: true, isWritable: false }
+        ];
+        
+        const data = Buffer.concat([
+            this.instructions.startCompetition,
+            this.serializeString(accounts.competitionId),
+            this.serializeU64(accounts.tokenAPrice),
+            this.serializeU64(accounts.tokenBPrice),
+            this.serializeU64(accounts.tokenAMarketCap),
+            this.serializeU64(accounts.tokenBMarketCap)
+        ]);
+        
+        return new solanaWeb3.TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data
+        });
     }
 
-    // Build place_bet instruction
+    async buildUpdateTwapInstruction(accounts) {
+        const keys = [
+            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
+            { pubkey: accounts.authority, isSigner: true, isWritable: false }
+        ];
+        
+        const data = Buffer.concat([
+            this.instructions.updateTwapSample,
+            this.serializeString(accounts.competitionId),
+            this.serializeU64(accounts.tokenAPrice),
+            this.serializeU64(accounts.tokenBPrice),
+            this.serializeU64(accounts.tokenAMarketCap),
+            this.serializeU64(accounts.tokenBMarketCap)
+        ]);
+        
+        return new solanaWeb3.TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data
+        });
+    }
+
     async buildPlaceBetInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.userBet, isSigner: false, isWritable: true },
             { pubkey: accounts.user, isSigner: true, isWritable: true },
             { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
         ];
         
-        // Serialize instruction data
-        const tokenChoiceValue = accounts.tokenChoice === 'A' ? 0 : 1;
         const data = Buffer.concat([
             this.instructions.placeBet,
             this.serializeString(accounts.competitionId),
-            Buffer.from([tokenChoiceValue]),
-            this.serializeU64(accounts.amount)
+            this.serializeU8(accounts.tokenChoice),
+            this.serializeU64(accounts.betAmount)
         ]);
         
         return new solanaWeb3.TransactionInstruction({
@@ -367,63 +619,14 @@ class SmartContractService {
         });
     }
 
-    // Start competition and begin TWAP calculation
-    async startCompetition(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
-        try {
-            console.log('🚀 Starting competition with TWAP:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get Pyth price accounts
-            const priceAccounts = await this.getPythPriceAccounts(tokenAAddress, tokenBAddress);
-            
-            // Build start_competition instruction
-            const instruction = await this.buildStartCompetitionInstruction({
-                escrow: escrowAccount,
-                authority: new solanaWeb3.PublicKey(adminWallet),
-                tokenAPriceFeed: priceAccounts.tokenA,
-                tokenBPriceFeed: priceAccounts.tokenB,
-                competitionId: competitionId
-            });
-            
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending start competition transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Competition started successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error starting competition:', error);
-            throw error;
-        }
-    }
-
-    // Build start_competition instruction
-    async buildStartCompetitionInstruction(accounts) {
+    async buildCollectPlatformFeeInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.authority, isSigner: true, isWritable: false },
-            { pubkey: accounts.tokenAPriceFeed, isSigner: false, isWritable: false },
-            { pubkey: accounts.tokenBPriceFeed, isSigner: false, isWritable: false }
+            { pubkey: accounts.platformWallet, isSigner: true, isWritable: true }
         ];
         
-        // Serialize instruction data
         const data = Buffer.concat([
-            this.instructions.startCompetition,
+            this.instructions.collectPlatformFee,
             this.serializeString(accounts.competitionId)
         ]);
         
@@ -434,63 +637,14 @@ class SmartContractService {
         });
     }
 
-    // Update TWAP sample during 5-minute windows
-    async updateTwapSample(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
-        try {
-            console.log('📊 Updating TWAP sample:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get Pyth price accounts
-            const priceAccounts = await this.getPythPriceAccounts(tokenAAddress, tokenBAddress);
-            
-            // Build update_twap_sample instruction
-            const instruction = await this.buildUpdateTwapInstruction({
-                escrow: escrowAccount,
-                authority: new solanaWeb3.PublicKey(adminWallet),
-                tokenAPriceFeed: priceAccounts.tokenA,
-                tokenBPriceFeed: priceAccounts.tokenB,
-                competitionId: competitionId
-            });
-            
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending TWAP update transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ TWAP sample updated successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error updating TWAP sample:', error);
-            throw error;
-        }
-    }
-
-    // Build update_twap_sample instruction
-    async buildUpdateTwapInstruction(accounts) {
+    async buildCleanupEscrowInstruction(accounts) {
         const keys = [
             { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.authority, isSigner: true, isWritable: false },
-            { pubkey: accounts.tokenAPriceFeed, isSigner: false, isWritable: false },
-            { pubkey: accounts.tokenBPriceFeed, isSigner: false, isWritable: false }
+            { pubkey: accounts.platformWallet, isSigner: true, isWritable: true }
         ];
         
-        // Serialize instruction data
         const data = Buffer.concat([
-            this.instructions.updateTwapSample,
+            this.instructions.cleanupEscrow,
             this.serializeString(accounts.competitionId)
         ]);
         
@@ -501,200 +655,84 @@ class SmartContractService {
         });
     }
 
-    // Withdraw winnings from completed competition
-    async withdrawWinnings(competitionId, userWallet) {
-        try {
-            console.log('💰 Withdrawing winnings:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Get user bet PDA
-            const userPubkey = new solanaWeb3.PublicKey(userWallet);
-            const [userBetAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("user_bet"), userPubkey.toBuffer(), escrowAccount.toBuffer()],
-                this.programId
-            );
-            
-            // Build withdraw_winnings instruction
-            const instruction = await this.buildWithdrawInstruction({
-                escrow: escrowAccount,
-                userBet: userBetAccount,
-                user: userPubkey,
-                competitionId: competitionId
-            });
-            
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get recent blockhash
-            const { blockhash } = await this.connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            console.log('📤 Sending withdraw transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature);
-            
-            console.log('✅ Winnings withdrawn successfully:', signature);
-            return signature;
-            
-        } catch (error) {
-            console.error('❌ Error withdrawing winnings:', error);
-            throw error;
-        }
-    }
-
-    // Build withdraw_winnings instruction
-    async buildWithdrawInstruction(accounts) {
-        const keys = [
-            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.userBet, isSigner: false, isWritable: true },
-            { pubkey: accounts.user, isSigner: true, isWritable: true }
-        ];
-        
-        // Serialize instruction data
-        const data = Buffer.concat([
-            this.instructions.withdrawWinnings,
-            this.serializeString(accounts.competitionId)
-        ]);
-        
-        return new solanaWeb3.TransactionInstruction({
-            keys,
-            programId: this.programId,
-            data
-        });
-    }
-
-    // Helper: Get connected wallet
-    async getConnectedWallet() {
-        try {
-            // Check for admin wallet first (for competition creation)
-            const adminWallet = sessionStorage.getItem('adminWallet');
-            if (adminWallet && window.solana && window.solana.isConnected) {
-                console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
-                
-                // CRITICAL FIX: Ensure publicKey is properly set
-                if (window.solana.publicKey) {
-                    // Create a proper wallet object with required methods
-                    return {
-                        publicKey: window.solana.publicKey,
-                        sendTransaction: async (transaction, connection) => {
-                            // Ensure fee payer is set correctly
-                            transaction.feePayer = window.solana.publicKey;
-                            
-                            if (typeof window.solana.sendTransaction === 'function') {
-                                return await window.solana.sendTransaction(transaction, connection);
-                            } else if (typeof window.solana.signAndSendTransaction === 'function') {
-                                return await window.solana.signAndSendTransaction(transaction);
-                            } else {
-                                throw new Error('Wallet does not support transaction sending');
-                            }
-                        }
-                    };
-                } else {
-                    throw new Error('Admin wallet publicKey not available');
-                }
-            }
-            
-            // Check for regular user wallet (for betting)
-            const walletService = window.getWalletService && window.getWalletService();
-            if (walletService && walletService.isConnected()) {
-                console.log('👤 Using user wallet for blockchain operation');
-                
-                const provider = walletService.getWalletProvider();
-                if (provider && provider.publicKey) {
-                    return {
-                        publicKey: provider.publicKey,
-                        sendTransaction: async (transaction, connection) => {
-                            transaction.feePayer = provider.publicKey;
-                            
-                            if (typeof provider.sendTransaction === 'function') {
-                                return await provider.sendTransaction(transaction, connection);
-                            } else if (typeof provider.signAndSendTransaction === 'function') {
-                                return await provider.signAndSendTransaction(transaction);
-                            } else {
-                                throw new Error('Wallet provider does not support transactions');
-                            }
-                        }
-                    };
-                }
-            }
-            
-            throw new Error('No wallet with transaction capability available');
-            
-        } catch (error) {
-            console.error('❌ getConnectedWallet error:', error);
-            throw new Error(`Wallet connection failed: ${error.message}`);
-        }
-    }
-
-    // Browser-compatible serialization helpers
+    // Serialization helpers
     serializeString(str) {
-        const strBytes = new TextEncoder().encode(str);
-        const lengthArray = new Uint8Array(4);
-        const dataView = new DataView(lengthArray.buffer);
-        dataView.setUint32(0, strBytes.length, true); // true = little endian
-        
-        const result = new Uint8Array(4 + strBytes.length);
-        result.set(lengthArray, 0);
-        result.set(strBytes, 4);
-        return result;
+        const bytes = Buffer.from(str, 'utf8');
+        const length = Buffer.alloc(4);
+        length.writeUInt32LE(bytes.length, 0);
+        return Buffer.concat([length, bytes]);
     }
-    
-    serializeU64(value) {
-        const buffer = new Uint8Array(8);
-        const dataView = new DataView(buffer.buffer);
-        dataView.setBigUint64(0, BigInt(value), true); // true = little endian
-        return buffer;
-    }
-    
-    serializeU16(value) {
-        const buffer = new Uint8Array(2);
-        const dataView = new DataView(buffer.buffer);
-        dataView.setUint16(0, value, true); // true = little endian
+
+    serializeU8(value) {
+        const buffer = Buffer.alloc(1);
+        buffer.writeUInt8(value, 0);
         return buffer;
     }
 
-    // Check if smart contract features are available
-    isAvailable() {
-        return this.available === true && typeof solanaWeb3 !== 'undefined';
+    serializeU16(value) {
+        const buffer = Buffer.alloc(2);
+        buffer.writeUInt16LE(value, 0);
+        return buffer;
     }
-    // Get escrow account data
-    async getEscrowData(competitionId) {
-        try {
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            const accountInfo = await this.connection.getAccountInfo(escrowAccount);
-            if (!accountInfo) {
-                return null;
+
+    serializeU64(value) {
+        const buffer = Buffer.alloc(8);
+        buffer.writeBigUInt64LE(BigInt(value), 0);
+        return buffer;
+    }
+
+    serializeI64(value) {
+        const buffer = Buffer.alloc(8);
+        buffer.writeBigInt64LE(BigInt(value), 0);
+        return buffer;
+    }
+
+    // Get connected wallet
+    async getConnectedWallet() {
+        if (typeof window !== 'undefined' && window.walletService) {
+            const wallet = await window.walletService.getConnectedWallet();
+            if (!wallet) {
+                throw new Error('No wallet connected');
             }
-            
-            // Parse account data (simplified - in production would use Anchor IDL)
-            return {
-                address: escrowAccount.toString(),
-                lamports: accountInfo.lamports,
-                data: accountInfo.data
-            };
-            
-        } catch (error) {
-            console.error('❌ Error getting escrow data:', error);
-            return null;
+            return wallet;
+        }
+        throw new Error('Wallet service not available');
+    }
+
+    // Check if service is available
+    isAvailable() {
+        return this.available;
+    }
+
+    // Get program ID
+    getProgramId() {
+        return this.programId ? this.programId.toString() : null;
+    }
+
+    // Stop all TWAP sampling
+    stopAllTwapSampling() {
+        if (this.twapIntervals) {
+            for (const [competitionId, interval] of this.twapIntervals) {
+                clearInterval(interval);
+                console.log('🛑 Stopped TWAP sampling for:', competitionId);
+            }
+            this.twapIntervals.clear();
         }
     }
 }
 
-// Global instance
-window.smartContractService = new SmartContractService();
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SmartContractService;
+// Initialize global instance
+if (typeof window !== 'undefined') {
+    window.jupiterSmartContractService = new JupiterSmartContractService();
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await window.jupiterSmartContractService.initialize();
+        });
+    } else {
+        window.jupiterSmartContractService.initialize();
+    }
 }
+
+console.log('🎯 Jupiter Smart Contract Service module loaded');
