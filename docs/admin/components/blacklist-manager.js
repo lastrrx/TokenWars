@@ -191,10 +191,11 @@ class BlacklistManager {
             // Update statistics in UI
             this.updateStatisticsDisplay();
             
-            // Update category displays
+            // Update category displays - only manual for now
             this.updateCategoryDisplay('manual', this.blacklistData.manual);
-            this.updateCategoryDisplay('auto', this.blacklistData.automatic);
-            this.updateCategoryDisplay('community', this.blacklistData.community);
+            // Comment out until containers are added back:
+            // this.updateCategoryDisplay('auto', this.blacklistData.automatic);
+            // this.updateCategoryDisplay('community', this.blacklistData.community);
             
             console.log('✅ Blacklist display updated');
         } catch (error) {
@@ -227,26 +228,27 @@ class BlacklistManager {
     /**
      * Update Category Display
      */
-    updateCategoryDisplay(category, tokens) {
-        const containerId = `${category}-blacklist`;
-        const container = document.getElementById(containerId);
+        updateCategoryDisplay(category, tokens) {
+            const containerId = `${category}-blacklist`;
+            const container = document.getElementById(containerId);
+            
+            if (!container) {
+                console.warn(`Container not found: ${containerId}`);
+                return; // Just return silently, don't process this category
+            }
+            
+            // Only process if container exists
+            if (tokens.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 1rem; text-align: center; color: #94a3b8;">
+                        No ${category} blacklisted tokens
+                    </div>
+                `;
+                return;
+            }
         
-        if (!container) {
-            console.warn(`Container not found: ${containerId}`);
-            return;
+            container.innerHTML = tokens.map(token => this.createBlacklistItemHTML(token)).join('');
         }
-
-        if (tokens.length === 0) {
-            container.innerHTML = `
-                <div style="padding: 1rem; text-align: center; color: #94a3b8;">
-                    No ${category} blacklisted tokens
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = tokens.map(token => this.createBlacklistItemHTML(token)).join('');
-    }
 
     /**
      * Create Blacklist Item HTML
