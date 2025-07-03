@@ -29,9 +29,8 @@ class SmartContractService {
         
         try {
             this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
-            this.programId = new solanaWeb3.PublicKey('11111111111111111111111111111111');
-            //this.programId = new solanaWeb3.PublicKey(
-               // window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5' // TEMP TEST for declare_id issue COMMENTED OUT
+            this.programId = new solanaWeb3.PublicKey(
+                window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5' 
             );
             this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
             this.available = true;
