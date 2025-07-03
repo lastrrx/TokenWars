@@ -100,119 +100,203 @@ class SmartContractService {
         }
     }
 
-    // Create escrow for new competition
-    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+// Enhanced createCompetitionEscrow method with comprehensive error handling
+async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+    try {
+        console.log('📊 Creating competition escrow on-chain:', competitionId);
+        console.log('🔍 Input parameters:', {
+            competitionId,
+            tokenAAddress,
+            tokenBAddress,
+            adminWallet
+        });
+        
+        // Check if smart contract service is properly initialized
+        if (!this.isAvailable()) {
+            throw new Error('Smart contract service not available or not initialized');
+        }
+        
+        console.log('🔍 Service status check:', {
+            initialized: this.initialized,
+            available: this.available,
+            connectionReady: !!this.connection,
+            programId: this.programId?.toString()
+        });
+        
+        const wallet = await this.getConnectedWallet();
+        console.log('✅ Connected wallet obtained:', wallet.publicKey.toString());
+        
+        const tokenInfo = await this.getTokenPriceInfo(tokenAAddress, tokenBAddress);
+        console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
+        
+        // Generate escrow PDA
+        const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
+            [Buffer.from("escrow"), Buffer.from(competitionId)],
+            this.programId
+        );
+        
+        console.log('🔑 Generated escrow PDA:', escrowAccount.toString());
+        console.log('🔑 PDA bump:', bump);
+        
+        // Calculate competition timing
+        const now = Math.floor(Date.now() / 1000);
+        const votingEndTime = now + (15 * 60); // 15 minutes voting
+        const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours competition
+        
+        console.log('⏰ Competition timing:', {
+            now,
+            votingEndTime,
+            competitionEndTime,
+            votingDurationMinutes: 15,
+            competitionDurationHours: 24
+        });
+        
+        // Build create_escrow instruction
+        console.log('🔨 Building create escrow instruction...');
+        const instruction = await this.buildCreateEscrowInstruction({
+            escrow: escrowAccount,
+            authority: new solanaWeb3.PublicKey(adminWallet),
+            systemProgram: solanaWeb3.SystemProgram.programId,
+            competitionId: competitionId,
+            tokenAAddress: tokenAAddress,
+            tokenBAddress: tokenBAddress,
+            votingEndTime: votingEndTime,
+            competitionEndTime: competitionEndTime,
+            platformFeeBps: 1500 // 15%
+        });
+        
+        console.log('✅ Instruction built successfully');
+        
+        // Create transaction
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        console.log('📦 Transaction created with', transaction.instructions.length, 'instructions');
+        
+        // Get fresh blockhash
+        console.log('⏳ Getting recent blockhash...');
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+        
+        console.log('🔗 Transaction configured:', {
+            recentBlockhash: blockhash,
+            feePayer: wallet.publicKey.toString()
+        });
+        
+        // Get fee estimate using modern API
+        let estimatedFee = 'unknown';
         try {
-            console.log('📊 Creating competition escrow on-chain:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            const tokenInfo = await this.getTokenPriceInfo(tokenAAddress, tokenBAddress);
-            console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
-            
-            // Generate escrow PDA
-            const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            console.log('🔑 Generated escrow PDA:', escrowAccount.toString());
-            
-            // Calculate competition timing
-            const now = Math.floor(Date.now() / 1000);
-            const votingEndTime = now + (15 * 60); // 15 minutes voting
-            const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours competition
-            
-            // Build create_escrow instruction
-            const instruction = await this.buildCreateEscrowInstruction({
-                escrow: escrowAccount,
-                authority: new solanaWeb3.PublicKey(adminWallet),
-                systemProgram: solanaWeb3.SystemProgram.programId,
-                competitionId: competitionId,
-                tokenAAddress: tokenAAddress,
-                tokenBAddress: tokenBAddress,
-                votingEndTime: votingEndTime,
-                competitionEndTime: competitionEndTime,
-                platformFeeBps: 1500 // 15%
-            });
-            
-            // Create transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            
-            // Get fresh blockhash
-            console.log('⏳ Getting recent blockhash...');
-            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            // Get fee estimate using modern API
-            let estimatedFee = 'unknown';
-            try {
-                const fee = await this.connection.getFeeForMessage(transaction.compileMessage());
-                estimatedFee = fee.value || 'unknown';
-            } catch (feeError) {
-                console.warn('Could not estimate fee:', feeError.message);
-            }
-            
-            console.log('📤 Sending create escrow transaction...');
-            console.log('🔍 Transaction details:', {
-                instructions: transaction.instructions.length,
-                feePayer: transaction.feePayer?.toString(),
-                recentBlockhash: transaction.recentBlockhash,
-                estimatedFee: estimatedFee
-            });
-                        
-            // Send transaction with proper error handling
-            const signature = await wallet.sendTransaction(transaction, this.connection);
+            const fee = await this.connection.getFeeForMessage(transaction.compileMessage());
+            estimatedFee = fee.value || 'unknown';
+            console.log('💰 Estimated transaction fee:', estimatedFee, 'lamports');
+        } catch (feeError) {
+            console.warn('⚠️ Could not estimate fee:', feeError.message);
+        }
+        
+        console.log('📤 Sending create escrow transaction...');
+        console.log('🔍 Final transaction details:', {
+            instructions: transaction.instructions.length,
+            feePayer: transaction.feePayer?.toString(),
+            recentBlockhash: transaction.recentBlockhash,
+            estimatedFee: estimatedFee
+        });
+        
+        // Send transaction with enhanced error handling
+        let signature;
+        try {
+            signature = await wallet.sendTransaction(transaction, this.connection);
             console.log('✅ Transaction sent successfully, signature:', signature);
+        } catch (sendError) {
+            console.error('❌ Transaction send failed:', sendError);
             
-            // Wait for confirmation with timeout
-            console.log('⏳ Confirming transaction...');
-            const confirmation = await Promise.race([
+            // Provide specific error guidance
+            if (sendError.message.includes('rejected') || sendError.message.includes('cancelled')) {
+                throw new Error('Transaction was rejected by user. Please try again and approve the transaction.');
+            } else if (sendError.message.includes('insufficient')) {
+                throw new Error('Insufficient SOL balance. Please add SOL to your wallet and try again.');
+            } else if (sendError.message.includes('blockhash')) {
+                throw new Error('Transaction expired. Please try again.');
+            } else if (sendError.message.includes('simulation failed')) {
+                throw new Error('Transaction simulation failed. Check your wallet balance and try again.');
+            } else {
+                throw new Error(`Transaction failed: ${sendError.message}`);
+            }
+        }
+        
+        // Wait for confirmation with timeout
+        console.log('⏳ Confirming transaction...');
+        let confirmation;
+        try {
+            confirmation = await Promise.race([
                 this.connection.confirmTransaction(signature, 'confirmed'),
                 new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Transaction confirmation timeout')), 30000)
+                    setTimeout(() => reject(new Error('Transaction confirmation timeout after 30 seconds')), 30000)
                 )
             ]);
             
-            console.log('📋 Transaction confirmation:', confirmation);
+            console.log('📋 Transaction confirmation received:', confirmation);
+        } catch (confirmError) {
+            console.error('❌ Transaction confirmation failed:', confirmError);
             
-            if (confirmation.value?.err) {
-                console.error('❌ Transaction failed on-chain:', confirmation.value.err);
-                throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
-            }
-            
-            console.log('✅ Escrow created successfully');
-            
-            return {
-                escrowAccount: escrowAccount.toString(),
-                bump: bump,
-                signature: signature
-            };
-            
-        } catch (error) {
-            console.error('❌ Detailed transaction error:', error);
-            
-            // Log additional error context for debugging
-            if (error.name) console.error('Error name:', error.name);
-            if (error.code) console.error('Error code:', error.code);
-            if (error.logs) console.error('Transaction logs:', error.logs);
-            if (error.message) console.error('Error message:', error.message);
-            
-            // Provide more specific error messages
-            let errorMessage = 'Unknown transaction error';
-            if (error.message.includes('insufficient funds')) {
-                errorMessage = 'Insufficient SOL balance for transaction';
-            } else if (error.message.includes('blockhash')) {
-                errorMessage = 'Transaction expired, please try again';
-            } else if (error.message.includes('simulation failed')) {
-                errorMessage = 'Transaction simulation failed - check account balances';
+            if (confirmError.message.includes('timeout')) {
+                console.warn('⚠️ Transaction may still be processing. Check Solana Explorer with signature:', signature);
+                throw new Error('Transaction confirmation timeout. Transaction may still be processing.');
             } else {
-                errorMessage = error.message || 'Transaction failed';
+                throw new Error(`Transaction confirmation failed: ${confirmError.message}`);
             }
-            
-            throw new Error(`Transaction failed: ${errorMessage}`);
         }
+        
+        if (confirmation.value?.err) {
+            console.error('❌ Transaction failed on-chain:', confirmation.value.err);
+            throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
+        }
+        
+        console.log('✅ Escrow created successfully');
+        console.log('🎉 Final result:', {
+            escrowAccount: escrowAccount.toString(),
+            bump,
+            signature,
+            status: 'success'
+        });
+        
+        return {
+            escrowAccount: escrowAccount.toString(),
+            bump: bump,
+            signature: signature
+        };
+        
+    } catch (error) {
+        console.error('❌ Detailed transaction error:', error);
+        
+        // Log additional error context for debugging
+        if (error.name) console.error('Error name:', error.name);
+        if (error.code) console.error('Error code:', error.code);
+        if (error.logs) console.error('Transaction logs:', error.logs);
+        if (error.message) console.error('Error message:', error.message);
+        if (error.stack) console.error('Error stack:', error.stack);
+        
+        // Don't wrap already user-friendly errors
+        if (error.message.includes('rejected') || 
+            error.message.includes('cancelled') || 
+            error.message.includes('insufficient') ||
+            error.message.includes('expired') ||
+            error.message.includes('timeout')) {
+            throw error;
+        }
+        
+        // Provide more specific error messages for other cases
+        let errorMessage = error.message || 'Unknown transaction error';
+        if (errorMessage.includes('simulation failed')) {
+            errorMessage = 'Transaction simulation failed - check account balances and try again';
+        } else if (errorMessage.includes('Network request failed')) {
+            errorMessage = 'Network connection failed - check your internet connection and try again';
+        } else if (errorMessage.includes('Invalid blockhash')) {
+            errorMessage = 'Transaction expired - please try again';
+        }
+        
+        throw new Error(`Transaction failed: ${errorMessage}`);
     }
+}
+
     // FIXED: Complete buildCreateEscrowInstruction method
     async buildCreateEscrowInstruction(accounts) {
         const keys = [
@@ -380,7 +464,8 @@ class SmartContractService {
         });
     }
 
-    // FIXED: Complete getConnectedWallet method
+
+// FIXED: Complete getConnectedWallet method with comprehensive error handling
 async getConnectedWallet() {
     try {
         console.log('🔍 Getting connected wallet for blockchain operation...');
@@ -414,55 +499,138 @@ async getConnectedWallet() {
         
         // Fallback: Check for admin wallet (direct window.solana access)
         const adminWallet = sessionStorage.getItem('adminWallet');
-        if (adminWallet && window.solana && window.solana.isConnected) {
-            console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
+        if (adminWallet && window.solana) {
+            console.log('🔐 Checking admin wallet for blockchain operation:', adminWallet);
             
-            if (window.solana.publicKey) {
-                return {
-                    publicKey: window.solana.publicKey,
-                    sendTransaction: async (transaction, connection) => {
-                        try {
-                            // Ensure transaction is properly configured
-                            transaction.feePayer = window.solana.publicKey;
-                            
-                            // Enhanced transaction sending with proper connection handling
-                            if (typeof window.solana.signAndSendTransaction === 'function') {
-                                console.log('📤 Using admin wallet signAndSendTransaction');
-                                return await window.solana.signAndSendTransaction(transaction);
-                            } else if (typeof window.solana.sendTransaction === 'function') {
-                                console.log('📤 Using admin wallet sendTransaction');
-                                return await window.solana.sendTransaction(transaction, {
-                                    skipPreflight: false,
-                                    preflightCommitment: 'confirmed'
-                                });
-                            } else {
-                                throw new Error('Admin wallet does not support transaction sending');
-                            }
-                            
-                        } catch (error) {
-                            console.error('❌ Admin wallet transaction error:', error);
-                            
-                            // Provide more specific error messages
-                            let errorMessage = 'Unknown transaction error';
-                            if (error.message.includes('insufficient funds')) {
-                                errorMessage = 'Insufficient SOL balance for transaction';
-                            } else if (error.message.includes('blockhash')) {
-                                errorMessage = 'Transaction expired, please try again';
-                            } else if (error.message.includes('simulation failed')) {
-                                errorMessage = 'Transaction simulation failed - check account balances';
-                            } else if (error.message.includes('User rejected')) {
-                                errorMessage = 'Transaction was rejected by user';
-                            } else {
-                                errorMessage = error.message || 'Transaction failed';
-                            }
-                            
-                            throw new Error(`Admin wallet transaction failed: ${errorMessage}`);
-                        }
-                    }
-                };
-            } else {
-                throw new Error('Admin wallet publicKey not available');
+            // Enhanced wallet state checking
+            console.log('🔍 Wallet state check:', {
+                isConnected: window.solana.isConnected,
+                publicKey: window.solana.publicKey?.toString(),
+                hasSignAndSendTransaction: typeof window.solana.signAndSendTransaction === 'function',
+                hasSendTransaction: typeof window.solana.sendTransaction === 'function'
+            });
+            
+            // Check if wallet needs to be reconnected
+            if (!window.solana.isConnected) {
+                console.log('🔄 Wallet not connected, attempting to reconnect...');
+                try {
+                    await window.solana.connect();
+                    console.log('✅ Wallet reconnected successfully');
+                } catch (connectError) {
+                    console.error('❌ Failed to reconnect wallet:', connectError);
+                    throw new Error('Wallet connection lost and reconnection failed');
+                }
             }
+            
+            // Verify we have a public key
+            if (!window.solana.publicKey) {
+                throw new Error('Wallet connected but no public key available');
+            }
+            
+            // Check SOL balance
+            try {
+                const balance = await this.connection.getBalance(window.solana.publicKey);
+                const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                console.log(`💰 Admin wallet balance: ${solBalance} SOL`);
+                
+                if (solBalance < 0.01) {
+                    throw new Error(`Insufficient SOL balance: ${solBalance} SOL (minimum 0.01 SOL required)`);
+                }
+            } catch (balanceError) {
+                console.warn('⚠️ Could not check wallet balance:', balanceError.message);
+            }
+            
+            return {
+                publicKey: window.solana.publicKey,
+                sendTransaction: async (transaction, connection) => {
+                    try {
+                        console.log('📤 Preparing admin wallet transaction...');
+                        
+                        // Ensure transaction is properly configured
+                        transaction.feePayer = window.solana.publicKey;
+                        
+                        // Get fresh blockhash
+                        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+                        transaction.recentBlockhash = blockhash;
+                        
+                        console.log('🔍 Final transaction check:', {
+                            feePayer: transaction.feePayer.toString(),
+                            recentBlockhash: transaction.recentBlockhash,
+                            instructions: transaction.instructions.length
+                        });
+                        
+                        // Try different signing methods with specific error handling
+                        let signature;
+                        
+                        if (typeof window.solana.signAndSendTransaction === 'function') {
+                            console.log('📤 Using admin wallet signAndSendTransaction');
+                            try {
+                                signature = await window.solana.signAndSendTransaction(transaction);
+                                console.log('✅ signAndSendTransaction successful:', signature);
+                            } catch (signError) {
+                                console.error('❌ signAndSendTransaction failed:', signError);
+                                
+                                // Provide specific error messages
+                                if (signError.message.includes('User rejected')) {
+                                    throw new Error('Transaction was rejected by user');
+                                } else if (signError.code === 4001) {
+                                    throw new Error('Transaction was cancelled by user');
+                                } else if (signError.message.includes('insufficient funds')) {
+                                    throw new Error('Insufficient SOL balance for transaction');
+                                } else {
+                                    throw new Error(`Transaction signing failed: ${signError.message}`);
+                                }
+                            }
+                        } else if (typeof window.solana.sendTransaction === 'function') {
+                            console.log('📤 Using admin wallet sendTransaction');
+                            try {
+                                signature = await window.solana.sendTransaction(transaction, connection, {
+                                    skipPreflight: false,
+                                    preflightCommitment: 'confirmed',
+                                    maxRetries: 3
+                                });
+                                console.log('✅ sendTransaction successful:', signature);
+                            } catch (sendError) {
+                                console.error('❌ sendTransaction failed:', sendError);
+                                
+                                if (sendError.message.includes('User rejected')) {
+                                    throw new Error('Transaction was rejected by user');
+                                } else if (sendError.code === 4001) {
+                                    throw new Error('Transaction was cancelled by user');
+                                } else if (sendError.message.includes('insufficient funds')) {
+                                    throw new Error('Insufficient SOL balance for transaction');
+                                } else if (sendError.message.includes('blockhash')) {
+                                    throw new Error('Transaction expired, please try again');
+                                } else {
+                                    throw new Error(`Transaction failed: ${sendError.message}`);
+                                }
+                            }
+                        } else {
+                            throw new Error('Admin wallet does not support transaction sending methods');
+                        }
+                        
+                        if (!signature) {
+                            throw new Error('No transaction signature received');
+                        }
+                        
+                        console.log('✅ Admin wallet transaction completed:', signature);
+                        return signature;
+                        
+                    } catch (error) {
+                        console.error('❌ Admin wallet transaction error:', error);
+                        
+                        // Don't wrap already specific errors
+                        if (error.message.includes('rejected') || 
+                            error.message.includes('cancelled') || 
+                            error.message.includes('insufficient') ||
+                            error.message.includes('expired')) {
+                            throw error;
+                        }
+                        
+                        throw new Error(`Admin wallet transaction failed: ${error.message}`);
+                    }
+                }
+            };
         }
         
         // No wallet available
