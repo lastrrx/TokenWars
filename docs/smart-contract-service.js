@@ -81,6 +81,57 @@ class SmartContractService {
         return discriminator;
     }
 
+// Add this test method to your SmartContractService class
+async testTransaction() {
+    try {
+        console.log('🧪 Testing transaction simulation...');
+        
+        // Build the same transaction as normal
+        const now = Math.floor(Date.now() / 1000);
+        const votingEndTime = now + (15 * 60);
+        const competitionEndTime = votingEndTime + (24 * 60 * 60);
+        
+        const instructionResult = await this.buildCreateEscrowInstruction({
+            authority: new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv'),
+            systemProgram: solanaWeb3.SystemProgram.programId,
+            competitionId: 'TEST-' + Date.now(),
+            tokenAAddress: 'So11111111111111111111111111111111111111112',
+            tokenBAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            votingEndTime: votingEndTime,
+            competitionEndTime: competitionEndTime,
+            platformFeeBps: 1500
+        });
+        
+        const transaction = new solanaWeb3.Transaction();
+        transaction.add(instructionResult.instruction);
+        
+        // Get recent blockhash
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
+        
+        // SIMULATE instead of sending
+        console.log('🧪 Simulating transaction...');
+        const simulation = await this.connection.simulateTransaction(transaction);
+        
+        console.log('📋 Simulation result:', simulation);
+        
+        if (simulation.value.err) {
+            console.error('❌ Simulation failed:', simulation.value.err);
+            console.error('📜 Program logs:', simulation.value.logs);
+        } else {
+            console.log('✅ Simulation successful!');
+            console.log('📜 Program logs:', simulation.value.logs);
+        }
+        
+        return simulation;
+        
+    } catch (error) {
+        console.error('❌ Test transaction failed:', error);
+        return null;
+    }
+}
+
     // Jupiter integration for token price info
     async getTokenPriceInfo(tokenAAddress, tokenBAddress) {
         try {
