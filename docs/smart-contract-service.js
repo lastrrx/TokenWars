@@ -212,7 +212,7 @@ class SmartContractService {
             
             throw new Error(`Transaction failed: ${errorMessage}`);
         }
-
+    }
     // FIXED: Complete buildCreateEscrowInstruction method
     async buildCreateEscrowInstruction(accounts) {
         const keys = [
