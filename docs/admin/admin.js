@@ -1566,9 +1566,7 @@ async function createCompetitionWithSmartContract(config) {
  * Generate unique competition ID
  */
 function generateCompetitionId() {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substr(2, 9);
-    return `COMP-${timestamp}-${random}`;
+    return crypto.randomUUID();
 }
 
 /**
