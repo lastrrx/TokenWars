@@ -910,11 +910,29 @@ async signAndSendTransactionWithConnection(transaction, connection) {
         }
         
         // ✅ FIXED: This is now a separate fallback, not an "else if"
-        if (typeof provider.signAndSendTransaction === 'function') {
-            return await provider.signAndSendTransaction(transaction);
-        } else {
-            throw new Error(`Enhanced transaction signing not supported for ${this.walletType}`);
-        }
+            if (typeof provider.signAndSendTransaction === 'function') {
+                console.log('🔍 Trying signAndSendTransaction fallback...');
+                console.log('🔍 Passing connection:', !!connection);
+                
+                try {
+                    // Try with connection first
+                    return await provider.signAndSendTransaction(transaction, connection);
+                } catch (withConnectionError) {
+                    console.error('❌ signAndSendTransaction with connection failed:', withConnectionError);
+                    
+                    // Fallback to without connection
+                    try {
+                        console.log('🔄 Trying signAndSendTransaction without connection...');
+                        return await provider.signAndSendTransaction(transaction);
+                    } catch (withoutConnectionError) {
+                        console.error('❌ signAndSendTransaction without connection ALSO failed:', withoutConnectionError);
+                        console.error('❌ Final error message:', withoutConnectionError.message);
+                        throw withoutConnectionError;
+                    }
+                }
+            } else {
+                throw new Error(`Enhanced transaction signing not supported for ${this.walletType}`);
+            }
         
     } catch (error) {
         console.error('❌ Enhanced transaction signing failed:', error);
