@@ -381,52 +381,51 @@ class SmartContractService {
     }
 
     // FIXED: Complete getConnectedWallet method
-    async getConnectedWallet() {
-        try {
-            console.log('🔍 Getting connected wallet for blockchain operation...');
+async getConnectedWallet() {
+    try {
+        console.log('🔍 Getting connected wallet for blockchain operation...');
+        
+        // First try to get wallet from WalletService
+        const walletService = window.getWalletService && window.getWalletService();
+        if (walletService && walletService.isConnected()) {
+            console.log('👤 Using WalletService connected wallet');
             
-            // First try to get wallet from WalletService
-            const walletService = window.getWalletService && window.getWalletService();
-            if (walletService && walletService.isConnected()) {
-                console.log('👤 Using WalletService connected wallet');
-                
-                const provider = walletService.getWalletProvider();
-                if (provider && provider.publicKey) {
-                    return {
-                        publicKey: provider.publicKey,
-                        sendTransaction: async (transaction, connection) => {
-                            try {
-                                // Ensure transaction is properly configured
-                                transaction.feePayer = provider.publicKey;
-                                
-                                // Use WalletService method for transaction signing
-                                // Use enhanced WalletService method for transaction signing
-                                console.log('📤 Using enhanced WalletService transaction method');
-                                return await walletService.signAndSendTransactionWithConnection(transaction, connection);
-                                
-                            } catch (error) {
-                                console.error('❌ WalletService transaction error:', error);
-                                throw new Error(`WalletService transaction failed: ${error.message}`);
-                            }
+            const provider = walletService.getWalletProvider();
+            if (provider && provider.publicKey) {
+                return {
+                    publicKey: provider.publicKey,
+                    sendTransaction: async (transaction, connection) => {
+                        try {
+                            // Ensure transaction is properly configured
+                            transaction.feePayer = provider.publicKey;
+                            
+                            // Use enhanced WalletService method for transaction signing
+                            console.log('📤 Using enhanced WalletService transaction method');
+                            return await walletService.signAndSendTransactionWithConnection(transaction, connection);
+                            
+                        } catch (error) {
+                            console.error('❌ WalletService transaction error:', error);
+                            throw new Error(`WalletService transaction failed: ${error.message}`);
                         }
-                    };
-                }
+                    }
+                };
             }
+        }
+        
+        // Fallback: Check for admin wallet (direct window.solana access)
+        const adminWallet = sessionStorage.getItem('adminWallet');
+        if (adminWallet && window.solana && window.solana.isConnected) {
+            console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
             
-            // Fallback: Check for admin wallet (direct window.solana access)
-            const adminWallet = sessionStorage.getItem('adminWallet');
-            if (adminWallet && window.solana && window.solana.isConnected) {
-                console.log('🔐 Using admin wallet for blockchain operation:', adminWallet);
-                
-                if (window.solana.publicKey) {
-                    return {
-                        publicKey: window.solana.publicKey,
-                        sendTransaction: async (transaction, connection) => {
-                            try {
-                                // Ensure transaction is properly configured
-                                transaction.feePayer = window.solana.publicKey;
-                                
-                                // Try different wallet methods in order of preference
+            if (window.solana.publicKey) {
+                return {
+                    publicKey: window.solana.publicKey,
+                    sendTransaction: async (transaction, connection) => {
+                        try {
+                            // Ensure transaction is properly configured
+                            transaction.feePayer = window.solana.publicKey;
+                            
+                            // Enhanced transaction sending with proper connection handling
                             if (typeof window.solana.signAndSendTransaction === 'function') {
                                 console.log('📤 Using admin wallet signAndSendTransaction');
                                 return await window.solana.signAndSendTransaction(transaction);
@@ -439,26 +438,103 @@ class SmartContractService {
                             } else {
                                 throw new Error('Admin wallet does not support transaction sending');
                             }
-                                
-                            } catch (error) {
-                                console.error('❌ Admin wallet transaction error:', error);
-                                throw new Error(`Admin wallet transaction failed: ${error.message}`);
+                            
+                        } catch (error) {
+                            console.error('❌ Admin wallet transaction error:', error);
+                            
+                            // Provide more specific error messages
+                            let errorMessage = 'Unknown transaction error';
+                            if (error.message.includes('insufficient funds')) {
+                                errorMessage = 'Insufficient SOL balance for transaction';
+                            } else if (error.message.includes('blockhash')) {
+                                errorMessage = 'Transaction expired, please try again';
+                            } else if (error.message.includes('simulation failed')) {
+                                errorMessage = 'Transaction simulation failed - check account balances';
+                            } else if (error.message.includes('User rejected')) {
+                                errorMessage = 'Transaction was rejected by user';
+                            } else {
+                                errorMessage = error.message || 'Transaction failed';
                             }
+                            
+                            throw new Error(`Admin wallet transaction failed: ${errorMessage}`);
                         }
-                    };
-                } else {
-                    throw new Error('Admin wallet publicKey not available');
-                }
+                    }
+                };
+            } else {
+                throw new Error('Admin wallet publicKey not available');
             }
-            
-            // No wallet available
-            throw new Error('No connected wallet found. Please connect a wallet first.');
-            
-        } catch (error) {
-            console.error('❌ getConnectedWallet error:', error);
-            throw new Error(`Wallet connection failed: ${error.message}`);
         }
+        
+        // No wallet available
+        throw new Error('No connected wallet found. Please connect a wallet first.');
+        
+    } catch (error) {
+        console.error('❌ Error getting connected wallet:', error);
+        throw error;
     }
+}
+
+// ALSO ADD: Enhanced sendTransaction method with better error handling
+async sendTransaction(transaction, wallet) {
+    try {
+        console.log('📤 Sending blockchain transaction...');
+        
+        // Prepare transaction
+        console.log('⏳ Getting recent blockhash...');
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+        
+        // Show transaction details for debugging
+        console.log('🔍 Transaction details:', {
+            instructions: transaction.instructions.length,
+            feePayer: wallet.publicKey.toString(),
+            recentBlockhash: blockhash,
+            estimatedFee: 'unknown'
+        });
+        
+        console.log('📤 Sending transaction...');
+        const signature = await wallet.sendTransaction(transaction, this.connection);
+        
+        // Wait for confirmation
+        console.log('⏳ Confirming transaction...');
+        await this.connection.confirmTransaction(signature, 'confirmed');
+        
+        console.log('✅ Transaction confirmed, signature:', signature);
+        return {
+            success: true,
+            signature: signature
+        };
+        
+    } catch (error) {
+        // Enhanced error logging with more details
+        console.error('❌ Detailed transaction error:', error);
+        
+        // Log additional error context
+        if (error.name) console.error('Error name:', error.name);
+        if (error.code) console.error('Error code:', error.code);
+        if (error.logs) console.error('Transaction logs:', error.logs);
+        if (error.message) console.error('Error message:', error.message);
+        
+        // Provide more specific error messages
+        let errorMessage = 'Unknown transaction error';
+        if (error.message.includes('insufficient funds')) {
+            errorMessage = 'Insufficient SOL balance for transaction';
+        } else if (error.message.includes('blockhash')) {
+            errorMessage = 'Transaction expired, please try again';
+        } else if (error.message.includes('simulation failed')) {
+            errorMessage = 'Transaction simulation failed - check account balances';
+        } else if (error.message.includes('User rejected')) {
+            errorMessage = 'Transaction was rejected by user';
+        } else if (error.message.includes('Network request failed')) {
+            errorMessage = 'Network connection failed, please try again';
+        } else {
+            errorMessage = error.message || 'Transaction failed';
+        }
+        
+        throw new Error(`Transaction failed: ${errorMessage}`);
+    }
+}
 
     // Browser-compatible serialization helpers
     serializeString(str) {
