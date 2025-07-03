@@ -440,7 +440,7 @@ async testTransaction() {
             //     competition_end_time: i64,
             //     platform_fee_bps: u16,
             // )
-            this.serializeString(accounts.competitionId),
+            this.serializeString(shortId),
             this.serializeString(accounts.tokenAAddress),
             this.serializeString(accounts.tokenBAddress),
             this.serializeI64(accounts.votingEndTime),
