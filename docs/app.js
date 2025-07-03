@@ -508,6 +508,9 @@ async function enhanceCompetitionsWithTokenCache(competitions) {
                 id: comp.competition_id,
                 competitionId: comp.competition_id,
                 status: determineCompetitionStatus(comp),
+                escrow_account: comp.escrow_account,
+                program_id: comp.program_id,
+                escrow_bump: comp.escrow_bump,
                 
                 tokenA: {
                     address: comp.token_a_address,
