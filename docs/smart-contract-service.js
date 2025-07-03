@@ -190,19 +190,28 @@ class SmartContractService {
             };
             
         } catch (error) {
-            // Enhanced error logging with more details
             console.error('❌ Detailed transaction error:', error);
             
-            // Log additional error context
+            // Log additional error context for debugging
             if (error.name) console.error('Error name:', error.name);
             if (error.code) console.error('Error code:', error.code);
             if (error.logs) console.error('Transaction logs:', error.logs);
             if (error.message) console.error('Error message:', error.message);
             
-            // Re-throw with more context
-            throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
+            // Provide more specific error messages
+            let errorMessage = 'Unknown transaction error';
+            if (error.message.includes('insufficient funds')) {
+                errorMessage = 'Insufficient SOL balance for transaction';
+            } else if (error.message.includes('blockhash')) {
+                errorMessage = 'Transaction expired, please try again';
+            } else if (error.message.includes('simulation failed')) {
+                errorMessage = 'Transaction simulation failed - check account balances';
+            } else {
+                errorMessage = error.message || 'Transaction failed';
+            }
+            
+            throw new Error(`Transaction failed: ${errorMessage}`);
         }
-    }
 
     // FIXED: Complete buildCreateEscrowInstruction method
     async buildCreateEscrowInstruction(accounts) {
@@ -417,15 +426,18 @@ class SmartContractService {
                                 transaction.feePayer = window.solana.publicKey;
                                 
                                 // Try different wallet methods in order of preference
-                                if (typeof window.solana.signAndSendTransaction === 'function') {
-                                    console.log('📤 Using admin wallet signAndSendTransaction');
-                                    return await window.solana.signAndSendTransaction(transaction);
-                                } else if (typeof window.solana.sendTransaction === 'function') {
-                                    console.log('📤 Using admin wallet sendTransaction');
-                                    return await window.solana.sendTransaction(transaction, connection);
-                                } else {
-                                    throw new Error('Admin wallet does not support transaction sending');
-                                }
+                            if (typeof window.solana.signAndSendTransaction === 'function') {
+                                console.log('📤 Using admin wallet signAndSendTransaction');
+                                return await window.solana.signAndSendTransaction(transaction);
+                            } else if (typeof window.solana.sendTransaction === 'function') {
+                                console.log('📤 Using admin wallet sendTransaction');
+                                return await window.solana.sendTransaction(transaction, {
+                                    skipPreflight: false,
+                                    preflightCommitment: 'confirmed'
+                                });
+                            } else {
+                                throw new Error('Admin wallet does not support transaction sending');
+                            }
                                 
                             } catch (error) {
                                 console.error('❌ Admin wallet transaction error:', error);
