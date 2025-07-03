@@ -506,6 +506,31 @@ async testTransaction() {
             transaction.feePayer = wallet.publicKey;
             
             console.log('📤 Sending bet transaction...');
+            console.log('🔍 TRANSACTION DEBUG:');
+            console.log('Transaction instructions:', transaction.instructions.length);
+            console.log('Program ID:', instruction.programId.toString());
+            console.log('Instruction keys:', instruction.keys.map(k => ({
+                pubkey: k.pubkey.toString(),
+                isSigner: k.isSigner,
+                isWritable: k.isWritable
+            })));
+            console.log('Instruction data length:', instruction.data.length);
+            console.log('Instruction data (first 32 bytes):', Array.from(instruction.data.slice(0, 32)));
+            console.log('Fee payer:', transaction.feePayer?.toString());
+            console.log('Recent blockhash:', transaction.recentBlockhash);
+            
+            // Also log the full transaction structure
+            console.log('Full transaction:', {
+                instructions: transaction.instructions.map(ix => ({
+                    programId: ix.programId.toString(),
+                    keys: ix.keys.length,
+                    dataLength: ix.data.length
+                })),
+                feePayer: transaction.feePayer?.toString(),
+                recentBlockhash: !!transaction.recentBlockhash
+            });
+            
+            console.log('📤 Sending bet transaction...');
             const signature = await wallet.sendTransaction(transaction, this.connection);
             
             console.log('⏳ Confirming bet transaction...');
