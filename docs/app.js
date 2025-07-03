@@ -879,14 +879,17 @@ function openCompetitionModalFixed(competitionId) {
 
     try {
         const competition = CompetitionState.competitions.find(c => c.competitionId === competitionId);
-        
+        console.log('Found competition result:', !!competition);        
+
         if (!competition) {
             console.error('❌ Competition not found:', competitionId);
             showNotificationFixed('Competition not found', 'error');
             return;
         }
-        
+
+        console.log('Setting CompetitionState.selectedCompetition...');
         CompetitionState.selectedCompetition = competition;
+        console.log('✅ CompetitionState.selectedCompetition set:', !!CompetitionState.selectedCompetition);
         CompetitionState.selectedToken = null;
         CompetitionState.betAmount = 0.1;
         
