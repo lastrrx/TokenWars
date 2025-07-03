@@ -380,12 +380,14 @@ async testTransaction() {
     async buildCreateEscrowInstruction(accounts) {
         console.log('🔨 Building CreateEscrow instruction for Anchor init...');
         
-        // STEP 1: Generate PDA (Anchor handles account creation automatically)
+        // STEP 1: Generate PDA (Anchor handles account creation automatically), reduced size 32 characters
         console.log('🔑 Generating escrow PDA...');
+        const shortId = accounts.competitionId.replace(/-/g, '').substring(0, 28); // Remove dashes, take first 28 chars
+        
         const [escrowPDA, bump] = await solanaWeb3.PublicKey.findProgramAddress(
             [
-                Buffer.from("escrow", "utf8"),
-                Buffer.from(accounts.competitionId, "utf8")
+                Buffer.from("escrow", "utf8"),        // 6 bytes
+                Buffer.from(shortId, "utf8")          // 28 bytes = 34 total (under 32-byte limit per seed)
             ],
             this.programId
         );
