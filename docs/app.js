@@ -963,6 +963,13 @@ async function placeBetWithSmartContract() {
     try {
         console.log('🎯 Placing bet with smart contract integration...');
         
+        console.log('=== PLACE BET DEBUG ===');
+        console.log('CompetitionState.selectedCompetition:', !!CompetitionState.selectedCompetition);
+        console.log('CompetitionState.selectedCompetition?.escrow_account:', CompetitionState.selectedCompetition?.escrow_account);
+        console.log('typeof escrow_account:', typeof CompetitionState.selectedCompetition?.escrow_account);
+        console.log('escrow_account value:', JSON.stringify(CompetitionState.selectedCompetition?.escrow_account));
+        console.log('smartContractService.isAvailable():', window.smartContractService?.isAvailable());
+
         // Validate inputs
         if (!CompetitionState.selectedToken || !CompetitionState.selectedCompetition) {
             showNotificationFixed('Please select a token first', 'error');
