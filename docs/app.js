@@ -67,6 +67,10 @@ window.closeCompetitionModal = function() {
     return closeCompetitionModalFixed();
 };
 
+window.openCompetitionModal = function(competitionId) {
+    return openCompetitionModalFixed(competitionId);
+};
+
 window.selectToken = function(token) {
     return selectTokenFixed(token);
 };
