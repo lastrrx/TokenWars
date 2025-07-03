@@ -400,8 +400,9 @@ class SmartContractService {
                                 transaction.feePayer = provider.publicKey;
                                 
                                 // Use WalletService method for transaction signing
-                                console.log('📤 Using WalletService signAndSendTransaction');
-                                return await walletService.signAndSendTransaction(transaction, connection);
+                                // Use enhanced WalletService method for transaction signing
+                                console.log('📤 Using enhanced WalletService transaction method');
+                                return await walletService.signAndSendTransactionWithConnection(transaction, connection);
                                 
                             } catch (error) {
                                 console.error('❌ WalletService transaction error:', error);
