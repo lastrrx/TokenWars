@@ -862,6 +862,46 @@ class WalletService {
         }
     }
 
+/**
+ * Enhanced transaction sending with connection parameter support
+ */
+async signAndSendTransactionWithConnection(transaction, connection) {
+    try {
+        if (!this.isConnected()) {
+            throw new Error('Wallet not connected');
+        }
+        
+        if (this.isDemo) {
+            console.log('🎮 Demo transaction sending (simulated)');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return 'demo_signature_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        console.log('📤 Signing and sending transaction with connection:', this.walletType);
+        
+        const provider = this.getWalletProvider();
+        
+        // Set the fee payer
+        transaction.feePayer = provider.publicKey;
+        
+        // Try wallet-specific methods
+        if (typeof provider.signAndSendTransaction === 'function') {
+            return await provider.signAndSendTransaction(transaction);
+        } else if (typeof provider.sendTransaction === 'function') {
+            return await provider.sendTransaction(transaction, connection, {
+                skipPreflight: false,
+                preflightCommitment: 'confirmed'
+            });
+        } else {
+            throw new Error(`Enhanced transaction signing not supported for ${this.walletType}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Enhanced transaction signing failed:', error);
+        throw new Error(`Wallet transaction failed: ${error.message}`);
+    }
+}
+
     /**
      * Check if wallet supports smart contract transactions
      */
