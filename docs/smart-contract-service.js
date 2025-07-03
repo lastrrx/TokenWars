@@ -474,18 +474,27 @@ async testTransaction() {
             
             const wallet = await this.getConnectedWallet();
             
-            // Get escrow PDA
+            // FIXED: Use same PDA calculation as createEscrow
+            console.log('🔑 Calculating escrow PDA for bet placement...');
+            const shortId = competitionId.replace(/-/g, '').substring(0, 28); // Match createEscrow logic
+            console.log('🔑 Using shortId for PDA:', shortId);
+            
             const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                [
+                    Buffer.from("escrow", "utf8"),        // Match createEscrow exactly
+                    Buffer.from(shortId, "utf8")          // Use shortId, not full competitionId
+                ],
                 this.programId
             );
+            
+            console.log('🔑 Escrow PDA calculated:', escrowAccount.toString());
             
             // Build place_bet instruction
             const instruction = await this.buildPlaceBetInstruction({
                 escrow: escrowAccount,
                 user: new solanaWeb3.PublicKey(userWallet),
                 systemProgram: solanaWeb3.SystemProgram.programId,
-                competitionId: competitionId,
+                competitionId: shortId,  // FIXED: Use shortId to match PDA calculation
                 tokenChoice: tokenChoice,
                 amount: betAmount * solanaWeb3.LAMPORTS_PER_SOL
             });
@@ -496,7 +505,10 @@ async testTransaction() {
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
             
+            console.log('📤 Sending bet transaction...');
             const signature = await wallet.sendTransaction(transaction, this.connection);
+            
+            console.log('⏳ Confirming bet transaction...');
             await this.connection.confirmTransaction(signature, 'confirmed');
             
             console.log('✅ Bet placed successfully, signature:', signature);
@@ -504,6 +516,8 @@ async testTransaction() {
             
         } catch (error) {
             console.error('❌ Error placing bet:', error);
+            console.error('❌ Competition ID:', competitionId);
+            console.error('❌ Error details:', error.message);
             throw new Error(`Bet placement failed: ${error.message}`);
         }
     }
