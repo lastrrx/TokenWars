@@ -882,11 +882,27 @@ async signAndSendTransactionWithConnection(transaction, connection) {
         const provider = this.getWalletProvider();
         
         // ✅ FIXED: Try sendTransaction FIRST for smart contracts
-        if (typeof provider.sendTransaction === 'function') {
-            return await provider.sendTransaction(transaction, connection, {
-                skipPreflight: false,
-                preflightCommitment: 'confirmed'
-            });
+        if (typeof provider.sendTransaction === 'function') {                                     //ADDED FROM HERE
+            try {
+                console.log('🔍 Trying provider.sendTransaction first...');
+                return await provider.sendTransaction(transaction, connection, {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed'
+                });
+            } catch (sendTxError) {
+                console.error('❌ sendTransaction failed with error:', sendTxError);
+                console.error('❌ Error name:', sendTxError.name);
+                console.error('❌ Error message:', sendTxError.message);
+                console.error('❌ Error code:', sendTxError.code);
+                console.error('❌ Full error object:', JSON.stringify(sendTxError, null, 2));
+                
+                // Try to extract simulation logs if available
+                if (sendTxError.logs) {
+                    console.error('❌ Simulation logs:', sendTxError.logs);
+                }
+                if (sendTxError.simulation) {
+                    console.error('❌ Simulation details:', sendTxError.simulation);
+                }                                                                                 // ADDED TO HERE
         } else if (typeof provider.signAndSendTransaction === 'function') {
             return await provider.signAndSendTransaction(transaction);
         } else {
