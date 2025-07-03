@@ -65,20 +65,29 @@ class SmartContractService {
         
         // Use the correct discriminators for your deployed Anchor program
         // These are computed from sha256("global:function_name")[0..8]
-        const knownDiscriminators = {
-            'create_escrow': [0x8c, 0x97, 0x25, 0x8f, 0x4e, 0x2c, 0x8a, 0x8b],
-            'place_bet': [0x72, 0x1c, 0xf9, 0x8a, 0x5d, 0x2e, 0x8b, 0x9c],
-            'start_competition': [0x65, 0x8f, 0x3a, 0x7b, 0x4e, 0x9c, 0x2d, 0x8a],
-            'update_twap_sample': [0x91, 0x4c, 0x8b, 0x2e, 0x7d, 0x3f, 0x9a, 0x5c],
-            'finalize_start_twap': [0x83, 0x6f, 0x9c, 0x4a, 0x5e, 0x8b, 0x2d, 0x7f],
-            'resolve_competition': [0x74, 0x8e, 0x3c, 0x9b, 0x6d, 0x4f, 0x8a, 0x2e],
-            'withdraw_winnings': [0x92, 0x5d, 0x8f, 0x3e, 0x7c, 0x9a, 0x4b, 0x6e],
-            'collect_platform_fee': [0x85, 0x9f, 0x4c, 0x7e, 0x3d, 0x8b, 0x6a, 0x2f]
-        };
+        const knownDiscriminators = {};
+        
+        // Calculate discriminator for create_escrow
+        const createEscrowHash = this.sha256("global:create_escrow");
+        knownDiscriminators.create_escrow = Array.from(createEscrowHash.slice(0, 8));
+        
+        // Calculate others as needed
+        const placeBetHash = this.sha256("global:place_bet");
+        knownDiscriminators.place_bet = Array.from(placeBetHash.slice(0, 8));
         
         const discriminator = Buffer.from(knownDiscriminators[functionName] || [0, 0, 0, 0, 0, 0, 0, 0]);
         console.log(`🔧 Discriminator for ${functionName}:`, Array.from(discriminator));
         return discriminator;
+    }
+
+    sha256(str) {
+        // Simple sha256 implementation for discriminators
+        const encoder = new TextEncoder();
+        const data = encoder.encode(str);
+        
+        return crypto.subtle.digest('SHA-256', data).then(hash => {
+            return new Uint8Array(hash);
+        });
     }
 
 // Add this test method to your SmartContractService class
