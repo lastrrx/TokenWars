@@ -142,37 +142,10 @@ class SmartContractService {
             console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
             
             // Generate escrow PDA with correct seeds
-            const [escrowAccount, bump] = await solanaWeb3.PublicKey.findProgramAddress(
-                [
-                    Buffer.from("escrow", "utf8"),  // Seed prefix
-                    Buffer.from(competitionId, "utf8")  // Competition ID
-                ],
-                this.programId
-            );
-            
-            console.log('🔑 Generated escrow PDA:', {
-                address: escrowAccount.toString(),
-                bump: bump,
-                programId: this.programId.toString()
-            });
-            
-            // Calculate competition timing
-            const now = Math.floor(Date.now() / 1000);
-            const votingEndTime = now + (15 * 60); // 15 minutes
-            const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours
-            
-            console.log('⏰ Competition timing:', {
-                now,
-                votingEndTime,
-                competitionEndTime,
-                votingDurationMin: 15,
-                activeDurationHours: 24
-            });
-            
             // Build instruction with correct parameters
-            console.log('🔨 Building create escrow instruction...');
-            const instruction = await this.buildCreateEscrowInstruction({
-                escrow: escrowAccount,
+            console.log('🔨 Building create escrow instruction sequence...');
+            const instructionResult = await this.buildCreateEscrowInstruction({
+                escrow: escrowAccount,  // This will be recalculated inside the method
                 authority: new solanaWeb3.PublicKey(adminWallet),
                 systemProgram: solanaWeb3.SystemProgram.programId,
                 competitionId: competitionId,
@@ -183,10 +156,24 @@ class SmartContractService {
                 platformFeeBps: 1500 // 15%
             });
             
-            console.log('✅ Instruction built successfully');
+            console.log('✅ Instruction sequence built successfully');
+            console.log('🏗️ Instructions to add:', instructionResult.instructions.length);
+            console.log('💰 Rent cost:', instructionResult.rentCost, 'lamports');
             
-            // Create and configure transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
+            // Update escrowAccount to use the PDA from instruction result
+            const escrowAccount = instructionResult.escrowPDA;
+            const bump = instructionResult.bump;
+            
+            // Create and configure transaction with BOTH instructions
+            const transaction = new solanaWeb3.Transaction();
+            
+            // Add BOTH instructions in the correct order
+            instructionResult.instructions.forEach((instruction, index) => {
+                console.log(`📦 Adding instruction ${index + 1}:`, 
+                    index === 0 ? 'SystemProgram::CreateAccount' : 'create_escrow');
+                transaction.add(instruction);
+            });
+            
             console.log('📦 Transaction created with', transaction.instructions.length, 'instructions');
             
             console.log('⏳ Getting recent blockhash...');
@@ -341,74 +328,143 @@ class SmartContractService {
         }
     }
 
-    // FIXED: Correct account ordering and attributes for CreateEscrow
-    async buildCreateEscrowInstruction(accounts) {
-        console.log('🔨 Building CreateEscrow instruction with correct Anchor format...');
+// FIXED: Complete buildCreateEscrowInstruction method that handles Anchor's init attribute
+async buildCreateEscrowInstruction(accounts) {
+    console.log('🔨 Building CreateEscrow instruction with Anchor init support...');
+    
+    // STEP 1: Calculate exact space needed for Escrow struct
+    // Based on your Rust Escrow struct fields:
+    const ESCROW_SPACE = 
+        8 +                    // Anchor discriminator
+        32 +                   // competition_id (String with max 32 chars)
+        32 +                   // token_a_address (String with max 32 chars) 
+        32 +                   // token_b_address (String with max 32 chars)
+        8 +                    // voting_end_time (i64)
+        8 +                    // competition_end_time (i64)
+        2 +                    // platform_fee_bps (u16)
+        1 +                    // status (enum, 1 byte)
+        8 +                    // total_deposited (u64)
+        4 +                    // token_a_bets (u32)
+        4 +                    // token_b_bets (u32)
+        1 +                    // winner (Option<enum>, 1 byte)
+        8 +                    // token_a_start_price (u64)
+        8 +                    // token_b_start_price (u64)
+        8 +                    // token_a_start_market_cap (u64)
+        8 +                    // token_b_start_market_cap (u64)
+        8 +                    // token_a_end_price (u64)
+        8 +                    // token_b_end_price (u64)
+        8 +                    // token_a_end_market_cap (u64)
+        8 +                    // token_b_end_market_cap (u64)
+        4 +                    // twap_samples (Vec<TWAPSample> length prefix)
+        (48 * 20) +            // Up to 20 TWAP samples (48 bytes each)
+        4 +                    // user_bets (Vec<UserBet> length prefix)
+        (65 * 100) +           // Up to 100 user bets (65 bytes each)
+        1 +                    // bump (u8)
+        64;                    // Extra padding for safety
+    
+    console.log('📏 Calculated Escrow account space:', ESCROW_SPACE, 'bytes');
+    
+    // STEP 2: Get rent-exempt minimum for this space
+    console.log('💰 Calculating rent-exempt minimum...');
+    const rentExemptMinimum = await this.connection.getMinimumBalanceForRentExemption(ESCROW_SPACE);
+    console.log('💰 Rent-exempt minimum:', rentExemptMinimum, 'lamports');
+    
+    // STEP 3: Generate PDA and get bump
+    console.log('🔑 Generating escrow PDA...');
+    const [escrowPDA, bump] = await solanaWeb3.PublicKey.findProgramAddress(
+        [
+            Buffer.from("escrow", "utf8"),
+            Buffer.from(accounts.competitionId, "utf8")
+        ],
+        this.programId
+    );
+    
+    console.log('🔑 Escrow PDA:', escrowPDA.toString());
+    console.log('🔑 Bump seed:', bump);
+    
+    // STEP 4: Build SystemProgram::CreateAccount instruction (required for init)
+    console.log('🏗️ Building SystemProgram CreateAccount instruction...');
+    const createAccountInstruction = solanaWeb3.SystemProgram.createAccount({
+        fromPubkey: accounts.authority,
+        newAccountPubkey: escrowPDA,
+        lamports: rentExemptMinimum,
+        space: ESCROW_SPACE,
+        programId: this.programId
+    });
+    
+    console.log('✅ CreateAccount instruction built');
+    
+    // STEP 5: Build the actual create_escrow instruction
+    console.log('🔨 Building create_escrow program instruction...');
+    
+    // Account ordering must match your Rust CreateEscrow struct exactly
+    const keys = [
+        // 1. escrow: The PDA being initialized
+        { 
+            pubkey: escrowPDA, 
+            isSigner: false, 
+            isWritable: true 
+        },
+        // 2. authority: Signer and payer
+        { 
+            pubkey: accounts.authority, 
+            isSigner: true, 
+            isWritable: true 
+        },
+        // 3. system_program: Required for account operations
+        { 
+            pubkey: accounts.systemProgram, 
+            isSigner: false, 
+            isWritable: false 
+        }
+    ];
+    
+    console.log('📋 Program instruction accounts:', keys.map(k => ({
+        pubkey: k.pubkey.toString(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable
+    })));
+    
+    // STEP 6: Serialize instruction data with bump included
+    console.log('📦 Serializing create_escrow instruction data...');
+    
+    const instructionData = Buffer.concat([
+        // Anchor discriminator (8 bytes)
+        this.instructions.createEscrow,
         
-        // FIXED: Correct account ordering to match Rust CreateEscrow struct
-        const keys = [
-            // 1. escrow: PDA account being created
-            { 
-                pubkey: accounts.escrow, 
-                isSigner: false, 
-                isWritable: true  // Will be initialized
-            },
-            // 2. authority: Signer and rent payer
-            { 
-                pubkey: accounts.authority, 
-                isSigner: true, 
-                isWritable: true  // Pays for account creation rent
-            },
-            // 3. system_program: System program for account creation
-            { 
-                pubkey: accounts.systemProgram, 
-                isSigner: false, 
-                isWritable: false 
-            }
-        ];
-        
-        console.log('📋 Instruction accounts:', keys.map(k => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable
-        })));
-        
-        // FIXED: Correct data serialization to match Anchor format
-        console.log('📦 Serializing instruction data...');
-        
-        const data = Buffer.concat([
-            // Anchor discriminator (8 bytes)
-            this.instructions.createEscrow,
-            
-            // Parameters in order they appear in Rust function signature:
-            // competition_id: String
-            this.serializeString(accounts.competitionId),
-            
-            // token_a_address: String  
-            this.serializeString(accounts.tokenAAddress),
-            
-            // token_b_address: String
-            this.serializeString(accounts.tokenBAddress),
-            
-            // voting_end_time: i64
-            this.serializeU64(accounts.votingEndTime),
-            
-            // competition_end_time: i64
-            this.serializeU64(accounts.competitionEndTime),
-            
-            // platform_fee_bps: u16
-            this.serializeU16(accounts.platformFeeBps)
-        ]);
-        
-        console.log('📦 Instruction data size:', data.length, 'bytes');
-        console.log('🔧 Discriminator:', Array.from(this.instructions.createEscrow));
-        
-        return new solanaWeb3.TransactionInstruction({
-            keys,
-            programId: this.programId,
-            data
-        });
-    }
+        // Parameters in exact order as Rust function signature:
+        this.serializeString(accounts.competitionId),
+        this.serializeString(accounts.tokenAAddress),
+        this.serializeString(accounts.tokenBAddress),
+        this.serializeU64(accounts.votingEndTime),
+        this.serializeU64(accounts.competitionEndTime),
+        this.serializeU16(accounts.platformFeeBps)
+        // Note: bump is handled automatically by Anchor via seeds
+    ]);
+    
+    console.log('📦 Instruction data size:', instructionData.length, 'bytes');
+    console.log('🔧 Discriminator used:', Array.from(this.instructions.createEscrow));
+    
+    // STEP 7: Build the program instruction
+    const programInstruction = new solanaWeb3.TransactionInstruction({
+        keys,
+        programId: this.programId,
+        data: instructionData
+    });
+    
+    console.log('✅ Program instruction built');
+    
+    // STEP 8: Return BOTH instructions that need to be added to transaction
+    console.log('📋 Returning instruction sequence for Anchor init...');
+    
+    return {
+        // Return both instructions - they MUST be added to transaction in this order
+        instructions: [createAccountInstruction, programInstruction],
+        escrowPDA: escrowPDA,
+        bump: bump,
+        rentCost: rentExemptMinimum
+    };
+}
 
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
