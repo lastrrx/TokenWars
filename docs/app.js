@@ -866,7 +866,17 @@ function handleCompetitionActionFixed(competitionId, status, isWalletConnected) 
 
 function openCompetitionModalFixed(competitionId) {
     console.log(`🔍 Opening competition modal: ${competitionId}`);
+    console.log('=== COMPETITION STATE DEBUG ===');
+    console.log('CompetitionState.competitions length:', CompetitionState.competitions?.length);
+    console.log('CompetitionState.competitions:', CompetitionState.competitions);
+    console.log('Looking for competitionId:', competitionId);
     
+    if (CompetitionState.competitions?.length > 0) {
+        console.log('First competition in array:', CompetitionState.competitions[0]);
+        console.log('First competition ID:', CompetitionState.competitions[0]?.competitionId);
+        console.log('ID match check:', CompetitionState.competitions[0]?.competitionId === competitionId);    
+        }
+
     try {
         const competition = CompetitionState.competitions.find(c => c.competitionId === competitionId);
         
