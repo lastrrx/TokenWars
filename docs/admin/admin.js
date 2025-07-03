@@ -1513,9 +1513,9 @@ async function createCompetitionWithSmartContract(config) {
             // Smart contract fields
             escrow_account: escrowResult.escrowAccount,
             escrow_bump: escrowResult.bump,
-            pyth_token_a_id: Buffer.from(pythIds.tokenA).toString('hex'),
-            pyth_token_b_id: Buffer.from(pythIds.tokenB).toString('hex'),
-            program_id: '95LeMiq1NxxUQiTyJwKVELPK6SbYVwzGxckw3XLneCv4'
+            jupiter_token_a_id: tokenAAddress,
+            jupiter_token_b_id: tokenBAddress,
+            program_id: 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5'
         };
 
         const supabase = getSupabase();
