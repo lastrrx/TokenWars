@@ -882,7 +882,7 @@ async signAndSendTransactionWithConnection(transaction, connection) {
         const provider = this.getWalletProvider();
         
         // ✅ FIXED: Try sendTransaction FIRST for smart contracts
-        if (typeof provider.sendTransaction === 'function') {                                     //ADDED FROM HERE
+        if (typeof provider.sendTransaction === 'function') {
             try {
                 console.log('🔍 Trying provider.sendTransaction first...');
                 return await provider.sendTransaction(transaction, connection, {
@@ -902,8 +902,15 @@ async signAndSendTransactionWithConnection(transaction, connection) {
                 }
                 if (sendTxError.simulation) {
                     console.error('❌ Simulation details:', sendTxError.simulation);
-                }                                                                                 // ADDED TO HERE
-        } else if (typeof provider.signAndSendTransaction === 'function') {
+                }
+                
+                // Continue to fallback (don't return here)
+                console.log('🔄 Falling back to signAndSendTransaction...');
+            }
+        }
+        
+        // ✅ FIXED: This is now a separate fallback, not an "else if"
+        if (typeof provider.signAndSendTransaction === 'function') {
             return await provider.signAndSendTransaction(transaction);
         } else {
             throw new Error(`Enhanced transaction signing not supported for ${this.walletType}`);
@@ -914,7 +921,6 @@ async signAndSendTransactionWithConnection(transaction, connection) {
         throw new Error(`Wallet transaction failed: ${error.message}`);
     }
 }
-
     /**
      * Check if wallet supports smart contract transactions
      */
