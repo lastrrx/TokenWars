@@ -1,8 +1,23 @@
+What happun
+File structure cleanup
+Competitions.js gone (I think merged into admin)
+
+
 What do
 
 UI CLEANUP
+1. Landing Page
+a. User creation is broken, no user creation flow, no username is created, isn't stored in database
+
 1. Competitions Page
   a. Slider showing bet distributions
   b. Expanded cards show more info
     i.Charts showing the 2 tokens (like in dextools), with start of competition shown on-chart, either both on 1 chart 2 separate charts
     ii.
+  c. Time remaining filter not working
+  d. Add seach bar for token search (with token name, ticker and address)
+  e. countdown timer - add animation into styles.css, more functionality, countdown to start as well
+  f. Remove being able to change bet amount on UI. That is set separately in admin.
+
+PLATFORM GUIDE
+a. No separate page, have it integrated instead
