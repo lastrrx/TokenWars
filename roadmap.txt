@@ -1,4 +1,8 @@
 What do
 
 UI CLEANUP
-1. 
+1. Competitions Page
+  a. Slider showing bet distributions
+  b. Expanded cards show more info
+    i.Charts showing the 2 tokens (like in dextools), with start of competition shown on-chart, either both on 1 chart 2 separate charts
+    ii.
