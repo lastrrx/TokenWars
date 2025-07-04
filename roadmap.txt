@@ -18,6 +18,18 @@ a. User creation is broken, no user creation flow, no username is created, isn't
   d. Add seach bar for token search (with token name, ticker and address)
   e. countdown timer - add animation into styles.css, more functionality, countdown to start as well
   f. Remove being able to change bet amount on UI. That is set separately in admin.
+  g. some code on bottom left
+  h. Needs to be clicked on twice to show up.
+  i. When placing vote, it shows 0.00008 for tx fee only, but actually took off the place bet fee + tx fee!
+
+LEADERBOARDS
+  a. Leaderboards table from supabase, draw info from there! Show it nicely
+  b. Rn: Users table is re-compiled into leaderboards table, so we need the page to take info from thre
+
+PORTFOLIO
+- achievements
+- pie charts
+- 
 
 PLATFORM GUIDE
 a. No separate page, have it integrated instead
