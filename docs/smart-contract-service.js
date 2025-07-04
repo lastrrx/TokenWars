@@ -28,7 +28,14 @@ class SmartContractService {
         }
         
         try {
-            this.connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
+            this.connection = new solanaWeb3.Connection(
+                'https://api.devnet.solana.com', 
+                {
+                    commitment: 'confirmed',
+                    confirmTransactionInitialTimeout: 60000,
+                    wsEndpoint: 'wss://api.devnet.solana.com'
+                }
+            );
             this.programId = new solanaWeb3.PublicKey(
                 window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5' 
             );
