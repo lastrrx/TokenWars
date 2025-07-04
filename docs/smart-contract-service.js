@@ -83,6 +83,53 @@ class SmartContractService {
     }
     
 
+async inspectEscrowAccount(competitionId, escrowAddress) {
+    try {
+        console.log('🔍 Inspecting escrow account:', escrowAddress);
+        
+        const publicKey = new solanaWeb3.PublicKey(escrowAddress);
+        const accountInfo = await this.connection.getAccountInfo(publicKey);
+        
+        if (!accountInfo) {
+            console.log('❌ Account not found');
+            return null;
+        }
+        
+        console.log('✅ Account found:', {
+            lamports: accountInfo.lamports,
+            dataLength: accountInfo.data.length,
+            owner: accountInfo.owner.toString(),
+            executable: accountInfo.executable,
+            rentEpoch: accountInfo.rentEpoch
+        });
+        
+        // Try to parse the first few bytes to see the account structure
+        const data = accountInfo.data;
+        if (data.length > 0) {
+            console.log('📊 Account data preview (first 100 bytes):');
+            console.log(Array.from(data.slice(0, 100)));
+            
+            // Try to read the discriminator (first 8 bytes)
+            if (data.length >= 8) {
+                const discriminator = Array.from(data.slice(0, 8));
+                console.log('🔧 Account discriminator:', discriminator);
+            }
+        }
+        
+        return {
+            exists: true,
+            lamports: accountInfo.lamports,
+            dataLength: accountInfo.data.length,
+            owner: accountInfo.owner.toString(),
+            data: accountInfo.data
+        };
+        
+    } catch (error) {
+        console.error('❌ Error inspecting escrow account:', error);
+        return null;
+    }
+}
+
 // Add this test method to your SmartContractService class
 async testTransaction() {
     try {
