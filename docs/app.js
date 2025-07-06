@@ -2712,7 +2712,7 @@ function setupStepFeatures(stepNumber) {
 function setupStep3Features() {
     const usernameInput = document.getElementById('traderUsername');
     if (usernameInput) {
-        usernameInput.addEventListener('input', validateUsernameInputFixed);
+        usernameInput.addEventListener('input', validateUsernameDebounced);
     }
     updateTraderPreview();
 }
