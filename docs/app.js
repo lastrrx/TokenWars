@@ -85,19 +85,44 @@ window.handleCompetitionFilterChange = function() {
     // Read current filter values from HTML dropdowns
     const phaseSelect = document.getElementById('competition-phase');
     const sortSelect = document.getElementById('sort-by');
+    const searchInput = document.getElementById('tokenSearch');
     
-    // Update filter state
-    if (phaseSelect) {
-        CompetitionState.currentFilters.phase = phaseSelect.value;
-        console.log('📊 Phase filter set to:', phaseSelect.value);
+    if (phaseSelect && sortSelect) {
+        CompetitionState.currentFilters = {
+            phase: phaseSelect.value,
+            sortBy: sortSelect.value,
+            searchQuery: searchInput ? searchInput.value.toLowerCase().trim() : ''
+        };
+        
+        console.log('🔄 Updated filters:', CompetitionState.currentFilters);
+        
+        // Re-display competitions with new filters
+        displayCompetitionsContent(isWalletConnected());
     }
-    if (sortSelect) {
-        CompetitionState.currentFilters.sortBy = sortSelect.value;
-        console.log('📊 Sort filter set to:', sortSelect.value);
+};
+
+// Add search functions
+window.handleTokenSearch = function() {
+    const searchInput = document.getElementById('tokenSearch');
+    if (searchInput) {
+        CompetitionState.currentFilters.searchQuery = searchInput.value.toLowerCase().trim();
+        console.log('🔍 Search query:', CompetitionState.currentFilters.searchQuery);
+        
+        // Re-display competitions with search filter
+        displayCompetitionsContent(isWalletConnected());
     }
-    
-    // Refresh display with new filters
-    updateCompetitionsDisplayFixed();
+};
+
+window.clearTokenSearch = function() {
+    const searchInput = document.getElementById('tokenSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        CompetitionState.currentFilters.searchQuery = '';
+        console.log('🔍 Search cleared');
+        
+        // Re-display competitions without search filter
+        displayCompetitionsContent(isWalletConnected());
+    }
 };
 
 window.refreshCompetitions = async function() {
