@@ -1742,13 +1742,37 @@ async function selectWalletFixed(walletType) {
                 isDemo: walletType === 'demo'
             };
             
-            // Check if user has profile
-            const profile = service.getUserProfile?.();
-            if (profile) {
-                // Complete onboarding
-                await completedOnboardingFixed();
-            } else {
-                // Go to profile creation
+            // Check if user exists in database
+            console.log('🔍 Checking for existing user in database...');
+            
+            try {
+                // Use proper Supabase function to check for existing user
+                const existingUser = await getOrCreateUser(result.publicKey);
+                
+                if (existingUser && existingUser.username) {
+                    console.log('✅ Found existing user:', existingUser.username);
+                    
+                    // Update connected user with database info
+                    connectedUser = {
+                        walletAddress: result.publicKey,
+                        walletType: walletType,
+                        isDemo: walletType === 'demo',
+                        profile: existingUser,
+                        username: existingUser.username,
+                        avatar: existingUser.avatar || '🎯'
+                    };
+                    
+                    // Complete onboarding - skip profile creation
+                    await completedOnboardingFixed();
+                } else {
+                    console.log('ℹ️ No existing user found, need profile creation');
+                    // Go to profile creation step
+                    goToStepFixed(3);
+                }
+            } catch (dbError) {
+                console.error('❌ Database check failed:', dbError);
+                // If database fails, force profile creation to be safe
+                console.log('⚠️ Database unavailable, forcing profile creation');
                 goToStepFixed(3);
             }
             
@@ -2454,6 +2478,41 @@ function shortenAddress(address) {
     if (!address) return 'Unknown';
     if (address.startsWith('DEMO')) return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+// Helper function to access Supabase functions
+async function getOrCreateUser(walletAddress) {
+    try {
+        // Wait for Supabase to be ready
+        if (window.SupabaseReady) {
+            await window.SupabaseReady;
+        }
+        
+        // Use the Supabase client function
+        if (window.supabaseClient && window.supabaseClient.getOrCreateUser) {
+            return await window.supabaseClient.getOrCreateUser(walletAddress);
+        }
+        
+        // Direct Supabase query as fallback
+        if (window.supabase) {
+            const { data, error } = await window.supabase
+                .from('users')
+                .select('*')
+                .eq('wallet_address', walletAddress)
+                .single();
+                
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+            
+            return data; // null if no user found
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error in getOrCreateUser:', error);
+        return null;
+    }
 }
 
 function getPageContentArea(pageName) {
