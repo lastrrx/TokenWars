@@ -392,6 +392,55 @@ body {
     transform: scale(1.2);
 }
 
+/* Enhanced Timer Animations */
+.timer.countdown-urgent {
+    animation: pulse-urgent 1s ease-in-out infinite;
+}
+
+.timer.countdown-critical {
+    animation: pulse-critical 0.8s ease-in-out infinite;
+}
+
+.timer.countdown-final {
+    animation: pulse-final 0.5s ease-in-out infinite;
+    border: 2px solid #ff0000;
+}
+
+@keyframes pulse-urgent {
+    0%, 100% { 
+        border-color: rgba(245, 158, 11, 0.5);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(245, 158, 11, 0.8);
+        transform: scale(1.02);
+    }
+}
+
+@keyframes pulse-critical {
+    0%, 100% { 
+        border-color: rgba(249, 115, 22, 0.6);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(249, 115, 22, 0.9);
+        transform: scale(1.03);
+    }
+}
+
+@keyframes pulse-final {
+    0%, 100% { 
+        border-color: rgba(239, 68, 68, 0.8);
+        background: rgba(239, 68, 68, 0.1);
+        transform: scale(1);
+    }
+    50% { 
+        border-color: rgba(239, 68, 68, 1);
+        background: rgba(239, 68, 68, 0.2);
+        transform: scale(1.05);
+    }
+}
+
 /* Final countdown animations */
 @keyframes pulse-final {
     0%, 100% { 
