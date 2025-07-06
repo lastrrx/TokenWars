@@ -772,7 +772,7 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
             <div class="competition-card enhanced-card" 
                  data-competition-id="${competition.competitionId}"
                  data-status="${competition.status}"
-                 onclick="handleCompetitionActionFixed('${competition.competitionId}', '${competition.status}', ${isWalletConnected})">
+                 data-clickable="true">
                 
                 <!-- Status Badge -->
                 <div class="card-status ${competition.status}">
@@ -857,7 +857,7 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">${competition.betAmount} SOL</div>
-                        <div class="stat-label">Entry Fee</div>
+                        <div class="stat-label">Entry Fee (Fixed)</div>
                     </div>
                 </div>
                 
@@ -3151,6 +3151,40 @@ if (document.readyState === 'loading') {
 } else {
     setTimeout(initializeApp, 50);
 }
+
+function calculateCompetitionFees(betAmount) {
+    const SOLANA_TX_FEE = 0.000005; // Actual Solana transaction fee
+    const PLATFORM_FEE_RATE = 0.15; // 15% platform fee
+    const platformFee = betAmount * PLATFORM_FEE_RATE;
+    
+    return {
+        betAmount: betAmount,
+        platformFee: platformFee,
+        transactionFee: SOLANA_TX_FEE,
+        totalCost: betAmount + platformFee + SOLANA_TX_FEE,
+        userReceives: betAmount // What goes into the prize pool
+    };
+}
+
+// Fix double-click issue by using event delegation
+function setupCompetitionCardListeners() {
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.competition-card[data-clickable="true"]');
+        if (card && !e.target.closest('.action-button')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const competitionId = card.getAttribute('data-competition-id');
+            const status = card.getAttribute('data-status');
+            const isConnected = isWalletConnected();
+            
+            handleCompetitionActionFixed(competitionId, status, isConnected);
+        }
+    });
+}
+
+// Call this function when the page loads
+document.addEventListener('DOMContentLoaded', setupCompetitionCardListeners);
 
 console.log('✅ INTEGRATED App.js loaded!');
 console.log('🔧 INTEGRATED FEATURES:');
