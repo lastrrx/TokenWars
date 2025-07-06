@@ -2732,6 +2732,143 @@ function validateUsernameInputFixed() {
     updateTraderPreview();
 }
 
+// ==============================================
+// MISSING VALIDATION FUNCTION FIX
+// ==============================================
+
+// This is the function that the HTML calls
+function validateUsernameInput() {
+    validateUsernameInputFixed();
+}
+
+// Enhanced validation function with duplicate checking and profanity filter
+async function validateUsernameInputEnhanced() {
+    const usernameInput = document.getElementById('traderUsername');
+    const createButton = document.getElementById('createProfileBtn');
+    const inputStatus = document.getElementById('inputStatus');
+    
+    if (!usernameInput) return;
+    
+    const username = usernameInput.value.trim();
+    
+    // Reset status
+    if (inputStatus) {
+        inputStatus.textContent = '';
+        inputStatus.className = 'input-status';
+    }
+    
+    // Basic validation
+    if (username.length < 3) {
+        updateValidationStatus('Username must be at least 3 characters', 'error');
+        if (createButton) createButton.disabled = true;
+        return;
+    }
+    
+    if (username.length > 20) {
+        updateValidationStatus('Username must be 20 characters or less', 'error');
+        if (createButton) createButton.disabled = true;
+        return;
+    }
+    
+    // Check for invalid characters (only letters, numbers, underscore, hyphen)
+    const validPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!validPattern.test(username)) {
+        updateValidationStatus('Username can only contain letters, numbers, underscore, and hyphen', 'error');
+        if (createButton) createButton.disabled = true;
+        return;
+    }
+    
+    // Profanity filter
+    if (containsProfanity(username)) {
+        updateValidationStatus('Username contains inappropriate content', 'error');
+        if (createButton) createButton.disabled = true;
+        return;
+    }
+    
+    // Show checking status
+    updateValidationStatus('Checking availability...', 'checking');
+    if (createButton) createButton.disabled = true;
+    
+    try {
+        // Check if username is available in database
+        const isAvailable = await checkUsernameAvailability(username);
+        
+        if (isAvailable) {
+            updateValidationStatus('Username available!', 'success');
+            if (createButton) createButton.disabled = false;
+            usernameValidation.valid = true;
+        } else {
+            updateValidationStatus('Username already taken', 'error');
+            if (createButton) createButton.disabled = true;
+            usernameValidation.valid = false;
+        }
+    } catch (error) {
+        console.error('Error checking username availability:', error);
+        updateValidationStatus('Error checking availability', 'error');
+        if (createButton) createButton.disabled = true;
+    }
+    
+    updateTraderPreview();
+}
+
+// Helper function to update validation status display
+function updateValidationStatus(message, type) {
+    const inputStatus = document.getElementById('inputStatus');
+    if (inputStatus) {
+        inputStatus.textContent = message;
+        inputStatus.className = `input-status ${type}`;
+        
+        // Add appropriate emoji based on type
+        switch(type) {
+            case 'success':
+                inputStatus.textContent = '✅ ' + message;
+                break;
+            case 'error':
+                inputStatus.textContent = '❌ ' + message;
+                break;
+            case 'checking':
+                inputStatus.textContent = '🔄 ' + message;
+                break;
+        }
+    }
+}
+
+// Simple profanity filter function
+function containsProfanity(text) {
+    const profanityList = [
+        'fuck', 'shit', 'damn', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'cock', 'tits',
+        'nazi', 'hitler', 'nigger', 'faggot', 'retard', 'whore', 'slut', 'bastard',
+        'piss', 'crap', 'fag', 'homo', 'gay', 'lesbian', 'tranny', 'midget', 'spic',
+        'chink', 'gook', 'kike', 'wetback', 'raghead', 'terrorist', 'jihad', 'bomb',
+        'kill', 'murder', 'rape', 'molest', 'pedo', 'child', 'sex', 'porn', 'xxx'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    
+    // Check for exact matches and partial matches
+    return profanityList.some(word => {
+        return lowerText.includes(word) || 
+               lowerText.replace(/[0@$!]/g, match => {
+                   switch(match) {
+                       case '0': return 'o';
+                       case '@': return 'a';
+                       case '$': return 's';
+                       case '!': return 'i';
+                       default: return match;
+                   }
+               }).includes(word);
+    });
+}
+
+// Enhanced debounced validation (call this instead of the basic one)
+let usernameValidationTimeout;
+function validateUsernameDebounced() {
+    clearTimeout(usernameValidationTimeout);
+    usernameValidationTimeout = setTimeout(() => {
+        validateUsernameInputEnhanced();
+    }, 500); // Wait 500ms after user stops typing
+}
+
 function updateTraderPreview() {
     const usernameInput = document.getElementById('traderUsername');
     const previewName = document.getElementById('previewName');
