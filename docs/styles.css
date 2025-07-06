@@ -1325,11 +1325,19 @@ body {
 /* Enhanced Filters Section */
 .section-filters {
     display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.section-filters .filter-row {
+    display: flex;
     gap: 1rem;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    position: relative;
 }
 
 .filter-select {
@@ -1348,9 +1356,11 @@ body {
 /* Search Container Styles */
 .search-container {
     position: relative;
-    min-width: 300px;
+    width: 100%;
+    max-width: 500px;
     display: flex;
     align-items: center;
+    margin-bottom: 0;
 }
 
 .search-input {
