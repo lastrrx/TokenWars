@@ -371,8 +371,8 @@
                                 <p class="section-description">Predict token performance and earn SOL rewards</p>
                                 
                                 <!-- Competition Filters -->
-                                <div class="section-filters">
-    <!-- Search Bar -->
+                         <div class="section-filters">
+    <!-- Search Bar Row -->
     <div class="search-container">
         <input type="text" 
                id="tokenSearch" 
@@ -383,24 +383,26 @@
         <button class="search-clear" onclick="clearTokenSearch()" title="Clear search">✕</button>
     </div>
     
-    <select id="competition-phase" class="filter-select" onchange="handleCompetitionFilterChange()">
-        <option value="all">All Competitions</option>
-        <option value="voting">Voting Open</option>
-        <option value="active">Running</option>
-    </select>
-    
-    <select id="sort-by" class="filter-select" onchange="handleCompetitionFilterChange()">
-        <option value="time_remaining">Time Remaining</option>
-        <option value="total_pool">Pool Size</option>
-        <option value="total_bets">Participants</option>
-        <option value="created_at">Newest First</option>
-    </select>
-    
-    <button class="btn-refresh-stylized" onclick="loadActiveCompetitions()" title="Refresh competitions">
-        <span class="refresh-icon">🔄</span> Refresh
-    </button>
+    <!-- Filter Controls Row -->
+    <div class="filter-row">
+        <select id="competition-phase" class="filter-select" onchange="handleCompetitionFilterChange()">
+            <option value="all">All Competitions</option>
+            <option value="voting">Voting Open</option>
+            <option value="active">Running</option>
+        </select>
+        
+        <select id="sort-by" class="filter-select" onchange="handleCompetitionFilterChange()">
+            <option value="time_remaining">Time Remaining</option>
+            <option value="total_pool">Pool Size</option>
+            <option value="total_bets">Participants</option>
+            <option value="created_at">Newest First</option>
+        </select>
+        
+        <button class="btn-refresh-stylized" onclick="loadActiveCompetitions()" title="Refresh competitions">
+            <span class="refresh-icon">🔄</span> Refresh
+        </button>
+    </div>
 </div>
-                            </div>
                             
                             <!-- Competition Status Summary -->
                             <div class="competition-status-summary">
