@@ -2662,19 +2662,35 @@ function calculateTimeRemainingForComp(competition) {
     }
 }
 
-function formatTimeRemaining(milliseconds) {
-    if (milliseconds <= 0) return 'Ended';
-
-    const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((milliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+function formatTimeRemaining(timeRemaining) {
+    if (timeRemaining <= 0) {
+        return '<span class="timer-expired">EXPIRED</span>';
+    }
+    
+    const totalSeconds = Math.floor(timeRemaining / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    // Add urgency classes for styling
+    let urgencyClass = '';
+    if (totalSeconds <= 300) { // 5 minutes
+        urgencyClass = 'countdown-final';
+    } else if (totalSeconds <= 3600) { // 1 hour
+        urgencyClass = 'countdown-critical';
+    } else if (totalSeconds <= 86400) { // 1 day
+        urgencyClass = 'countdown-urgent';
+    }
     
     if (days > 0) {
-        return `${days}d ${hours}h`;
+        return `<span class="${urgencyClass}">${days}d ${hours}h ${minutes}m</span>`;
     } else if (hours > 0) {
-        return `${hours}h ${minutes}m`;
+        return `<span class="${urgencyClass}">${hours}h ${minutes}m</span>`;
+    } else if (minutes > 0) {
+        return `<span class="${urgencyClass}">${minutes}m ${seconds}s</span>`;
     } else {
-        return `${minutes}m`;
+        return `<span class="${urgencyClass}">${seconds}s</span>`;
     }
 }
 
