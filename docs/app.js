@@ -2494,30 +2494,86 @@ function getPageContentArea(pageName) {
 }
 
 function getFilteredCompetitions() {
-    let competitions = [...CompetitionState.competitions];
-    
-    // Apply phase filter
-    if (CompetitionState.currentFilters.phase !== 'all') {
-        competitions = competitions.filter(comp => comp.status === CompetitionState.currentFilters.phase);
-    }
-    
-    // Apply sorting
-    competitions.sort((a, b) => {
-        switch (CompetitionState.currentFilters.sortBy) {
-            case 'time_remaining':
-                return a.timeRemaining - b.timeRemaining;
-            case 'total_pool':
-                return b.prizePool - a.prizePool;
-            case 'total_bets':
-                return b.participants - a.participants;
-            case 'created_at':
-                return b.createdAt - a.createdAt;
-            default:
-                return 0;
+    try {
+        let filtered = [...CompetitionState.competitions];
+        const filters = CompetitionState.currentFilters;
+        
+        console.log('🔄 Applying filters:', filters);
+        console.log('📊 Total competitions before filtering:', filtered.length);
+        
+        // Phase filter
+        if (filters.phase && filters.phase !== 'all') {
+            filtered = filtered.filter(comp => comp.status === filters.phase);
+            console.log(`📊 After phase filter (${filters.phase}):`, filtered.length);
         }
-    });
-    
-    return competitions;
+        
+        // Search filter
+        if (filters.searchQuery && filters.searchQuery.length > 0) {
+            filtered = filtered.filter(comp => {
+                const query = filters.searchQuery;
+                return (
+                    comp.tokenA.symbol.toLowerCase().includes(query) ||
+                    comp.tokenA.name.toLowerCase().includes(query) ||
+                    comp.tokenA.address.toLowerCase().includes(query) ||
+                    comp.tokenB.symbol.toLowerCase().includes(query) ||
+                    comp.tokenB.name.toLowerCase().includes(query) ||
+                    comp.tokenB.address.toLowerCase().includes(query)
+                );
+            });
+            console.log(`📊 After search filter (${filters.searchQuery}):`, filtered.length);
+        }
+        
+        // Time remaining filter (fix this!)
+        if (filters.timeRemaining && filters.timeRemaining !== 'all') {
+            const now = Date.now();
+            filtered = filtered.filter(comp => {
+                const endTime = new Date(comp.endTime || comp.end_time).getTime();
+                const timeRemaining = endTime - now;
+                const hoursRemaining = timeRemaining / (1000 * 60 * 60);
+                
+                switch(filters.timeRemaining) {
+                    case 'ending_soon': return hoursRemaining <= 24 && hoursRemaining > 0;
+                    case 'this_week': return hoursRemaining <= 168 && hoursRemaining > 0; // 7 days
+                    case 'active': return timeRemaining > 0;
+                    default: return true;
+                }
+            });
+            console.log(`📊 After time filter (${filters.timeRemaining}):`, filtered.length);
+        }
+        
+        // Sort competitions
+        if (filters.sortBy) {
+            filtered.sort((a, b) => {
+                switch(filters.sortBy) {
+                    case 'time_remaining':
+                        const aTime = new Date(a.endTime || a.end_time).getTime();
+                        const bTime = new Date(b.endTime || b.end_time).getTime();
+                        return aTime - bTime; // Soonest first
+                    
+                    case 'total_pool':
+                        return (b.prizePool || 0) - (a.prizePool || 0); // Largest first
+                    
+                    case 'total_bets':
+                        return (b.participants || 0) - (a.participants || 0); // Most participants first
+                    
+                    case 'created_at':
+                        const aCreated = new Date(a.createdAt || a.created_at).getTime();
+                        const bCreated = new Date(b.createdAt || b.created_at).getTime();
+                        return bCreated - aCreated; // Newest first
+                    
+                    default:
+                        return 0;
+                }
+            });
+        }
+        
+        console.log(`✅ Final filtered competitions:`, filtered.length);
+        return filtered;
+        
+    } catch (error) {
+        console.error('❌ Error filtering competitions:', error);
+        return CompetitionState.competitions || [];
+    }
 }
 
 function updateCompetitionStatsDisplay() {
