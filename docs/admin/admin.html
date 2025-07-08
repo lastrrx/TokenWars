@@ -1911,5 +1911,69 @@
     });
 
     </script>
+    <!-- Emergency Cleanup Modal -->
+    <div id="emergencyCleanupModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeEmergencyCleanupModal()">&times;</button>
+            
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🚨</div>
+                <h2 style="color: var(--admin-error); margin: 0;">Emergency Cleanup Confirmation</h2>
+            </div>
+            
+            <div class="security-warning">
+                <h4 style="margin: 0 0 1rem 0; color: var(--admin-warning);">⚠️ WARNING: This action cannot be undone!</h4>
+                <p style="margin: 0;">Emergency cleanup will:</p>
+                <ul style="margin: 0.5rem 0 0 1rem;">
+                    <li>Cancel the competition immediately</li>
+                    <li>Refund all bets minus 0.002 SOL transaction fee per bet</li>
+                    <li>Transfer remaining funds to platform wallet</li>
+                    <li>Set competition status to CANCELLED</li>
+                </ul>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--admin-text);">
+                    Type the competition ID to confirm:
+                </label>
+                <input 
+                    type="text" 
+                    id="confirmCompetitionId" 
+                    placeholder="Enter competition ID" 
+                    style="
+                        width: 100%;
+                        padding: 0.75rem;
+                        background: var(--admin-bg);
+                        border: 1px solid var(--admin-border);
+                        border-radius: 6px;
+                        color: var(--admin-text);
+                        font-family: monospace;
+                    "
+                />
+                <div style="margin-top: 0.5rem; padding: 0.5rem; background: var(--admin-surface); border-radius: 4px; border: 1px solid var(--admin-border);">
+                    <strong>Competition ID:</strong> <span id="targetCompetitionId" style="font-family: monospace; color: var(--admin-primary);"></span>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+                <button 
+                    class="btn btn-secondary" 
+                    onclick="closeEmergencyCleanupModal()"
+                    style="flex: 1;"
+                >
+                    Cancel
+                </button>
+                <button 
+                    class="btn btn-danger" 
+                    onclick="executeEmergencyCleanup()" 
+                    id="confirmCleanupBtn" 
+                    disabled
+                    style="flex: 1;"
+                >
+                    🚨 Confirm Emergency Cleanup
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
