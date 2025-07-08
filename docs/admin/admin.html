@@ -69,6 +69,88 @@
             console.error('❌ [ADMIN] Supabase failed to load');
         }
     });
+        // Emergency Cleanup Modal Functions
+        let targetCompetitionForCleanup = null;
+        
+        function showEmergencyCleanupModal(competitionId) {
+            console.log('🚨 Opening emergency cleanup modal for:', competitionId);
+            
+            targetCompetitionForCleanup = competitionId;
+            document.getElementById('targetCompetitionId').textContent = competitionId;
+            document.getElementById('confirmCompetitionId').value = '';
+            document.getElementById('confirmCleanupBtn').disabled = true;
+            document.getElementById('emergencyCleanupModal').style.display = 'flex';
+            
+            // Enable confirm button when competition ID matches
+            const confirmInput = document.getElementById('confirmCompetitionId');
+            confirmInput.addEventListener('input', function(e) {
+                const isMatch = e.target.value === competitionId;
+                document.getElementById('confirmCleanupBtn').disabled = !isMatch;
+                
+                if (isMatch) {
+                    e.target.style.borderColor = '#10b981';
+                    e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                } else {
+                    e.target.style.borderColor = 'var(--admin-border)';
+                    e.target.style.backgroundColor = 'var(--admin-bg)';
+                }
+            });
+            
+            // Focus the input
+            setTimeout(() => confirmInput.focus(), 100);
+        }
+        
+        function closeEmergencyCleanupModal() {
+            document.getElementById('emergencyCleanupModal').style.display = 'none';
+            targetCompetitionForCleanup = null;
+            
+            // Reset input styles
+            const confirmInput = document.getElementById('confirmCompetitionId');
+            confirmInput.style.borderColor = 'var(--admin-border)';
+            confirmInput.style.backgroundColor = 'var(--admin-bg)';
+        }
+        
+        async function executeEmergencyCleanup() {
+            if (!targetCompetitionForCleanup) {
+                showAdminNotification('No competition selected for cleanup', 'error');
+                return;
+            }
+            
+            const confirmedId = document.getElementById('confirmCompetitionId').value;
+            if (confirmedId !== targetCompetitionForCleanup) {
+                showAdminNotification('Competition ID does not match', 'error');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const confirmBtn = document.getElementById('confirmCleanupBtn');
+                const originalText = confirmBtn.textContent;
+                confirmBtn.textContent = '⏳ Processing...';
+                confirmBtn.disabled = true;
+                
+                showAdminNotification('Executing emergency cleanup...', 'info');
+                closeEmergencyCleanupModal();
+                
+                // Call the emergency cleanup function from admin.js
+                await window.emergencyCleanupCompetition(targetCompetitionForCleanup);
+                
+                // Refresh the competitions display
+                if (typeof loadCompetitionsManagementWithDiagnostics === 'function') {
+                    await loadCompetitionsManagementWithDiagnostics();
+                }
+                
+            } catch (error) {
+                console.error('Emergency cleanup failed:', error);
+                showAdminNotification(`Emergency cleanup failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Export functions globally for onclick handlers
+        window.showEmergencyCleanupModal = showEmergencyCleanupModal;
+        window.closeEmergencyCleanupModal = closeEmergencyCleanupModal;
+        window.executeEmergencyCleanup = executeEmergencyCleanup;
+
     </script>
 
     <style>
@@ -1114,16 +1196,41 @@
                         
                         <div class="parameter-control">
                             <label>Minimum Bet Amount (SOL)</label>
-                            <input type="number" class="parameter-input" id="min-bet-amount" 
-                                   min="0.01" max="10" step="0.01" value="0.1">
-                            <div class="parameter-value">0.1 SOL</div>
+                            <select class="parameter-input" id="min-bet-amount">
+                                <option value="0.05">0.05</option>
+                                <option value="0.10" selected>0.10</option>
+                                <option value="0.15">0.15</option>
+                                <option value="0.20">0.20</option>
+                                <option value="0.25">0.25</option>
+                                <option value="0.30">0.30</option>
+                                <option value="0.35">0.35</option>
+                                <option value="0.40">0.40</option>
+                                <option value="0.45">0.45</option>
+                                <option value="0.50">0.50</option>
+                            </select>
+                            <div class="parameter-value">
+                                <div>0.1 SOL</div>
+                                <div>Smart contract range: 0.05-0.5 SOL</div>
+                            </div>
                         </div>
                         
                         <div class="parameter-control">
                             <label>Platform Fee (%)</label>
-                            <input type="number" class="parameter-input" id="platform-fee" 
-                                   min="1" max="30" value="15">
-                            <div class="parameter-value">15%</div>
+                            <select class="parameter-input" id="platform-fee">
+                                <option value="5">5</option>
+                                <option value="7.5">7.5</option>
+                                <option value="10">10</option>
+                                <option value="12.5">12.5</option>
+                                <option value="15" selected>15</option>
+                                <option value="17.5">17.5</option>
+                                <option value="20">20</option>
+                                <option value="22.5">22.5</option>
+                                <option value="25">25</option>
+                            </select>
+                            <div class="parameter-value">
+                                <div>15%</div>
+                                <div>Smart contract range: 5%-25%</div>
+                            </div>
                         </div>
                         
                         <div class="parameter-control">
