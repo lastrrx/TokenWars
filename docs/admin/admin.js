@@ -5006,7 +5006,107 @@ function generateTokenPairs() {
 // View competition details
 function viewCompetitionDetails(competitionId) {
     debugLog('competition', `👁️ Viewing competition details: ${competitionId}`);
-    showAdminNotification(`Competition details for ${competitionId} - feature coming soon`, 'info');
+    
+    try {
+        // Find competition in AdminState
+        const competition = AdminState.competitions?.find(c => c.competition_id === competitionId);
+        if (!competition) {
+            showAdminNotification('Competition not found', 'error');
+            return;
+        }
+        
+        // Create detailed competition modal
+        const modal = document.createElement('div');
+        modal.id = 'competition-details-modal';
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <button class="close-modal" onclick="closeCompetitionDetailsModal()">&times;</button>
+                
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h2 style="color: var(--admin-primary); margin: 0;">📊 Competition Details</h2>
+                    <p style="color: var(--admin-text-secondary); margin: 0.5rem 0 0 0; font-family: monospace;">
+                        ID: ${competitionId}
+                    </p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <!-- Competition Info -->
+                    <div style="background: var(--admin-surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--admin-border);">
+                        <h3 style="margin: 0 0 1rem 0; color: var(--admin-text);">🪙 Token Pair</h3>
+                        <div class="competition-parameter">
+                            <strong>Token A:</strong> ${competition.token_a_symbol || 'N/A'} (${competition.token_a_name || 'Unknown'})
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>Token B:</strong> ${competition.token_b_symbol || 'N/A'} (${competition.token_b_name || 'Unknown'})
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>Required Bet Amount:</strong> ${(competition.required_bet_amount ? (competition.required_bet_amount / 1e9).toFixed(2) : '0.1')} SOL
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>Platform Fee:</strong> ${(competition.platform_fee_bps ? (competition.platform_fee_bps / 100).toFixed(1) : '15')}%
+                        </div>
+                    </div>
+                    
+                    <!-- Status & Actions -->
+                    <div style="background: var(--admin-surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--admin-border);">
+                        <h3 style="margin: 0 0 1rem 0; color: var(--admin-text);">📈 Status & Actions</h3>
+                        <div class="competition-parameter">
+                            <strong>Status:</strong> 
+                            <span class="status-badge status-${competition.status?.toLowerCase()}" style="
+                                padding: 0.25rem 0.5rem;
+                                border-radius: 0.25rem;
+                                font-size: 0.75rem;
+                                font-weight: 600;
+                                text-transform: uppercase;
+                                background: ${getStatusColor(competition.status)};
+                                color: white;
+                                margin-left: 0.5rem;
+                            ">${competition.status || 'Unknown'}</span>
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>Total Bets:</strong> ${competition.total_bets || 0}
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>Total Pool:</strong> ${parseFloat(competition.total_pool || 0).toFixed(2)} SOL
+                        </div>
+                        <div class="competition-parameter">
+                            <strong>End Time:</strong> ${formatDateTime(competition.end_time)}
+                        </div>
+                        
+                        ${(competition.status === 'VOTING' || competition.status === 'ACTIVE') ? `
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--admin-border);">
+                                <button class="btn btn-danger" onclick="showEmergencyCleanupModal('${competition.competition_id}')" style="width: 100%;">
+                                    🚨 Emergency Cleanup
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: center; margin-top: 2rem;">
+                    <button class="btn btn-secondary" onclick="closeCompetitionDetailsModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+    } catch (error) {
+        console.error('Error showing competition details:', error);
+        showAdminNotification(`Failed to show competition details: ${error.message}`, 'error');
+    }
+}
+
+// Helper function to close competition details modal
+function closeCompetitionDetailsModal() {
+    const modal = document.getElementById('competition-details-modal');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Quick action functions
@@ -5125,6 +5225,7 @@ window.submitManualCompetition = submitManualCompetitionWithSmartContract;
 window.createCompetitionWithSmartContract = createCompetitionWithSmartContract;
 window.generateCompetitionId = generateCompetitionId;
 window.emergencyCleanupCompetition = emergencyCleanupCompetition;
+window.closeCompetitionDetailsModal = closeCompetitionDetailsModal;
 
 // Backward compatibility functions
 window.verifyAdminWallet = verifyAdminWallet;
