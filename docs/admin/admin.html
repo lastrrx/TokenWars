@@ -69,82 +69,147 @@
             console.error('❌ [ADMIN] Supabase failed to load');
         }
     });
-        // Emergency Cleanup Modal Functions
-        let targetCompetitionForCleanup = null;
+// Emergency Cleanup Modal Functions
+let targetCompetitionForCleanup = null;
+
+function showEmergencyCleanupModal(competitionId) {
+    console.log('🚨 Opening emergency cleanup modal for:', competitionId);
+    console.log('🔍 Competition ID type:', typeof competitionId);
+    console.log('🔍 Competition ID value:', JSON.stringify(competitionId));
+    
+    // Validate competition ID
+    if (!competitionId || competitionId === 'null' || competitionId === 'undefined') {
+        console.error('❌ Invalid competition ID passed to modal:', competitionId);
+        showAdminNotification('Invalid competition ID', 'error');
+        return;
+    }
+    
+    // Store competition ID globally AND on window for extra safety
+    targetCompetitionForCleanup = competitionId;
+    window.targetCompetitionForCleanup = competitionId;
+    
+    console.log('✅ Target competition set to:', targetCompetitionForCleanup);
+    
+    // Update modal content
+    document.getElementById('targetCompetitionId').textContent = competitionId;
+    document.getElementById('confirmCompetitionId').value = '';
+    document.getElementById('confirmCleanupBtn').disabled = true;
+    document.getElementById('emergencyCleanupModal').style.display = 'flex';
+    
+    // Remove any existing event listeners to prevent duplicates
+    const confirmInput = document.getElementById('confirmCompetitionId');
+    const newConfirmInput = confirmInput.cloneNode(true);
+    confirmInput.parentNode.replaceChild(newConfirmInput, confirmInput);
+    
+    // Add fresh event listener for input validation
+    newConfirmInput.addEventListener('input', function(e) {
+        const isMatch = e.target.value === competitionId;
+        const confirmBtn = document.getElementById('confirmCleanupBtn');
+        confirmBtn.disabled = !isMatch;
         
-        function showEmergencyCleanupModal(competitionId) {
-            console.log('🚨 Opening emergency cleanup modal for:', competitionId);
-            
-            targetCompetitionForCleanup = competitionId;
-            document.getElementById('targetCompetitionId').textContent = competitionId;
-            document.getElementById('confirmCompetitionId').value = '';
-            document.getElementById('confirmCleanupBtn').disabled = true;
-            document.getElementById('emergencyCleanupModal').style.display = 'flex';
-            
-            // Enable confirm button when competition ID matches
-            const confirmInput = document.getElementById('confirmCompetitionId');
-            confirmInput.addEventListener('input', function(e) {
-                const isMatch = e.target.value === competitionId;
-                document.getElementById('confirmCleanupBtn').disabled = !isMatch;
-                
-                if (isMatch) {
-                    e.target.style.borderColor = '#10b981';
-                    e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-                } else {
-                    e.target.style.borderColor = 'var(--admin-border)';
-                    e.target.style.backgroundColor = 'var(--admin-bg)';
-                }
-            });
-            
-            // Focus the input
-            setTimeout(() => confirmInput.focus(), 100);
+        console.log('🔍 Input validation - Match:', isMatch, 'Input:', e.target.value, 'Expected:', competitionId);
+        
+        if (isMatch) {
+            e.target.style.borderColor = '#10b981';
+            e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+        } else {
+            e.target.style.borderColor = 'var(--admin-border)';
+            e.target.style.backgroundColor = 'var(--admin-bg)';
+        }
+    });
+    
+    // Focus the input
+    setTimeout(() => newConfirmInput.focus(), 100);
+}
+
+function closeEmergencyCleanupModal() {
+    console.log('🔍 Closing emergency cleanup modal');
+    
+    document.getElementById('emergencyCleanupModal').style.display = 'none';
+    
+    // Reset input styles
+    const confirmInput = document.getElementById('confirmCompetitionId');
+    if (confirmInput) {
+        confirmInput.style.borderColor = 'var(--admin-border)';
+        confirmInput.style.backgroundColor = 'var(--admin-bg)';
+        confirmInput.value = '';
+    }
+    
+    // Reset button state
+    const confirmBtn = document.getElementById('confirmCleanupBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '🚨 Confirm Emergency Cleanup';
+    }
+    
+    // Clear target ONLY after use (moved to end of executeEmergencyCleanup)
+    // targetCompetitionForCleanup = null;  // DON'T clear here!
+}
+
+async function executeEmergencyCleanup() {
+    console.log('🔍 Execute emergency cleanup called');
+    console.log('🔍 targetCompetitionForCleanup:', targetCompetitionForCleanup);
+    console.log('🔍 window.targetCompetitionForCleanup:', window.targetCompetitionForCleanup);
+    
+    // Use fallback from window if main variable is lost
+    const competitionToCleanup = targetCompetitionForCleanup || window.targetCompetitionForCleanup;
+    
+    if (!competitionToCleanup) {
+        console.error('❌ No competition selected for cleanup');
+        showAdminNotification('No competition selected for cleanup', 'error');
+        return;
+    }
+    
+    const confirmedId = document.getElementById('confirmCompetitionId').value;
+    console.log('🔍 Confirmed ID:', confirmedId);
+    console.log('🔍 Expected ID:', competitionToCleanup);
+    
+    if (confirmedId !== competitionToCleanup) {
+        console.error('❌ Competition ID mismatch');
+        showAdminNotification('Competition ID does not match', 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const confirmBtn = document.getElementById('confirmCleanupBtn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.textContent = '⏳ Processing...';
+        confirmBtn.disabled = true;
+        
+        showAdminNotification('Executing emergency cleanup...', 'info');
+        
+        console.log('🚨 Executing emergency cleanup for:', competitionToCleanup);
+        
+        // Call the emergency cleanup function from admin.js BEFORE closing modal
+        await window.emergencyCleanupCompetition(competitionToCleanup);
+        
+        // NOW close the modal after successful execution
+        closeEmergencyCleanupModal();
+        
+        // Clear the target variables NOW that we're done
+        targetCompetitionForCleanup = null;
+        window.targetCompetitionForCleanup = null;
+        
+        console.log('✅ Emergency cleanup completed successfully');
+        
+        // Refresh the competitions display
+        if (typeof loadCompetitionsManagementWithDiagnostics === 'function') {
+            await loadCompetitionsManagementWithDiagnostics();
         }
         
-        function closeEmergencyCleanupModal() {
-            document.getElementById('emergencyCleanupModal').style.display = 'none';
-            targetCompetitionForCleanup = null;
-            
-            // Reset input styles
-            const confirmInput = document.getElementById('confirmCompetitionId');
-            confirmInput.style.borderColor = 'var(--admin-border)';
-            confirmInput.style.backgroundColor = 'var(--admin-bg)';
-        }
+    } catch (error) {
+        console.error('❌ Emergency cleanup failed:', error);
+        showAdminNotification(`Emergency cleanup failed: ${error.message}`, 'error');
         
-        async function executeEmergencyCleanup() {
-            if (!targetCompetitionForCleanup) {
-                showAdminNotification('No competition selected for cleanup', 'error');
-                return;
-            }
-            
-            const confirmedId = document.getElementById('confirmCompetitionId').value;
-            if (confirmedId !== targetCompetitionForCleanup) {
-                showAdminNotification('Competition ID does not match', 'error');
-                return;
-            }
-            
-            try {
-                // Show loading state
-                const confirmBtn = document.getElementById('confirmCleanupBtn');
-                const originalText = confirmBtn.textContent;
-                confirmBtn.textContent = '⏳ Processing...';
-                confirmBtn.disabled = true;
-                
-                showAdminNotification('Executing emergency cleanup...', 'info');
-                closeEmergencyCleanupModal();
-                
-                // Call the emergency cleanup function from admin.js
-                await window.emergencyCleanupCompetition(targetCompetitionForCleanup);
-                
-                // Refresh the competitions display
-                if (typeof loadCompetitionsManagementWithDiagnostics === 'function') {
-                    await loadCompetitionsManagementWithDiagnostics();
-                }
-                
-            } catch (error) {
-                console.error('Emergency cleanup failed:', error);
-                showAdminNotification(`Emergency cleanup failed: ${error.message}`, 'error');
-            }
+        // Reset button state on error
+        const confirmBtn = document.getElementById('confirmCleanupBtn');
+        if (confirmBtn) {
+            confirmBtn.textContent = '🚨 Confirm Emergency Cleanup';
+            confirmBtn.disabled = false;
         }
+    }
+}
         
         // Export functions globally for onclick handlers
         window.showEmergencyCleanupModal = showEmergencyCleanupModal;
