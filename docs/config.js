@@ -115,12 +115,10 @@ const UI_CONFIG = {
 // Add smart contract configuration
 
 const BLOCKCHAIN_CONFIG = {
-    SOLANA_PROGRAM_ID: 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5',
+    SOLANA_PROGRAM_ID: 'FtYH93zU1WtfiNNwFJ7K8We4AYHC961LBN3wbPb4xVMH',
     SOLANA_NETWORK: 'devnet',
     JUPITER_API_URL: 'https://lite-api.jup.ag/tokens/v2',
     SMART_CONTRACT_ENABLED: true,
-    TWAP_SAMPLING_INTERVAL: 5000, // 5 seconds
-    TWAP_WINDOW_DURATION: 300000, // 5 minutes
     FALLBACK_TO_DATABASE: true,
     PLATFORM_WALLET: 'HmT6Nj3r24YKCxGLPvf1gSJijXyNcrPHKKeknZYGRXv',
     RPC_URL: 'https://api.devnet.solana.com'  // ← ADD THIS LINE
