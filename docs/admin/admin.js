@@ -1470,11 +1470,23 @@ async function createCompetitionWithSmartContract(config) {
 
         // 1. Create on-chain escrow first
         console.log('📊 Creating on-chain escrow...');
+        
+        // Convert bet amount to lamports (SOL * 1e9)
+        const betAmountLamports = Math.floor((config.betAmount || 0.1) * 1e9);
+        
+        // Convert platform fee percentage to basis points (% * 100)
+        const platformFeeBps = Math.floor((config.platformFee || 15) * 100);
+        
+        console.log('💰 Bet amount:', config.betAmount, 'SOL =', betAmountLamports, 'lamports');
+        console.log('💳 Platform fee:', config.platformFee, '% =', platformFeeBps, 'basis points');
+        
         const escrowResult = await window.smartContractService.createCompetitionEscrow(
             competitionId,
-            config.selectedPair.token_a_address,  // ← Correct
-            config.selectedPair.token_b_address,  // ← Correct
-            adminWallet
+            config.selectedPair.token_a_address,
+            config.selectedPair.token_b_address,
+            adminWallet,
+            betAmountLamports,    // NEW: Variable bet amount (0.05-0.5 SOL)
+            platformFeeBps        // NEW: Variable platform fee (5-25%)
         );
 
         console.log('✅ Escrow created:', escrowResult);
@@ -1607,6 +1619,19 @@ async function submitManualCompetitionWithSmartContract() {
             selectedPair: selectedPair
         };
         
+        // NEW: Validate bet amount and platform fee for new smart contract
+        if (config.betAmount < 0.05 || config.betAmount > 0.5) {
+            showAdminNotification('Bet amount must be between 0.05 and 0.5 SOL', 'error');
+            return;
+        }
+        
+        if (config.platformFee < 5 || config.platformFee > 25) {
+            showAdminNotification('Platform fee must be between 5% and 25%', 'error');
+            return;
+        }
+        
+        console.log('✅ Competition config validated:', config);
+        
         debugLog('competitionSubmit', 'Competition config:', config);
         
         // Show loading state
@@ -1667,106 +1692,77 @@ async function submitManualCompetitionWithSmartContract() {
 }
 
 /**
- * Start competition and begin TWAP price tracking
+ * Emergency cleanup competition - refund all bets and cancel
  */
-async function startCompetitionWithTwap(competitionId) {
+async function emergencyCleanupCompetition(competitionId) {
     try {
-        console.log('🚀 Starting competition with TWAP tracking:', competitionId);
+        console.log('🚨 Executing emergency cleanup for:', competitionId);
         
         const adminWallet = sessionStorage.getItem('adminWallet');
         if (!adminWallet) {
             throw new Error('Admin wallet not connected');
         }
 
-        // Get competition details from database
-        const supabase = getSupabase();
-        const { data: competition, error } = await supabase
-            .from('competitions')
-            .select('*')
-            .eq('competition_id', competitionId)
-            .single();
-
-        if (error) {
-            throw new Error(`Competition not found: ${error.message}`);
+        // Verify admin authorization
+        const authResult = await verifyAdminWalletEnhanced(adminWallet);
+        if (!authResult.authorized) {
+            throw new Error(`Unauthorized: ${authResult.reason}`);
         }
 
-        // Check if competition has smart contract integration
-        if (!competition.escrow_account) {
-            throw new Error('Competition does not have smart contract integration');
-        }
-
-        // Start competition on-chain
-        const signature = await window.smartContractService.startCompetition(
+        // Call smart contract emergency cleanup
+        console.log('📤 Calling smart contract emergency cleanup...');
+        const signature = await window.smartContractService.emergencyCleanup(
             competitionId,
-            competition.token_a_address,
-            competition.token_b_address,
             adminWallet
         );
 
-        // Update competition status in database
-        await supabase
+        console.log('✅ Emergency cleanup transaction:', signature);
+
+        // Update database status to CANCELLED
+        const supabase = getSupabase();
+        const { error: updateError } = await supabase
             .from('competitions')
-            .update({
-                status: 'ACTIVE',
-                updated_at: new Date().toISOString()
+            .update({ 
+                status: 'CANCELLED',
+                updated_at: new Date().toISOString(),
+                emergency_cleanup_signature: signature,
+                cancelled_by: adminWallet,
+                cancellation_reason: 'Emergency cleanup by admin'
             })
             .eq('competition_id', competitionId);
 
-        console.log('✅ Competition started with TWAP tracking:', signature);
-        showAdminNotification('Competition started with TWAP price tracking!', 'success');
+        if (updateError) {
+            console.error('❌ Database update error:', updateError);
+            showAdminNotification('Cleanup succeeded but database update failed', 'warning');
+        } else {
+            showAdminNotification('Emergency cleanup completed successfully', 'success');
+        }
 
-        return signature;
+        // Log admin action
+        await logAdminActionEnhanced('emergency_cleanup', {
+            competition_id: competitionId,
+            transaction_signature: signature,
+            admin_wallet: adminWallet,
+            timestamp: new Date().toISOString()
+        });
+
+        // Refresh competition display
+        if (typeof loadActiveCompetitionsFixed === 'function') {
+            loadActiveCompetitionsFixed();
+        }
+        if (typeof loadCompetitionsManagementWithDiagnostics === 'function') {
+            loadCompetitionsManagementWithDiagnostics();
+        }
+
+        return { success: true, signature };
 
     } catch (error) {
-        console.error('❌ Error starting competition with TWAP:', error);
-        showAdminNotification(`Failed to start competition: ${error.message}`, 'error');
+        console.error('❌ Emergency cleanup error:', error);
+        showAdminNotification(`Emergency cleanup failed: ${error.message}`, 'error');
         throw error;
     }
 }
 
-/**
- * Update TWAP sample during competition
- */
-async function updateCompetitionTwap(competitionId) {
-    try {
-        console.log('📊 Updating TWAP sample for competition:', competitionId);
-        
-        const adminWallet = sessionStorage.getItem('adminWallet');
-        if (!adminWallet) {
-            throw new Error('Admin wallet not connected');
-        }
-
-        // Get competition details
-        const supabase = getSupabase();
-        const { data: competition, error } = await supabase
-            .from('competitions')
-            .select('*')
-            .eq('competition_id', competitionId)
-            .single();
-
-        if (error) {
-            throw new Error(`Competition not found: ${error.message}`);
-        }
-
-        // Update TWAP sample on-chain
-        const signature = await window.smartContractService.updateTwapSample(
-            competitionId,
-            competition.token_a_address,
-            competition.token_b_address,
-            adminWallet
-        );
-
-        console.log('✅ TWAP sample updated:', signature);
-        showAdminNotification('TWAP sample updated successfully!', 'info');
-
-        return signature;
-
-    } catch (error) {
-        console.error('❌ Error updating TWAP sample:', error);
-        showAdminNotification(`Failed to update TWAP: ${error.message}`, 'error');
-        throw error;
-    }
-}
 
 /**
  * FIXED: Submit Manual Competition
@@ -3402,6 +3398,9 @@ async function testAutomationConfigurationEnhanced() {
 /**
  * Reset Automation Settings to Enhanced Defaults
  */
+/**
+ * Reset Automation Settings to Enhanced Defaults
+ */
 function resetAutomationSettingsEnhanced() {
     const confirmHtml = `
         <div style="color: var(--admin-text, #f3f4f6);">
@@ -3411,29 +3410,81 @@ function resetAutomationSettingsEnhanced() {
                 <div>• Competitions per day: 4 (every 6 hours)</div>
                 <div>• Voting period: 15 minutes</div>
                 <div>• Performance period: 24 hours</div>
-                <div>• Bet amount: 0.1 SOL</div>
-                <div>• Platform fee: 15%</div>
+                <div>• Bet amount: 0.1 SOL <span style="color: #10b981;">(valid: 0.05-0.5 SOL)</span></div>
+                <div>• Platform fee: 15% <span style="color: #10b981;">(valid: 5-25%)</span></div>
                 <div>• Max pool size: 100 SOL</div>
             </div>
             <p style="color: #f59e0b;">⚠️ Current settings will be lost. Continue with reset?</p>
+            <p style="color: #6b7280; font-size: 0.875rem;">Note: These defaults are compatible with the new smart contract requirements.</p>
         </div>
     `;
     
     showEnhancedConfirmDialog('Reset Settings', confirmHtml).then(confirmed => {
         if (confirmed) {
-            // Reset form values to defaults
-            document.getElementById('competitions-per-day').value = 4;
-            document.getElementById('voting-period').value = 15;
-            document.getElementById('performance-period').value = 24;
-            document.getElementById('min-bet-amount').value = 0.1;
-            document.getElementById('platform-fee').value = 15;
-            document.getElementById('max-pool-size').value = 100;
+            // Reset automation settings form values to defaults
+            const elementsToReset = [
+                { id: 'competitions-per-day', value: 4 },
+                { id: 'voting-period', value: 15 },
+                { id: 'performance-period', value: 24 },
+                { id: 'min-bet-amount', value: 0.1 },
+                { id: 'platform-fee', value: 15 },
+                { id: 'max-pool-size', value: 100 }
+            ];
+
+            let resetCount = 0;
+            elementsToReset.forEach(({ id, value }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value;
+                    resetCount++;
+                    console.log(`✅ Reset ${id} to ${value}`);
+                } else {
+                    console.warn(`⚠️ Automation element not found: ${id}`);
+                }
+            });
+
+            // Also reset manual competition form if it exists
+            const manualElements = [
+                { id: 'manual-voting-period', value: 15 },
+                { id: 'manual-performance-period', value: 24 },
+                { id: 'manual-bet-amount', value: 0.1 },
+                { id: 'manual-platform-fee', value: 15 }
+            ];
+
+            manualElements.forEach(({ id, value }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value;
+                    console.log(`✅ Reset manual form ${id} to ${value}`);
+                }
+            });
+
+            // Update displays and trigger validation
+            if (typeof updateParameterDisplaysEnhanced === 'function') {
+                updateParameterDisplaysEnhanced();
+            }
+
+            // Trigger individual parameter updates to refresh displays with new validation
+            elementsToReset.forEach(({ id, value }) => {
+                if (typeof updateParameterValueEnhanced === 'function') {
+                    updateParameterValueEnhanced(id, value);
+                }
+            });
+
+            // Update automation state if running
+            if (AdminState.automationState.enabled) {
+                AdminState.automationState.config = {
+                    competitions_per_day: 4,
+                    voting_period: 15,
+                    performance_period: 24,
+                    min_bet_amount: 0.1,
+                    platform_fee: 15,
+                    max_pool_size: 100
+                };
+            }
             
-            // Update displays
-            updateParameterDisplaysEnhanced();
-            
-            showAdminNotification('Settings reset to defaults', 'info');
-            debugLog('settings', '🔄 Automation settings reset to enhanced defaults');
+            showAdminNotification(`Settings reset to defaults (${resetCount} automation fields updated)`, 'success');
+            debugLog('settings', '🔄 Automation settings reset to enhanced defaults with smart contract compatibility');
         }
     });
 }
@@ -5035,8 +5086,7 @@ window.submitManualCompetition = submitManualCompetitionWithSmartContract;
 // Export new functions
 window.createCompetitionWithSmartContract = createCompetitionWithSmartContract;
 window.generateCompetitionId = generateCompetitionId;
-window.startCompetitionWithTwap = startCompetitionWithTwap;
-window.updateCompetitionTwap = updateCompetitionTwap;
+window.emergencyCleanupCompetition = emergencyCleanupCompetition;
 
 // Backward compatibility functions
 window.verifyAdminWallet = verifyAdminWallet;
