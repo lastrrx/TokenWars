@@ -825,17 +825,32 @@ async function renderCompetitionsTableWithDiagnostics() {
                         ">${typeLabel}</span>
                     </td>
                     <td>
-                        <button class="btn btn-small btn-info" onclick="viewCompetitionDetails('${comp.competition_id}')" style="
-                            padding: 0.25rem 0.5rem;
-                            font-size: 0.75rem;
-                            background: #3b82f6;
-                            color: white;
-                            border: none;
-                            border-radius: 0.25rem;
-                            cursor: pointer;
-                        ">
-                            👁️ View
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-small btn-info" onclick="viewCompetitionDetails('${comp.competition_id}')" style="
+                                padding: 0.25rem 0.5rem;
+                                font-size: 0.75rem;
+                                background: #3b82f6;
+                                color: white;
+                                border: none;
+                                border-radius: 0.25rem;
+                                cursor: pointer;
+                            ">
+                                👁️ View
+                            </button>
+                            ${(comp.status === 'VOTING' || comp.status === 'ACTIVE') ? `
+                                <button class="btn btn-small btn-danger" onclick="showEmergencyCleanupModal('${comp.competition_id}')" style="
+                                    padding: 0.25rem 0.5rem;
+                                    font-size: 0.75rem;
+                                    background: #ef4444;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 0.25rem;
+                                    cursor: pointer;
+                                ">
+                                    🚨 Cleanup
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `;
