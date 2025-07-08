@@ -2067,7 +2067,7 @@ async function showCompetitionCreationModal() {
                             </div>
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #9ca3af;">Bet Amount (SOL)</label>
-                                <input type="number" id="manual-bet-amount" min="0.01" max="10" step="0.01" value="0.1" style="
+                                <select id="manual-bet-amount" style="
                                     width: 100%;
                                     padding: 0.5rem;
                                     background: var(--admin-bg, #111827);
@@ -2075,10 +2075,22 @@ async function showCompetitionCreationModal() {
                                     border-radius: 4px;
                                     color: var(--admin-text, #f3f4f6);
                                 ">
+                                    <option value="0.05">0.05 SOL</option>
+                                    <option value="0.10" selected>0.10 SOL</option>
+                                    <option value="0.15">0.15 SOL</option>
+                                    <option value="0.20">0.20 SOL</option>
+                                    <option value="0.25">0.25 SOL</option>
+                                    <option value="0.30">0.30 SOL</option>
+                                    <option value="0.35">0.35 SOL</option>
+                                    <option value="0.40">0.40 SOL</option>
+                                    <option value="0.45">0.45 SOL</option>
+                                    <option value="0.50">0.50 SOL</option>
+                                </select>
+                                <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">Smart contract enforced range: 0.05 - 0.5 SOL</small>
                             </div>
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #9ca3af;">Platform Fee (%)</label>
-                                <input type="number" id="manual-platform-fee" min="1" max="30" value="15" style="
+                                <select id="manual-platform-fee" style="
                                     width: 100%;
                                     padding: 0.5rem;
                                     background: var(--admin-bg, #111827);
@@ -2086,6 +2098,17 @@ async function showCompetitionCreationModal() {
                                     border-radius: 4px;
                                     color: var(--admin-text, #f3f4f6);
                                 ">
+                                    <option value="5">5%</option>
+                                    <option value="7.5">7.5%</option>
+                                    <option value="10">10%</option>
+                                    <option value="12.5">12.5%</option>
+                                    <option value="15" selected>15%</option>
+                                    <option value="17.5">17.5%</option>
+                                    <option value="20">20%</option>
+                                    <option value="22.5">22.5%</option>
+                                    <option value="25">25%</option>
+                                </select>
+                                <small style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">Smart contract enforced range: 5% - 25%</small>
                             </div>
                         </div>
                     </div>
