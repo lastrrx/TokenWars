@@ -1529,7 +1529,7 @@ async function createCompetitionWithSmartContract(config) {
             voting_end_time: votingEndTime.toISOString(),
             end_time: endTime.toISOString(),
             required_bet_amount: config.betAmountLamports,
-            platform_fee_bps: config.platformFeeBps,
+            platform_fee_bps: platformFeeBps,
             total_pool: 0,
             total_bets: 0,
             is_auto_created: !config.isManual,
