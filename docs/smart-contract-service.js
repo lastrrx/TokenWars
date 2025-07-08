@@ -46,12 +46,11 @@ class SmartContractService {
             this.instructions = {
                 createEscrow: await this.computeAnchorDiscriminator('create_escrow'),
                 placeBet: await this.computeAnchorDiscriminator('place_bet'),
-                startCompetition: this.computeAnchorDiscriminator('start_competition'),
-                updateTwapSample: this.computeAnchorDiscriminator('update_twap_sample'),
-                finalizeStartTwap: this.computeAnchorDiscriminator('finalize_start_twap'),
-                resolveCompetition: this.computeAnchorDiscriminator('resolve_competition'),
-                withdrawWinnings: this.computeAnchorDiscriminator('withdraw_winnings'),
-                collectPlatformFee: this.computeAnchorDiscriminator('collect_platform_fee')
+                startCompetition: await this.computeAnchorDiscriminator('start_competition'),
+                updatePriceSample: await this.computeAnchorDiscriminator('update_price_sample'),  // NEW: Replaces TWAP
+                emergencyCleanup: await this.computeAnchorDiscriminator('emergency_cleanup'),    // NEW: Emergency function
+                withdrawWinnings: await this.computeAnchorDiscriminator('withdraw_winnings')
+                // REMOVED: updateTwapSample, finalizeStartTwap, resolveCompetition, collectPlatformFee (auto-handled now)
             };
             
             console.log('✅ Smart Contract Service initialized with correct Anchor discriminators');
@@ -148,7 +147,8 @@ async testTransaction() {
             tokenBAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
             votingEndTime: votingEndTime,
             competitionEndTime: competitionEndTime,
-            platformFeeBps: 1500
+            platformFeeBps: 1500,
+            requiredBetAmount: 100000000  // NEW: 0.1 SOL in lamports for testing
         });
         
         const transaction = new solanaWeb3.Transaction();
@@ -204,7 +204,7 @@ async testTransaction() {
     }
 
     // CORRECTED: createCompetitionEscrow with proper variable ordering and Anchor init handling
-    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet) {
+    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet, betAmount, platformFeeBps) {
         try {
             console.log('📊 Creating competition escrow with CORRECTED Anchor integration...');
             console.log('🔍 Input validation:', {
@@ -215,13 +215,21 @@ async testTransaction() {
             });
             
             // Validate inputs
-            if (!competitionId || !tokenAAddress || !tokenBAddress || !adminWallet) {
+            if (!competitionId || !tokenAAddress || !tokenBAddress || !adminWallet || betAmount === undefined || platformFeeBps === undefined) {
                 throw new Error('Missing required parameters for escrow creation');
             }
             
-            if (competitionId.length > 64) {
-                throw new Error('Competition ID too long (max 64 characters)');
+            // NEW: Validate bet amount and platform fee ranges
+            if (betAmount < 50000000 || betAmount > 500000000) { // 0.05 to 0.5 SOL in lamports
+                throw new Error('Bet amount must be between 0.05 and 0.5 SOL');
             }
+            
+            if (platformFeeBps < 500 || platformFeeBps > 2500) { // 5% to 25% in basis points
+                throw new Error('Platform fee must be between 5% and 25%');
+            }
+            
+            console.log('💰 Bet amount validation:', betAmount, 'lamports');
+            console.log('💳 Platform fee validation:', platformFeeBps, 'basis points');
             
             // Check if smart contract service is properly initialized
             if (!this.isAvailable()) {
@@ -265,7 +273,8 @@ async testTransaction() {
                 tokenBAddress: tokenBAddress,
                 votingEndTime: votingEndTime,
                 competitionEndTime: competitionEndTime,
-                platformFeeBps: 1500 // 15%
+                platformFeeBps: platformFeeBps,     // Keep existing parameter
+                requiredBetAmount: betAmount        // NEW: Add bet amount parameter
             });
             
             console.log('✅ Instruction built successfully');
@@ -430,6 +439,149 @@ async testTransaction() {
         }
     }
 
+/**
+ * Emergency cleanup competition - refund all bets and cancel
+ */
+async emergencyCleanup(competitionId, adminWallet) {
+    try {
+        console.log('🚨 Building emergency cleanup instruction...');
+        
+        // Validate inputs
+        if (!competitionId || !adminWallet) {
+            throw new Error('Missing required parameters for emergency cleanup');
+        }
+
+        // Check if smart contract service is available
+        if (!this.isAvailable()) {
+            throw new Error('Smart contract service not available');
+        }
+        
+        const wallet = await this.getConnectedWallet();
+        if (!wallet) {
+            throw new Error('No wallet connected');
+        }
+
+        // Verify admin wallet matches connected wallet
+        if (wallet.publicKey.toString() !== adminWallet) {
+            throw new Error('Connected wallet does not match admin wallet');
+        }
+        
+        // Calculate escrow PDA (same logic as createEscrow)
+        const shortId = competitionId.replace(/-/g, '').substring(0, 28);
+        const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow", "utf8"),
+                Buffer.from(shortId, "utf8")
+            ],
+            this.programId
+        );
+
+        console.log('🔑 Emergency cleanup escrow PDA:', escrowAccount.toString());
+
+        // Build emergency cleanup instruction
+        const instruction = await this.buildEmergencyCleanupInstruction({
+            escrow: escrowAccount,
+            platformWallet: new solanaWeb3.PublicKey(adminWallet),
+            systemProgram: solanaWeb3.SystemProgram.programId,
+            competitionId: competitionId
+        });
+
+        // Create and send transaction
+        const transaction = new solanaWeb3.Transaction();
+        transaction.add(instruction);
+        
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+
+        console.log('📤 Sending emergency cleanup transaction...');
+        const signedTransaction = await wallet.signTransaction(transaction);
+        const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+        
+        // Confirm transaction
+        console.log('⏳ Confirming emergency cleanup transaction...');
+        await this.connection.confirmTransaction(signature, 'confirmed');
+        
+        console.log('✅ Emergency cleanup completed:', signature);
+        return signature;
+
+    } catch (error) {
+        console.error('❌ Emergency cleanup error:', error);
+        throw error;
+    }
+}
+
+
+/**
+ * Update price sample (replaces TWAP sampling)
+ */
+async updatePriceSample(competitionId, tokenAPrice, tokenBPrice) {
+    try {
+        console.log('📊 Updating price sample...');
+        console.log('🔍 Input validation:', {
+            competitionId: competitionId?.length || 'undefined',
+            tokenAPrice: tokenAPrice || 'undefined',
+            tokenBPrice: tokenBPrice || 'undefined'
+        });
+        
+        // Validate inputs
+        if (!competitionId || tokenAPrice === undefined || tokenBPrice === undefined) {
+            throw new Error('Missing required parameters for price sample update');
+        }
+
+        if (!this.isAvailable()) {
+            throw new Error('Smart contract service not available');
+        }
+        
+        const wallet = await this.getConnectedWallet();
+        if (!wallet) {
+            throw new Error('No wallet connected');
+        }
+        
+        // Calculate escrow PDA
+        const shortId = competitionId.replace(/-/g, '').substring(0, 28);
+        const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow", "utf8"),
+                Buffer.from(shortId, "utf8")
+            ],
+            this.programId
+        );
+
+        // Build price sample instruction
+        const instruction = await this.buildUpdatePriceSampleInstruction({
+            escrow: escrowAccount,
+            platformWallet: wallet.publicKey,
+            competitionId: competitionId,
+            tokenAPrice: tokenAPrice,
+            tokenBPrice: tokenBPrice
+        });
+
+        // Create and send transaction
+        const transaction = new solanaWeb3.Transaction();
+        transaction.add(instruction);
+        
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+
+        console.log('📤 Sending price sample transaction...');
+        const signedTransaction = await wallet.signTransaction(transaction);
+        const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+        
+        // Confirm transaction
+        console.log('⏳ Confirming price sample transaction...');
+        await this.connection.confirmTransaction(signature, 'confirmed');
+        
+        console.log('✅ Price sample updated:', signature);
+        return signature;
+
+    } catch (error) {
+        console.error('❌ Price sample update error:', error);
+        throw error;
+    }
+}
+    
     // CORRECTED: buildCreateEscrowInstruction for Anchor init (single instruction)
     async buildCreateEscrowInstruction(accounts) {
         console.log('🔨 Building CreateEscrow instruction for Anchor init...');
@@ -484,7 +636,7 @@ async testTransaction() {
             // Anchor discriminator (8 bytes)
             this.instructions.createEscrow,
             
-            // Parameters in exact order as Rust function signature:
+            // Parameters in exact order as NEW Rust function signature:
             // pub fn create_escrow(
             //     ctx: Context<CreateEscrow>,
             //     competition_id: String,
@@ -493,13 +645,15 @@ async testTransaction() {
             //     voting_end_time: i64,
             //     competition_end_time: i64,
             //     platform_fee_bps: u16,
+            //     required_bet_amount: u64,  // NEW PARAMETER
             // )
             this.serializeString(shortId),
             this.serializeString(accounts.tokenAAddress),
             this.serializeString(accounts.tokenBAddress),
             this.serializeI64(accounts.votingEndTime),
             this.serializeI64(accounts.competitionEndTime),
-            this.serializeU16(accounts.platformFeeBps)
+            this.serializeU16(accounts.platformFeeBps),
+            this.serializeU64(accounts.requiredBetAmount)  // NEW: Add bet amount serialization
         ]);
         
         console.log('📦 Instruction data size:', instructionData.length, 'bytes');
@@ -521,6 +675,117 @@ async testTransaction() {
         };
     }
 
+/**
+ * Build emergency cleanup instruction
+ */
+async buildEmergencyCleanupInstruction(accounts) {
+    console.log('🔨 Building emergency cleanup instruction...');
+    
+    // Account keys for emergency cleanup
+    const keys = [
+        // 1. escrow: The escrow account to cleanup
+        { 
+            pubkey: accounts.escrow, 
+            isSigner: false, 
+            isWritable: true 
+        },
+        // 2. platform_wallet: Admin wallet that can call cleanup
+        { 
+            pubkey: accounts.platformWallet, 
+            isSigner: true, 
+            isWritable: true 
+        },
+        // 3. system_program: Required for transfers
+        { 
+            pubkey: accounts.systemProgram, 
+            isSigner: false, 
+            isWritable: false 
+        }
+    ];
+    
+    console.log('📋 Emergency cleanup account keys:', keys.map(k => ({
+        pubkey: k.pubkey.toString(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable
+    })));
+    
+    // Serialize instruction data
+    const shortId = accounts.competitionId.replace(/-/g, '').substring(0, 28);
+    const instructionData = Buffer.concat([
+        // Anchor discriminator (8 bytes)
+        this.instructions.emergencyCleanup,
+        
+        // Parameters: competition_id: String
+        this.serializeString(shortId)
+    ]);
+    
+    console.log('📦 Emergency cleanup instruction data length:', instructionData.length, 'bytes');
+    
+    // Create instruction
+    const instruction = new solanaWeb3.TransactionInstruction({
+        keys: keys,
+        programId: this.programId,
+        data: instructionData
+    });
+    
+    console.log('✅ Emergency cleanup instruction built successfully');
+    return instruction;
+}
+
+/**
+ * Build update price sample instruction
+ */
+async buildUpdatePriceSampleInstruction(accounts) {
+    console.log('🔨 Building update price sample instruction...');
+    
+    // Account keys for price sample update
+    const keys = [
+        // 1. escrow: The escrow account to update
+        { 
+            pubkey: accounts.escrow, 
+            isSigner: false, 
+            isWritable: true 
+        },
+        // 2. platform_wallet: Admin wallet that can send price updates
+        { 
+            pubkey: accounts.platformWallet, 
+            isSigner: true, 
+            isWritable: false 
+        }
+    ];
+    
+    console.log('📋 Price sample account keys:', keys.map(k => ({
+        pubkey: k.pubkey.toString(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable
+    })));
+    
+    // Serialize instruction data
+    const shortId = accounts.competitionId.replace(/-/g, '').substring(0, 28);
+    const instructionData = Buffer.concat([
+        // Anchor discriminator (8 bytes)
+        this.instructions.updatePriceSample,
+        
+        // Parameters: competition_id: String, token_a_price: u64, token_b_price: u64
+        this.serializeString(shortId),
+        this.serializeU64(accounts.tokenAPrice),
+        this.serializeU64(accounts.tokenBPrice)
+    ]);
+    
+    console.log('📦 Price sample instruction data length:', instructionData.length, 'bytes');
+    
+    // Create instruction
+    const instruction = new solanaWeb3.TransactionInstruction({
+        keys: keys,
+        programId: this.programId,
+        data: instructionData
+    });
+    
+    console.log('✅ Price sample instruction built successfully');
+    return instruction;
+}
+
+    
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
         try {
