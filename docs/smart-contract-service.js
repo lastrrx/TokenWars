@@ -37,7 +37,7 @@ class SmartContractService {
                 }
             );
             this.programId = new solanaWeb3.PublicKey(
-                window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'Dqusfo21uM5XX6rEpSVRXuLikyf1drkisqGUDDFo2qj5' 
+                window.BLOCKCHAIN_CONFIG?.SOLANA_PROGRAM_ID || 'FtYH93zU1WtfiNNwFJ7K8We4AYHC961LBN3wbPb4xVMH' 
             );
             this.platformWallet = new solanaWeb3.PublicKey('HmT6Nj3r24YKCxGLPFvf1gSJijXyNcrPHKKeknZYGRXv');
             this.available = true;
