@@ -1528,7 +1528,7 @@ async function createCompetitionWithSmartContract(config) {
             start_time: startTime.toISOString(),
             voting_end_time: votingEndTime.toISOString(),
             end_time: endTime.toISOString(),
-            required_bet_amount: config.betAmountLamports,
+            required_bet_amount: config.betAmount,
             platform_fee_bps: platformFeeBps,
             total_pool: 0,
             total_bets: 0,
