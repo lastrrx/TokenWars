@@ -452,9 +452,13 @@ async function loadRealCompetitionsFromDatabase() {
         
         console.log('✅ Supabase client verified, querying competitions...');
         
-        const { data: competitions, error } = await CompetitionState.supabaseClient
+        const { data: competitions, error } = await supabase
             .from('competitions')
-            .select('*')
+            .select(`
+                *,
+                required_bet_amount,
+                platform_fee_bps
+            `)
             .in('status', ['VOTING', 'ACTIVE'])
             .order('created_at', { ascending: false });
         
@@ -629,6 +633,9 @@ function transformBasicCompetitions(competitions) {
         participants: comp.total_bets || 0,
         prizePool: parseFloat(comp.total_pool || 0),
         betAmount: parseFloat(comp.bet_amount || 0.1),
+        requiredBetAmount: parseFloat(comp.required_bet_amount || 0.1), // NEW: Required bet amount from smart contract
+        platformFeeBps: parseInt(comp.platform_fee_bps || 1500), // NEW: Platform fee in basis points
+        platformFeePercent: parseFloat((comp.platform_fee_bps || 1500) / 100), // NEW: Platform fee as percentage
         
         startTime: new Date(comp.start_time),
         endTime: new Date(comp.end_time),
@@ -856,8 +863,12 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
                         <div class="stat-label">Prize Pool</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value">${competition.betAmount} SOL</div>
-                        <div class="stat-label">Entry Fee (Fixed)</div>
+                        <div class="stat-value">${(competition.requiredBetAmount || competition.betAmount || 0.1).toFixed(2)} SOL</div>
+                        <div class="stat-label">Required Bet</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${(competition.platformFeePercent || 15).toFixed(1)}%</div>
+                        <div class="stat-label">Platform Fee</div>
                     </div>
                 </div>
                 
@@ -967,6 +978,26 @@ function updateCompetitionModalContent(competition) {
         updateStat('modalPrizePool', `${competition.prizePool.toFixed(1)} SOL`);
         updateStat('modalTimeRemaining', formatTimeRemaining(competition.timeRemaining));
         
+        // NEW: Update bet amount and platform fee information
+        const requiredBetElement = document.getElementById('requiredBetAmount');
+        if (requiredBetElement) {
+            const requiredAmount = competition.requiredBetAmount || competition.betAmount || 0.1;
+            requiredBetElement.textContent = `${requiredAmount.toFixed(2)} SOL`;
+        }
+        
+        const platformFeeElement = document.getElementById('platformFeeDisplay');
+        if (platformFeeElement) {
+            const platformFee = competition.platformFeePercent || 15;
+            platformFeeElement.textContent = `${platformFee.toFixed(1)}%`;
+        }
+        
+        const betAmountInput = document.getElementById('betAmount');
+        if (betAmountInput) {
+            betAmountInput.value = competition.requiredBetAmount;
+            betAmountInput.readOnly = true; // NEW: Make input read-only
+        }
+
+        
         // Show/hide betting interface
         const bettingInterface = document.getElementById('bettingInterface');
         if (bettingInterface) {
@@ -1009,11 +1040,41 @@ async function placeBetWithSmartContract() {
         
         const betAmountInput = document.getElementById('betAmount');
         const betAmount = parseFloat(betAmountInput?.value || 0.1);
+        const competition = CompetitionState.selectedCompetition;
         
-        if (betAmount < 0.1) {
-            showNotificationFixed('Minimum bet amount is 0.1 SOL', 'error');
+        // NEW: Enhanced validation for new smart contract requirements
+        console.log('🔍 Competition data check:', {
+            requiredBetAmount: competition.requiredBetAmount,
+            platformFeePercent: competition.platformFeePercent,
+            competitionId: competition.competitionId
+        });
+        
+        // Check if competition has required bet amount data
+        if (!competition.requiredBetAmount && !competition.betAmount) {
+            console.warn('⚠️ Competition missing bet amount data, using fallback');
+            competition.requiredBetAmount = 0.1; // Fallback to 0.1 SOL
+        }
+        
+        // Use requiredBetAmount if available, otherwise fall back to betAmount
+        const requiredAmount = competition.requiredBetAmount || competition.betAmount || 0.1;
+        
+        // NEW: Validate bet amount matches competition requirement exactly
+        if (Math.abs(betAmount - requiredAmount) > 0.001) { // Allow for small floating point differences
+            showNotificationFixed(
+                `This competition requires exactly ${requiredAmount.toFixed(2)} SOL. Current amount: ${betAmount.toFixed(2)} SOL`, 
+                'error'
+            );
             return;
         }
+        
+        console.log('✅ Bet amount validation passed:', {
+            userAmount: betAmount,
+            requiredAmount: requiredAmount,
+            platformFee: competition.platformFeePercent || '15%'
+        });
+        
+        // Remove old minimum bet check since we now validate exact amounts
+        // if (betAmount < 0.1) { ... } // REMOVED
         
         // Check wallet connection
         const walletAddress = getWalletAddress();
@@ -1023,25 +1084,41 @@ async function placeBetWithSmartContract() {
         }
 
         // Check if competition has smart contract integration
-        const competition = CompetitionState.selectedCompetition;
         const hasSmartContract = competition.escrow_account && window.smartContractService?.isAvailable();
         
         console.log('🔗 Smart contract integration:', hasSmartContract ? 'enabled' : 'disabled');
+        console.log('📊 Bet details:', {
+            competitionId: competition.competitionId,
+            walletAddress: walletAddress,
+            selectedToken: CompetitionState.selectedToken,
+            betAmount: betAmount,
+            requiredAmount: requiredAmount,
+            hasSmartContract: hasSmartContract
+        });
         
-        // Show loading state
+        // Show loading state with enhanced messaging
         const placeBetButton = document.getElementById('placeBetButton');
         if (placeBetButton) {
             placeBetButton.disabled = true;
-            placeBetButton.textContent = hasSmartContract ? 'Placing bet on-chain...' : 'Placing bet...';
+            placeBetButton.textContent = hasSmartContract 
+                ? `Placing ${betAmount.toFixed(2)} SOL bet on-chain...` 
+                : `Placing ${betAmount.toFixed(2)} SOL bet...`;
         }
 
         let transactionSignature = null;
 
         if (hasSmartContract) {
             try {
-                // 1. Place bet on-chain first
-                console.log('📊 Placing bet on-chain...');
-                showNotificationFixed('Placing bet on-chain...', 'info');
+                // 1. Place bet on-chain first with enhanced logging
+                console.log('📊 Placing bet on-chain with params:', {
+                    competitionId: competition.competitionId,
+                    walletAddress: walletAddress,
+                    tokenChoice: CompetitionState.selectedToken,
+                    betAmountSOL: betAmount,
+                    betAmountLamports: Math.floor(betAmount * 1e9)
+                });
+                
+                showNotificationFixed(`Placing ${betAmount.toFixed(2)} SOL bet on-chain...`, 'info');
                 
                 transactionSignature = await window.smartContractService.placeBet(
                     competition.competitionId,
@@ -1050,17 +1127,31 @@ async function placeBetWithSmartContract() {
                     betAmount
                 );
                 
-                console.log('✅ On-chain bet placed:', transactionSignature);
+                console.log('✅ On-chain bet placed successfully:', transactionSignature);
                 showNotificationFixed('Bet placed on-chain, saving to database...', 'info');
                 
             } catch (onChainError) {
                 console.error('❌ On-chain bet placement failed:', onChainError);
-                showNotificationFixed(`On-chain bet failed: ${onChainError.message}`, 'error');
+                
+                // Enhanced error messaging for smart contract failures
+                let errorMessage = `On-chain bet failed: ${onChainError.message}`;
+                
+                if (onChainError.message.includes('InvalidBetAmount')) {
+                    errorMessage = `Invalid bet amount. This competition requires exactly ${requiredAmount.toFixed(2)} SOL.`;
+                } else if (onChainError.message.includes('VotingClosed')) {
+                    errorMessage = 'Voting for this competition has closed.';
+                } else if (onChainError.message.includes('UserAlreadyBet')) {
+                    errorMessage = 'You have already placed a bet on this competition.';
+                } else if (onChainError.message.includes('insufficient')) {
+                    errorMessage = `Insufficient SOL balance. You need at least ${betAmount.toFixed(2)} SOL plus transaction fees.`;
+                }
+                
+                showNotificationFixed(errorMessage, 'error');
                 
                 // Reset button and exit - don't proceed with database if on-chain fails
                 if (placeBetButton) {
                     placeBetButton.disabled = false;
-                    placeBetButton.textContent = 'Place Bet';
+                    placeBetButton.textContent = `Place ${betAmount.toFixed(2)} SOL Bet`;
                 }
                 return;
             }
@@ -1075,7 +1166,10 @@ async function placeBetWithSmartContract() {
             chosen_token: `token_${CompetitionState.selectedToken.toLowerCase()}`,
             amount: betAmount,
             status: hasSmartContract ? 'PLACED' : 'PLACED',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // NEW: Store additional data for new smart contract
+            required_bet_amount: requiredAmount,
+            platform_fee_bps: competition.platform_fee_bps || (competition.platformFeePercent * 100) || 1500
         };
 
         // Add transaction signature if on-chain bet was successful
@@ -1098,10 +1192,10 @@ async function placeBetWithSmartContract() {
             // 3. Update competition stats
             await updateCompetitionStats(competition.competitionId, betAmount);
 
-            // 4. Show success message
+            // 4. Show enhanced success message
             const successMessage = hasSmartContract 
-                ? 'Bet placed successfully on-chain and recorded!'
-                : 'Bet placed successfully!';
+                ? `${betAmount.toFixed(2)} SOL bet placed successfully on-chain and recorded!`
+                : `${betAmount.toFixed(2)} SOL bet placed successfully!`;
             
             showNotificationFixed(successMessage, 'success');
             
@@ -1133,11 +1227,13 @@ async function placeBetWithSmartContract() {
         showNotificationFixed(`Failed to place bet: ${error.message}`, 'error');
         
     } finally {
-        // Reset button state
+        // Reset button state with bet amount
         const placeBetButton = document.getElementById('placeBetButton');
-        if (placeBetButton) {
+        if (placeBetButton && CompetitionState.selectedCompetition) {
+            const betAmount = CompetitionState.selectedCompetition.requiredBetAmount || 
+                             CompetitionState.selectedCompetition.betAmount || 0.1;
             placeBetButton.disabled = false;
-            placeBetButton.textContent = 'Place Bet';
+            placeBetButton.textContent = `Place ${betAmount.toFixed(2)} SOL Bet`;
         }
     }
 }
@@ -1441,10 +1537,20 @@ function setupBettingInterface(competition) {
         updateChoiceButton('choiceTokenASymbol', competition.tokenA.symbol);
         updateChoiceButton('choiceTokenBSymbol', competition.tokenB.symbol);
         
-        // Reset bet amount
+        // Reset bet amount to competition requirement
         const betAmountInput = document.getElementById('betAmount');
         if (betAmountInput) {
-            betAmountInput.value = '0.1';
+            const requiredAmount = competition.requiredBetAmount || competition.betAmount || 0.1;
+            betAmountInput.value = requiredAmount.toFixed(2);
+            betAmountInput.readOnly = true; // Make read-only
+            betAmountInput.style.backgroundColor = 'var(--surface-light)';
+            betAmountInput.style.cursor = 'not-allowed';
+            betAmountInput.style.opacity = '0.8';
+        }
+        
+        // NEW: Update total cost display if function exists
+        if (typeof window.updateTotalCostDisplay === 'function') {
+            window.updateTotalCostDisplay();
         }
         
         // Reset button state
@@ -1485,6 +1591,35 @@ function selectTokenFixed(token) {
         if (placeBetButton) {
             placeBetButton.disabled = false;
             placeBetButton.textContent = 'Place Bet';
+        }
+        
+        // NEW: Update button with bet amount info
+        if (placeBetButton && CompetitionState.selectedCompetition) {
+            const betAmount = CompetitionState.selectedCompetition.requiredBetAmount || 
+                             CompetitionState.selectedCompetition.betAmount || 0.1;
+            
+            const placeBetButtonText = document.getElementById('placeBetButtonText');
+            const placeBetSubtext = document.getElementById('placeBetSubtext');
+            
+            if (placeBetButtonText) {
+                placeBetButtonText.textContent = `Place Bet - ${betAmount.toFixed(2)} SOL`;
+            } else {
+                placeBetButton.innerHTML = `
+                    <span id="placeBetButtonText">Place Bet - ${betAmount.toFixed(2)} SOL</span>
+                    <div id="placeBetSubtext" style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">
+                        Transaction fee: ~0.001 SOL
+                    </div>
+                `;
+            }
+            
+            if (placeBetSubtext) {
+                placeBetSubtext.style.display = 'block';
+            }
+        }
+        
+        // NEW: Update total cost display
+        if (typeof window.updateTotalCostDisplay === 'function') {
+            window.updateTotalCostDisplay();
         }
         
     } catch (error) {
@@ -3199,8 +3334,84 @@ function setupCompetitionCardListeners() {
     });
 }
 
+// NEW: Enhanced token selection function for index.html
+function selectTokenEnhanced(token) {
+    try {
+        // Call existing function
+        if (typeof selectTokenFixed === 'function') {
+            selectTokenFixed(token);
+        } else {
+            // Fallback if selectTokenFixed doesn't exist
+            console.log('🎯 Token selected:', token);
+            CompetitionState.selectedToken = token;
+            
+            // Update UI
+            document.querySelectorAll('.token-choice-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const selectedButton = document.getElementById(`choiceToken${token}`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
+            }
+        }
+        
+        // Update bet button with enhanced info
+        const placeBetButton = document.getElementById('placeBetButton');
+        if (placeBetButton && CompetitionState.selectedCompetition) {
+            const betAmount = CompetitionState.selectedCompetition.requiredBetAmount || 0.1;
+            const platformFee = CompetitionState.selectedCompetition.platformFeePercent || 15;
+            
+            placeBetButton.disabled = false;
+            placeBetButton.innerHTML = `
+                <span>Place Bet - ${betAmount.toFixed(2)} SOL</span>
+                <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">
+                    Platform fee: ${platformFee.toFixed(1)}% • TX fee: ~0.001 SOL
+                </div>
+            `;
+        }
+        
+        // Update total cost display if function exists
+        if (typeof window.updateTotalCostDisplay === 'function') {
+            window.updateTotalCostDisplay();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced token selection:', error);
+    }
+}
+
+// NEW: Total cost display update function
+function updateTotalCostDisplay() {
+    try {
+        const betAmountElement = document.getElementById('betAmount');
+        const totalCostElement = document.getElementById('totalCostDisplay');
+        const modalPlatformFeeElement = document.getElementById('modalPlatformFee');
+        
+        if (betAmountElement && totalCostElement && CompetitionState.selectedCompetition) {
+            const betAmount = parseFloat(betAmountElement.value || 0.1);
+            const platformFee = CompetitionState.selectedCompetition.platformFeePercent || 15;
+            
+            // Total cost is just the bet amount (platform fee comes from winnings)
+            totalCostElement.textContent = `${betAmount.toFixed(2)} SOL`;
+            
+            if (modalPlatformFeeElement) {
+                modalPlatformFeeElement.textContent = `${platformFee.toFixed(1)}%`;
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error updating total cost display:', error);
+    }
+}
+
+// Export new functions globally
+window.selectTokenEnhanced = selectTokenEnhanced;
+window.updateTotalCostDisplay = updateTotalCostDisplay;
+
 // Call this function when the page loads
 document.addEventListener('DOMContentLoaded', setupCompetitionCardListeners);
+
+
 
 console.log('✅ INTEGRATED App.js loaded!');
 console.log('🔧 INTEGRATED FEATURES:');
