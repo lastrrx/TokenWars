@@ -47,31 +47,232 @@ class WalletService {
     // CORE INITIALIZATION (Simplified)
     // ==============================================
 
-    async initialize() {
-        try {
-            if (this.isInitialized) {
-                console.log('✅ WalletService already initialized');
-                return true;
-            }
-            
-            console.log('🔄 Initializing WalletService...');
-            
-            // Check for persisted connection
-            await this.checkPersistedConnection();
-            
-            // Set up wallet event listeners
-            this.setupWalletEventListeners();
-            
-            this.isInitialized = true;
-            console.log('✅ WalletService initialized successfully');
-            
-            return true;
-            
-        } catch (error) {
-            console.error('❌ WalletService initialization failed:', error);
-            return false;
+async initialize() {
+    try {
+        console.log('🔧 Initializing wallet service with storage validation...');
+        
+        // Clean up storage first
+        const wasCorrupted = await this.cleanupStorage();
+        
+        if (wasCorrupted) {
+            console.log('🔄 Storage was corrupted and cleaned - starting fresh');
         }
+        
+        // Original initialization code
+        this.setupWalletEventListeners();
+        
+        // Try to restore previous connection only if storage is clean
+        if (!wasCorrupted) {
+            await this.restorePersistedConnection();
+        }
+        
+        this.isInitialized = true;
+        console.log('✅ Wallet service initialized');
+        
+        return { success: true, wasCorrupted };
+        
+    } catch (error) {
+        console.error('❌ Error initializing wallet service:', error);
+        this.isInitialized = true; // Set as initialized even if restore fails
+        return { success: false, error: error.message };
     }
+}
+
+
+// ==============================================
+// STORAGE CLEANUP & CORRUPTION PREVENTION
+// Add this to your WalletService class
+// ==============================================
+
+/**
+ * Clean up corrupted or invalid storage data
+ */
+async cleanupStorage() {
+    try {
+        console.log('🧹 Checking for storage cleanup...');
+        
+        // Check for storage corruption signs
+        const issues = [];
+        
+        // Check for invalid wallet type
+        const storedWalletType = localStorage.getItem(this.storageKeys.walletType);
+        if (storedWalletType && !['phantom', 'solflare', 'backpack', 'demo'].includes(storedWalletType)) {
+            issues.push('invalid_wallet_type');
+        }
+        
+        // Check for malformed public key
+        const storedPublicKey = localStorage.getItem(this.storageKeys.publicKey);
+        if (storedPublicKey && (storedPublicKey.length < 32 || storedPublicKey.length > 50)) {
+            issues.push('invalid_public_key');
+        }
+        
+        // Check for corrupted JSON data
+        try {
+            const storedProfile = localStorage.getItem(this.storageKeys.userProfile);
+            if (storedProfile) {
+                JSON.parse(storedProfile);
+            }
+        } catch (error) {
+            issues.push('corrupted_profile');
+        }
+        
+        // Check for storage version mismatch
+        const currentVersion = '2.0'; // Update this when you change storage structure
+        const storedVersion = localStorage.getItem('walletServiceVersion');
+        if (storedVersion && storedVersion !== currentVersion) {
+            issues.push('version_mismatch');
+        }
+        
+        // Clean up if issues found
+        if (issues.length > 0) {
+            console.log('⚠️ Storage issues detected:', issues);
+            console.log('🧹 Cleaning up corrupted storage...');
+            
+            this.clearPersistedConnection();
+            localStorage.setItem('walletServiceVersion', currentVersion);
+            
+            console.log('✅ Storage cleaned up successfully');
+            return true;
+        }
+        
+        // Set version if not exists
+        if (!storedVersion) {
+            localStorage.setItem('walletServiceVersion', currentVersion);
+        }
+        
+        console.log('✅ Storage is clean');
+        return false;
+        
+    } catch (error) {
+        console.error('❌ Error during storage cleanup:', error);
+        // If cleanup fails, clear everything as fallback
+        this.clearPersistedConnection();
+        return true;
+    }
+}
+
+/**
+ * Enhanced restore with expiration check
+ */
+async restorePersistedConnection() {
+    try {
+        console.log('🔄 Attempting to restore persisted connection...');
+        
+        // Check session expiration (24 hours)
+        const timestamp = localStorage.getItem('walletServiceTimestamp');
+        if (timestamp) {
+            const age = Date.now() - parseInt(timestamp);
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (age > maxAge) {
+                console.log('⏰ Session expired - clearing old data');
+                this.clearPersistedConnection();
+                return { success: false, reason: 'expired' };
+            }
+        }
+        
+        // Get stored connection data
+        const walletType = localStorage.getItem(this.storageKeys.walletType);
+        const publicKey = localStorage.getItem(this.storageKeys.publicKey);
+        const isDemo = localStorage.getItem(this.storageKeys.isDemo) === 'true';
+        
+        if (!walletType || !publicKey) {
+            console.log('📝 No previous connection found');
+            return { success: false, reason: 'no_data' };
+        }
+        
+        console.log(`🔗 Found previous ${walletType} connection`);
+        
+        // Restore demo connection
+        if (isDemo) {
+            const demoSessionData = localStorage.getItem(this.storageKeys.demoSession);
+            if (demoSessionData) {
+                this.demoSession = JSON.parse(demoSessionData);
+                this.connectedWallet = 'demo';
+                this.walletType = 'demo';
+                this.publicKey = publicKey;
+                this.isDemo = true;
+                
+                console.log('✅ Demo session restored');
+                this.notifyConnectionListeners('connected', this.getConnectionStatus());
+                return { success: true };
+            }
+        } else {
+            // Verify real wallet is still connected
+            const availableWallets = await this.detectAvailableWallets();
+            const targetWallet = availableWallets[walletType];
+            
+            if (targetWallet?.isInstalled) {
+                const isStillConnected = await this.checkWalletStillConnected(walletType, targetWallet.provider);
+                
+                if (isStillConnected) {
+                    this.connectedWallet = targetWallet.provider;
+                    this.walletProvider = targetWallet.provider;
+                    this.walletType = walletType;
+                    this.publicKey = publicKey;
+                    this.isDemo = false;
+                    
+                    // Load user profile
+                    await this.loadUserProfile();
+                    
+                    console.log('✅ Real wallet connection restored');
+                    this.notifyConnectionListeners('connected', this.getConnectionStatus());
+                    return { success: true };
+                } else {
+                    console.log('⚠️ Wallet no longer connected - clearing stale data');
+                    this.clearPersistedConnection();
+                    return { success: false, reason: 'disconnected' };
+                }
+            } else {
+                console.log('⚠️ Wallet no longer available - clearing stale data');
+                this.clearPersistedConnection();
+                return { success: false, reason: 'unavailable' };
+            }
+        }
+        
+        return { success: false, reason: 'unknown' };
+        
+    } catch (error) {
+        console.error('❌ Error restoring connection:', error);
+        this.clearPersistedConnection();
+        return { success: false, reason: 'error', error: error.message };
+    }
+}
+
+/**
+ * Add emergency storage reset function
+ */
+emergencyStorageReset() {
+    console.log('🚨 Emergency storage reset triggered');
+    
+    try {
+        // Clear all wallet-related storage
+        const keysToRemove = [
+            ...Object.values(this.storageKeys),
+            'walletServiceVersion',
+            'walletServiceTimestamp'
+        ];
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
+        });
+        
+        console.log('✅ Emergency storage reset complete');
+        
+        // Show user notification
+        if (typeof showNotificationFixed === 'function') {
+            showNotificationFixed('Wallet storage reset - please reconnect your wallet', 'warning');
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Emergency storage reset failed:', error);
+        return false;
+    }
+}
+
 
     // ==============================================
     // CONNECTION STATUS METHODS (Fixed)
@@ -416,6 +617,45 @@ async connectPhantom() {
             throw error;
         }
     }
+
+/**
+ * Enhanced storage save with validation
+ */
+saveSessionData() {
+    try {
+        // Validate data before saving
+        if (!this.walletType || !this.publicKey) {
+            console.log('⚠️ Incomplete session data - skipping save');
+            return;
+        }
+        
+        // Save with timestamp for expiration
+        const sessionData = {
+            walletType: this.walletType,
+            publicKey: this.publicKey,
+            isDemo: this.isDemo,
+            timestamp: Date.now(),
+            version: '2.0'
+        };
+        
+        localStorage.setItem(this.storageKeys.walletType, sessionData.walletType);
+        localStorage.setItem(this.storageKeys.publicKey, sessionData.publicKey);
+        localStorage.setItem(this.storageKeys.isDemo, sessionData.isDemo.toString());
+        localStorage.setItem('walletServiceTimestamp', sessionData.timestamp.toString());
+        localStorage.setItem('walletServiceVersion', sessionData.version);
+        
+        if (this.isDemo && this.demoSession) {
+            localStorage.setItem(this.storageKeys.demoSession, JSON.stringify(this.demoSession));
+        }
+        
+        console.log('💾 Session data saved with validation');
+        
+    } catch (error) {
+        console.error('❌ Error saving session data:', error);
+        // If save fails, clear storage to prevent corruption
+        this.clearPersistedConnection();
+    }
+}
 
     // ==============================================
     // USER PROFILE MANAGEMENT (Simplified)
@@ -1041,6 +1281,16 @@ function getWalletService() {
     return window.walletService;
 }
 
+// Export emergency function globally for console access
+window.emergencyWalletReset = () => {
+    if (window.walletService) {
+        return window.walletService.emergencyStorageReset();
+    } else {
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload();
+    }
+};
 // ==============================================
 // IMMEDIATE GLOBAL EXPOSURE
 // ==============================================
