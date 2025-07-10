@@ -104,123 +104,196 @@ class WalletService {
     // WALLET DETECTION (Simplified)
     // ==============================================
 
-    detectAvailableWallets() {
-        const wallets = {
-            phantom: {
-                name: 'Phantom',
-                icon: '👻',
-                provider: window.phantom?.solana,
-                isInstalled: !!window.phantom?.solana?.isPhantom,
-                downloadUrl: 'https://phantom.app/'
-            },
-            solflare: {
-                name: 'Solflare',
-                icon: '☀️',
-                provider: window.solflare,
-                isInstalled: !!window.solflare?.isSolflare,
-                downloadUrl: 'https://solflare.com/'
-            },
-            backpack: {
-                name: 'Backpack',
-                icon: '🎒',
-                provider: window.backpack,
-                isInstalled: !!window.backpack?.isBackpack,
-                downloadUrl: 'https://www.backpack.app/'
-            },
-            demo: {
-                name: 'Demo Mode',
-                icon: '🎮',
-                provider: null,
-                isInstalled: true,
-                downloadUrl: null
-            }
-        };
-        
-        console.log('🔍 Available wallets detected');
-        return wallets;
-    }
+async detectAvailableWallets() {
+    console.log('🔍 Detecting available wallets with readiness check...');
+    
+    // Wait a moment for wallets to inject
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const wallets = {
+        phantom: {
+            name: 'Phantom',
+            icon: '👻',
+            provider: window.phantom?.solana,
+            isInstalled: !!(window.phantom?.solana?.isPhantom),
+            downloadUrl: 'https://phantom.app/'
+        },
+        solflare: {
+            name: 'Solflare',
+            icon: '☀️',
+            provider: window.solflare,
+            isInstalled: !!(window.solflare?.isSolflare),
+            downloadUrl: 'https://solflare.com/'
+        },
+        backpack: {
+            name: 'Backpack',
+            icon: '🎒',
+            provider: window.backpack,
+            isInstalled: !!(window.backpack?.isBackpack),
+            downloadUrl: 'https://www.backpack.app/'
+        },
+        demo: {
+            name: 'Demo Mode',
+            icon: '🎮',
+            provider: null,
+            isInstalled: true,
+            downloadUrl: null
+        }
+    };
+    
+    console.log('🔍 Wallet detection results:', {
+        phantom: wallets.phantom.isInstalled,
+        solflare: wallets.solflare.isInstalled,
+        backpack: wallets.backpack.isInstalled
+    });
+    
+    return wallets;
+}
 
     // ==============================================
     // WALLET CONNECTION (Fixed & Simplified)
     // ==============================================
 
-    async connectWallet(walletType) {
-        try {
-            console.log(`🔗 Connecting to ${walletType} wallet...`);
+async connectWallet(walletType) {
+    try {
+        console.log(`🔗 Connecting to ${walletType} wallet...`);
+        
+        if (walletType === 'demo') {
+            return await this.connectDemoWallet();
+        }
+        
+        // IMPORTANT: Wait for wallet to be ready before attempting connection
+        console.log(`⏳ Waiting for ${walletType} wallet to be ready...`);
+        const isWalletReady = await this.waitForWalletReady(walletType);
+        
+        if (!isWalletReady) {
+            throw new Error(`${walletType} wallet is not installed or not ready. Please make sure the extension is installed and enabled.`);
+        }
+        
+        // Get fresh wallet list after readiness check
+        const availableWallets = await this.detectAvailableWallets();
+        const selectedWallet = availableWallets[walletType];
+        
+        if (!selectedWallet?.isInstalled) {
+            throw new Error(`${selectedWallet?.name || walletType} is not installed`);
+        }
+        
+        // Connect based on wallet type
+        let connection;
+        switch (walletType) {
+            case 'phantom':
+                connection = await this.connectPhantom();
+                break;
+            case 'solflare':
+                connection = await this.connectSolflare();
+                break;
+            case 'backpack':
+                connection = await this.connectBackpack();
+                break;
+            default:
+                throw new Error(`Unsupported wallet type: ${walletType}`);
+        }
+        
+        if (connection.success) {
+            await this.handleSuccessfulConnection(walletType, connection);
+            return { success: true, publicKey: this.publicKey };
+        } else {
+            throw new Error(connection.error);
+        }
+        
+    } catch (error) {
+        console.error(`❌ Failed to connect ${walletType}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Wait for wallet extension to be ready
+ * This fixes the timing issue where detection happens before wallet injection
+ */
+async waitForWalletReady(walletType, maxWaitTime = 5000) {
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        
+        const checkWallet = () => {
+            let isReady = false;
             
-            if (walletType === 'demo') {
-                return await this.connectDemoWallet();
-            }
-            
-            const availableWallets = this.detectAvailableWallets();
-            const selectedWallet = availableWallets[walletType];
-            
-            if (!selectedWallet?.isInstalled) {
-                throw new Error(`${selectedWallet?.name || walletType} is not installed`);
-            }
-            
-            // Connect based on wallet type
-            let connection;
             switch (walletType) {
                 case 'phantom':
-                    connection = await this.connectPhantom();
+                    isReady = !!(window.phantom?.solana?.isPhantom);
                     break;
                 case 'solflare':
-                    connection = await this.connectSolflare();
+                    isReady = !!(window.solflare?.isSolflare);
                     break;
                 case 'backpack':
-                    connection = await this.connectBackpack();
+                    isReady = !!(window.backpack?.isBackpack);
                     break;
                 default:
-                    throw new Error(`Unsupported wallet type: ${walletType}`);
+                    isReady = false;
             }
             
-            if (connection.success) {
-                await this.handleSuccessfulConnection(walletType, connection);
-                return { success: true, publicKey: this.publicKey };
-            } else {
-                throw new Error(connection.error);
+            if (isReady) {
+                console.log(`✅ ${walletType} wallet ready`);
+                resolve(true);
+                return;
             }
             
-        } catch (error) {
-            console.error(`❌ Failed to connect ${walletType}:`, error);
-            return { success: false, error: error.message };
-        }
-    }
+            // Check if we've exceeded max wait time
+            if (Date.now() - startTime > maxWaitTime) {
+                console.log(`⏰ ${walletType} wallet wait timeout`);
+                resolve(false);
+                return;
+            }
+            
+            // Check again in 100ms
+            setTimeout(checkWallet, 100);
+        };
+        
+        checkWallet();
+    });
+}
 
     // ==============================================
     // INDIVIDUAL WALLET CONNECTIONS (Simplified)
     // ==============================================
 
-    async connectPhantom() {
-        try {
-            const phantom = window.phantom?.solana;
-            
-            if (!phantom?.isPhantom) {
-                throw new Error('Phantom wallet not detected');
-            }
-            
-            const response = await phantom.connect();
-            
-            if (!response.publicKey) {
-                throw new Error('No public key received');
-            }
-            
-            console.log('✅ Phantom connected');
-            return {
-                success: true,
-                publicKey: response.publicKey.toString(),
-                provider: phantom
-            };
-            
-        } catch (error) {
-            if (error.code === 4001) {
-                return { success: false, error: 'User rejected connection' };
-            }
-            return { success: false, error: error.message };
+async connectPhantom() {
+    try {
+        // Double-check Phantom is available
+        const phantom = window.phantom?.solana;
+        
+        if (!phantom) {
+            throw new Error('Phantom wallet extension not found. Please install Phantom wallet.');
         }
+        
+        if (!phantom.isPhantom) {
+            throw new Error('Phantom wallet not properly loaded. Please refresh the page and try again.');
+        }
+        
+        console.log('🔗 Requesting Phantom connection...');
+        const response = await phantom.connect();
+        
+        if (!response.publicKey) {
+            throw new Error('No public key received from Phantom');
+        }
+        
+        console.log('✅ Phantom connected successfully');
+        return {
+            success: true,
+            publicKey: response.publicKey.toString(),
+            provider: phantom
+        };
+        
+    } catch (error) {
+        console.error('❌ Phantom connection error:', error);
+        
+        if (error.code === 4001) {
+            return { success: false, error: 'User rejected the connection request' };
+        }
+        
+        return { success: false, error: error.message };
     }
-
+}
     async connectSolflare() {
         try {
             const solflare = window.solflare;
