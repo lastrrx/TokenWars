@@ -948,81 +948,99 @@ async buildUpdatePriceSampleInstruction(accounts) {
         });
     }
 
-    // Withdraw winnings from completed competition
-    async withdrawWinnings(competitionId, userWallet) {
-        try {
-            console.log('💰 Withdrawing winnings:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Build withdraw_winnings instruction
-            const instruction = await this.buildWithdrawInstruction({
-                escrow: escrowAccount,
-                user: new solanaWeb3.PublicKey(userWallet),
-                competitionId: competitionId
-            });
-            
-            // Create and send transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature, 'confirmed');
-            
-            console.log('✅ Winnings withdrawn successfully, signature:', signature);
-            return { signature };
-            
-        } catch (error) {
-            console.error('❌ Error withdrawing winnings:', error);
-            throw new Error(`Withdrawal failed: ${error.message}`);
-        }
+// Withdraw winnings from completed competition
+async withdrawWinnings(competitionId, userWallet) {
+    try {
+        console.log('💰 Withdrawing winnings:', competitionId);
+        
+        const wallet = await this.getConnectedWallet();
+        
+        // ✅ CRITICAL: Use exact same shortId pattern as ALL working functions
+        const shortId = competitionId.replace(/-/g, '').substring(0, 28);
+        console.log('🔑 shortId for PDA:', shortId, '(length:', shortId.length, ')');
+        
+        // ✅ CRITICAL: Use shortId for PDA calculation (matches createEscrow pattern)
+        const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow", "utf8"),        // Same as ALL working functions
+                Buffer.from(shortId, "utf8")          // ✅ shortId, not full competitionId
+            ],
+            this.programId
+        );
+        
+        console.log('🔑 Escrow PDA:', escrowAccount.toString());
+        
+        // Build withdraw_winnings instruction
+        const instruction = await this.buildWithdrawInstruction({
+            escrow: escrowAccount,
+            user: new solanaWeb3.PublicKey(userWallet),
+            competitionId: shortId  // ✅ Pass shortId to instruction builder
+        });
+        
+        // Create and send transaction (same pattern as ALL working functions)
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+        
+        const signature = await wallet.sendTransaction(transaction, this.connection);
+        await this.connection.confirmTransaction(signature, 'confirmed');
+        
+        console.log('✅ Winnings withdrawn successfully, signature:', signature);
+        return { signature };
+        
+    } catch (error) {
+        console.error('❌ Error withdrawing winnings:', error);
+        throw new Error(`Withdrawal failed: ${error.message}`);
     }
+}
 
-    // Withdraw refund from cancelled competition
-    async withdrawRefund(competitionId, userWallet) {
-        try {
-            console.log('🔄 Withdrawing refund:', competitionId);
-            
-            const wallet = await this.getConnectedWallet();
-            
-            // Get escrow PDA
-            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-                [Buffer.from("escrow"), Buffer.from(competitionId)],
-                this.programId
-            );
-            
-            // Build withdraw_refund instruction
-            const instruction = await this.buildRefundInstruction({
-                escrow: escrowAccount,
-                user: new solanaWeb3.PublicKey(userWallet),
-                competitionId: competitionId
-            });
-            
-            // Create and send transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = wallet.publicKey;
-            
-            const signature = await wallet.sendTransaction(transaction, this.connection);
-            await this.connection.confirmTransaction(signature, 'confirmed');
-            
-            console.log('✅ Refund withdrawn successfully, signature:', signature);
-            return { signature };
-            
-        } catch (error) {
-            console.error('❌ Error withdrawing refund:', error);
-            throw new Error(`Refund withdrawal failed: ${error.message}`);
-        }
+// Withdraw refund from cancelled competition  
+async withdrawRefund(competitionId, userWallet) {
+    try {
+        console.log('🔄 Withdrawing refund:', competitionId);
+        
+        const wallet = await this.getConnectedWallet();
+        
+        // ✅ CRITICAL: Use exact same shortId pattern as ALL working functions
+        const shortId = competitionId.replace(/-/g, '').substring(0, 28);
+        console.log('🔑 shortId for PDA:', shortId, '(length:', shortId.length, ')');
+        
+        // ✅ CRITICAL: Use shortId for PDA calculation (matches createEscrow pattern)
+        const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+                Buffer.from("escrow", "utf8"),        // Same as ALL working functions
+                Buffer.from(shortId, "utf8")          // ✅ shortId, not full competitionId  
+            ],
+            this.programId
+        );
+        
+        console.log('🔑 Escrow PDA:', escrowAccount.toString());
+        
+        // Build withdraw_refund instruction
+        const instruction = await this.buildRefundInstruction({
+            escrow: escrowAccount,
+            user: new solanaWeb3.PublicKey(userWallet),
+            competitionId: shortId  // ✅ Pass shortId to instruction builder
+        });
+        
+        // Create and send transaction (same pattern as ALL working functions)
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+        
+        const signature = await wallet.sendTransaction(transaction, this.connection);
+        await this.connection.confirmTransaction(signature, 'confirmed');
+        
+        console.log('✅ Refund withdrawn successfully, signature:', signature);
+        return { signature };
+        
+    } catch (error) {
+        console.error('❌ Error withdrawing refund:', error);
+        throw new Error(`Refund withdrawal failed: ${error.message}`);
     }
+}
 
     // Complete buildWithdrawInstruction method
     async buildWithdrawInstruction(accounts) {
