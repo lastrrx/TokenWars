@@ -1028,9 +1028,6 @@ async function executeEmergencyCleanup() {
                         <button class="btn btn-success" onclick="optimizeCache()">
                             ⚡ Optimize Cache
                         </button>
-                        <button class="btn btn-info" onclick="viewCacheAnalytics()">
-                            📊 Cache Analytics
-                        </button>
                     </div>
                     
                     <!-- Cache Progress Indicator -->
@@ -1745,11 +1742,6 @@ async function executeEmergencyCleanup() {
             showAdminNotification('Token cache refresh initiated', 'info');
         }
         
-        function viewCacheAnalytics() {
-            console.log('📊 Viewing cache analytics...');
-            showAdminNotification('Loading cache analytics...', 'info');
-        }
-
         // Blacklist Functions
         function whitelistWithApproval() {
             console.log('🔄 Whitelist with approval...');
