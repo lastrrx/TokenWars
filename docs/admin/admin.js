@@ -453,62 +453,6 @@ async function loadComprehensiveCacheDataWithDiagnostics() {
         } catch (healthError) {
             debugLog('error', 'Failed to load cache health:', healthError);
         }
-
-        // Load cache analytics with enhanced error handling for 406 fix
-        try {
-            debugLog('cache', 'Attempting to load cache analytics...');
-            
-            const { data: cacheAnalytics, error: analyticsError } = await supabase
-                .from('cache_analytics')
-                .select('*')
-                .order('period_start', { ascending: false })
-                .limit(1);
-
-            if (analyticsError) {
-                if (analyticsError.code === '406' || analyticsError.message?.includes('406')) {
-                    debugLog('error', '406 Error on cache_analytics - table may be empty or have schema issues:', analyticsError);
-                    // Create a default analytics entry to fix 406 error
-                    try {
-                        const defaultAnalytics = {
-                            period_start: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-                            period_end: new Date().toISOString(),
-                            total_requests: 0,
-                            cache_hits: 0,
-                            cache_misses: 0,
-                            api_calls_made: 0,
-                            avg_processing_time_ms: 0
-                        };
-                        
-                        const { data: insertedAnalytics, error: insertError } = await supabase
-                            .from('cache_analytics')
-                            .insert([defaultAnalytics])
-                            .select()
-                            .single();
-                        
-                        if (insertError) {
-                            debugLog('error', 'Failed to insert default analytics:', insertError);
-                        } else {
-                            debugLog('cache', 'Default analytics entry created to fix 406 error');
-                            AdminState.cacheState.tokenCache.responseTime = 0;
-                            AdminState.cacheState.performance.dailyRequests = 0;
-                        }
-                    } catch (insertError) {
-                        debugLog('error', 'Failed to create default analytics entry:', insertError);
-                    }
-                } else {
-                    debugLog('error', 'Cache analytics query error:', analyticsError);
-                }
-            } else if (cacheAnalytics && cacheAnalytics.length > 0) {
-                const analytics = cacheAnalytics[0];
-                AdminState.cacheState.tokenCache.responseTime = analytics.avg_processing_time_ms || 0;
-                AdminState.cacheState.performance.dailyRequests = analytics.total_requests || 0;
-                debugLog('cache', 'Cache analytics loaded successfully');
-            } else {
-                debugLog('cache', 'No cache analytics data found - table may be empty');
-            }
-        } catch (analyticsError) {
-            debugLog('error', 'Failed to load cache analytics:', analyticsError);
-        }
         
         debugLog('cache', '✅ Cache data loading completed (with error handling)');
         
@@ -4940,11 +4884,6 @@ function optimizeCache() {
     showAdminNotification('Cache optimization started', 'info');
 }
 
-function viewCacheAnalytics() {
-    debugLog('cache', '📊 Viewing cache analytics...');
-    showAdminNotification('Loading cache analytics...', 'info');
-}
-
 // Blacklist management functions
 function bulkWhitelist() {
     debugLog('blacklist', '✅ Bulk whitelist operation...');
@@ -5264,7 +5203,6 @@ window.viewTokenAnalytics = viewTokenAnalytics;
 window.refreshTokenCache = refreshTokenCache;
 window.clearStaleCache = clearStaleCache;
 window.optimizeCache = optimizeCache;
-window.viewCacheAnalytics = viewCacheAnalytics;
 window.bulkWhitelist = bulkWhitelist;
 window.whitelistWithApproval = whitelistWithApproval;
 window.exportBlacklist = exportBlacklist;
