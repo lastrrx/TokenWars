@@ -495,8 +495,7 @@ async emergencyCleanup(competitionId, adminWallet) {
         transaction.feePayer = wallet.publicKey;
 
         console.log('📤 Sending emergency cleanup transaction...');
-        const signedTransaction = await wallet.signTransaction(transaction);
-        const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+        const signature = await wallet.sendTransaction(transaction, this.connection);
         
         // Confirm transaction
         console.log('⏳ Confirming emergency cleanup transaction...');
@@ -566,8 +565,7 @@ async updatePriceSample(competitionId, tokenAPrice, tokenBPrice) {
         transaction.feePayer = wallet.publicKey;
 
         console.log('📤 Sending price sample transaction...');
-        const signedTransaction = await wallet.signTransaction(transaction);
-        const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
+        const signature = await wallet.sendTransaction(transaction, this.connection);
         
         // Confirm transaction
         console.log('⏳ Confirming price sample transaction...');
