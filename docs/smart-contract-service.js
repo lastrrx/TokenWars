@@ -996,7 +996,7 @@ async withdrawWinnings(competitionId, userWallet) {
 }
 
 window.claimRefund = async function(betId, competitionId) {
-    console.log(`🔄 Claiming refund for bet: ${betId}`);
+    console.log(`🔄 Claiming refund for bet: ${betId}, competition: ${competitionId}`);
     
     try {
         const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
@@ -1010,6 +1010,8 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Wallet not connected');
         }
         
+        console.log('👤 Wallet address:', walletAddress);
+        
         // Get bet details
         const { data: bet, error: betError } = await window.supabase
             .from('bets')
@@ -1022,8 +1024,14 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Bet not found or unauthorized');
         }
         
-        // Verify this bet is eligible for refund
         const comp = bet.competitions;
+        console.log('📊 Competition details:', {
+            status: comp.status,
+            escrow_account: comp.escrow_account,
+            program_id: comp.program_id
+        });
+        
+        // Verify this bet is eligible for refund
         if (comp.status !== 'CANCELLED') {
             throw new Error('Competition not cancelled - refunds not available');
         }
@@ -1034,12 +1042,22 @@ window.claimRefund = async function(betId, competitionId) {
         
         let withdrawSignature = null;
         
-        // ✅ CRITICAL FIX: Use withdraw_winnings, NOT withdraw_refund!
-        if (comp.escrow_account && window.smartContractService?.isAvailable()) {
+        // Check conditions for blockchain call
+        const hasEscrow = !!comp.escrow_account;
+        const serviceAvailable = window.smartContractService?.isAvailable();
+        
+        console.log('🔍 Blockchain conditions:', {
+            hasEscrow,
+            serviceAvailable,
+            willCallBlockchain: hasEscrow && serviceAvailable
+        });
+        
+        if (hasEscrow && serviceAvailable) {
             try {
+                console.log('🚀 Making blockchain call...');
                 showNotificationFixed('Processing refund on-chain...', 'info');
                 
-                // ✅ Use withdrawWinnings for cancelled competitions (refunds)
+                // Use withdrawWinnings for cancelled competitions (refunds)
                 const result = await window.smartContractService.withdrawWinnings(
                     competitionId,
                     walletAddress
@@ -1053,6 +1071,15 @@ window.claimRefund = async function(betId, competitionId) {
                 showNotificationFixed(`Smart contract refund failed: ${contractError.message}`, 'error');
                 return;
             }
+        } else {
+            console.log('⚠️ Skipping blockchain call - processing as database-only refund');
+            
+            if (!hasEscrow) {
+                console.log('❌ No escrow account found - this was a database-only competition');
+            }
+            if (!serviceAvailable) {
+                console.log('❌ Smart contract service not available');
+            }
         }
         
         // Update database with refund info
@@ -1065,6 +1092,9 @@ window.claimRefund = async function(betId, competitionId) {
         
         if (withdrawSignature) {
             updateData.withdraw_transaction_signature = withdrawSignature;
+            console.log('✅ Including blockchain signature in database update');
+        } else {
+            console.log('⚠️ No blockchain signature - database-only refund');
         }
         
         const { error: updateError } = await window.supabase
@@ -1076,7 +1106,11 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error(`Database update failed: ${updateError.message}`);
         }
         
-        showNotificationFixed('Refund claimed successfully!', 'success');
+        const message = withdrawSignature 
+            ? 'Refund claimed successfully from smart contract!' 
+            : 'Refund processed (database-only competition)';
+            
+        showNotificationFixed(message, 'success');
         
         // Update UI immediately
         const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
