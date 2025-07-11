@@ -695,8 +695,8 @@ function transformBasicCompetitions(competitions) {
         requiredBetAmount: comp.required_bet_amount ?   // NEW: Required bet amount from smart contract
             parseFloat((comp.required_bet_amount / 1e9).toFixed(3)) : 
             0.1, //Fallback to 0.1 default
-        platformFeeBps: parseInt(comp.platform_fee_bps || 1500), // NEW: Platform fee in basis points
-        platformFeePercent: parseFloat((comp.platform_fee_bps || 1500) / 100), // NEW: Platform fee as percentage
+        platformFeeBps: comp.platform_fee_bps ? parseInt(comp.platform_fee_bps) : null,
+        platformFeePercent: comp.platform_fee_bps ? parseFloat(comp.platform_fee_bps / 100) : null,
         
         startTime: new Date(comp.start_time),
         endTime: new Date(comp.end_time),
@@ -928,7 +928,7 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
                         <div class="stat-label">Required Bet</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value">${(competition.platformFeePercent || 15).toFixed(1)}%</div>
+                        <div class="stat-value">${competition.platformFeePercent ? competition.platformFeePercent.toFixed(1) : 'N/A'}%</div>
                         <div class="stat-label">Platform Fee</div>
                     </div>
                 </div>
