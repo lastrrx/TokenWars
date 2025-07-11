@@ -643,7 +643,8 @@ async function enhanceCompetitionsWithTokenCache(competitions) {
                 tokenBPerformance: comp.token_b_performance || null,
                 
                 isRealData: true,
-                platformFee: comp.platform_fee_percentage || 15
+                platformFeeBps: comp.platform_fee_bps ? parseInt(comp.platform_fee_bps) : null,
+                platformFeePercent: comp.platform_fee_bps ? parseFloat(comp.platform_fee_bps / 100) : null,
             };
         });
         
