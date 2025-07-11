@@ -1547,8 +1547,6 @@ async function createCompetitionWithSmartContract(config) {
             // Smart contract fields
             escrow_account: escrowResult.escrowAccount,
             escrow_bump: escrowResult.bump,
-            jupiter_token_a_id: window.selectedPair?.token_a_address, // Use selectedPair from global state
-            jupiter_token_b_id: window.selectedPair?.token_b_address, // Use selectedPair from global state
             program_id: 'GQ5wLSCs3g62xDoaKxgTVtqjsSXHz3FXYjNpBZGDdpqm'
         };
 
