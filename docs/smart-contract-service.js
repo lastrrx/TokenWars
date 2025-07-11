@@ -587,8 +587,6 @@ async emergencyCleanup(competitionId, adminWallet) {
                     .update({ 
                         status: 'CANCELLED',
                         updated_at: new Date().toISOString(),
-                        emergency_cleanup_signature: signature,
-                        cancelled_by: adminWallet,
                         cancellation_reason: 'Emergency cleanup by admin'
                     })
                     .eq('competition_id', competitionId);
