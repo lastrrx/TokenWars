@@ -439,8 +439,10 @@ async testTransaction() {
         }
     }
 
+
 /**
  * Emergency cleanup competition - refund all bets and cancel
+ * FIXED: Uses same transaction sending pattern as working functions
  */
 async emergencyCleanup(competitionId, adminWallet) {
     try {
@@ -456,14 +458,40 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Smart contract service not available');
         }
         
-        const wallet = await this.getConnectedWallet();
-        if (!wallet) {
-            throw new Error('No wallet connected');
+        // ✅ FIXED: Use WalletService instead of custom admin wrapper
+        console.log('🔗 Getting wallet using WalletService (same as working functions)...');
+        let wallet;
+        
+        // First try: Use WalletService (same as working functions)
+        if (window.walletService && window.walletService.isConnected()) {
+            console.log('✅ Using WalletService for admin transaction');
+            wallet = window.walletService.getWalletProvider();
+        } 
+        // Second try: Fallback to getWalletService() 
+        else {
+            const walletService = window.getWalletService ? window.getWalletService() : null;
+            if (walletService && walletService.isConnected()) {
+                console.log('✅ Using fallback WalletService for admin transaction');
+                wallet = walletService.getWalletProvider();
+            } else {
+                throw new Error('No wallet connected via WalletService');
+            }
+        }
+
+        if (!wallet || !wallet.publicKey) {
+            throw new Error('No wallet connected or wallet missing public key');
         }
 
         // Verify admin wallet matches connected wallet
-        if (wallet.publicKey.toString() !== adminWallet) {
-            throw new Error('Connected wallet does not match admin wallet');
+        const connectedWalletAddress = wallet.publicKey.toString();
+        console.log('🔍 Wallet verification:', {
+            connected: connectedWalletAddress,
+            expected: adminWallet,
+            matches: connectedWalletAddress === adminWallet
+        });
+        
+        if (connectedWalletAddress !== adminWallet) {
+            throw new Error(`Connected wallet (${connectedWalletAddress}) does not match admin wallet (${adminWallet})`);
         }
         
         // Calculate escrow PDA (same logic as createEscrow)
@@ -486,15 +514,23 @@ async emergencyCleanup(competitionId, adminWallet) {
             competitionId: competitionId
         });
 
-        // Create and send transaction
+        // Create and send transaction (SAME PATTERN AS WORKING FUNCTIONS)
         const transaction = new solanaWeb3.Transaction();
         transaction.add(instruction);
         
+        console.log('⏳ Getting recent blockhash...');
         const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = wallet.publicKey;
 
-        console.log('📤 Sending emergency cleanup transaction...');
+        console.log('🔍 Transaction details:', {
+            instructions: transaction.instructions.length,
+            feePayer: wallet.publicKey.toString(),
+            recentBlockhash: blockhash
+        });
+
+        // ✅ FIXED: Use exact same transaction sending as working functions
+        console.log('📤 Sending emergency cleanup transaction (using working pattern)...');
         const signature = await wallet.sendTransaction(transaction, this.connection);
         
         // Confirm transaction
@@ -506,7 +542,17 @@ async emergencyCleanup(competitionId, adminWallet) {
 
     } catch (error) {
         console.error('❌ Emergency cleanup error:', error);
-        throw error;
+        
+        // Enhanced error reporting for debugging
+        if (error.message.includes('User rejected')) {
+            throw new Error('Emergency cleanup was rejected by user');
+        } else if (error.message.includes('insufficient funds')) {
+            throw new Error('Insufficient SOL balance for emergency cleanup transaction');
+        } else if (error.message.includes('does not match')) {
+            throw new Error('Wrong wallet connected - please connect the admin wallet');
+        } else {
+            throw new Error(`Emergency cleanup failed: ${error.message}`);
+        }
     }
 }
 
