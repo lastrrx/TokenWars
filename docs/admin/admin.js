@@ -1495,23 +1495,30 @@ async function createCompetitionWithSmartContract(config) {
         console.log('💰 Bet amount:', config.betAmount, 'SOL =', betAmountLamports, 'lamports');
         console.log('💳 Platform fee:', config.platformFee, '% =', platformFeeBps, 'basis points');
         
+        // 1. Calculate timing FIRST
+        const now = new Date();
+        const startTime = new Date(now.getTime() + (config.startDelay || 5 * 60 * 1000));
+        const votingEndTime = new Date(startTime.getTime() + (config.votingDuration || 15) * 60 * 1000);
+        const endTime = new Date(votingEndTime.getTime() + (config.activeDuration || 24) * 60 * 60 * 1000);
+        
+        // 2. Convert to Unix timestamps (seconds)
+        const votingEndTimeUnix = Math.floor(votingEndTime.getTime() / 1000);
+        const competitionEndTimeUnix = Math.floor(endTime.getTime() / 1000);
+        
+        // 3. THEN call smart contract with correct timing
         const escrowResult = await window.smartContractService.createCompetitionEscrow(
             competitionId,
             config.selectedPair.token_a_address,
             config.selectedPair.token_b_address,
             adminWallet,
-            betAmountLamports,    // NEW: Variable bet amount (0.05-0.5 SOL)
-            platformFeeBps        // NEW: Variable platform fee (5-25%)
+            betAmountLamports,
+            platformFeeBps,
+            votingEndTimeUnix,      // ✅ ADD: Unix timestamp
+            competitionEndTimeUnix  // ✅ ADD: Unix timestamp
         );
 
         console.log('✅ Escrow created:', escrowResult);
         showAdminNotification('Escrow created successfully, saving to database...', 'info');
-
-        // 2. Calculate timing
-        const now = new Date();
-        const startTime = new Date(now.getTime() + (config.startDelay || 5 * 60 * 1000));
-        const votingEndTime = new Date(startTime.getTime() + (config.votingDuration || 15) * 60 * 1000);
-        const endTime = new Date(votingEndTime.getTime() + (config.activeDuration || 24) * 60 * 60 * 1000);
 
         // 3. Create database record with escrow info
         console.log('💾 Creating database record...');
