@@ -676,7 +676,7 @@ saveSessionData() {
                     await window.SupabaseReady;
                     
                     const { data, error } = await window.supabase
-                        .from('user_profiles')
+                        .from('users')
                         .select('*')
                         .eq('wallet_address', this.publicKey)
                         .single();
@@ -738,7 +738,7 @@ saveSessionData() {
                     await window.SupabaseReady;
                     
                     const { data, error } = await window.supabase
-                        .from('user_profiles')
+                        .from('users')
                         .insert([newProfile])
                         .select()
                         .single();
