@@ -3830,7 +3830,8 @@ async function loadBettingHistory(walletAddress) {
                     status,
                     winner_token,
                     start_time,
-                    end_time
+                    end_time,
+                    escrow_account
                 )
             `)
             .eq('user_wallet', walletAddress)
@@ -3855,34 +3856,50 @@ async function loadBettingHistory(walletAddress) {
         const historyItems = bets.map(bet => {
             const comp = bet.competitions;
             
-            // FIXED: Proper winner determination using actual token symbols
-            const isWinner = comp.status === 'RESOLVED' && 
-                           ((bet.chosen_token === 'token_a' && comp.winner_token === comp.token_a_symbol) ||
-                            (bet.chosen_token === 'token_b' && comp.winner_token === comp.token_b_symbol));
+            // SIMPLE: Read bet status directly from database
+            const betStatus = bet.status; // WON, LOST, PLACED, CLAIMED, REFUNDED
             
-            // FIXED: Only show claim buttons for eligible bets that haven't been withdrawn
-            const canClaimWinnings = comp.status === 'RESOLVED' && isWinner && !bet.is_withdrawn;
-            const canClaimRefund = comp.status === 'CANCELLED' && !bet.is_withdrawn;
-            
-            // FIXED: Proper status determination for color coding
+            // SIMPLE: Determine outcome class for styling
             let outcomeClass, statusText;
-            if (comp.status === 'RESOLVED') {
-                outcomeClass = isWinner ? 'won' : 'lost';
-                statusText = isWinner ? 'WON' : 'LOST';
-            } else if (comp.status === 'CANCELLED') {
-                outcomeClass = 'cancelled';
-                statusText = 'CANCELLED';
-            } else {
-                outcomeClass = 'pending';
-                statusText = 'PENDING';
+            switch (betStatus) {
+                case 'WON':
+                    outcomeClass = 'won';
+                    statusText = 'WON';
+                    break;
+                case 'LOST':
+                    outcomeClass = 'lost';
+                    statusText = 'LOST';
+                    break;
+                case 'CLAIMED':
+                    outcomeClass = 'won';
+                    statusText = 'CLAIMED';
+                    break;
+                case 'REFUNDED':
+                    outcomeClass = 'cancelled';
+                    statusText = 'REFUNDED';
+                    break;
+                case 'PLACED':
+                default:
+                    if (comp.status === 'CANCELLED') {
+                        outcomeClass = 'cancelled';
+                        statusText = 'CANCELLED';
+                    } else {
+                        outcomeClass = 'pending';
+                        statusText = 'PENDING';
+                    }
+                    break;
             }
             
-            // FIXED: Display actual token names/symbols instead of token_a/token_b
+            // SIMPLE: Button logic based on database status
+            const canClaimWinnings = betStatus === 'WON' && !bet.is_withdrawn;
+            const canClaimRefund = comp.status === 'CANCELLED' && !bet.is_withdrawn;
+            
+            // Display token names
             const chosenTokenName = bet.chosen_token === 'token_a' ? 
                 (comp.token_a_name || comp.token_a_symbol) : 
                 (comp.token_b_name || comp.token_b_symbol);
             
-            // FIXED: Display actual winner name instead of token_a/token_b
+            // Display winner name (for resolved competitions)
             const winnerDisplay = comp.status === 'RESOLVED' ? 
                 (comp.winner_token || 'TBD') : 'TBD';
             
@@ -3911,7 +3928,7 @@ async function loadBettingHistory(walletAddress) {
                             <div class="bet-outcome">
                                 <strong>Winner:</strong> ${winnerDisplay}
                             </div>
-                            ${isWinner && bet.payout_amount ? `
+                            ${betStatus === 'WON' && bet.payout_amount ? `
                                 <div class="bet-payout">
                                     <strong>Payout:</strong> ${bet.payout_amount} SOL
                                 </div>
@@ -4042,6 +4059,7 @@ function getWalletAddress() {
 }
 
 // REAL Claim Functions - Connected to Smart Contracts and Database
+// SIMPLIFIED Claim Functions - Just read database status and withdraw from escrow
 window.claimWinnings = async function(betId, competitionId) {
     console.log(`💰 Claiming winnings for bet: ${betId}`);
     
@@ -4057,7 +4075,7 @@ window.claimWinnings = async function(betId, competitionId) {
             throw new Error('Wallet not connected');
         }
         
-        // Get bet details
+        // Get bet details - just verify it's a winning bet from database
         const { data: bet, error: betError } = await window.supabase
             .from('bets')
             .select('*, competitions(*)')
@@ -4069,14 +4087,9 @@ window.claimWinnings = async function(betId, competitionId) {
             throw new Error('Bet not found or unauthorized');
         }
         
-        // Verify this is a winning bet
-        const comp = bet.competitions;
-        const isWinner = comp.status === 'RESOLVED' && 
-                       ((bet.chosen_token === 'token_a' && comp.winner_token === comp.token_a_symbol) ||
-                        (bet.chosen_token === 'token_b' && comp.winner_token === comp.token_b_symbol));
-        
-        if (!isWinner) {
-            throw new Error('This bet is not a winner');
+        // SIMPLE: Just check database status
+        if (bet.status !== 'WON') {
+            throw new Error('This bet is not marked as won in database');
         }
         
         if (bet.is_withdrawn) {
@@ -4085,7 +4098,8 @@ window.claimWinnings = async function(betId, competitionId) {
         
         let withdrawSignature = null;
         
-        // Try smart contract withdrawal if available
+        // Try smart contract withdrawal if escrow exists
+        const comp = bet.competitions;
         if (comp.escrow_account && window.smartContractService?.isAvailable()) {
             try {
                 showNotificationFixed('Processing withdrawal on-chain...', 'info');
@@ -4105,11 +4119,12 @@ window.claimWinnings = async function(betId, competitionId) {
             }
         }
         
-        // Update database with withdrawal info
+        // Update database - mark as claimed
         const updateData = {
             is_withdrawn: true,
             claimed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            status: 'CLAIMED'  // Update status to CLAIMED
         };
         
         if (withdrawSignature) {
@@ -4127,9 +4142,15 @@ window.claimWinnings = async function(betId, competitionId) {
         
         showNotificationFixed('Winnings claimed successfully!', 'success');
         
-        // Remove the claim button and update UI
+        // Update UI immediately
         const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
         if (betCard) {
+            betCard.className = betCard.className.replace(/won|lost|pending|cancelled/, 'won');
+            const statusBadge = betCard.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.textContent = 'CLAIMED';
+                statusBadge.className = 'status-badge won';
+            }
             const actionsDiv = betCard.querySelector('.bet-actions');
             if (actionsDiv) {
                 actionsDiv.innerHTML = '<div class="claimed-badge">✅ Claimed</div>';
@@ -4169,7 +4190,7 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Wallet not connected');
         }
         
-        // Get bet details
+        // Get bet details - verify competition is cancelled
         const { data: bet, error: betError } = await window.supabase
             .from('bets')
             .select('*, competitions(*)')
@@ -4181,10 +4202,10 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Bet not found or unauthorized');
         }
         
-        // Verify this bet is eligible for refund
+        // SIMPLE: Check if competition is cancelled
         const comp = bet.competitions;
         if (comp.status !== 'CANCELLED') {
-            throw new Error('Competition not cancelled');
+            throw new Error('Competition is not cancelled');
         }
         
         if (bet.is_withdrawn) {
@@ -4193,12 +4214,11 @@ window.claimRefund = async function(betId, competitionId) {
         
         let withdrawSignature = null;
         
-        // Try smart contract refund if available
+        // Try smart contract refund if escrow exists
         if (comp.escrow_account && window.smartContractService?.isAvailable()) {
             try {
                 showNotificationFixed('Processing refund on-chain...', 'info');
                 
-                // We'll add this function to smart-contract-service.js in the next step
                 const result = await window.smartContractService.withdrawRefund(
                     competitionId,
                     walletAddress
@@ -4214,11 +4234,12 @@ window.claimRefund = async function(betId, competitionId) {
             }
         }
         
-        // Update database with refund info
+        // Update database - mark as refunded
         const updateData = {
             is_withdrawn: true,
             claimed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            status: 'REFUNDED'  // Update status to REFUNDED
         };
         
         if (withdrawSignature) {
@@ -4236,9 +4257,15 @@ window.claimRefund = async function(betId, competitionId) {
         
         showNotificationFixed('Refund claimed successfully!', 'success');
         
-        // Remove the claim button and update UI
+        // Update UI immediately
         const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
         if (betCard) {
+            betCard.className = betCard.className.replace(/won|lost|pending|cancelled/, 'cancelled');
+            const statusBadge = betCard.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.textContent = 'REFUNDED';
+                statusBadge.className = 'status-badge cancelled';
+            }
             const actionsDiv = betCard.querySelector('.bet-actions');
             if (actionsDiv) {
                 actionsDiv.innerHTML = '<div class="claimed-badge">✅ Refunded</div>';
