@@ -938,12 +938,6 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
                         onclick="event.stopPropagation(); handleCompetitionActionFixed('${competition.competitionId}', '${competition.status}', ${isWalletConnected})">
                     ${actionButtonText}
                 </button>
-                
-                <!-- Live Data Indicator -->
-                <div class="data-indicator">
-                    <span class="data-dot live"></span>
-                    <span class="data-text">Live Data</span>
-                </div>
             </div>
         `;
         
