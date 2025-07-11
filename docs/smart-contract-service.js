@@ -1010,8 +1010,6 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Wallet not connected');
         }
         
-        console.log('👤 Wallet address:', walletAddress);
-        
         // Get bet details
         const { data: bet, error: betError } = await window.supabase
             .from('bets')
@@ -1040,62 +1038,48 @@ window.claimRefund = async function(betId, competitionId) {
             throw new Error('Refund already claimed');
         }
         
-        let withdrawSignature = null;
-        
-        // Check conditions for blockchain call
-        const hasEscrow = !!comp.escrow_account;
-        const serviceAvailable = window.smartContractService?.isAvailable();
-        
-        console.log('🔍 Blockchain conditions:', {
-            hasEscrow,
-            serviceAvailable,
-            willCallBlockchain: hasEscrow && serviceAvailable
-        });
-        
-        if (hasEscrow && serviceAvailable) {
-            try {
-                console.log('🚀 Making blockchain call...');
-                showNotificationFixed('Processing refund on-chain...', 'info');
-                
-                // Use withdrawWinnings for cancelled competitions (refunds)
-                const result = await window.smartContractService.withdrawWinnings(
-                    competitionId,
-                    walletAddress
-                );
-                
-                withdrawSignature = result.signature;
-                console.log('✅ On-chain refund successful:', withdrawSignature);
-                
-            } catch (contractError) {
-                console.error('❌ Smart contract refund failed:', contractError);
-                showNotificationFixed(`Smart contract refund failed: ${contractError.message}`, 'error');
-                return;
-            }
-        } else {
-            console.log('⚠️ Skipping blockchain call - processing as database-only refund');
-            
-            if (!hasEscrow) {
-                console.log('❌ No escrow account found - this was a database-only competition');
-            }
-            if (!serviceAvailable) {
-                console.log('❌ Smart contract service not available');
-            }
+        // ✅ CRITICAL FIX: REQUIRE blockchain transaction for ANY competition with escrow
+        if (!comp.escrow_account) {
+            throw new Error('This competition has no escrow account - cannot process refund');
         }
         
-        // Update database with refund info
+        if (!window.smartContractService?.isAvailable()) {
+            throw new Error('Smart contract service not available - cannot process refund');
+        }
+        
+        // ✅ MANDATORY blockchain call - no database update without this
+        console.log('🚀 REQUIRED blockchain call for escrow competition...');
+        showNotificationFixed('Processing refund on-chain...', 'info');
+        
+        let withdrawSignature;
+        try {
+            const result = await window.smartContractService.withdrawWinnings(
+                competitionId,
+                walletAddress
+            );
+            
+            withdrawSignature = result.signature;
+            if (!withdrawSignature) {
+                throw new Error('No signature returned from blockchain transaction');
+            }
+            
+            console.log('✅ Blockchain refund successful:', withdrawSignature);
+            
+        } catch (contractError) {
+            console.error('❌ Blockchain refund failed:', contractError);
+            throw new Error(`Blockchain transaction failed: ${contractError.message}`);
+        }
+        
+        // ✅ ONLY update database AFTER successful blockchain transaction
+        console.log('💾 Updating database after successful blockchain transaction...');
+        
         const updateData = {
             is_withdrawn: true,
             claimed_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            status: 'REFUNDED'
+            status: 'REFUNDED',
+            withdraw_transaction_signature: withdrawSignature
         };
-        
-        if (withdrawSignature) {
-            updateData.withdraw_transaction_signature = withdrawSignature;
-            console.log('✅ Including blockchain signature in database update');
-        } else {
-            console.log('⚠️ No blockchain signature - database-only refund');
-        }
         
         const { error: updateError } = await window.supabase
             .from('bets')
@@ -1103,14 +1087,12 @@ window.claimRefund = async function(betId, competitionId) {
             .eq('bet_id', betId);
         
         if (updateError) {
-            throw new Error(`Database update failed: ${updateError.message}`);
+            console.error('❌ Database update failed after successful blockchain transaction:', updateError);
+            // This is a serious issue - blockchain succeeded but database failed
+            throw new Error(`CRITICAL: Blockchain refund succeeded (${withdrawSignature}) but database update failed: ${updateError.message}`);
         }
         
-        const message = withdrawSignature 
-            ? 'Refund claimed successfully from smart contract!' 
-            : 'Refund processed (database-only competition)';
-            
-        showNotificationFixed(message, 'success');
+        showNotificationFixed('Refund claimed successfully from blockchain!', 'success');
         
         // Update UI immediately
         const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
