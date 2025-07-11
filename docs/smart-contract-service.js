@@ -204,7 +204,7 @@ async testTransaction() {
     }
 
     // CORRECTED: createCompetitionEscrow with proper variable ordering and Anchor init handling
-    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet, betAmount, platformFeeBps) {
+    async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet, betAmount, platformFeeBps, votingEndTimeUnix, competitionEndTimeUnix) {
         try {
             console.log('📊 Creating competition escrow with CORRECTED Anchor integration...');
             console.log('🔍 Input validation:', {
@@ -250,17 +250,17 @@ async testTransaction() {
             console.log('📊 Using Jupiter price discovery for tokens:', tokenInfo);
             
             // CORRECTED: Calculate timing BEFORE building instruction
-            console.log('⏰ Calculating competition timing...');
+            console.log('⏰ Using passed competition timing...');
             const now = Math.floor(Date.now() / 1000);
-            const votingEndTime = now + (15 * 60); // 15 minutes
-            const competitionEndTime = votingEndTime + (24 * 60 * 60); // 24 hours
+            const votingEndTime = votingEndTimeUnix;
+            const competitionEndTime = competitionEndTimeUnix;
             
             console.log('⏰ Competition timing:', {
                 now,
                 votingEndTime,
                 competitionEndTime,
-                votingDurationMin: 15,
-                activeDurationHours: 24
+                votingDurationMin: Math.round((votingEndTime - now) / 60),
+                activeDurationHours: Math.round((competitionEndTime - votingEndTime) / 3600)
             });
             
             // CORRECTED: Build instruction with proper Anchor init handling
