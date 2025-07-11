@@ -993,6 +993,7 @@ async withdrawWinnings(competitionId, userWallet) {
         console.error('❌ Error withdrawing winnings:', error);
         throw new Error(`Withdrawal failed: ${error.message}`);
     }
+  }  
 }
 
 window.claimRefund = async function(betId, competitionId) {
