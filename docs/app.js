@@ -920,7 +920,7 @@ function createCompetitionCardFixed(competition, isWalletConnected) {
                         <div class="stat-label">Participants</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value">${competition.prizePool.toFixed(1)} SOL</div>
+                        <div class="stat-value">${competition.prizePool.toFixed(2)} SOL</div>
                         <div class="stat-label">Prize Pool</div>
                     </div>
                     <div class="stat-item">
@@ -1036,7 +1036,7 @@ function updateCompetitionModalContent(competition) {
         };
         
         updateStat('modalParticipants', competition.participants);
-        updateStat('modalPrizePool', `${competition.prizePool.toFixed(1)} SOL`);
+        updateStat('modalPrizePool', `${competition.prizePool.toFixed(2)} SOL`);
         updateStat('modalTimeRemaining', formatTimeRemaining(competition.timeRemaining));
         
         // NEW: Update bet amount and platform fee information
@@ -2880,7 +2880,7 @@ function updateCompetitionStatsDisplay() {
         updateStat('activeCompetitionsCount', activeCount);
         updateStat('totalCompetitionsCount', totalCompetitions);
         updateStat('totalParticipants', totalParticipants.toLocaleString());
-        updateStat('totalPrizePool', `${totalPrizePool.toFixed(1)} SOL`);
+        updateStat('totalPrizePool', `${totalPrizePool.toFixed(2)} SOL`);
         updateStat('activeCompetitions', activeCount);
 
     } catch (error) {
