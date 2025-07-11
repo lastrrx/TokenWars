@@ -3650,7 +3650,7 @@ async function loadPortfolioContent(tabName) {
     `;
     
     try {
-        const walletAddress = getCurrentWalletAddress();
+        const walletAddress = getWalletAddress();
         if (!walletAddress) {
             portfolioContent.innerHTML = `
                 <div class="error-state">
