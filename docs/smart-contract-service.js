@@ -442,7 +442,7 @@ async testTransaction() {
 
 /**
  * Emergency cleanup competition - refund all bets and cancel
- * FIXED: Uses same transaction sending pattern as working functions
+ * FIXED: Uses correct Phantom wallet API and includes database update
  */
 async emergencyCleanup(competitionId, adminWallet) {
     try {
@@ -458,8 +458,8 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Smart contract service not available');
         }
         
-        // ✅ FIXED: Support both WalletService AND direct window.solana (admin panel)
-        console.log('🔗 Getting wallet using multiple connection methods...');
+        // ✅ FIXED: Use correct wallet API detection and calling
+        console.log('🔗 Getting wallet using correct Phantom API...');
         let wallet;
         
         // First try: Use WalletService (main app)
@@ -476,28 +476,45 @@ async emergencyCleanup(competitionId, adminWallet) {
             }
         }
         
-        // Third try: Direct window.solana (admin panel connection)
+        // Third try: Direct Phantom wallet (admin panel connection) - CORRECTED
+        if (!wallet && window.phantom?.solana && window.phantom.solana.isConnected && window.phantom.solana.publicKey) {
+            console.log('✅ Using direct Phantom wallet for admin transaction (admin panel mode)');
+            const phantom = window.phantom.solana;
+            wallet = {
+                publicKey: phantom.publicKey,
+                sendTransaction: async (transaction, connection) => {
+                    console.log('📤 Using Phantom signAndSendTransaction (correct method)');
+                    
+                    // Phantom uses signAndSendTransaction, not sendTransaction
+                    if (typeof phantom.signAndSendTransaction === 'function') {
+                        return await phantom.signAndSendTransaction(transaction);
+                    } else {
+                        throw new Error('Phantom signAndSendTransaction method not available');
+                    }
+                }
+            };
+        }
+        
+        // Fourth try: Legacy window.solana fallback
         if (!wallet && window.solana && window.solana.isConnected && window.solana.publicKey) {
-            console.log('✅ Using direct window.solana for admin transaction (admin panel mode)');
+            console.log('✅ Using legacy window.solana for admin transaction');
             wallet = {
                 publicKey: window.solana.publicKey,
                 sendTransaction: async (transaction, connection) => {
-                    console.log('📤 Using window.solana.sendTransaction');
-                    return await window.solana.sendTransaction(transaction, connection, {
-                        skipPreflight: false,
-                        preflightCommitment: 'confirmed'
-                    });
+                    console.log('📤 Using legacy signAndSendTransaction');
+                    
+                    if (typeof window.solana.signAndSendTransaction === 'function') {
+                        return await window.solana.signAndSendTransaction(transaction);
+                    } else {
+                        throw new Error('Legacy wallet signAndSendTransaction method not available');
+                    }
                 }
             };
         }
         
         // Final check
-        if (!wallet) {
-            throw new Error('No wallet connected. Please ensure your wallet (Phantom/Solflare) is connected and authorized.');
-        }
-
         if (!wallet || !wallet.publicKey) {
-            throw new Error('No wallet connected or wallet missing public key');
+            throw new Error('No wallet connected. Please ensure your Phantom wallet is connected and authorized.');
         }
 
         // Verify admin wallet matches connected wallet
@@ -548,14 +565,47 @@ async emergencyCleanup(competitionId, adminWallet) {
         });
 
         // ✅ FIXED: Use exact same transaction sending as working functions
-        console.log('📤 Sending emergency cleanup transaction (using working pattern)...');
+        console.log('📤 Sending emergency cleanup transaction (using correct Phantom method)...');
         const signature = await wallet.sendTransaction(transaction, this.connection);
         
         // Confirm transaction
         console.log('⏳ Confirming emergency cleanup transaction...');
         await this.connection.confirmTransaction(signature, 'confirmed');
         
-        console.log('✅ Emergency cleanup completed:', signature);
+        console.log('✅ Emergency cleanup transaction completed:', signature);
+
+        // ✅ NEW: Update database competition status to CANCELLED
+        console.log('💾 Updating database competition status to CANCELLED...');
+        try {
+            // Get Supabase client
+            const supabase = window.getSupabase ? window.getSupabase() : null;
+            if (!supabase) {
+                console.warn('⚠️ Supabase client not available, skipping database update');
+            } else {
+                const { error: updateError } = await supabase
+                    .from('competitions')
+                    .update({ 
+                        status: 'CANCELLED',
+                        updated_at: new Date().toISOString(),
+                        emergency_cleanup_signature: signature,
+                        cancelled_by: adminWallet,
+                        cancellation_reason: 'Emergency cleanup by admin'
+                    })
+                    .eq('competition_id', competitionId);
+
+                if (updateError) {
+                    console.error('❌ Database update error:', updateError);
+                    console.warn('⚠️ Smart contract cleanup succeeded but database update failed');
+                } else {
+                    console.log('✅ Database updated: competition status set to CANCELLED');
+                }
+            }
+        } catch (dbError) {
+            console.error('❌ Database update failed:', dbError);
+            console.warn('⚠️ Smart contract cleanup succeeded but database update failed');
+        }
+        
+        console.log('✅ Emergency cleanup completed successfully:', signature);
         return signature;
 
     } catch (error) {
@@ -568,6 +618,8 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Insufficient SOL balance for emergency cleanup transaction');
         } else if (error.message.includes('does not match')) {
             throw new Error('Wrong wallet connected - please connect the admin wallet');
+        } else if (error.message.includes('not available')) {
+            throw new Error('Wallet method not available - please ensure Phantom wallet is properly connected');
         } else {
             throw new Error(`Emergency cleanup failed: ${error.message}`);
         }
