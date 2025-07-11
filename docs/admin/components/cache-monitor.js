@@ -439,7 +439,7 @@ async loadCacheAnalytics() {
                 } catch (error) {
                     console.error('Cache monitoring error:', error);
                 }
-            }, 30000);
+            }, 3600000);
 
             console.log('✅ Real-time cache monitoring started');
             
