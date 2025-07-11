@@ -3854,25 +3854,46 @@ async function loadBettingHistory(walletAddress) {
         
         const historyItems = bets.map(bet => {
             const comp = bet.competitions;
+            
+            // FIXED: Proper winner determination using actual token symbols
             const isWinner = comp.status === 'RESOLVED' && 
                            ((bet.chosen_token === 'token_a' && comp.winner_token === comp.token_a_symbol) ||
                             (bet.chosen_token === 'token_b' && comp.winner_token === comp.token_b_symbol));
-            const canClaimWinnings = comp.status === 'RESOLVED' && isWinner && bet.status === 'PLACED';
-            const canClaimRefund = comp.status === 'CANCELLED' && bet.status === 'PLACED';
             
-            const outcomeClass = comp.status === 'RESOLVED' ? (isWinner ? 'won' : 'lost') : 
-                               comp.status === 'CANCELLED' ? 'cancelled' : 'pending';
+            // FIXED: Only show claim buttons for eligible bets that haven't been withdrawn
+            const canClaimWinnings = comp.status === 'RESOLVED' && isWinner && !bet.is_withdrawn;
+            const canClaimRefund = comp.status === 'CANCELLED' && !bet.is_withdrawn;
             
-            const chosenTokenName = bet.chosen_token === 'token_a' ? comp.token_a_symbol : comp.token_b_symbol;
+            // FIXED: Proper status determination for color coding
+            let outcomeClass, statusText;
+            if (comp.status === 'RESOLVED') {
+                outcomeClass = isWinner ? 'won' : 'lost';
+                statusText = isWinner ? 'WON' : 'LOST';
+            } else if (comp.status === 'CANCELLED') {
+                outcomeClass = 'cancelled';
+                statusText = 'CANCELLED';
+            } else {
+                outcomeClass = 'pending';
+                statusText = 'PENDING';
+            }
+            
+            // FIXED: Display actual token names/symbols instead of token_a/token_b
+            const chosenTokenName = bet.chosen_token === 'token_a' ? 
+                (comp.token_a_name || comp.token_a_symbol) : 
+                (comp.token_b_name || comp.token_b_symbol);
+            
+            // FIXED: Display actual winner name instead of token_a/token_b
+            const winnerDisplay = comp.status === 'RESOLVED' ? 
+                (comp.winner_token || 'TBD') : 'TBD';
             
             return `
-                <div class="betting-history-card ${outcomeClass}">
+                <div class="betting-history-card ${outcomeClass}" data-bet-id="${bet.bet_id}">
                     <div class="bet-header">
                         <div class="bet-tokens">
                             <span class="token-vs">${comp.token_a_symbol} vs ${comp.token_b_symbol}</span>
                         </div>
                         <div class="bet-status">
-                            <span class="status-badge ${outcomeClass}">${comp.status}</span>
+                            <span class="status-badge ${outcomeClass}">${statusText}</span>
                         </div>
                     </div>
                     
@@ -3888,20 +3909,25 @@ async function loadBettingHistory(walletAddress) {
                         </div>
                         ${comp.status === 'RESOLVED' ? `
                             <div class="bet-outcome">
-                                <strong>Winner:</strong> ${comp.winner_token || 'TBD'}
+                                <strong>Winner:</strong> ${winnerDisplay}
                             </div>
+                            ${isWinner && bet.payout_amount ? `
+                                <div class="bet-payout">
+                                    <strong>Payout:</strong> ${bet.payout_amount} SOL
+                                </div>
+                            ` : ''}
                         ` : ''}
                     </div>
                     
-                    ${canClaimWinnings || canClaimRefund ? `
+                    ${(canClaimWinnings || canClaimRefund) ? `
                         <div class="bet-actions">
                             ${canClaimWinnings ? `
-                                <button class="btn-claim winnings" onclick="claimWinnings('${bet.bet_id}')">
+                                <button class="btn-claim winnings" onclick="claimWinnings('${bet.bet_id}', '${comp.competition_id}')">
                                     💰 Claim Winnings
                                 </button>
                             ` : ''}
                             ${canClaimRefund ? `
-                                <button class="btn-claim refund" onclick="claimRefund('${bet.bet_id}')">
+                                <button class="btn-claim refund" onclick="claimRefund('${bet.bet_id}', '${comp.competition_id}')">
                                     🔄 Claim Refund
                                 </button>
                             ` : ''}
@@ -4007,17 +4033,234 @@ async function loadAchievements(walletAddress) {
     `;
 }
 
-// Claim functions (placeholder - connect to your existing smart contract functions)
-window.claimWinnings = async function(betId) {
+// Helper function to get wallet address
+function getWalletAddress() {
+    if (window.walletService && window.walletService.isConnected()) {
+        return window.walletService.getWalletAddress();
+    }
+    return null;
+}
+
+// REAL Claim Functions - Connected to Smart Contracts and Database
+window.claimWinnings = async function(betId, competitionId) {
     console.log(`💰 Claiming winnings for bet: ${betId}`);
-    // TODO: Integrate with your existing smart contract withdrawal functions
-    alert('Claim winnings functionality will be connected to smart contracts');
+    
+    try {
+        const button = document.querySelector(`[onclick="claimWinnings('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Processing...';
+        }
+        
+        const walletAddress = getWalletAddress();
+        if (!walletAddress) {
+            throw new Error('Wallet not connected');
+        }
+        
+        // Get bet details
+        const { data: bet, error: betError } = await window.supabase
+            .from('bets')
+            .select('*, competitions(*)')
+            .eq('bet_id', betId)
+            .eq('user_wallet', walletAddress)
+            .single();
+        
+        if (betError || !bet) {
+            throw new Error('Bet not found or unauthorized');
+        }
+        
+        // Verify this is a winning bet
+        const comp = bet.competitions;
+        const isWinner = comp.status === 'RESOLVED' && 
+                       ((bet.chosen_token === 'token_a' && comp.winner_token === comp.token_a_symbol) ||
+                        (bet.chosen_token === 'token_b' && comp.winner_token === comp.token_b_symbol));
+        
+        if (!isWinner) {
+            throw new Error('This bet is not a winner');
+        }
+        
+        if (bet.is_withdrawn) {
+            throw new Error('Winnings already claimed');
+        }
+        
+        let withdrawSignature = null;
+        
+        // Try smart contract withdrawal if available
+        if (comp.escrow_account && window.smartContractService?.isAvailable()) {
+            try {
+                showNotificationFixed('Processing withdrawal on-chain...', 'info');
+                
+                const result = await window.smartContractService.withdrawWinnings(
+                    competitionId,
+                    walletAddress
+                );
+                
+                withdrawSignature = result.signature;
+                console.log('✅ On-chain withdrawal successful:', withdrawSignature);
+                
+            } catch (contractError) {
+                console.error('❌ Smart contract withdrawal failed:', contractError);
+                showNotificationFixed(`Smart contract withdrawal failed: ${contractError.message}`, 'error');
+                return;
+            }
+        }
+        
+        // Update database with withdrawal info
+        const updateData = {
+            is_withdrawn: true,
+            claimed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        if (withdrawSignature) {
+            updateData.withdraw_transaction_signature = withdrawSignature;
+        }
+        
+        const { error: updateError } = await window.supabase
+            .from('bets')
+            .update(updateData)
+            .eq('bet_id', betId);
+        
+        if (updateError) {
+            throw new Error(`Database update failed: ${updateError.message}`);
+        }
+        
+        showNotificationFixed('Winnings claimed successfully!', 'success');
+        
+        // Remove the claim button and update UI
+        const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
+        if (betCard) {
+            const actionsDiv = betCard.querySelector('.bet-actions');
+            if (actionsDiv) {
+                actionsDiv.innerHTML = '<div class="claimed-badge">✅ Claimed</div>';
+            }
+        }
+        
+        // Refresh portfolio data
+        if (window.refreshPortfolioData) {
+            setTimeout(() => window.refreshPortfolioData(), 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Claim winnings failed:', error);
+        showNotificationFixed(`Failed to claim winnings: ${error.message}`, 'error');
+        
+        // Reset button
+        const button = document.querySelector(`[onclick="claimWinnings('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '💰 Claim Winnings';
+        }
+    }
 };
 
-window.claimRefund = async function(betId) {
+window.claimRefund = async function(betId, competitionId) {
     console.log(`🔄 Claiming refund for bet: ${betId}`);
-    // TODO: Integrate with your existing smart contract withdrawal functions
-    alert('Claim refund functionality will be connected to smart contracts');
+    
+    try {
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Processing...';
+        }
+        
+        const walletAddress = getWalletAddress();
+        if (!walletAddress) {
+            throw new Error('Wallet not connected');
+        }
+        
+        // Get bet details
+        const { data: bet, error: betError } = await window.supabase
+            .from('bets')
+            .select('*, competitions(*)')
+            .eq('bet_id', betId)
+            .eq('user_wallet', walletAddress)
+            .single();
+        
+        if (betError || !bet) {
+            throw new Error('Bet not found or unauthorized');
+        }
+        
+        // Verify this bet is eligible for refund
+        const comp = bet.competitions;
+        if (comp.status !== 'CANCELLED') {
+            throw new Error('Competition not cancelled');
+        }
+        
+        if (bet.is_withdrawn) {
+            throw new Error('Refund already claimed');
+        }
+        
+        let withdrawSignature = null;
+        
+        // Try smart contract refund if available
+        if (comp.escrow_account && window.smartContractService?.isAvailable()) {
+            try {
+                showNotificationFixed('Processing refund on-chain...', 'info');
+                
+                // We'll add this function to smart-contract-service.js in the next step
+                const result = await window.smartContractService.withdrawRefund(
+                    competitionId,
+                    walletAddress
+                );
+                
+                withdrawSignature = result.signature;
+                console.log('✅ On-chain refund successful:', withdrawSignature);
+                
+            } catch (contractError) {
+                console.error('❌ Smart contract refund failed:', contractError);
+                showNotificationFixed(`Smart contract refund failed: ${contractError.message}`, 'error');
+                return;
+            }
+        }
+        
+        // Update database with refund info
+        const updateData = {
+            is_withdrawn: true,
+            claimed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        if (withdrawSignature) {
+            updateData.withdraw_transaction_signature = withdrawSignature;
+        }
+        
+        const { error: updateError } = await window.supabase
+            .from('bets')
+            .update(updateData)
+            .eq('bet_id', betId);
+        
+        if (updateError) {
+            throw new Error(`Database update failed: ${updateError.message}`);
+        }
+        
+        showNotificationFixed('Refund claimed successfully!', 'success');
+        
+        // Remove the claim button and update UI
+        const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
+        if (betCard) {
+            const actionsDiv = betCard.querySelector('.bet-actions');
+            if (actionsDiv) {
+                actionsDiv.innerHTML = '<div class="claimed-badge">✅ Refunded</div>';
+            }
+        }
+        
+        // Refresh portfolio data
+        if (window.refreshPortfolioData) {
+            setTimeout(() => window.refreshPortfolioData(), 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Claim refund failed:', error);
+        showNotificationFixed(`Failed to claim refund: ${error.message}`, 'error');
+        
+        // Reset button
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '🔄 Claim Refund';
+        }
+    }
 };
 
 // NEW: Total cost display update function
