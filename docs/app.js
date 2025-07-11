@@ -3587,8 +3587,8 @@ if (document.readyState === 'loading') {
 }
 
 function calculateCompetitionFees(betAmount) {
-    const SOLANA_TX_FEE = 0.000005; // Actual Solana transaction fee
-    const PLATFORM_FEE_RATE = 0.15; // 15% platform fee
+    const SOLANA_TX_FEE = 0.000005;
+    const PLATFORM_FEE_RATE = 0.10; // 10% platform fee
     const platformFee = betAmount * PLATFORM_FEE_RATE;
     
     return {
@@ -3596,7 +3596,7 @@ function calculateCompetitionFees(betAmount) {
         platformFee: platformFee,
         transactionFee: SOLANA_TX_FEE,
         totalCost: betAmount + platformFee + SOLANA_TX_FEE,
-        userReceives: betAmount // What goes into the prize pool
+        userReceives: betAmount
     };
 }
 
