@@ -872,14 +872,14 @@ body {
 }
 
 .stat-value {
-    font-size: 1.1rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-primary);
     font-family: var(--font-mono);
 }
 
 .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
