@@ -49,8 +49,8 @@ class SmartContractService {
                 startCompetition: await this.computeAnchorDiscriminator('start_competition'),
                 updatePriceSample: await this.computeAnchorDiscriminator('update_price_sample'),  // NEW: Replaces TWAP
                 emergencyCleanup: await this.computeAnchorDiscriminator('emergency_cleanup'),    // NEW: Emergency function
-                withdrawWinnings: await this.computeAnchorDiscriminator('withdraw_winnings')
-                // REMOVED: updateTwapSample, finalizeStartTwap, resolveCompetition, collectPlatformFee (auto-handled now)
+                withdrawWinnings: await this.computeAnchorDiscriminator('withdraw_winnings'),
+                withdrawRefund: await this.computeAnchorDiscriminator('withdraw_refund') 
             };
             
             console.log('✅ Smart Contract Service initialized with correct Anchor discriminators');
@@ -986,6 +986,44 @@ async buildUpdatePriceSampleInstruction(accounts) {
         }
     }
 
+    // Withdraw refund from cancelled competition
+    async withdrawRefund(competitionId, userWallet) {
+        try {
+            console.log('🔄 Withdrawing refund:', competitionId);
+            
+            const wallet = await this.getConnectedWallet();
+            
+            // Get escrow PDA
+            const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+                [Buffer.from("escrow"), Buffer.from(competitionId)],
+                this.programId
+            );
+            
+            // Build withdraw_refund instruction
+            const instruction = await this.buildRefundInstruction({
+                escrow: escrowAccount,
+                user: new solanaWeb3.PublicKey(userWallet),
+                competitionId: competitionId
+            });
+            
+            // Create and send transaction
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = wallet.publicKey;
+            
+            const signature = await wallet.sendTransaction(transaction, this.connection);
+            await this.connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Refund withdrawn successfully, signature:', signature);
+            return { signature };
+            
+        } catch (error) {
+            console.error('❌ Error withdrawing refund:', error);
+            throw new Error(`Refund withdrawal failed: ${error.message}`);
+        }
+    }
+
     // Complete buildWithdrawInstruction method
     async buildWithdrawInstruction(accounts) {
         const keys = [
@@ -996,6 +1034,28 @@ async buildUpdatePriceSampleInstruction(accounts) {
         // Serialize instruction data
         const data = Buffer.concat([
             this.instructions.withdrawWinnings,
+            this.serializeString(accounts.competitionId)
+        ]);
+        
+        return new solanaWeb3.TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data
+        });
+    }
+
+    // Build refund instruction for cancelled competitions
+    async buildRefundInstruction(accounts) {
+        console.log('🔧 Building refund instruction for:', accounts.competitionId);
+        
+        const keys = [
+            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
+            { pubkey: accounts.user, isSigner: true, isWritable: true },
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
+        ];
+        
+        const data = Buffer.concat([
+            this.instructions.withdrawRefund,
             this.serializeString(accounts.competitionId)
         ]);
         
