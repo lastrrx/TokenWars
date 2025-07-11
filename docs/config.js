@@ -115,7 +115,7 @@ const UI_CONFIG = {
 // Add smart contract configuration
 
 const BLOCKCHAIN_CONFIG = {
-    SOLANA_PROGRAM_ID: '2aGet7TxaynJ5QtyzF1CP2ujT3QWvYefGLBU5Kjzk5JV',
+    SOLANA_PROGRAM_ID: 'GQ5wLSCs3g62xDoaKxgTVtqjsSXHz3FXYjNpBZGDdpqm',
     SOLANA_NETWORK: 'devnet',
     JUPITER_API_URL: 'https://lite-api.jup.ag/tokens/v2',
     SMART_CONTRACT_ENABLED: true,
