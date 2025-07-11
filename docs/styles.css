@@ -3017,3 +3017,256 @@ body {
         border: 2px solid #000;
     }
 }
+
+/* ===================================== */
+/* ENHANCED LEADERBOARD STYLES */
+/* ===================================== */
+
+.leaderboard-premium {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.leaderboard-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 140px 100px 80px 80px;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.1));
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-body {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 140px 100px 80px 80px;
+    gap: 1rem;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+    transition: all 0.3s ease;
+    align-items: center;
+    position: relative;
+    background: rgba(15, 23, 42, 0.1);
+}
+
+.leaderboard-row:hover {
+    background: rgba(139, 92, 246, 0.05);
+    transform: translateX(5px);
+    border-left: 3px solid var(--accent-purple);
+}
+
+.leaderboard-row.top-performer {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(139, 92, 246, 0.05));
+    border-left: 3px solid var(--gold);
+}
+
+.leaderboard-row.top-performer:hover {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(139, 92, 246, 0.1));
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2);
+}
+
+.rank-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.rank-badge.medal {
+    font-size: 1.5rem;
+    animation: medalShine 3s ease-in-out infinite;
+}
+
+.rank-badge.number {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+@keyframes medalShine {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.username {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.top-performer .username {
+    color: var(--gold);
+    font-weight: 700;
+}
+
+.winnings {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-green);
+    font-size: 0.95rem;
+}
+
+.win-rate {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.streak {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-orange);
+}
+
+.games {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* Empty and Error States */
+.empty-state, .error-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+}
+
+.empty-icon, .error-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    display: block;
+    opacity: 0.7;
+}
+
+.empty-state h3, .error-state h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.empty-state p, .error-state p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 60px 1fr 120px 80px 60px 60px;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+    }
+    
+    .leaderboard-header {
+        font-size: 0.75rem;
+    }
+    
+    .username {
+        font-size: 0.9rem;
+    }
+    
+    .winnings, .win-rate, .streak, .games {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .leaderboard-premium {
+        margin: 0 -1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 50px 1fr 100px 70px;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .header-streak, .header-games,
+    .streak, .games {
+        display: none;
+    }
+    
+    .rank-badge.medal {
+        font-size: 1.2rem;
+    }
+    
+    .username {
+        font-size: 0.85rem;
+    }
+    
+    .winnings, .win-rate {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 40px 1fr 80px;
+        padding: 0.75rem;
+    }
+    
+    .header-winrate, .win-rate {
+        display: none;
+    }
+    
+    .leaderboard-row:hover {
+        transform: none;
+    }
+}
+
+/* Loading State Enhancement */
+.loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(139, 92, 246, 0.3);
+    border-top: 3px solid var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0;
+}
