@@ -4237,7 +4237,7 @@ async function setupRealTimeMonitoring() {
             } catch (error) {
                 debugLog('error', 'Real-time monitoring error:', error);
             }
-        }, 30000);
+        }, 3600000);
         
         AdminState.updateIntervals.push(interval);
         
