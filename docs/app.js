@@ -1724,10 +1724,16 @@ async function placeBetFixed() {
         showNotificationFixed('Bet placed successfully!', 'success');
         closeCompetitionModalFixed();
         
-        // Refresh competitions display
-        setTimeout(() => {
-            loadActiveCompetitionsFixed();
-        }, 1000);
+        // NEW: (More robust refresh with longer delay)
+        setTimeout(async () => {
+            console.log('🔄 Refreshing competitions after bet placement...');
+            try {
+                await loadActiveCompetitionsFixed();
+                console.log('✅ Competitions refreshed successfully');
+            } catch (error) {
+                console.error('❌ Error refreshing competitions:', error);
+            }
+        }, 2000); // Increased from 1000ms to 2000ms
         
     } catch (error) {
         console.error('❌ Error placing bet:', error);
@@ -1785,6 +1791,8 @@ async function updateCompetitionStats(competitionId, betAmount) {
             return;
         }
         
+        console.log(`🔄 Updating competition stats for ${competitionId}, adding ${betAmount} SOL`);
+        
         // Fetch current competition data
         const { data: competition, error: fetchError } = await CompetitionState.supabaseClient
             .from('competitions')
@@ -1794,32 +1802,56 @@ async function updateCompetitionStats(competitionId, betAmount) {
         
         if (fetchError) {
             console.error('❌ Error fetching competition for update:', fetchError);
-            return;
+            throw fetchError;
         }
         
         if (!competition) {
             console.error('❌ Competition not found:', competitionId);
-            return;
+            throw new Error('Competition not found');
         }
         
+        console.log('📊 Current competition data:', competition);
+        
         // Calculate new values
-        const newTotalPool = (parseFloat(competition.total_pool || 0) + betAmount).toFixed(2);
+        // FIX 1: Store as number, not string - remove .toFixed(2)
+        const currentPool = parseFloat(competition.total_pool || 0);
+        const newTotalPool = currentPool + betAmount; // Keep as number
         const newTotalBets = (competition.total_bets || 0) + 1;
+        
+        console.log(`💰 Prize pool update: ${currentPool} SOL + ${betAmount} SOL = ${newTotalPool} SOL`);
         
         // Update competition
         const { error: updateError } = await CompetitionState.supabaseClient
             .from('competitions')
             .update({
-                total_pool: newTotalPool,
-                total_bets: newTotalBets
+                total_pool: newTotalPool, // Now saving as number, not string
+                total_bets: newTotalBets,
+                updated_at: new Date().toISOString() // Also update timestamp
             })
             .eq('competition_id', competitionId);
         
         if (updateError) {
             console.error('❌ Error updating competition stats:', updateError);
             throw updateError;
+        } 
+        
+        console.log('✅ Competition stats updated successfully:', {
+            competitionId,
+            newTotalPool: newTotalPool,
+            newTotalBets: newTotalBets
+        });
+        
+        // FIX 2: Verify the update worked by fetching again
+        const { data: verifyData, error: verifyError } = await CompetitionState.supabaseClient
+            .from('competitions')
+            .select('total_pool, total_bets')
+            .eq('competition_id', competitionId)
+            .single();
+            
+        if (verifyError) {
+            console.warn('⚠️ Could not verify update:', verifyError);
         } else {
-            console.log('✅ Competition stats updated successfully');
+            console.log('✅ Verified database update:', verifyData);
         }
         
     } catch (error) {
