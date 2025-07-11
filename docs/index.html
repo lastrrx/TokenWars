@@ -523,48 +523,49 @@
         </div>
 
         <!-- PORTFOLIO PAGE -->
-        <div id="portfolioPage" class="page-content">
-            <div class="main-content">
-                <section class="section">
-                    <div class="container">
-                        <div class="section-header">
-                            <h2 class="section-title">MY PORTFOLIO</h2>
-                            <div class="section-filters">
-                                <select id="portfolio-view" class="filter-select" onchange="handlePortfolioViewChange()">
-                                    <option value="overview">Overview</option>
-                                    <option value="history">Betting History</option>
-                                    <option value="statistics">Statistics</option>
-                                    <option value="achievements">Achievements</option>
-                                </select>
-                                <button class="btn-refresh-stylized" onclick="refreshPortfolioData()">
-                                    <span class="refresh-icon">🔄</span> Refresh
-                                </button>
-                                <!-- Current (shows always) -->
-                                <button onclick="withdrawWinningsWithSmartContract('COMPETITION_ID')" class="btn btn-success">
-                                    💰 Withdraw Winnings
-                                </button>
-                                
-                                <!-- Should be (conditional) -->
-                                <div id="withdrawSection" style="display: none;">
-                                    <button onclick="withdrawWinningsWithSmartContract(competitionId)" class="btn btn-success">
-                                        💰 Withdraw Winnings
-                                    </button>
-                                </div>
-                            </div>
+<!-- PORTFOLIO PAGE -->
+<div id="portfolioPage" class="page-content">
+    <div class="main-content">
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">MY PORTFOLIO</h2>
+                    <div class="portfolio-navigation">
+                        <div class="portfolio-tabs">
+                            <button class="portfolio-tab active" data-tab="overview" onclick="switchPortfolioTab('overview')">
+                                <span class="tab-icon">📊</span>
+                                <span class="tab-label">Overview</span>
+                            </button>
+                            <button class="portfolio-tab" data-tab="history" onclick="switchPortfolioTab('history')">
+                                <span class="tab-icon">📋</span>
+                                <span class="tab-label">Betting History</span>
+                            </button>
+                            <button class="portfolio-tab" data-tab="statistics" onclick="switchPortfolioTab('statistics')">
+                                <span class="tab-icon">📈</span>
+                                <span class="tab-label">Statistics</span>
+                            </button>
+                            <button class="portfolio-tab" data-tab="achievements" onclick="switchPortfolioTab('achievements')">
+                                <span class="tab-icon">🏆</span>
+                                <span class="tab-label">Achievements</span>
+                            </button>
                         </div>
-
-                        <!-- Portfolio Content Container -->
-                        <div id="portfolio-content">
-                            <div class="loading-state">
-                                <div class="loading-spinner"></div>
-                                <p>Loading your portfolio...</p>
-                            </div>
-                        </div>
+                        <button class="btn-refresh-stylized" onclick="refreshPortfolioData()">
+                            <span class="refresh-icon">🔄</span> Refresh
+                        </button>
                     </div>
-                </section>
+                </div>
+
+                <!-- Portfolio Content Container -->
+                <div id="portfolio-content">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading portfolio...</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
+</div>
 
     <!-- Competition Details Modal -->
     <div class="competition-modal hidden" id="competitionModal">
