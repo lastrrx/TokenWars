@@ -442,7 +442,7 @@ async testTransaction() {
 
 /**
  * Emergency cleanup competition - refund all bets and cancel
- * FIXED: Uses correct Phantom wallet API and includes database update
+ * FIXED: Uses exact same pattern as working createCompetitionEscrow function
  */
 async emergencyCleanup(competitionId, adminWallet) {
     try {
@@ -458,63 +458,12 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Smart contract service not available');
         }
         
-        // ✅ FIXED: Use correct wallet API detection and calling
-        console.log('🔗 Getting wallet using correct Phantom API...');
-        let wallet;
+        // ✅ FIXED: Use exact same wallet getting as working createCompetitionEscrow
+        console.log('🔗 Getting connected wallet (same as working functions)...');
+        const wallet = await this.getConnectedWallet();
         
-        // First try: Use WalletService (main app)
-        if (window.walletService && window.walletService.isConnected()) {
-            console.log('✅ Using WalletService for admin transaction');
-            wallet = window.walletService.getWalletProvider();
-        } 
-        // Second try: Fallback to getWalletService() 
-        else if (window.getWalletService) {
-            const walletService = window.getWalletService();
-            if (walletService && walletService.isConnected()) {
-                console.log('✅ Using fallback WalletService for admin transaction');
-                wallet = walletService.getWalletProvider();
-            }
-        }
-        
-        // Third try: Direct Phantom wallet (admin panel connection) - CORRECTED
-        if (!wallet && window.phantom?.solana && window.phantom.solana.isConnected && window.phantom.solana.publicKey) {
-            console.log('✅ Using direct Phantom wallet for admin transaction (admin panel mode)');
-            const phantom = window.phantom.solana;
-            wallet = {
-                publicKey: phantom.publicKey,
-                sendTransaction: async (transaction, connection) => {
-                    console.log('📤 Using Phantom signAndSendTransaction (correct method)');
-                    
-                    // Phantom uses signAndSendTransaction, not sendTransaction
-                    if (typeof phantom.signAndSendTransaction === 'function') {
-                        return await phantom.signAndSendTransaction(transaction);
-                    } else {
-                        throw new Error('Phantom signAndSendTransaction method not available');
-                    }
-                }
-            };
-        }
-        
-        // Fourth try: Legacy window.solana fallback
-        if (!wallet && window.solana && window.solana.isConnected && window.solana.publicKey) {
-            console.log('✅ Using legacy window.solana for admin transaction');
-            wallet = {
-                publicKey: window.solana.publicKey,
-                sendTransaction: async (transaction, connection) => {
-                    console.log('📤 Using legacy signAndSendTransaction');
-                    
-                    if (typeof window.solana.signAndSendTransaction === 'function') {
-                        return await window.solana.signAndSendTransaction(transaction);
-                    } else {
-                        throw new Error('Legacy wallet signAndSendTransaction method not available');
-                    }
-                }
-            };
-        }
-        
-        // Final check
         if (!wallet || !wallet.publicKey) {
-            throw new Error('No wallet connected. Please ensure your Phantom wallet is connected and authorized.');
+            throw new Error('No wallet connected');
         }
 
         // Verify admin wallet matches connected wallet
@@ -549,7 +498,7 @@ async emergencyCleanup(competitionId, adminWallet) {
             competitionId: competitionId
         });
 
-        // Create and send transaction (SAME PATTERN AS WORKING FUNCTIONS)
+        // ✅ FIXED: Use exact same transaction creation and sending as createCompetitionEscrow
         const transaction = new solanaWeb3.Transaction();
         transaction.add(instruction);
         
@@ -564,8 +513,8 @@ async emergencyCleanup(competitionId, adminWallet) {
             recentBlockhash: blockhash
         });
 
-        // ✅ FIXED: Use exact same transaction sending as working functions
-        console.log('📤 Sending emergency cleanup transaction (using correct Phantom method)...');
+        // ✅ FIXED: Use exact same transaction sending as createCompetitionEscrow
+        console.log('📤 Sending emergency cleanup transaction...');
         const signature = await wallet.sendTransaction(transaction, this.connection);
         
         // Confirm transaction
@@ -574,7 +523,7 @@ async emergencyCleanup(competitionId, adminWallet) {
         
         console.log('✅ Emergency cleanup transaction completed:', signature);
 
-        // ✅ NEW: Update database competition status to CANCELLED
+        // ✅ SIMPLIFIED: Update database status to CANCELLED (minimal fields only)
         console.log('💾 Updating database competition status to CANCELLED...');
         try {
             // Get Supabase client
@@ -586,8 +535,7 @@ async emergencyCleanup(competitionId, adminWallet) {
                     .from('competitions')
                     .update({ 
                         status: 'CANCELLED',
-                        updated_at: new Date().toISOString(),
-                        cancellation_reason: 'Emergency cleanup by admin'
+                        updated_at: new Date().toISOString()
                     })
                     .eq('competition_id', competitionId);
 
@@ -616,8 +564,6 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Insufficient SOL balance for emergency cleanup transaction');
         } else if (error.message.includes('does not match')) {
             throw new Error('Wrong wallet connected - please connect the admin wallet');
-        } else if (error.message.includes('not available')) {
-            throw new Error('Wallet method not available - please ensure Phantom wallet is properly connected');
         } else {
             throw new Error(`Emergency cleanup failed: ${error.message}`);
         }
