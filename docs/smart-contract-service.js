@@ -1037,6 +1037,14 @@ async withdrawWinnings(competitionId, userWallet) {
         });
     }
 
+async withdrawRefund(competitionId, userWallet) {
+    console.log('🔄 Withdrawing refund (using withdrawWinnings logic):', competitionId);
+    
+    // Simply call the existing withdrawWinnings method
+    // Both refunds and winnings use the same on-chain instruction
+    return await this.withdrawWinnings(competitionId, userWallet);
+}
+
     // FIXED: Complete getConnectedWallet method with comprehensive error handling
     async getConnectedWallet() {
         try {
