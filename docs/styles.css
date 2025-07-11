@@ -3609,6 +3609,76 @@ body {
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
 }
 
+/* ADD these new classes for claim functionality */
+
+/* Claimed badge styling */
+.claimed-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: center;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* Button loading states */
+.btn-claim:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Bet card data attributes for easier targeting */
+.betting-history-card[data-bet-id] {
+    position: relative;
+}
+
+/* Enhanced payout display */
+.bet-payout {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+/* Status badge variations for CLAIMED and REFUNDED */
+.status-badge.claimed {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.status-badge.refunded {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+/* Ensure proper spacing for bet details */
+.bet-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+/* Mobile responsiveness for claim buttons */
+@media (max-width: 768px) {
+    .bet-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-claim {
+        width: 100%;
+        padding: 0.75rem;
+    }
+    
+    .claimed-badge {
+        width: 100%;
+        text-align: center;
+    }
+}
+
 /* Statistics Section */
 .statistics-section {
     max-width: 1200px;
