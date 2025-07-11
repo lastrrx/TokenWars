@@ -993,139 +993,7 @@ async withdrawWinnings(competitionId, userWallet) {
         console.error('❌ Error withdrawing winnings:', error);
         throw new Error(`Withdrawal failed: ${error.message}`);
     }
-}}
-
-window.claimRefund = async function(betId, competitionId) {
-    console.log(`🔄 Claiming refund for bet: ${betId}, competition: ${competitionId}`);
-    
-    try {
-        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
-        if (button) {
-            button.disabled = true;
-            button.textContent = 'Processing...';
-        }
-        
-        const walletAddress = getWalletAddress();
-        if (!walletAddress) {
-            throw new Error('Wallet not connected');
-        }
-        
-        // Get bet details
-        const { data: bet, error: betError } = await window.supabase
-            .from('bets')
-            .select('*, competitions(*)')
-            .eq('bet_id', betId)
-            .eq('user_wallet', walletAddress)
-            .single();
-        
-        if (betError || !bet) {
-            throw new Error('Bet not found or unauthorized');
-        }
-        
-        const comp = bet.competitions;
-        console.log('📊 Competition details:', {
-            status: comp.status,
-            escrow_account: comp.escrow_account,
-            program_id: comp.program_id
-        });
-        
-        // Verify this bet is eligible for refund
-        if (comp.status !== 'CANCELLED') {
-            throw new Error('Competition not cancelled - refunds not available');
-        }
-        
-        if (bet.is_withdrawn) {
-            throw new Error('Refund already claimed');
-        }
-        
-        // ✅ CRITICAL FIX: REQUIRE blockchain transaction for ANY competition with escrow
-        if (!comp.escrow_account) {
-            throw new Error('This competition has no escrow account - cannot process refund');
-        }
-        
-        if (!window.smartContractService?.isAvailable()) {
-            throw new Error('Smart contract service not available - cannot process refund');
-        }
-        
-        // ✅ MANDATORY blockchain call - no database update without this
-        console.log('🚀 REQUIRED blockchain call for escrow competition...');
-        showNotificationFixed('Processing refund on-chain...', 'info');
-        
-        let withdrawSignature;
-        try {
-            const result = await window.smartContractService.withdrawWinnings(
-                competitionId,
-                walletAddress
-            );
-            
-            withdrawSignature = result.signature;
-            if (!withdrawSignature) {
-                throw new Error('No signature returned from blockchain transaction');
-            }
-            
-            console.log('✅ Blockchain refund successful:', withdrawSignature);
-            
-        } catch (contractError) {
-            console.error('❌ Blockchain refund failed:', contractError);
-            throw new Error(`Blockchain transaction failed: ${contractError.message}`);
-        }
-        
-        // ✅ ONLY update database AFTER successful blockchain transaction
-        console.log('💾 Updating database after successful blockchain transaction...');
-        
-        const updateData = {
-            is_withdrawn: true,
-            claimed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            status: 'REFUNDED',
-            withdraw_transaction_signature: withdrawSignature
-        };
-        
-        const { error: updateError } = await window.supabase
-            .from('bets')
-            .update(updateData)
-            .eq('bet_id', betId);
-        
-        if (updateError) {
-            console.error('❌ Database update failed after successful blockchain transaction:', updateError);
-            // This is a serious issue - blockchain succeeded but database failed
-            throw new Error(`CRITICAL: Blockchain refund succeeded (${withdrawSignature}) but database update failed: ${updateError.message}`);
-        }
-        
-        showNotificationFixed('Refund claimed successfully from blockchain!', 'success');
-        
-        // Update UI immediately
-        const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
-        if (betCard) {
-            betCard.className = betCard.className.replace(/won|lost|pending|cancelled/, 'cancelled');
-            const statusBadge = betCard.querySelector('.status-badge');
-            if (statusBadge) {
-                statusBadge.textContent = 'REFUNDED';
-                statusBadge.className = 'status-badge cancelled';
-            }
-            const actionsDiv = betCard.querySelector('.bet-actions');
-            if (actionsDiv) {
-                actionsDiv.innerHTML = '<div class="claimed-badge">✅ Refunded</div>';
-            }
-        }
-        
-        // Refresh portfolio data
-        if (window.refreshPortfolioData) {
-            setTimeout(() => window.refreshPortfolioData(), 1000);
-        }
-        
-    } catch (error) {
-        console.error('❌ Claim refund failed:', error);
-        showNotificationFixed(`Failed to claim refund: ${error.message}`, 'error');
-        
-        // Reset button
-        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
-        if (button) {
-            button.disabled = false;
-            button.textContent = '🔄 Claim Refund';
-        }
-    }
-};
+}
 
     // Complete buildWithdrawInstruction method
     async buildWithdrawInstruction(accounts) {
@@ -1506,6 +1374,138 @@ window.claimRefund = async function(betId, competitionId) {
         }
     }
 }
+
+window.claimRefund = async function(betId, competitionId) {
+    console.log(`🔄 Claiming refund for bet: ${betId}, competition: ${competitionId}`);
+    
+    try {
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Processing...';
+        }
+        
+        const walletAddress = getWalletAddress();
+        if (!walletAddress) {
+            throw new Error('Wallet not connected');
+        }
+        
+        // Get bet details
+        const { data: bet, error: betError } = await window.supabase
+            .from('bets')
+            .select('*, competitions(*)')
+            .eq('bet_id', betId)
+            .eq('user_wallet', walletAddress)
+            .single();
+        
+        if (betError || !bet) {
+            throw new Error('Bet not found or unauthorized');
+        }
+        
+        const comp = bet.competitions;
+        console.log('📊 Competition details:', {
+            status: comp.status,
+            escrow_account: comp.escrow_account,
+            program_id: comp.program_id
+        });
+        
+        // Verify this bet is eligible for refund
+        if (comp.status !== 'CANCELLED') {
+            throw new Error('Competition not cancelled - refunds not available');
+        }
+        
+        if (bet.is_withdrawn) {
+            throw new Error('Refund already claimed');
+        }
+        
+        // ✅ CRITICAL FIX: REQUIRE blockchain transaction for ANY competition with escrow
+        if (!comp.escrow_account) {
+            throw new Error('This competition has no escrow account - cannot process refund');
+        }
+        
+        if (!window.smartContractService?.isAvailable()) {
+            throw new Error('Smart contract service not available - cannot process refund');
+        }
+        
+        // ✅ MANDATORY blockchain call - no database update without this
+        console.log('🚀 REQUIRED blockchain call for escrow competition...');
+        showNotificationFixed('Processing refund on-chain...', 'info');
+        
+        let withdrawSignature;
+        try {
+            const result = await window.smartContractService.withdrawWinnings(
+                competitionId,
+                walletAddress
+            );
+            
+            withdrawSignature = result.signature;
+            if (!withdrawSignature) {
+                throw new Error('No signature returned from blockchain transaction');
+            }
+            
+            console.log('✅ Blockchain refund successful:', withdrawSignature);
+            
+        } catch (contractError) {
+            console.error('❌ Blockchain refund failed:', contractError);
+            throw new Error(`Blockchain transaction failed: ${contractError.message}`);
+        }
+        
+        // ✅ ONLY update database AFTER successful blockchain transaction
+        console.log('💾 Updating database after successful blockchain transaction...');
+        
+        const updateData = {
+            is_withdrawn: true,
+            claimed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            status: 'REFUNDED',
+            withdraw_transaction_signature: withdrawSignature
+        };
+        
+        const { error: updateError } = await window.supabase
+            .from('bets')
+            .update(updateData)
+            .eq('bet_id', betId);
+        
+        if (updateError) {
+            console.error('❌ Database update failed after successful blockchain transaction:', updateError);
+            // This is a serious issue - blockchain succeeded but database failed
+            throw new Error(`CRITICAL: Blockchain refund succeeded (${withdrawSignature}) but database update failed: ${updateError.message}`);
+        }
+        
+        showNotificationFixed('Refund claimed successfully from blockchain!', 'success');
+        
+        // Update UI immediately
+        const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
+        if (betCard) {
+            betCard.className = betCard.className.replace(/won|lost|pending|cancelled/, 'cancelled');
+            const statusBadge = betCard.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.textContent = 'REFUNDED';
+                statusBadge.className = 'status-badge cancelled';
+            }
+            const actionsDiv = betCard.querySelector('.bet-actions');
+            if (actionsDiv) {
+                actionsDiv.innerHTML = '<div class="claimed-badge">✅ Refunded</div>';
+            }
+        }
+        
+        // Refresh portfolio data
+        if (window.refreshPortfolioData) {
+            setTimeout(() => window.refreshPortfolioData(), 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Claim refund failed:', error);
+        showNotificationFixed(`Failed to claim refund: ${error.message}`, 'error');
+        
+        // Reset button
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '🔄 Claim Refund';
+        }
+    }
+};
 
 // Global instance
 window.smartContractService = new SmartContractService();
