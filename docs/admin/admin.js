@@ -1542,7 +1542,7 @@ async function createCompetitionWithSmartContract(config) {
             escrow_bump: escrowResult.bump,
             jupiter_token_a_id: window.selectedPair?.token_a_address, // Use selectedPair from global state
             jupiter_token_b_id: window.selectedPair?.token_b_address, // Use selectedPair from global state
-            program_id: 'FtYH93zU1WtfiNNwFJ7K8We4AYHC961LBN3wbPb4xVMH'
+            program_id: '2aGet7TxaynJ5QtyzF1CP2ujT3QWvYefGLBU5Kjzk5JV'
         };
 
         const supabase = getSupabase();
