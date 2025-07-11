@@ -458,24 +458,42 @@ async emergencyCleanup(competitionId, adminWallet) {
             throw new Error('Smart contract service not available');
         }
         
-        // ✅ FIXED: Use WalletService instead of custom admin wrapper
-        console.log('🔗 Getting wallet using WalletService (same as working functions)...');
+        // ✅ FIXED: Support both WalletService AND direct window.solana (admin panel)
+        console.log('🔗 Getting wallet using multiple connection methods...');
         let wallet;
         
-        // First try: Use WalletService (same as working functions)
+        // First try: Use WalletService (main app)
         if (window.walletService && window.walletService.isConnected()) {
             console.log('✅ Using WalletService for admin transaction');
             wallet = window.walletService.getWalletProvider();
         } 
         // Second try: Fallback to getWalletService() 
-        else {
-            const walletService = window.getWalletService ? window.getWalletService() : null;
+        else if (window.getWalletService) {
+            const walletService = window.getWalletService();
             if (walletService && walletService.isConnected()) {
                 console.log('✅ Using fallback WalletService for admin transaction');
                 wallet = walletService.getWalletProvider();
-            } else {
-                throw new Error('No wallet connected via WalletService');
             }
+        }
+        
+        // Third try: Direct window.solana (admin panel connection)
+        if (!wallet && window.solana && window.solana.isConnected && window.solana.publicKey) {
+            console.log('✅ Using direct window.solana for admin transaction (admin panel mode)');
+            wallet = {
+                publicKey: window.solana.publicKey,
+                sendTransaction: async (transaction, connection) => {
+                    console.log('📤 Using window.solana.sendTransaction');
+                    return await window.solana.sendTransaction(transaction, connection, {
+                        skipPreflight: false,
+                        preflightCommitment: 'confirmed'
+                    });
+                }
+            };
+        }
+        
+        // Final check
+        if (!wallet) {
+            throw new Error('No wallet connected. Please ensure your wallet (Phantom/Solflare) is connected and authorized.');
         }
 
         if (!wallet || !wallet.publicKey) {
