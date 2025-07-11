@@ -161,9 +161,7 @@ window.refreshPortfolioData = function() {
 
 window.handleLeaderboardFilterChange = function() {
     console.log('🔄 Leaderboard filter changed');
-    if (window.initializeLeaderboard) {
-        window.initializeLeaderboard();
-    }
+    refreshLeaderboard();
 };
 
 window.refreshLeaderboard = async function() {
@@ -181,46 +179,90 @@ window.refreshLeaderboard = async function() {
     `;
     
     try {
-        const { data, error } = await window.supabase
+        // Get filter values
+        const periodFilter = document.getElementById('leaderboard-period')?.value || 'all-time';
+        const sortFilter = document.getElementById('leaderboard-sort')?.value || 'total_winnings';
+        
+        console.log(`🔄 Applying filters: ${periodFilter}, ${sortFilter}`);
+        
+        // Build query based on filters
+        let query = window.supabase
             .from('leaderboards')
-            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking')
-            .order('total_winnings', { ascending: false })
-            .limit(50);
-            
+            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking, updated_at');
+        
+        // Apply time filtering
+        if (periodFilter === 'weekly') {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            query = query.gte('updated_at', oneWeekAgo.toISOString());
+        } else if (periodFilter === 'monthly') {
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            query = query.gte('updated_at', oneMonthAgo.toISOString());
+        }
+        
+        // Apply sorting
+        const sortMapping = {
+            'total_winnings': 'total_winnings',
+            'win_rate': 'win_percentage', 
+            'current_streak': 'current_streak',
+            'total_bets': 'competitions_participated'
+        };
+        const sortColumn = sortMapping[sortFilter] || 'total_winnings';
+        query = query.order(sortColumn, { ascending: false });
+        
+        // Limit to top 25
+        query = query.limit(25);
+        
+        const { data, error } = await query;
+        
         if (error) throw error;
         
         console.log(`✅ Loaded ${data.length} leaderboard entries`);
         
         if (data && data.length > 0) {
-            const html = `
-                <div class="leaderboard-table">
-                    <div class="leaderboard-header">
-                        <div>Rank</div>
-                        <div>Username</div>
-                        <div>Winnings</div>
-                        <div>Win Rate</div>
-                        <div>Streak</div>
-                        <div>Games</div>
+            const leaderboardItems = data.map((user, index) => {
+                const rank = index + 1;
+                const isTopThree = rank <= 3;
+                const rankBadge = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                
+                return `
+                    <div class="leaderboard-row ${isTopThree ? 'top-performer' : ''}" data-rank="${rank}">
+                        <div class="rank-badge ${isTopThree ? 'medal' : 'number'}">${rankBadge}</div>
+                        <div class="username">${user.username || 'Anonymous'}</div>
+                        <div class="winnings">${(user.total_winnings || 0).toFixed(2)} SOL</div>
+                        <div class="win-rate">${(user.win_percentage || 0).toFixed(1)}%</div>
+                        <div class="streak">${user.current_streak || 0}</div>
+                        <div class="games">${user.competitions_participated || 0}</div>
                     </div>
-                    ${data.map((user, index) => `
-                        <div class="leaderboard-row">
-                            <div>${index + 1}</div>
-                            <div>${user.username || 'Anonymous'}</div>
-                            <div>${(user.total_winnings || 0).toFixed(2)} SOL</div>
-                            <div>${(user.win_percentage || 0).toFixed(1)}%</div>
-                            <div>${user.current_streak || 0}</div>
-                            <div>${user.competitions_participated || 0}</div>
-                        </div>
-                    `).join('')}
+                `;
+            }).join('');
+            
+            const html = `
+                <div class="leaderboard-premium">
+                    <div class="leaderboard-header">
+                        <div class="header-rank">Rank</div>
+                        <div class="header-username">Username</div>
+                        <div class="header-winnings">Total Winnings</div>
+                        <div class="header-winrate">Win Rate</div>
+                        <div class="header-streak">Streak</div>
+                        <div class="header-games">Games</div>
+                    </div>
+                    <div class="leaderboard-body">
+                        ${leaderboardItems}
+                    </div>
                 </div>
             `;
             leaderboardContent.innerHTML = html;
         } else {
             leaderboardContent.innerHTML = `
                 <div class="empty-state">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <div class="empty-icon">📊</div>
                     <h3>No Leaderboard Data</h3>
-                    <p>No statistics available yet.</p>
+                    <p>No statistics available for the selected time period.</p>
+                    <button class="btn-refresh-stylized" onclick="refreshLeaderboard()">
+                        <span class="refresh-icon">🔄</span> Refresh
+                    </button>
                 </div>
             `;
         }
@@ -229,9 +271,12 @@ window.refreshLeaderboard = async function() {
         console.error('❌ Leaderboard error:', error);
         leaderboardContent.innerHTML = `
             <div class="error-state">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-                <h3>Error</h3>
+                <div class="error-icon">⚠️</div>
+                <h3>Error Loading Leaderboard</h3>
                 <p>${error.message}</p>
+                <button class="btn-refresh-stylized" onclick="refreshLeaderboard()">
+                    <span class="refresh-icon">🔄</span> Try Again
+                </button>
             </div>
         `;
     }
