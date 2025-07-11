@@ -995,52 +995,121 @@ async withdrawWinnings(competitionId, userWallet) {
     }
 }
 
-// Withdraw refund from cancelled competition  
-async withdrawRefund(competitionId, userWallet) {
+window.claimRefund = async function(betId, competitionId) {
+    console.log(`🔄 Claiming refund for bet: ${betId}`);
+    
     try {
-        console.log('🔄 Withdrawing refund:', competitionId);
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Processing...';
+        }
         
-        const wallet = await this.getConnectedWallet();
+        const walletAddress = getWalletAddress();
+        if (!walletAddress) {
+            throw new Error('Wallet not connected');
+        }
         
-        // ✅ CRITICAL: Use exact same shortId pattern as ALL working functions
-        const shortId = competitionId.replace(/-/g, '').substring(0, 28);
-        console.log('🔑 shortId for PDA:', shortId, '(length:', shortId.length, ')');
+        // Get bet details
+        const { data: bet, error: betError } = await window.supabase
+            .from('bets')
+            .select('*, competitions(*)')
+            .eq('bet_id', betId)
+            .eq('user_wallet', walletAddress)
+            .single();
         
-        // ✅ CRITICAL: Use shortId for PDA calculation (matches createEscrow pattern)
-        const [escrowAccount] = await solanaWeb3.PublicKey.findProgramAddress(
-            [
-                Buffer.from("escrow", "utf8"),        // Same as ALL working functions
-                Buffer.from(shortId, "utf8")          // ✅ shortId, not full competitionId  
-            ],
-            this.programId
-        );
+        if (betError || !bet) {
+            throw new Error('Bet not found or unauthorized');
+        }
         
-        console.log('🔑 Escrow PDA:', escrowAccount.toString());
+        // Verify this bet is eligible for refund
+        const comp = bet.competitions;
+        if (comp.status !== 'CANCELLED') {
+            throw new Error('Competition not cancelled - refunds not available');
+        }
         
-        // Build withdraw_refund instruction
-        const instruction = await this.buildRefundInstruction({
-            escrow: escrowAccount,
-            user: new solanaWeb3.PublicKey(userWallet),
-            competitionId: shortId  // ✅ Pass shortId to instruction builder
-        });
+        if (bet.is_withdrawn) {
+            throw new Error('Refund already claimed');
+        }
         
-        // Create and send transaction (same pattern as ALL working functions)
-        const transaction = new solanaWeb3.Transaction().add(instruction);
-        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = wallet.publicKey;
+        let withdrawSignature = null;
         
-        const signature = await wallet.sendTransaction(transaction, this.connection);
-        await this.connection.confirmTransaction(signature, 'confirmed');
+        // ✅ CRITICAL FIX: Use withdraw_winnings, NOT withdraw_refund!
+        if (comp.escrow_account && window.smartContractService?.isAvailable()) {
+            try {
+                showNotificationFixed('Processing refund on-chain...', 'info');
+                
+                // ✅ Use withdrawWinnings for cancelled competitions (refunds)
+                const result = await window.smartContractService.withdrawWinnings(
+                    competitionId,
+                    walletAddress
+                );
+                
+                withdrawSignature = result.signature;
+                console.log('✅ On-chain refund successful:', withdrawSignature);
+                
+            } catch (contractError) {
+                console.error('❌ Smart contract refund failed:', contractError);
+                showNotificationFixed(`Smart contract refund failed: ${contractError.message}`, 'error');
+                return;
+            }
+        }
         
-        console.log('✅ Refund withdrawn successfully, signature:', signature);
-        return { signature };
+        // Update database with refund info
+        const updateData = {
+            is_withdrawn: true,
+            claimed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            status: 'REFUNDED'
+        };
+        
+        if (withdrawSignature) {
+            updateData.withdraw_transaction_signature = withdrawSignature;
+        }
+        
+        const { error: updateError } = await window.supabase
+            .from('bets')
+            .update(updateData)
+            .eq('bet_id', betId);
+        
+        if (updateError) {
+            throw new Error(`Database update failed: ${updateError.message}`);
+        }
+        
+        showNotificationFixed('Refund claimed successfully!', 'success');
+        
+        // Update UI immediately
+        const betCard = document.querySelector(`[data-bet-id="${betId}"]`);
+        if (betCard) {
+            betCard.className = betCard.className.replace(/won|lost|pending|cancelled/, 'cancelled');
+            const statusBadge = betCard.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.textContent = 'REFUNDED';
+                statusBadge.className = 'status-badge cancelled';
+            }
+            const actionsDiv = betCard.querySelector('.bet-actions');
+            if (actionsDiv) {
+                actionsDiv.innerHTML = '<div class="claimed-badge">✅ Refunded</div>';
+            }
+        }
+        
+        // Refresh portfolio data
+        if (window.refreshPortfolioData) {
+            setTimeout(() => window.refreshPortfolioData(), 1000);
+        }
         
     } catch (error) {
-        console.error('❌ Error withdrawing refund:', error);
-        throw new Error(`Refund withdrawal failed: ${error.message}`);
+        console.error('❌ Claim refund failed:', error);
+        showNotificationFixed(`Failed to claim refund: ${error.message}`, 'error');
+        
+        // Reset button
+        const button = document.querySelector(`[onclick="claimRefund('${betId}', '${competitionId}')"]`);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '🔄 Claim Refund';
+        }
     }
-}
+};
 
     // Complete buildWithdrawInstruction method
     async buildWithdrawInstruction(accounts) {
