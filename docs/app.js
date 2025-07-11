@@ -627,7 +627,10 @@ async function enhanceCompetitionsWithTokenCache(competitions) {
                 timeRemainingType: determineCompetitionStatus(comp) === 'voting' ? 'voting' : 'performance',
                 participants: comp.total_bets || 0,
                 prizePool: parseFloat(comp.total_pool || 0),
-                betAmount: parseFloat(comp.bet_amount || 0.1),
+                betAmount: parseFloat(comp.required_bet_amount || 0.1),
+                requiredBetAmount: comp.required_bet_amount ? 
+                    parseFloat((comp.required_bet_amount / 1e9).toFixed(3)) : 
+                    0.1, // fallback to 0.1 SOL
                 
                 startTime: new Date(comp.start_time),
                 votingEndTime: new Date(comp.voting_end_time),
@@ -689,7 +692,9 @@ function transformBasicCompetitions(competitions) {
         participants: comp.total_bets || 0,
         prizePool: parseFloat(comp.total_pool || 0),
         betAmount: parseFloat(comp.bet_amount || 0.1),
-        requiredBetAmount: parseFloat(comp.required_bet_amount || 0.1), // NEW: Required bet amount from smart contract
+        requiredBetAmount: comp.required_bet_amount ?   // NEW: Required bet amount from smart contract
+            parseFloat((comp.required_bet_amount / 1e9).toFixed(3)) : 
+            0.1, //Fallback to 0.1 default
         platformFeeBps: parseInt(comp.platform_fee_bps || 1500), // NEW: Platform fee in basis points
         platformFeePercent: parseFloat((comp.platform_fee_bps || 1500) / 100), // NEW: Platform fee as percentage
         
