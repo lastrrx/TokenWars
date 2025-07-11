@@ -145,18 +145,29 @@ window.refreshCompetitions = async function() {
 };
 
 window.handlePortfolioViewChange = function() {
-    console.log('🔄 Portfolio view changed');
     const select = document.getElementById('portfolio-view');
-    if (select && window.displayPortfolioView) {
-        window.displayPortfolioView(select.value);
+    if (select) {
+        switchPortfolioTab(select.value);
     }
+};
+
+window.switchPortfolioTab = function(tabName) {
+    console.log(`🔄 Switching to portfolio tab: ${tabName}`);
+    
+    // Update active tab
+    document.querySelectorAll('.portfolio-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+    
+    // Load content for the selected tab
+    loadPortfolioContent(tabName);
 };
 
 window.refreshPortfolioData = function() {
     console.log('🔄 Refreshing portfolio data');
-    if (window.refreshPortfolioData) {
-        window.refreshPortfolioData();
-    }
+    const activeTab = document.querySelector('.portfolio-tab.active')?.dataset.tab || 'overview';
+    loadPortfolioContent(activeTab);
 };
 
 window.handleLeaderboardFilterChange = function() {
@@ -3621,6 +3632,361 @@ function selectTokenEnhanced(token) {
         console.error('❌ Error in enhanced token selection:', error);
     }
 }
+
+// ==============================================
+// PORTFOLIO FUNCTIONS
+// ==============================================
+
+async function loadPortfolioContent(tabName) {
+    const portfolioContent = document.getElementById('portfolio-content');
+    if (!portfolioContent) return;
+    
+    // Show loading
+    portfolioContent.innerHTML = `
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading ${tabName}...</p>
+        </div>
+    `;
+    
+    try {
+        const walletAddress = getCurrentWalletAddress();
+        if (!walletAddress) {
+            portfolioContent.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">🔐</div>
+                    <h3>Wallet Not Connected</h3>
+                    <p>Please connect your wallet to view portfolio data.</p>
+                    <button class="btn-stylized primary" onclick="connectWallet()">
+                        Connect Wallet
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        switch(tabName) {
+            case 'overview':
+                await loadPortfolioOverview(walletAddress);
+                break;
+            case 'history':
+                await loadBettingHistory(walletAddress);
+                break;
+            case 'statistics':
+                await loadPortfolioStatistics(walletAddress);
+                break;
+            case 'achievements':
+                await loadAchievements(walletAddress);
+                break;
+            default:
+                await loadPortfolioOverview(walletAddress);
+        }
+        
+    } catch (error) {
+        console.error('❌ Portfolio loading error:', error);
+        portfolioContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">⚠️</div>
+                <h3>Error Loading Portfolio</h3>
+                <p>${error.message}</p>
+                <button class="btn-refresh-stylized" onclick="refreshPortfolioData()">
+                    <span class="refresh-icon">🔄</span> Try Again
+                </button>
+            </div>
+        `;
+    }
+}
+
+async function loadPortfolioOverview(walletAddress) {
+    const portfolioContent = document.getElementById('portfolio-content');
+    
+    try {
+        // Get user data
+        const { data: userData, error: userError } = await window.supabase
+            .from('users')
+            .select('*')
+            .eq('wallet_address', walletAddress)
+            .single();
+        
+        if (userError && userError.code !== 'PGRST116') throw userError;
+        
+        // Get leaderboard position
+        const { data: leaderboardData } = await window.supabase
+            .from('leaderboards')
+            .select('ranking, total_score')
+            .eq('user_wallet', walletAddress)
+            .single();
+        
+        const user = userData || { wallet_address: walletAddress, username: 'Anonymous' };
+        const ranking = leaderboardData?.ranking || 'Unranked';
+        
+        const html = `
+            <div class="portfolio-overview">
+                <div class="portfolio-header">
+                    <div class="user-info">
+                        <h2 class="username">${user.username || 'Anonymous'}</h2>
+                        <div class="wallet-address">${shortenAddress(walletAddress)}</div>
+                        <div class="user-ranking">Rank: ${ranking === 'Unranked' ? ranking : '#' + ranking}</div>
+                    </div>
+                </div>
+                
+                <div class="portfolio-stats-grid">
+                    <div class="portfolio-stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${(user.total_winnings || 0).toFixed(2)} SOL</div>
+                            <div class="stat-label">Total Winnings</div>
+                        </div>
+                    </div>
+                    
+                    <div class="portfolio-stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${(user.win_rate || 0).toFixed(1)}%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                    </div>
+                    
+                    <div class="portfolio-stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${user.total_bets || 0}</div>
+                            <div class="stat-label">Total Bets</div>
+                        </div>
+                    </div>
+                    
+                    <div class="portfolio-stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${user.current_streak || 0}</div>
+                            <div class="stat-label">Current Streak</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="portfolio-charts">
+                    <div class="chart-placeholder">
+                        <h3>Performance Charts Coming Soon</h3>
+                        <p>Advanced charts and analytics will be available here.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        portfolioContent.innerHTML = html;
+        
+    } catch (error) {
+        throw error;
+    }
+}
+
+async function loadBettingHistory(walletAddress) {
+    const portfolioContent = document.getElementById('portfolio-content');
+    
+    try {
+        // Get betting history with competition details
+        const { data: bets, error } = await window.supabase
+            .from('bets')
+            .select(`
+                *,
+                competitions (
+                    competition_id,
+                    token_a_symbol,
+                    token_a_name,
+                    token_b_symbol,
+                    token_b_name,
+                    status,
+                    winner_token,
+                    start_time,
+                    end_time
+                )
+            `)
+            .eq('user_wallet', walletAddress)
+            .order('timestamp', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!bets || bets.length === 0) {
+            portfolioContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3>No Betting History</h3>
+                    <p>You haven't placed any bets yet. Start by joining a competition!</p>
+                    <button class="btn-stylized primary" onclick="showPage('competitions')">
+                        View Competitions
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        const historyItems = bets.map(bet => {
+            const comp = bet.competitions;
+            const isWinner = comp.status === 'RESOLVED' && 
+                           ((bet.chosen_token === 'token_a' && comp.winner_token === comp.token_a_symbol) ||
+                            (bet.chosen_token === 'token_b' && comp.winner_token === comp.token_b_symbol));
+            const canClaimWinnings = comp.status === 'RESOLVED' && isWinner && bet.status === 'PLACED';
+            const canClaimRefund = comp.status === 'CANCELLED' && bet.status === 'PLACED';
+            
+            const outcomeClass = comp.status === 'RESOLVED' ? (isWinner ? 'won' : 'lost') : 
+                               comp.status === 'CANCELLED' ? 'cancelled' : 'pending';
+            
+            const chosenTokenName = bet.chosen_token === 'token_a' ? comp.token_a_symbol : comp.token_b_symbol;
+            
+            return `
+                <div class="betting-history-card ${outcomeClass}">
+                    <div class="bet-header">
+                        <div class="bet-tokens">
+                            <span class="token-vs">${comp.token_a_symbol} vs ${comp.token_b_symbol}</span>
+                        </div>
+                        <div class="bet-status">
+                            <span class="status-badge ${outcomeClass}">${comp.status}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bet-details">
+                        <div class="bet-choice">
+                            <strong>Your Pick:</strong> ${chosenTokenName}
+                        </div>
+                        <div class="bet-amount">
+                            <strong>Amount:</strong> ${bet.amount} SOL
+                        </div>
+                        <div class="bet-date">
+                            <strong>Date:</strong> ${new Date(bet.timestamp).toLocaleDateString()}
+                        </div>
+                        ${comp.status === 'RESOLVED' ? `
+                            <div class="bet-outcome">
+                                <strong>Winner:</strong> ${comp.winner_token || 'TBD'}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${canClaimWinnings || canClaimRefund ? `
+                        <div class="bet-actions">
+                            ${canClaimWinnings ? `
+                                <button class="btn-claim winnings" onclick="claimWinnings('${bet.bet_id}')">
+                                    💰 Claim Winnings
+                                </button>
+                            ` : ''}
+                            ${canClaimRefund ? `
+                                <button class="btn-claim refund" onclick="claimRefund('${bet.bet_id}')">
+                                    🔄 Claim Refund
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        portfolioContent.innerHTML = `
+            <div class="betting-history">
+                <div class="history-header">
+                    <h3>Your Betting History</h3>
+                    <div class="history-stats">
+                        <span>Total Bets: ${bets.length}</span>
+                    </div>
+                </div>
+                <div class="history-list">
+                    ${historyItems}
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        throw error;
+    }
+}
+
+async function loadPortfolioStatistics(walletAddress) {
+    const portfolioContent = document.getElementById('portfolio-content');
+    
+    portfolioContent.innerHTML = `
+        <div class="statistics-section">
+            <div class="stats-header">
+                <h3>Portfolio Statistics</h3>
+                <p>Advanced analytics and charts coming soon</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-chart-placeholder">
+                    <h4>Win Rate Trend</h4>
+                    <div class="chart-mock">📈 Chart Coming Soon</div>
+                </div>
+                
+                <div class="stat-chart-placeholder">
+                    <h4>Profit/Loss Over Time</h4>
+                    <div class="chart-mock">📊 Chart Coming Soon</div>
+                </div>
+                
+                <div class="stat-chart-placeholder">
+                    <h4>Token Performance</h4>
+                    <div class="chart-mock">🎯 Chart Coming Soon</div>
+                </div>
+                
+                <div class="stat-chart-placeholder">
+                    <h4>Betting Distribution</h4>
+                    <div class="chart-mock">🥧 Chart Coming Soon</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function loadAchievements(walletAddress) {
+    const portfolioContent = document.getElementById('portfolio-content');
+    
+    // Demo achievements data
+    const achievements = [
+        { icon: '🎯', name: 'First Bet', description: 'Place your first bet', unlocked: true },
+        { icon: '🔥', name: 'Hot Streak', description: 'Win 5 bets in a row', unlocked: false },
+        { icon: '💰', name: 'Big Winner', description: 'Win over 10 SOL', unlocked: false },
+        { icon: '📈', name: 'Market Expert', description: 'Achieve 80% win rate with 20+ bets', unlocked: false },
+        { icon: '🏆', name: 'Top 10', description: 'Reach top 10 on leaderboard', unlocked: false },
+        { icon: '⚡', name: 'Speed Trader', description: 'Place 10 bets in one day', unlocked: false }
+    ];
+    
+    const achievementItems = achievements.map(achievement => `
+        <div class="achievement-card ${achievement.unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-content">
+                <h4 class="achievement-name">${achievement.name}</h4>
+                <p class="achievement-description">${achievement.description}</p>
+            </div>
+            <div class="achievement-status">
+                ${achievement.unlocked ? '✅' : '🔒'}
+            </div>
+        </div>
+    `).join('');
+    
+    portfolioContent.innerHTML = `
+        <div class="achievements-section">
+            <div class="achievements-header">
+                <h3>Achievements</h3>
+                <div class="progress-summary">
+                    <span>${achievements.filter(a => a.unlocked).length}/${achievements.length} Unlocked</span>
+                </div>
+            </div>
+            
+            <div class="achievements-grid">
+                ${achievementItems}
+            </div>
+        </div>
+    `;
+}
+
+// Claim functions (placeholder - connect to your existing smart contract functions)
+window.claimWinnings = async function(betId) {
+    console.log(`💰 Claiming winnings for bet: ${betId}`);
+    // TODO: Integrate with your existing smart contract withdrawal functions
+    alert('Claim winnings functionality will be connected to smart contracts');
+};
+
+window.claimRefund = async function(betId) {
+    console.log(`🔄 Claiming refund for bet: ${betId}`);
+    // TODO: Integrate with your existing smart contract withdrawal functions
+    alert('Claim refund functionality will be connected to smart contracts');
+};
 
 // NEW: Total cost display update function
 function updateTotalCostDisplay() {
