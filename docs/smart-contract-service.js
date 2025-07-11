@@ -494,7 +494,6 @@ async emergencyCleanup(competitionId, adminWallet) {
         const instruction = await this.buildEmergencyCleanupInstruction({
             escrow: escrowAccount,
             platformWallet: new solanaWeb3.PublicKey(adminWallet),
-            systemProgram: solanaWeb3.SystemProgram.programId,
             competitionId: competitionId
         });
 
@@ -610,7 +609,8 @@ async updatePriceSample(competitionId, tokenAPrice, tokenBPrice) {
         // Build price sample instruction
         const instruction = await this.buildUpdatePriceSampleInstruction({
             escrow: escrowAccount,
-            platformWallet: wallet.publicKey,
+            authority: wallet.PublicKey,
+            platformWallet: this.platformWallet,
             competitionId: competitionId,
             tokenAPrice: tokenAPrice,
             tokenBPrice: tokenBPrice
@@ -752,12 +752,6 @@ async buildEmergencyCleanupInstruction(accounts) {
             pubkey: accounts.platformWallet, 
             isSigner: true, 
             isWritable: true 
-        },
-        // 3. system_program: Required for transfers
-        { 
-            pubkey: accounts.systemProgram, 
-            isSigner: false, 
-            isWritable: false 
         }
     ];
     
@@ -804,7 +798,13 @@ async buildUpdatePriceSampleInstruction(accounts) {
             isSigner: false, 
             isWritable: true 
         },
-        // 2. platform_wallet: Admin wallet that can send price updates
+        // 2. authority: The authority that can update prices
+        { 
+            pubkey: accounts.authority, 
+            isSigner: true, 
+            isWritable: false 
+        },
+        // 3. platform_wallet: Admin wallet that can send price updates
         { 
             pubkey: accounts.platformWallet, 
             isSigner: true, 
