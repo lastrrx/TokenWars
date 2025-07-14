@@ -1449,6 +1449,12 @@ async function createCompetitionWithSmartContract(config) {
         const votingEndTimeUnix = Math.floor(votingEndTime.getTime() / 1000);
         const competitionEndTimeUnix = Math.floor(endTime.getTime() / 1000);
         
+        // ✅ ENHANCED: Ensure token pair data is available for memo text
+        console.log('📊 Passing token pair data to smart contract service');
+        if (window.smartContractService) {
+            window.smartContractService.currentTokenPair = config.selectedPair;
+        }
+        
         // 3. THEN call smart contract with correct timing
         const escrowResult = await window.smartContractService.createCompetitionEscrow(
             competitionId,
