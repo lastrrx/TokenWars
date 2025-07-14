@@ -206,6 +206,27 @@ async testTransaction() {
     // CORRECTED: createCompetitionEscrow with proper variable ordering and Anchor init handling
     async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet, betAmount, platformFeeBps, votingEndTimeUnix, competitionEndTimeUnix) {
         try {
+                        // ✅ NEW: Store token pair data for memo text generation
+            if (typeof window !== 'undefined') {
+                // Try admin state first (admin panel)
+                if (window.AdminState?.selectedTokens?.selectedPairId && window.AdminState?.pairState?.allPairs) {
+                    const selectedPair = window.AdminState.pairState.allPairs.find(
+                        p => p.id === window.AdminState.selectedTokens.selectedPairId
+                    );
+                    this.currentTokenPair = selectedPair;
+                }
+                // Fallback to global selectedPair
+                else if (window.selectedPair) {
+                    this.currentTokenPair = window.selectedPair;
+                }
+                
+                if (this.currentTokenPair) {
+                    console.log('📊 Token pair data available for memo:', {
+                        tokenA: this.currentTokenPair.token_a_symbol,
+                        tokenB: this.currentTokenPair.token_b_symbol
+                    });
+                }
+            }
             console.log('📊 Creating competition escrow with CORRECTED Anchor integration...');
             console.log('🔍 Input validation:', {
                 competitionId: competitionId?.length || 'undefined',
@@ -876,6 +897,17 @@ async buildUpdatePriceSampleInstruction(accounts) {
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
         try {
+                        // ✅ NEW: Store competition data for memo text generation
+                if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
+                    this.currentCompetition = window.CompetitionState.selectedCompetition;
+                    console.log('📊 Competition data available for memo:', {
+                        tokenA: this.currentCompetition.tokenA?.symbol,
+                        tokenB: this.currentCompetition.tokenB?.symbol
+                    });
+                } else {
+                    console.warn('⚠️ Competition data not available for memo text');
+                }
+            
             console.log('🎯 Placing bet on-chain:', { competitionId, tokenChoice, betAmount });
             
             const wallet = await this.getConnectedWallet();
