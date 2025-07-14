@@ -947,8 +947,8 @@ async buildUpdatePriceSampleInstruction(accounts) {
             
             // ✅ MODIFIED: Build transaction with multiple instructions
             const transaction = new solanaWeb3.Transaction()
-                .add(memoInstruction)      // Shows description in Phantom
                 .add(transferInstruction)  // Shows SOL amount in Phantom  
+                .add(memoInstruction)      // Shows description in Phantom
                 .add(instruction);         // Your existing smart contract logic
             
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
