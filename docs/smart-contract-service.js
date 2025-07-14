@@ -302,9 +302,6 @@ async testTransaction() {
             console.log('🔑 Escrow PDA:', instructionResult.escrowPDA.toString());
             console.log('🔑 Bump seed:', instructionResult.bump);
             
-            // Create and configure transaction with single instruction
-            // ✅ NEW: Calculate admin escrow funding amount
-            const adminFundingAmount = betAmount; // Admin funds the escrow with the required bet amount
             
             // ✅ NEW: Add explicit SOL transfer for Phantom visibility
             // ✅ NEW: Validate funding amount before processing  
@@ -318,11 +315,10 @@ async testTransaction() {
                 lamports: validatedAmount.lamports  // ✅ Use validated amount
             });
             
-            // ✅ NEW: Calculate account rent (Anchor handles account creation automatically)
-            // Note: No additional funding needed - escrow gets funded by user bets
-            const rentExemptAmount = await this.connection.getMinimumBalanceForRentExemption(1240); // 1240 bytes from smart contract
+            // ✅ CORRECT: Calculate account rent only (no additional funding)
+            const rentExemptAmount = await this.connection.getMinimumBalanceForRentExemption(1240);
             
-            // ✅ NEW: Add memo instruction with actual token names (no transfer needed)
+            // ✅ CORRECT: Add memo instruction with actual token names
             const memoText = this.buildCompetitionMemoText(rentExemptAmount, competitionId);
             const memoInstruction = new solanaWeb3.TransactionInstruction({
                 keys: [],
@@ -330,11 +326,10 @@ async testTransaction() {
                 data: Buffer.from(memoText, 'utf8')
             });
             
-            // ✅ MODIFIED: Build transaction with memo + smart contract instruction only
-            // No additional transfer needed - Anchor handles account creation and rent
+            // ✅ CORRECT: Build transaction with memo + smart contract instruction only
             const transaction = new solanaWeb3.Transaction()
-                .add(memoInstruction)           // Shows description in Phantom
-                .add(result.instruction);       // Your existing smart contract logic (includes rent payment)
+                .add(memoInstruction)                    // Shows description in Phantom
+                .add(instructionResult.instruction);     // Your existing smart contract logic (includes rent payment)
             
             console.log('⏳ Getting recent blockhash...');
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
@@ -1412,12 +1407,9 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
     }
 }
 
-        /**
-         * ✅ NEW: Build memo text for competition creation with token pair names
-         */
-        buildCompetitionMemoText(fundingAmount, competitionId) {
+        buildCompetitionMemoText(rentAmount, competitionId) {
             try {
-                const fundingSol = (fundingAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2);
+                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
                 
                 // Try to get token pair information from admin state or competition data
                 let tokenPairText = 'Competition';
@@ -1438,15 +1430,15 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
                     }
                 }
                 
-                const memoText = `TokenWars: Create ${tokenPairText} (Fund: ${fundingSol} SOL)`;
+                const memoText = `TokenWars: Create ${tokenPairText} (Rent: ${rentSol} SOL)`;
                 
                 console.log('📝 Built competition memo text:', memoText);
                 return memoText;
                 
             } catch (error) {
                 console.warn('⚠️ Error building competition memo text, using fallback:', error);
-                const fundingSol = (fundingAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2);
-                return `TokenWars: Create Competition (Fund: ${fundingSol} SOL)`;
+                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+                return `TokenWars: Create Competition (Rent: ${rentSol} SOL)`;
             }
         }
     
