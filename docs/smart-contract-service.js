@@ -318,19 +318,23 @@ async testTransaction() {
                 lamports: validatedAmount.lamports  // ✅ Use validated amount
             });
             
-            // ✅ NEW: Add memo instruction with actual token names
-            const memoText = this.buildCompetitionMemoText(adminFundingAmount, competitionId);
+            // ✅ NEW: Calculate account rent (Anchor handles account creation automatically)
+            // Note: No additional funding needed - escrow gets funded by user bets
+            const rentExemptAmount = await this.connection.getMinimumBalanceForRentExemption(1240); // 1240 bytes from smart contract
+            
+            // ✅ NEW: Add memo instruction with actual token names (no transfer needed)
+            const memoText = this.buildCompetitionMemoText(rentExemptAmount, competitionId);
             const memoInstruction = new solanaWeb3.TransactionInstruction({
                 keys: [],
                 programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
                 data: Buffer.from(memoText, 'utf8')
             });
             
-            // ✅ MODIFIED: Build transaction with multiple instructions
+            // ✅ MODIFIED: Build transaction with memo + smart contract instruction only
+            // No additional transfer needed - Anchor handles account creation and rent
             const transaction = new solanaWeb3.Transaction()
                 .add(memoInstruction)           // Shows description in Phantom
-                .add(transferInstruction)       // Shows SOL amount in Phantom
-                .add(result.instruction);       // Your existing smart contract logic
+                .add(result.instruction);       // Your existing smart contract logic (includes rent payment)
             
             console.log('⏳ Getting recent blockhash...');
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
@@ -340,12 +344,12 @@ async testTransaction() {
             console.log('🔍 ENHANCED ESCROW CREATION DEBUG:');
             console.log('Transaction instructions:', transaction.instructions.length);
             console.log('1. Memo instruction:', memoText);
-            console.log('2. Transfer instruction:', (adminFundingAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2), 'SOL to escrow');
-            console.log('3. Smart contract instruction for escrow creation');
-            console.log('Total SOL to deduct:', (adminFundingAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2), 'SOL + ~0.001 SOL fees');
+            console.log('2. Smart contract instruction for escrow creation (includes rent payment)');
+            console.log('Account rent required:', (rentExemptAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3), 'SOL');
+            console.log('Total SOL to deduct: Account rent (~0.002 SOL) + transaction fees (~0.001 SOL)');
             console.log('Competition being created:', {
                 tokenPair: memoText.includes('Create ') ? memoText.split('Create ')[1].split(' (')[0] : 'Competition',
-                fundingAmount: `${(adminFundingAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(2)} SOL`
+                rentCost: `${(rentExemptAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3)} SOL`
             });
             
             console.log('🔗 Transaction configured:', {
@@ -943,11 +947,11 @@ async buildUpdatePriceSampleInstruction(accounts) {
             const validatedAmount = this.validateAndFormatSOLAmount(betAmount, 'bet');
             console.log('💰 Validated bet amount:', validatedAmount);
             
-            // Use validatedAmount.lamports instead of betAmount * LAMPORTS_PER_SOL
+            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
             const transferInstruction = solanaWeb3.SystemProgram.transfer({
                 fromPubkey: wallet.publicKey,
                 toPubkey: escrowAccount,
-                lamports: validatedAmount.lamports  // ✅ Use validated amount
+                lamports: betAmount * solanaWeb3.LAMPORTS_PER_SOL
             });
             
             // ✅ NEW: Add memo instruction with actual token names
