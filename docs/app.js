@@ -1176,12 +1176,18 @@ async function placeBetWithSmartContract() {
                 
                 showNotificationFixed(`Placing ${betAmount.toFixed(2)} SOL bet on-chain...`, 'info');
                 
-                transactionSignature = await window.smartContractService.placeBet(
-                    competition.competitionId,
-                    walletAddress,
-                    CompetitionState.selectedToken, // 'A' or 'B'
-                    betAmount
-                );
+            // ✅ ENHANCED: Ensure competition data is available before calling smart contract
+            console.log('📊 Passing competition data to smart contract service');
+            if (window.smartContractService) {
+                window.smartContractService.currentCompetition = competition;
+            }
+            
+            transactionSignature = await window.smartContractService.placeBet(
+                competition.competitionId,
+                walletAddress,
+                CompetitionState.selectedToken, // 'A' or 'B'
+                betAmount
+            );
                 
                 console.log('✅ On-chain bet placed successfully:', transactionSignature);
                 showNotificationFixed('Bet placed on-chain, saving to database...', 'info');
