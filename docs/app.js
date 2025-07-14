@@ -2180,10 +2180,11 @@ async function completedOnboardingFixed() {
         // Show success
         showNotificationFixed('Welcome to TokenWars! Your wallet is connected.', 'success');
         
-        // Navigate to competitions
+        // Stay on landing page and refresh hero section
         setTimeout(() => {
-            showPageFixed('competitions');
-        }, 1000);
+            updateHeroSections(true);
+            updateTraderDisplay();
+        }, 500);
         
     } catch (error) {
         console.error('❌ Error completing onboarding:', error);
