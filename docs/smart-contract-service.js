@@ -877,10 +877,41 @@ async buildUpdatePriceSampleInstruction(accounts) {
             });
             
             // Create and send transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
+            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
+            const transferInstruction = solanaWeb3.SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: escrowAccount,
+                lamports: betAmount * solanaWeb3.LAMPORTS_PER_SOL
+            });
+            
+            // ✅ NEW: Add memo instruction with actual token names
+            const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId);
+            const memoInstruction = new solanaWeb3.TransactionInstruction({
+                keys: [],
+                programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+                data: Buffer.from(memoText, 'utf8')
+            });
+            
+            // ✅ MODIFIED: Build transaction with multiple instructions
+            const transaction = new solanaWeb3.Transaction()
+                .add(memoInstruction)      // Shows description in Phantom
+                .add(transferInstruction)  // Shows SOL amount in Phantom  
+                .add(instruction);         // Your existing smart contract logic
+            
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
+            
+            console.log('🔍 ENHANCED TRANSACTION DEBUG:');
+            console.log('Transaction instructions:', transaction.instructions.length);
+            console.log('1. Memo instruction:', memoText);
+            console.log('2. Transfer instruction:', betAmount, 'SOL to', escrowAccount.toString());
+            console.log('3. Smart contract instruction:', instruction.programId.toString());
+            console.log('Total SOL to deduct:', betAmount, 'SOL + ~0.001 SOL fees');
+            console.log('Token being bet on:', {
+                choice: tokenChoice,
+                memoText: memoText.includes('(') ? memoText.split('(')[1].replace(')', '') : `Token ${tokenChoice}`
+            });
             
             console.log('📤 Sending bet transaction...');
             console.log('🔍 TRANSACTION DEBUG:');
