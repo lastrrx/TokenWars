@@ -3073,6 +3073,143 @@ function showNotificationFixed(message, type = 'info') {
 }
 
 // ==============================================
+// GLOBAL WALLET STATE MANAGEMENT
+// ==============================================
+
+// Global wallet state listeners
+let walletStateListeners = [];
+
+/**
+ * Add listener for wallet state changes
+ */
+function addWalletStateListener(callback) {
+    walletStateListeners.push(callback);
+    console.log(`📡 Wallet state listener added. Total: ${walletStateListeners.length}`);
+}
+
+/**
+ * Remove wallet state listener
+ */
+function removeWalletStateListener(callback) {
+    walletStateListeners = walletStateListeners.filter(listener => listener !== callback);
+    console.log(`📡 Wallet state listener removed. Total: ${walletStateListeners.length}`);
+}
+
+/**
+ * Broadcast wallet state change to all listeners
+ */
+function broadcastWalletStateChange(isConnected, walletData = null) {
+    console.log(`📢 Broadcasting wallet state change: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    
+    walletStateListeners.forEach((callback, index) => {
+        try {
+            callback(isConnected, walletData);
+        } catch (error) {
+            console.error(`❌ Error in wallet state listener ${index}:`, error);
+        }
+    });
+}
+
+/**
+ * Enhanced updateUIForConnectedUser with broadcasting
+ */
+function updateUIForConnectedUserEnhanced() {
+    try {
+        // Update UI elements
+        updateUIForConnectedUser();
+        
+        // Broadcast to all listeners
+        broadcastWalletStateChange(true, connectedUser);
+        
+        // Refresh all page content if needed
+        refreshCurrentPageContent();
+        
+        console.log('✅ Enhanced UI update for connected user complete');
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced connected user update:', error);
+    }
+}
+
+/**
+ * Enhanced updateUIForDisconnectedUser with broadcasting
+ */
+function updateUIForDisconnectedUserEnhanced() {
+    try {
+        // Update UI elements
+        updateUIForDisconnectedUser();
+        
+        // Broadcast to all listeners
+        broadcastWalletStateChange(false, null);
+        
+        // Refresh all page content if needed
+        refreshCurrentPageContent();
+        
+        console.log('✅ Enhanced UI update for disconnected user complete');
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced disconnected user update:', error);
+    }
+}
+
+/**
+ * Refresh current page content based on wallet state
+ */
+function refreshCurrentPageContent() {
+    try {
+        const currentPageName = getCurrentPageName();
+        console.log(`🔄 Refreshing content for current page: ${currentPageName}`);
+        
+        // Refresh content based on current page
+        switch (currentPageName) {
+            case 'competitions':
+                loadCompetitionsPageProgressive();
+                break;
+            case 'leaderboard':
+                loadLeaderboardPageProgressive();
+                break;
+            case 'portfolio':
+                loadPortfolioPageProgressive();
+                break;
+            case 'home':
+                // Home page auto-updates via hero sections
+                break;
+            default:
+                console.log(`ℹ️ No specific refresh needed for page: ${currentPageName}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error refreshing current page content:', error);
+    }
+}
+
+/**
+ * Get current page name from URL hash or currentPage variable
+ */
+function getCurrentPageName() {
+    // Try to get from hash first
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['home', 'competitions', 'leaderboard', 'portfolio'].includes(hash)) {
+        return hash;
+    }
+    
+    // Fall back to currentPage variable
+    if (typeof currentPage !== 'undefined' && currentPage) {
+        return currentPage;
+    }
+    
+    // Default to home
+    return 'home';
+}
+
+// Export functions globally
+window.addWalletStateListener = addWalletStateListener;
+window.removeWalletStateListener = removeWalletStateListener;
+window.broadcastWalletStateChange = broadcastWalletStateChange;
+window.updateUIForConnectedUserEnhanced = updateUIForConnectedUserEnhanced;
+window.updateUIForDisconnectedUserEnhanced = updateUIForDisconnectedUserEnhanced;
+
+// ==============================================
 // MODAL HELPER FUNCTIONS (from app.js)
 // ==============================================
 
