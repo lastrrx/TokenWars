@@ -303,18 +303,6 @@ async testTransaction() {
             console.log('🔑 Bump seed:', instructionResult.bump);
             
             
-            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
-            // ✅ NEW: Validate funding amount before processing  
-            const validatedAmount = this.validateAndFormatSOLAmount(betAmount, 'escrow funding');
-            console.log('💰 Validated escrow funding amount:', validatedAmount);
-            
-            // Use validatedAmount.lamports for the transfer
-            const transferInstruction = solanaWeb3.SystemProgram.transfer({
-                fromPubkey: wallet.publicKey,
-                toPubkey: result.escrowPDA,
-                lamports: validatedAmount.lamports  // ✅ Use validated amount
-            });
-            
             // ✅ CORRECT: Calculate account rent only (no additional funding)
             const rentExemptAmount = await this.connection.getMinimumBalanceForRentExemption(1240);
             
