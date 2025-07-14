@@ -361,10 +361,41 @@ function showPageFixed(pageName, updateHash = true) {
     
     // Load content progressively (non-blocking)
     setTimeout(() => {
-        loadPageContentProgressive(pageName);
+        loadPageContentProgressiveEnhanced(pageName);
     }, 50);
     
     console.log(`✅ Navigation to ${pageName} complete`);
+}
+
+/**
+ * Enhanced page content loading that checks wallet state
+ */
+function loadPageContentProgressiveEnhanced(pageName) {
+    console.log(`🔄 Loading ${pageName} content with wallet state awareness...`);
+    
+    // Check wallet connection state before loading
+    const isConnected = isWalletConnected();
+    console.log(`🔗 Wallet connection state: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    
+    switch (pageName) {
+        case 'competitions':
+            loadCompetitionsPageProgressive().catch(error => {
+                console.error('Error loading competitions page:', error);
+                hidePageLoadingState('competitions');
+            });
+            break;
+        case 'leaderboard':
+            loadLeaderboardPageProgressive();
+            break;
+        case 'portfolio':
+            loadPortfolioPageProgressive();
+            break;
+        case 'home':
+            loadHomePageProgressive();
+            break;
+        default:
+            hidePageLoadingState(pageName);
+    }
 }
 
 function hideAllPages() {
@@ -2175,7 +2206,7 @@ async function completedOnboardingFixed() {
         closeWalletModalFixed();
         
         // Update UI
-        updateUIForConnectedUser();
+        updateUIForConnectedUserEnhanced();
         
         // Show success
         showNotificationFixed('Welcome to TokenWars! Your wallet is connected.', 'success');
@@ -2204,7 +2235,7 @@ async function disconnectWalletFixed() {
         connectedUser = null;
         
         // Update UI
-        updateUIForDisconnectedUser();
+        updateUIForDisconnectedUserEnhanced();
         
         showNotificationFixed('Wallet disconnected', 'info');
         showPageFixed('home');
