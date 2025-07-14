@@ -1206,8 +1206,33 @@ async function placeBetWithSmartContract() {
                 
                 // Reset button and exit - don't proceed with database if on-chain fails
                 if (placeBetButton) {
-                    placeBetButton.disabled = false;
+                    // ✅ ENHANCED: Show total cost including approximate fees
+                    const approximateFees = 0.002; // ~0.002 SOL for multiple instructions
+                    const totalCost = betAmount + approximateFees;
+                    
                     placeBetButton.textContent = `Place ${betAmount.toFixed(2)} SOL Bet`;
+                    placeBetButton.disabled = false;
+                    
+                    // ✅ NEW: Add cost breakdown tooltip or subtitle
+                    const existingSubtext = placeBetButton.parentElement.querySelector('.bet-cost-breakdown');
+                    if (existingSubtext) {
+                        existingSubtext.remove();
+                    }
+                    
+                    const costBreakdown = document.createElement('div');
+                    costBreakdown.className = 'bet-cost-breakdown';
+                    costBreakdown.style.cssText = `
+                        font-size: 0.8rem; 
+                        color: var(--text-secondary); 
+                        margin-top: 0.25rem;
+                        text-align: center;
+                    `;
+                    costBreakdown.innerHTML = `
+                        Bet: ${betAmount.toFixed(2)} SOL + Fees: ~${approximateFees.toFixed(3)} SOL<br>
+                        <strong>Total: ~${totalCost.toFixed(3)} SOL</strong>
+                    `;
+                    
+                    placeBetButton.parentElement.appendChild(costBreakdown);
                 }
                 return;
             }
