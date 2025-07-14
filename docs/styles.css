@@ -1140,6 +1140,35 @@ body {
     box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
 }
 
+/* Welcome Message Styles for Connected Users */
+.trader-welcome-enhanced {
+    margin: 2rem 0;
+}
+
+.welcome-message {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1rem;
+}
+
+.welcome-trader {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    text-align: center;
+}
+
+.trader-name-highlight {
+    background: linear-gradient(135deg, #c084fc 0%, #a855f7 25%, #7c3aed 50%, #6366f1 75%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
 .btn-secondary {
     background: transparent;
     border: 2px solid var(--accent-purple);
