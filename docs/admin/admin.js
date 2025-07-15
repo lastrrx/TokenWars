@@ -4950,7 +4950,6 @@ window.generateRetentionReport = generateRetentionReport;
 window.exportTokenList = exportTokenList;
 window.viewTokenAnalytics = viewTokenAnalytics;
 window.refreshTokenCache = refreshTokenCache;
-window.clearStaleCache = clearStaleCache;
 window.optimizeCache = optimizeCache;
 window.bulkWhitelist = bulkWhitelist;
 window.whitelistWithApproval = whitelistWithApproval;
