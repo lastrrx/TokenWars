@@ -1289,115 +1289,6 @@ async function validateTokenPairFromDatabase(pair) {
     }
 }
 
-/**
- * FIXED: Database-Centric Competition Creation - UUID GENERATION FIXED
- * Replaces service-based approach with direct database operations
- * ✅ REMOVED custom competition_id generation - let database auto-generate UUID
- */
-async function createCompetitionDirectDatabase(tokenPair, config = {}) {
-    try {
-        debugLog('competitionCreation', '🚀 Creating competition with database-centric approach...');
-        
-        // Validate token pair
-        if (!tokenPair) {
-            throw new Error('Token pair is required');
-        }
-        
-        debugLog('pairValidation', `✅ Pair validation passed: ${tokenPair.token_a_symbol} vs ${tokenPair.token_b_symbol}`);
-        
-        const now = new Date();
-        const startTime = new Date(now.getTime() + (config.startDelay || 300000)); // 5 minutes default
-        const votingEndTime = new Date(startTime.getTime() + ((config.votingDuration || 15) * 60 * 1000));
-        const endTime = new Date(votingEndTime.getTime() + ((config.activeDuration || 24) * 60 * 60 * 1000));
-        
-        // Prepare competition data (let database auto-generate UUID)
-        const competitionData = {
-            // Remove competition_id - let database auto-generate UUID
-            token_a_address: tokenPair.token_a_address,
-            token_b_address: tokenPair.token_b_address,
-            token_a_symbol: tokenPair.token_a_symbol,
-            token_b_symbol: tokenPair.token_b_symbol,
-            token_a_name: tokenPair.token_a_name,
-            token_b_name: tokenPair.token_b_name,
-            pair_id: tokenPair.id,
-            status: 'SETUP',
-            start_time: startTime.toISOString(),
-            voting_end_time: votingEndTime.toISOString(),
-            end_time: endTime.toISOString(),
-            bet_amount: config.betAmount || 0.1,
-            platform_fee: config.platformFee || 15,
-            priority: config.priority || 'normal',
-            created_by: 'ADMIN_MANUAL',
-            // Smart contract fields (will be populated when blockchain is connected)
-            escrow_account: null,
-            program_id: null,
-            escrow_bump: null,
-            total_token_a_bets: 0,
-            total_token_b_bets: 0,
-            winner: null,
-            jupiter_token_a_id: tokenPair.token_a_address, // Use token address for Jupiter
-            jupiter_token_b_id: tokenPair.token_b_address
-        };
-        
-        debugLog('competitionCreation', 'Competition data prepared (without custom ID):', competitionData);
-        
-        // FIXED: Remove duplicate .from() chaining
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-            .from('competitions')
-            .insert([competitionData])
-            .select()
-            .single();
-        
-        if (error) {
-            throw new Error(`Database insert failed: ${error.message}`);
-        }
-        
-        debugLog('competitionCreation', '✅ Competition created with auto-generated UUID:', data.competition_id);
-        
-        // Update token pair usage with the database-generated competition_id
-        await supabase
-            .from('token_pairs')
-            .update({
-                usage_count: (tokenPair.usage_count || 0) + 1,
-                last_used: now.toISOString(),
-                last_competition_id: data.competition_id, // Use auto-generated UUID
-                updated_at: now.toISOString()
-            })
-            .eq('id', tokenPair.id);
-        
-        debugLog('competitionCreation', `✅ Competition created successfully: ${data.competition_id}`);
-        
-        return data;
-        
-    } catch (error) {
-        debugLog('error', 'Error creating competition with database approach:', error);
-        throw error;
-    }
-}
-
-/**
- * FIXED: Manual Competition Creation
- * Updated to use database-centric approach instead of service layer
- */
-async function createManualCompetitionWithConfig(config = {}) {
-    try {
-        debugLog('manualCompetition', '🎯 Creating manual competition with fixed database approach...');
-        
-        // Use database-centric creation
-        const competition = await createCompetitionDirectDatabase({
-            ...config,
-            isManual: true
-        });
-        
-        return competition;
-        
-    } catch (error) {
-        debugLog('error', 'Error in createManualCompetitionWithConfig:', error);
-        throw error;
-    }
-}
-
 
 /**
  * Create competition with smart contract integration
@@ -1620,7 +1511,7 @@ async function submitManualCompetitionWithSmartContract() {
         debugLog('competitionSubmit', 'Competition config:', config);
         
         // Show loading state
-        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
+        const submitButton = document.querySelector('button[onclick="submitManualCompetitionWithSmartContract()"]');
         if (submitButton) {
             submitButton.textContent = '⏳ Creating...';
             submitButton.disabled = true;
@@ -1644,8 +1535,7 @@ async function submitManualCompetitionWithSmartContract() {
             console.log('🔗 Using blockchain-first with database logging');
             competition = await createCompetitionWithSmartContract(config);
         } else {
-            console.log('🗄️ Using database-only approach');
-            competition = await createCompetitionDirectDatabase(config);
+            console.log('🗄️ Competition creation failed, blockchain not available');;
         }    
         if (competition) {
             // Close modal
@@ -1668,7 +1558,7 @@ async function submitManualCompetitionWithSmartContract() {
         showAdminNotification('Failed to create competition: ' + error.message, 'error');
     } finally {
         // Reset submit button
-        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
+        const submitButton = document.querySelector('button[onclick="submitManualCompetitionWithSmartContract()"]');
         if (submitButton) {
             submitButton.textContent = '🚀 Create Competition';
             submitButton.disabled = false;
@@ -1748,93 +1638,6 @@ async function emergencyCleanupCompetition(competitionId) {
     }
 }
 
-
-/**
- * FIXED: Submit Manual Competition
- * Updated to use database-centric approach
- */
-async function submitManualCompetition() {
-    try {
-        debugLog('competitionSubmit', '🚀 Submitting manual competition with fixed approach...');
-        
-        if (!AdminState.selectedTokens.selectedPairId) {
-            showAdminNotification('Please select a token pair first', 'error');
-            return;
-        }
-        
-        const adminWallet = sessionStorage.getItem('adminWallet');
-        if (!adminWallet) {
-            showAdminNotification('Admin wallet not connected', 'error');
-            return;
-        }
-        
-        // Get selected pair from AdminState
-        const selectedPair = AdminState.pairState.allPairs.find(p => p.id === AdminState.selectedTokens.selectedPairId);
-        if (!selectedPair) {
-            showAdminNotification('Selected token pair not found', 'error');
-            return;
-        }
-        
-        // Get form configuration
-        const config = {
-            votingDuration: parseInt(document.getElementById('manual-voting-period')?.value || 15),
-            activeDuration: parseInt(document.getElementById('manual-performance-period')?.value || 24),
-            betAmount: parseFloat(document.getElementById('manual-bet-amount')?.value || 0.1),
-            platformFee: parseInt(document.getElementById('manual-platform-fee')?.value || 15),
-            startDelay: getStartDelay(document.getElementById('manual-start-time')?.value || 'immediate'),
-            priority: document.getElementById('manual-priority')?.value || 'normal',
-            isManual: true,
-            selectedPair: selectedPair
-        };
-        
-        debugLog('competitionSubmit', 'Competition config:', config);
-        
-        // Show loading state
-        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
-        if (submitButton) {
-            submitButton.textContent = '⏳ Creating...';
-            submitButton.disabled = true;
-        }
-        
-        // ✅ FIXED: Create competition using database-centric approach (without custom UUID)
-        const competition = await createCompetitionDirectDatabase(config);
-        
-        if (competition) {
-            // Close modal
-            closeCompetitionModal();
-            
-            // Reload competitions data and UI
-            await loadAllCompetitionsDataWithDiagnostics();
-            await loadCompetitionsManagementWithDiagnostics();
-            
-            showAdminNotification(
-                `Competition created successfully: ${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
-                'success'
-            );
-            
-            // Log admin action
-            await logAdminAction('competition_create_manual', {
-                competition_id: competition.competition_id,
-                token_pair: `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`,
-                config: config,
-                admin_wallet: adminWallet
-            });
-            
-            debugLog('competitionSubmit', `✅ Competition created: ${competition.competition_id}`);
-        }
-        
-    } catch (error) {
-        debugLog('error', 'Error submitting manual competition:', error);
-        showAdminNotification('Failed to create competition: ' + error.message, 'error');
-        
-        // Reset submit button
-        const submitButton = document.querySelector('button[onclick="submitManualCompetition()"]');
-        if (submitButton) {
-            submitButton.textContent = '🚀 Create Competition';
-            submitButton.disabled = false;
-        }
-    }
-}
 
 // ===== ENHANCED UTILITY FUNCTIONS =====
 
@@ -2174,7 +1977,7 @@ async function showCompetitionCreationModal() {
                                 font-weight: 600;
                             ">🧪 Validate</button>
                             
-                            <button type="button" onclick="submitManualCompetition()" style="
+                            <button type="button" onclick="submitManualCompetitionWithSmartContract()" style="
                                 padding: 0.75rem 1.5rem;
                                 background: #22c55e;
                                 color: white;
@@ -5098,7 +4901,6 @@ window.selectTokenPair = selectTokenPair;
 window.reviewTokenPair = reviewTokenPair;
 window.updateCompetitionPreview = updateCompetitionPreview;
 window.validateCompetitionForm = validateCompetitionForm;
-window.submitManualCompetition = submitManualCompetition;
 window.closeCompetitionModal = closeCompetitionModal;
 
 // STEP 3: Enhanced Automation Controls & UI Polish
@@ -5110,7 +4912,7 @@ window.resetAutomationSettings = resetAutomationSettingsEnhanced;
 window.updateParameterValue = updateParameterValueEnhanced;
 
 // Update the existing submitManualCompetition function to use smart contract integration
-window.submitManualCompetition = submitManualCompetitionWithSmartContract;
+window.submitManualCompetitionWithSmartContract = submitManualCompetitionWithSmartContract;
 
 // Export new functions
 window.createCompetitionWithSmartContract = createCompetitionWithSmartContract;
