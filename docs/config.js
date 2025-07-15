@@ -124,38 +124,6 @@ const BLOCKCHAIN_CONFIG = {
     RPC_URL: 'https://api.devnet.solana.com'  // ← ADD THIS LINE
 };
 
-// Phase tracking configuration
-const PHASE_CONFIG = {
-    CURRENT_PHASE: 1,
-    PHASES: {
-        1: {
-            name: 'Navigation & UI Framework',
-            features: ['navigation', 'ui_framework', 'wallet_modal_ui', 'responsive_design'],
-            description: 'Basic navigation and user interface components'
-        },
-        2: {
-            name: 'Database & Backend Services',
-            features: ['database_schema', 'real_token_data', 'price_tracking', 'backend_services'],
-            description: 'Database integration and backend service implementation'
-        },
-        3: {
-            name: 'Wallet Connection System',
-            features: ['wallet_connection', 'user_profiles', 'authentication', 'session_management'],
-            description: 'Complete wallet integration and user management'
-        },
-        4: {
-            name: 'Admin Panel & Deployment',
-            features: ['admin_panel', 'token_management', 'system_monitoring', 'admin_controls'],
-            description: 'Administrative interface and system management'
-        },
-        5: {
-            name: 'System Integration & Testing',
-            features: ['end_to_end_testing', 'performance_optimization', 'production_deployment'],
-            description: 'Final integration, testing, and production readiness'
-        }
-    }
-};
-
 // Export for use in other files
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.APP_CONFIG = APP_CONFIG;
@@ -165,7 +133,6 @@ window.TOKEN_ERROR_CODES = TOKEN_ERROR_CODES;
 window.NAVIGATION_CONFIG = NAVIGATION_CONFIG;
 window.WALLET_CONFIG = WALLET_CONFIG;
 window.UI_CONFIG = UI_CONFIG;
-window.PHASE_CONFIG = PHASE_CONFIG;
 window.BLOCKCHAIN_CONFIG = BLOCKCHAIN_CONFIG;
 
 // Phase 1: Feature availability checker
