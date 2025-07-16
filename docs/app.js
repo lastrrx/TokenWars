@@ -199,17 +199,17 @@ window.refreshLeaderboard = async function() {
         // Build query based on filters
         let query = window.supabase
             .from('leaderboards')
-            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking, updated_at');
+            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking, last_updated');
         
         // Apply time filtering
         if (periodFilter === 'weekly') {
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            query = query.gte('updated_at', oneWeekAgo.toISOString());
+            query = query.gte('last_updated', oneWeekAgo.toISOString());
         } else if (periodFilter === 'monthly') {
             const oneMonthAgo = new Date();
             oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            query = query.gte('updated_at', oneMonthAgo.toISOString());
+            query = query.gte('last_updated', oneMonthAgo.toISOString());
         }
         
         // Apply sorting
