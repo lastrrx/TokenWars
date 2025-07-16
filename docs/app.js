@@ -240,7 +240,7 @@ window.refreshLeaderboard = async function() {
                 return `
                     <div class="leaderboard-row ${isTopThree ? 'top-performer' : ''}" data-rank="${rank}">
                         <div class="rank-badge ${isTopThree ? 'medal' : 'number'}">${rankBadge}</div>
-                        <div class="username">${user.username || 'Anonymous'}</div>
+                        <div class="username clickable-username" onclick="showUserProfileCard('${user.user_wallet}', '${user.username || 'Anonymous'}')" title="Click to view profile">${user.username || 'Anonymous'}</div>
                         <div class="winnings">${(user.total_winnings || 0).toFixed(2)} SOL</div>
                         <div class="win-rate">${(user.win_percentage || 0).toFixed(1)}%</div>
                         <div class="streak">${user.current_streak || 0}</div>
@@ -296,7 +296,6 @@ window.refreshLeaderboard = async function() {
 // ==============================================
 // USER PROFILE CARDS - ADD TO app.js
 // ==============================================
-// INSTRUCTIONS: Add this code to docs/app.js after the leaderboard functions
 
 /**
  * Show User Profile Card Modal
