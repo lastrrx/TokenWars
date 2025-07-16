@@ -4034,3 +4034,279 @@ body {
    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
    background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
 }
+
+/* ===================================== */
+/* LEADERBOARD TABLE STYLES */
+/* ===================================== */
+
+.leaderboard-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 2rem;
+}
+
+.leaderboard-header {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 80px 80px 80px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 80px 80px 80px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s ease;
+    align-items: center;
+}
+
+.leaderboard-row:hover {
+    background: rgba(139, 92, 246, 0.05);
+    transform: translateX(2px);
+}
+
+.leaderboard-row:last-child {
+    border-bottom: none;
+}
+
+.leaderboard-row.top-player {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), transparent);
+    border-left: 3px solid var(--accent-purple);
+}
+
+/* Rank Column */
+.rank-col {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.rank-number {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.rank-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+}
+
+/* User Column */
+.user-col {
+    display: flex;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.username {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.wallet-address {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Winnings Column */
+.winnings-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.winnings-amount {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.profit-amount {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-green);
+    opacity: 0.8;
+}
+
+/* Win Rate Column */
+.rate-col {
+    text-align: center;
+}
+
+.win-rate {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* Streak Column */
+.streak-col {
+    text-align: center;
+}
+
+.streak-number {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.streak-number.positive {
+    color: var(--accent-green);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.streak-number.neutral {
+    color: var(--text-secondary);
+}
+
+/* Games Column */
+.games-col {
+    text-align: center;
+}
+
+.games-count {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* Leaderboard States */
+.loading-state, .empty-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.empty-icon, .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.empty-state h3, .error-state h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.empty-state p, .error-state p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 300px;
+}
+
+.leaderboard-note {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background: var(--surface-elevated);
+    border-top: 1px solid var(--border);
+}
+
+/* ===================================== */
+/* RESPONSIVE LEADERBOARD */
+/* ===================================== */
+
+@media (max-width: 768px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 50px 1fr 100px 70px;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    /* Hide streak and games columns on mobile */
+    .streak-col,
+    .games-col {
+        display: none;
+    }
+    
+    .leaderboard-header {
+        font-size: 0.75rem;
+    }
+    
+    .username {
+        font-size: 0.875rem;
+    }
+    
+    .wallet-address {
+        font-size: 0.7rem;
+    }
+    
+    .winnings-amount {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 40px 1fr 80px;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    /* Hide win rate on very small screens */
+    .rate-col {
+        display: none;
+    }
+    
+    .user-info {
+        gap: 0.125rem;
+    }
+    
+    .profit-amount {
+        display: none;
+    }
+}
