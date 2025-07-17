@@ -280,6 +280,36 @@ class ChartService {
     }
 }
 
+// Add this function after the class definition but before the initialization
+async function createUserBettingDistribution(containerId, userWallet) {
+    try {
+        // Fetch user's betting choices from database
+        const { data, error } = await window.supabase
+            .from('bets')
+            .select('chosen_token')
+            .eq('user_wallet', userWallet);
+            
+        if (error) throw error;
+        
+        // Count token_a vs token_b choices
+        const tokenA = data.filter(bet => bet.chosen_token === 'token_a').length;
+        const tokenB = data.filter(bet => bet.chosen_token === 'token_b').length;
+        
+        // Use existing chart service
+        return window.chartService.createBettingDistributionChart(containerId, {
+            tokenA: tokenA,
+            tokenB: tokenB
+        });
+        
+    } catch (error) {
+        console.error('Error creating betting distribution chart:', error);
+        window.chartService.showChartPlaceholder(
+            document.getElementById(containerId), 
+            'Unable to load betting data'
+        );
+    }
+}
+
 // Initialize global chart service
 window.chartService = new ChartService();
 
