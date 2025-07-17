@@ -280,7 +280,7 @@ class ChartService {
     }
 }
 
-// Add this function after the class definition but before the initialization
+// Add these functions after the class definition but before the initialization
 async function createUserBettingDistribution(containerId, userWallet) {
     try {
         // Fetch user's betting choices from database
@@ -306,6 +306,40 @@ async function createUserBettingDistribution(containerId, userWallet) {
         window.chartService.showChartPlaceholder(
             document.getElementById(containerId), 
             'Unable to load betting data'
+        );
+    }
+}
+
+async function createUserProfitLossChart(containerId, userWallet) {
+    try {
+        const { data, error } = await window.supabase
+            .from('bets')
+            .select('payout_amount, amount, timestamp')
+            .eq('user_wallet', userWallet)
+            .order('timestamp', { ascending: true });
+            
+        if (error) throw error;
+        
+        // Group by date and calculate daily profit/loss
+        const dailyData = {};
+        data.forEach(bet => {
+            const date = new Date(bet.timestamp).toDateString();
+            if (!dailyData[date]) dailyData[date] = 0;
+            dailyData[date] += (bet.payout_amount || 0) - bet.amount;
+        });
+        
+        const chartData = Object.entries(dailyData).map(([date, profit]) => ({
+            date: date,
+            profit: profit
+        }));
+        
+        return window.chartService.createProfitLossChart(containerId, chartData);
+        
+    } catch (error) {
+        console.error('Error creating profit/loss chart:', error);
+        window.chartService.showChartPlaceholder(
+            document.getElementById(containerId), 
+            'Unable to load profit data'
         );
     }
 }
