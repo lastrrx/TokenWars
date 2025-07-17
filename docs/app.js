@@ -4622,7 +4622,7 @@ async function loadPortfolioStatistics(walletAddress) {
                 
                 <div class="stat-chart-placeholder">
                     <h4>Profit/Loss Over Time</h4>
-                    <div class="chart-mock">📊 Chart Coming Soon</div>
+                    <div id="profit-chart-container" class="chart-container"></div>
                 </div>
                 
                 <div class="stat-chart-placeholder">
@@ -4643,6 +4643,7 @@ async function loadPortfolioStatistics(walletAddress) {
 setTimeout(() => {
     if (window.createUserBettingDistribution && connectedUser?.walletAddress) {
         createUserBettingDistribution('betting-chart-container', connectedUser.walletAddress);
+        createUserProfitLossChart('profit-chart-container', connectedUser.walletAddress);
     }
 }, 500);
 
