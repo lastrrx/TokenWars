@@ -4617,7 +4617,7 @@ async function loadPortfolioStatistics(walletAddress) {
             <div class="stats-grid">
                 <div class="stat-chart-placeholder">
                     <h4>Win Rate Trend</h4>
-                    <div class="chart-mock">📈 Chart Coming Soon</div>
+                    <div id="winrate-chart-container" class="chart-container"></div>
                 </div>
                 
                 <div class="stat-chart-placeholder">
@@ -4644,6 +4644,7 @@ setTimeout(() => {
     if (window.createUserBettingDistribution && connectedUser?.walletAddress) {
         createUserBettingDistribution('betting-chart-container', connectedUser.walletAddress);
         createUserProfitLossChart('profit-chart-container', connectedUser.walletAddress);
+        createUserWinRateChart('winrate-chart-container', connectedUser.walletAddress);
     }
 }, 500);
 
