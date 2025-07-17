@@ -4632,12 +4632,19 @@ async function loadPortfolioStatistics(walletAddress) {
                 
                 <div class="stat-chart-placeholder">
                     <h4>Betting Distribution</h4>
-                    <div class="chart-mock">🥧 Chart Coming Soon</div>
+                    <div id="betting-chart-container" class="chart-container"></div>
                 </div>
             </div>
         </div>
     `;
 }
+
+// Initialize betting distribution chart
+setTimeout(() => {
+    if (window.createUserBettingDistribution && connectedUser?.walletAddress) {
+        createUserBettingDistribution('betting-chart-container', connectedUser.walletAddress);
+    }
+}, 500);
 
 async function loadAchievements(walletAddress) {
     const portfolioContent = document.getElementById('portfolio-content');
