@@ -344,6 +344,41 @@ async function createUserProfitLossChart(containerId, userWallet) {
     }
 }
 
+async function createUserWinRateChart(containerId, userWallet) {
+    try {
+        const { data, error } = await window.supabase
+            .from('bets')
+            .select('status, timestamp')
+            .eq('user_wallet', userWallet)
+            .order('timestamp', { ascending: true });
+            
+        if (error) throw error;
+        
+        // Group by date and calculate daily win rate
+        const dailyData = {};
+        data.forEach(bet => {
+            const date = new Date(bet.timestamp).toDateString();
+            if (!dailyData[date]) dailyData[date] = { wins: 0, total: 0 };
+            dailyData[date].total++;
+            if (bet.status === 'WON') dailyData[date].wins++;
+        });
+        
+        const chartData = Object.entries(dailyData).map(([date, stats]) => ({
+            date: date,
+            winRate: stats.total > 0 ? (stats.wins / stats.total) * 100 : 0
+        }));
+        
+        return window.chartService.createWinRateTrend(containerId, chartData);
+        
+    } catch (error) {
+        console.error('Error creating win rate chart:', error);
+        window.chartService.showChartPlaceholder(
+            document.getElementById(containerId), 
+            'Unable to load win rate data'
+        );
+    }
+}
+
 // Initialize global chart service
 window.chartService = new ChartService();
 
