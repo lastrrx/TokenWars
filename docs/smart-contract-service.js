@@ -970,11 +970,28 @@ async buildUpdatePriceSampleInstruction(accounts) {
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
             
-            console.log('🔍 ENHANCED TRANSACTION DEBUG:');
-            console.log('Transaction instructions:', transaction.instructions.length);
-            console.log('1. Memo instruction:', memoText);
-            console.log('2. Transfer instruction:', betAmount, 'SOL to', escrowAccount.toString());
-            console.log('3. Smart contract instruction:', instruction.programId.toString());
+            // ✅ DEBUG: Verify transaction ONLY has 2 instructions
+            console.log('🔍 FINAL VERIFICATION:');
+            console.log('Total instructions:', transaction.instructions.length);
+            
+            if (transaction.instructions.length !== 2) {
+                console.error('❌ WRONG! Should have exactly 2 instructions, found:', transaction.instructions.length);
+            }
+            
+            transaction.instructions.forEach((ix, index) => {
+                const programId = ix.programId.toString();
+                let type = 'Unknown';
+                
+                if (programId === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr") {
+                    type = 'Memo ✅';
+                } else if (programId === "11111111111111111111111111111111") {
+                    type = 'System Transfer ❌ SHOULD NOT BE HERE!';
+                } else if (programId === this.programId.toString()) {
+                    type = 'Smart Contract ✅';
+                }
+                
+                console.log(`${index + 1}. ${type}`);
+            });
             console.log('Total SOL to deduct:', betAmount, 'SOL + ~0.001 SOL fees');
             console.log('Token being bet on:', {
                 choice: tokenChoice,
