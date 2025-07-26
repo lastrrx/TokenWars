@@ -851,6 +851,83 @@ saveSessionData() {
         }
     }
 
+/**
+     * Sign a descriptive message before transaction (NEW METHOD)
+     */
+    async signTransactionMessage(messageText) {
+        try {
+            if (!this.isConnected()) {
+                throw new Error('Wallet not connected');
+            }
+            
+            if (this.isDemo) {
+                console.log('🎮 Demo message signing:', messageText);
+                return { success: true };
+            }
+            
+            console.log('📝 Signing transaction message:', messageText);
+            const encodedMessage = new TextEncoder().encode(messageText);
+            
+            const provider = this.getWalletProvider();
+            
+            if (typeof provider.signMessage === 'function') {
+                await provider.signMessage(encodedMessage, "utf8");
+                return { success: true };
+            }
+            
+            // If signMessage not available, just continue
+            console.log('⚠️ Message signing not supported, continuing anyway');
+            return { success: false, reason: 'not_supported' };
+            
+        } catch (error) {
+            if (error.code === 4001) {
+                throw new Error('Transaction cancelled by user');
+            }
+            // Don't fail transaction for message signing issues
+            console.log('⚠️ Message signing failed, continuing anyway:', error.message);
+            return { success: false, reason: 'failed' };
+        }
+    }
+
+    /**
+     * Generate transaction message templates (NEW METHOD)
+     */
+    generateTransactionMessage(transactionType, details) {
+        const { tokenASymbol, tokenBSymbol, amount } = details;
+        
+        switch (transactionType) {
+            case 'PLACE_BET':
+                return `Place ${amount} SOL bet on ${tokenASymbol} vs ${tokenBSymbol}`;
+            case 'WITHDRAW_WINNINGS':
+                return `Withdraw ${amount} SOL winnings from ${tokenASymbol} vs ${tokenBSymbol}`;
+            case 'WITHDRAW_REFUND':
+                return `Withdraw ${amount} SOL refund from ${tokenASymbol} vs ${tokenBSymbol}`;
+            default:
+                return `Confirm ${amount} SOL transaction`;
+        }
+    }
+
+    /**
+     * Enhanced transaction sending with messaging (NEW METHOD)
+     */
+    async sendTransactionWithMessage(transaction, connection, messageDetails) {
+        try {
+            // Step 1: Try to show message first
+            if (messageDetails) {
+                const message = this.generateTransactionMessage(messageDetails.type, messageDetails.details);
+                console.log('📝 Attempting to show message:', message);
+                await this.signTransactionMessage(message);
+            }
+            
+            // Step 2: Send actual transaction (use existing method)
+            return await this.signAndSendTransactionWithConnection(transaction, connection);
+            
+        } catch (error) {
+            console.error('❌ Transaction with message failed:', error);
+            throw error;
+        }
+    }
+
     // ==============================================
     // SESSION PERSISTENCE (Fixed)
     // ==============================================
@@ -1175,6 +1252,31 @@ saveSessionData() {
         }
     }
 
+/**
+     * Get competition details for messaging (NEW METHOD)
+     */
+    async getCompetitionDetails(competitionId) {
+        try {
+            const supabase = window.getSupabase ? window.getSupabase() : window.supabase;
+            if (!supabase) {
+                return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
+            }
+            
+            const { data: competition, error } = await supabase
+                .from('competitions')
+                .select('token_a_symbol, token_b_symbol, required_bet_amount')
+                .eq('competition_id', competitionId)
+                .single();
+            
+            if (error) throw error;
+            return competition;
+            
+        } catch (error) {
+            console.error('❌ Error getting competition details:', error);
+            return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
+        }
+    }
+    
     /**
      * Enhanced transaction sending with connection parameter support
      */
