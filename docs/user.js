@@ -52,7 +52,7 @@ async function initializePortfolio() {
 }
 
 /**
- * Load Complete Portfolio Data from Supabase
+ * FIXED: Load Complete Portfolio Data from Supabase
  */
 async function loadPortfolioData() {
     try {
@@ -73,14 +73,19 @@ async function loadPortfolioData() {
         PortfolioState.bettingHistory = bettingHistory;
         PortfolioState.leaderboardPosition = leaderboardData;
         
-        // Calculate statistics and achievements
+        // FIXED: Calculate statistics FIRST, then achievements
         PortfolioState.statistics = calculatePortfolioStatistics();
+        
+        // FIXED: Calculate achievements AFTER statistics are ready
         PortfolioState.achievements = calculateAchievements();
         
         PortfolioState.lastUpdate = new Date();
         
         // Display portfolio based on current view
         displayPortfolioView(PortfolioState.currentView);
+        
+        // FIXED: Create charts AFTER data is ready
+        await createPortfolioCharts();
         
     } catch (error) {
         console.error('Failed to load portfolio data:', error);
@@ -380,12 +385,30 @@ function calculateWeeklyActivity(bets) {
 }
 
 /**
- * Calculate Achievements
+ * FIXED: Calculate Achievements with proper data checking
  */
 function calculateAchievements() {
     const user = PortfolioState.userData;
     const stats = PortfolioState.statistics;
     const bets = PortfolioState.bettingHistory;
+    
+    console.log('🏆 Calculating achievements with:', { user, stats, bets });
+    
+    // FIXED: Add safety checks
+    if (!stats) {
+        console.warn('🏆 Statistics not available yet, returning empty achievements');
+        return [];
+    }
+    
+    if (!user) {
+        console.warn('🏆 User data not available, returning empty achievements');
+        return [];
+    }
+    
+    if (!Array.isArray(bets)) {
+        console.warn('🏆 Betting history not available, using empty array');
+        bets = [];
+    }
     
     const achievements = [
         {
@@ -394,8 +417,8 @@ function calculateAchievements() {
             description: 'Place your first bet',
             icon: '🎯',
             requirement: 1,
-            current: stats.totalBets,
-            unlocked: stats.totalBets >= 1,
+            current: stats.totalBets || 0,
+            unlocked: (stats.totalBets || 0) >= 1,
             unlockedAt: bets.length > 0 ? bets[bets.length - 1].timestamp : null
         },
         {
@@ -404,8 +427,8 @@ function calculateAchievements() {
             description: 'Place 10 bets',
             icon: '📈',
             requirement: 10,
-            current: stats.totalBets,
-            unlocked: stats.totalBets >= 10
+            current: stats.totalBets || 0,
+            unlocked: (stats.totalBets || 0) >= 10
         },
         {
             id: 'first_win',
@@ -413,8 +436,8 @@ function calculateAchievements() {
             description: 'Win your first bet',
             icon: '🏆',
             requirement: 1,
-            current: stats.wonBets,
-            unlocked: stats.wonBets >= 1
+            current: stats.wonBets || 0,
+            unlocked: (stats.wonBets || 0) >= 1
         },
         {
             id: 'profit_1_sol',
@@ -422,8 +445,8 @@ function calculateAchievements() {
             description: 'Earn 1 SOL in total winnings',
             icon: '💰',
             requirement: 1,
-            current: stats.totalWinnings,
-            unlocked: stats.totalWinnings >= 1
+            current: stats.totalWinnings || 0,
+            unlocked: (stats.totalWinnings || 0) >= 1
         },
         {
             id: 'win_streak_5',
@@ -431,8 +454,8 @@ function calculateAchievements() {
             description: 'Win 5 bets in a row',
             icon: '🔥',
             requirement: 5,
-            current: stats.bestStreak,
-            unlocked: stats.bestStreak >= 5
+            current: stats.bestStreak || 0,
+            unlocked: (stats.bestStreak || 0) >= 5
         },
         {
             id: 'high_roller',
@@ -440,8 +463,8 @@ function calculateAchievements() {
             description: 'Place 50 bets',
             icon: '🎰',
             requirement: 50,
-            current: stats.totalBets,
-            unlocked: stats.totalBets >= 50
+            current: stats.totalBets || 0,
+            unlocked: (stats.totalBets || 0) >= 50
         },
         {
             id: 'token_master',
@@ -449,8 +472,8 @@ function calculateAchievements() {
             description: 'Bet on 10 different tokens',
             icon: '🪙',
             requirement: 10,
-            current: stats.performanceByToken.size,
-            unlocked: stats.performanceByToken.size >= 10
+            current: stats.performanceByToken ? stats.performanceByToken.size : 0,
+            unlocked: stats.performanceByToken ? stats.performanceByToken.size >= 10 : false
         },
         {
             id: 'win_rate_60',
@@ -458,8 +481,8 @@ function calculateAchievements() {
             description: 'Maintain 60% win rate (min 20 bets)',
             icon: '🎖️',
             requirement: 60,
-            current: stats.winRate,
-            unlocked: stats.winRate >= 60 && stats.totalBets >= 20
+            current: stats.winRate || 0,
+            unlocked: (stats.winRate || 0) >= 60 && (stats.totalBets || 0) >= 20
         },
         {
             id: 'profit_10_sol',
@@ -467,8 +490,8 @@ function calculateAchievements() {
             description: 'Earn 10 SOL in total profit',
             icon: '💎',
             requirement: 10,
-            current: Math.max(0, stats.profitLoss),
-            unlocked: stats.profitLoss >= 10
+            current: Math.max(0, stats.profitLoss || 0),
+            unlocked: (stats.profitLoss || 0) >= 10
         },
         {
             id: 'weekly_warrior',
@@ -476,8 +499,8 @@ function calculateAchievements() {
             description: 'Place bets for 4 consecutive weeks',
             icon: '📅',
             requirement: 4,
-            current: countConsecutiveWeeks(stats.weeklyActivity),
-            unlocked: countConsecutiveWeeks(stats.weeklyActivity) >= 4
+            current: stats.weeklyActivity ? countConsecutiveWeeks(stats.weeklyActivity) : 0,
+            unlocked: stats.weeklyActivity ? countConsecutiveWeeks(stats.weeklyActivity) >= 4 : false
         }
     ];
     
@@ -492,6 +515,7 @@ function calculateAchievements() {
         )}/${achievement.requirement}`;
     });
     
+    console.log('🏆 Calculated achievements:', achievements);
     return achievements;
 }
 
@@ -1047,6 +1071,78 @@ window.portfolio = {
     refreshPortfolioData,
     PortfolioState
 };
+
+/**
+ * NEW: Create Portfolio Charts after data is loaded
+ */
+async function createPortfolioCharts() {
+    try {
+        console.log('📊 Creating portfolio charts...');
+        
+        const currentUser = PortfolioState.walletService?.getWalletAddress();
+        if (!currentUser) {
+            console.warn('📊 No wallet address available for charts');
+            return;
+        }
+        
+        // Check if chart service is available
+        if (typeof window.chartService === 'undefined') {
+            console.warn('📊 Chart service not available');
+            return;
+        }
+        
+        // Try to create charts for the statistics view
+        if (PortfolioState.currentView === 'statistics') {
+            await createStatisticsCharts(currentUser);
+        }
+        
+        console.log('✅ Portfolio charts created successfully');
+        
+    } catch (error) {
+        console.error('❌ Error creating portfolio charts:', error);
+    }
+}
+
+/**
+ * NEW: Create charts for statistics view
+ */
+async function createStatisticsCharts(walletAddress) {
+    try {
+        // Only create charts if we're on statistics view and containers exist
+        const containers = [
+            'user-betting-distribution',
+            'user-profit-loss-chart', 
+            'user-win-rate-chart'
+        ];
+        
+        // Check if containers exist
+        const existingContainers = containers.filter(id => document.getElementById(id));
+        if (existingContainers.length === 0) {
+            console.log('📊 Chart containers not found in current view');
+            return;
+        }
+        
+        // Create charts for existing containers
+        for (const containerId of existingContainers) {
+            console.log(`📊 Creating chart for container: ${containerId}`);
+            
+            try {
+                if (containerId === 'user-betting-distribution') {
+                    await window.createUserBettingDistribution(containerId, walletAddress);
+                } else if (containerId === 'user-profit-loss-chart') {
+                    await window.createUserProfitLossChart(containerId, walletAddress);
+                } else if (containerId === 'user-win-rate-chart') {
+                    await window.createUserWinRateChart(containerId, walletAddress);
+                }
+            } catch (chartError) {
+                console.error(`❌ Error creating chart ${containerId}:`, chartError);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error in createStatisticsCharts:', error);
+    }
+}
 
 // Also export individual functions for backward compatibility
 window.initializePortfolio = initializePortfolio;
