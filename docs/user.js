@@ -390,7 +390,7 @@ function calculateWeeklyActivity(bets) {
 function calculateAchievements() {
     const user = PortfolioState.userData;
     const stats = PortfolioState.statistics;
-    const bets = PortfolioState.bettingHistory;
+    let bets = PortfolioState.bettingHistory;  // ← CHANGED from const to let
     
     console.log('🏆 Calculating achievements with:', { user, stats, bets });
     
@@ -407,7 +407,7 @@ function calculateAchievements() {
     
     if (!Array.isArray(bets)) {
         console.warn('🏆 Betting history not available, using empty array');
-        bets = [];
+        bets = [];  // ← Now this works because bets is let, not const
     }
     
     const achievements = [
