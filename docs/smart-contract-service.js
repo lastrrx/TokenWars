@@ -1096,33 +1096,29 @@ async withdrawWinnings(competitionId, userWallet) {
             data: Buffer.from(memoText, 'utf8')
         });
         
-        // ✅ ENHANCED: Create transaction with memo + smart contract instruction
+        // ✅ FIXED: Create transaction and send directly
         const transaction = new solanaWeb3.Transaction()
             .add(memoInstruction)      // Shows description in Phantom
             .add(instruction);         // Smart contract handles SOL transfer
+            
         const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = wallet.publicKey;
         
-        // ✅ ENHANCED: Get competition details for messaging
-        const competition = await this.getCompetitionDetails(competitionId);
+        // ✅ DEBUG: Verify memo instruction is properly formatted
+        console.log('🔍 MEMO INSTRUCTION DEBUG:');
+        console.log('Memo text:', memoText);
+        console.log('Memo program ID:', "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+        console.log('Memo data length:', Buffer.from(memoText, 'utf8').length);
+        console.log('Transaction instructions order:', transaction.instructions.map((ix, i) => ({
+            index: i,
+            programId: ix.programId.toString(),
+            isMemo: ix.programId.toString() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+            dataPreview: ix.data.length > 0 ? Buffer.from(ix.data).toString('utf8').substring(0, 50) : 'no data'
+        })));
         
-        // ✅ ENHANCED: Send transaction with message
-        const messageDetails = {
-            type: 'WITHDRAW_WINNINGS',
-            details: {
-                tokenASymbol: competition.token_a_symbol || 'Token A',
-                tokenBSymbol: competition.token_b_symbol || 'Token B',
-                amount: '0.00' // Will show generic amount
-            }
-        };
-        
-        console.log('📤 Sending withdrawal transaction with message...');
-        const signature = await window.walletService.sendTransactionWithMessage(
-            transaction, 
-            this.connection, 
-            messageDetails
-        );
+        console.log('📤 Sending withdrawal transaction...');
+        const signature = await wallet.sendTransaction(transaction, this.connection);
         
         await this.connection.confirmTransaction(signature, 'confirmed');
         
