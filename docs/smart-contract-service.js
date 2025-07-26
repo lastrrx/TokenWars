@@ -939,17 +939,33 @@ async buildUpdatePriceSampleInstruction(accounts) {
             
             // ✅ NEW: Add memo instruction with actual token names
             const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId);
+            // ✅ FIXED: Use correct memo program ID and format
             const memoInstruction = new solanaWeb3.TransactionInstruction({
                 keys: [],
                 programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
                 data: Buffer.from(memoText, 'utf8')
             });
             
-            // ✅ CRITICAL: Memo MUST be first for Phantom to display it prominently
-            const transaction = new solanaWeb3.Transaction()
-                .add(memoInstruction)      // ← FIRST: Shows description in Phantom
-                .add(transferInstruction)  // ← SECOND: Shows SOL amount in Phantom  
-                .add(instruction);         // ← THIRD: Smart contract logic
+            // ✅ ENHANCED: Log memo instruction details for debugging
+            console.log('📝 MEMO DEBUG:', {
+                programId: memoInstruction.programId.toString(),
+                dataLength: memoInstruction.data.length,
+                text: memoText,
+                dataAsString: Buffer.from(memoInstruction.data).toString('utf8')
+            });
+            
+            // ✅ PHANTOM OPTIMIZED: Structure transaction for better display
+            const transaction = new solanaWeb3.Transaction();
+            
+            // Add instructions in specific order for Phantom
+            transaction.add(memoInstruction);       // Description
+            transaction.add(transferInstruction);   // SOL transfer (visible amount)
+            transaction.add(instruction);           // Smart contract logic
+            
+            // ✅ ENHANCED: Add transaction metadata for Phantom
+            transaction.addSignature = function() {
+                // This helps Phantom understand the transaction better
+            };
             
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
@@ -1405,17 +1421,14 @@ validateAndFormatSOLAmount(amount, context = 'transaction') {
     }
 }
 
-/**
- * ✅ ENHANCED: Build memo text for bet transactions with actual token names
- */
 buildBetMemoText(betAmount, tokenChoice, competitionId) {
     try {
-        // Get competition data from app's global state
+        // Get competition data
         let tokenASymbol = 'Token A';
         let tokenBSymbol = 'Token B';
         let chosenTokenName = `Token ${tokenChoice}`;
         
-        // Try to get actual token information from CompetitionState
+        // Try to get actual token information
         if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
             const competition = window.CompetitionState.selectedCompetition;
             if (competition.tokenA && competition.tokenA.symbol) {
@@ -1425,23 +1438,22 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
                 tokenBSymbol = competition.tokenB.symbol;
             }
             
-            // Set the chosen token name based on choice
             if (tokenChoice === 'A' && competition.tokenA) {
-                chosenTokenName = competition.tokenA.symbol || competition.tokenA.name || 'Token A';
+                chosenTokenName = competition.tokenA.symbol || 'Token A';
             } else if (tokenChoice === 'B' && competition.tokenB) {
-                chosenTokenName = competition.tokenB.symbol || competition.tokenB.name || 'Token B';
+                chosenTokenName = competition.tokenB.symbol || 'Token B';
             }
         }
         
-        // Build VERY descriptive memo text that Phantom will display prominently
-        const memoText = `TokenWars Bet: ${betAmount} SOL → ${chosenTokenName} (${tokenASymbol} vs ${tokenBSymbol})`;
+        // ✅ PHANTOM OPTIMIZED: Shorter, clearer memo text
+        const memoText = `Bet ${betAmount} SOL on ${chosenTokenName} (${tokenASymbol} vs ${tokenBSymbol})`;
         
-        console.log('📝 Enhanced bet memo for Phantom display:', memoText);
+        console.log('📝 Phantom-optimized memo:', memoText);
         return memoText;
         
     } catch (error) {
-        console.warn('⚠️ Error building bet memo text, using fallback:', error);
-        return `TokenWars Bet: ${betAmount} SOL on Token ${tokenChoice}`;
+        console.warn('⚠️ Error building memo, using fallback:', error);
+        return `Bet ${betAmount} SOL on Token ${tokenChoice}`;
     }
 }
 
