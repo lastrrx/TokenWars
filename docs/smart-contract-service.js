@@ -945,11 +945,11 @@ async buildUpdatePriceSampleInstruction(accounts) {
                 data: Buffer.from(memoText, 'utf8')
             });
             
-            // ✅ MODIFIED: Build transaction with multiple instructions
+            // ✅ CRITICAL: Memo MUST be first for Phantom to display it prominently
             const transaction = new solanaWeb3.Transaction()
-                .add(transferInstruction)  // Shows SOL amount in Phantom  
-                .add(memoInstruction)      // Shows description in Phantom
-                .add(instruction);         // Your existing smart contract logic
+                .add(memoInstruction)      // ← FIRST: Shows description in Phantom
+                .add(transferInstruction)  // ← SECOND: Shows SOL amount in Phantom  
+                .add(instruction);         // ← THIRD: Smart contract logic
             
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
@@ -1087,8 +1087,19 @@ async withdrawWinnings(competitionId, userWallet) {
             competitionId: shortId  // ✅ Pass shortId to instruction builder
         });
         
-        // ✅ FIXED: Create transaction BEFORE trying to send it
-        const transaction = new solanaWeb3.Transaction().add(instruction);
+        // ✅ ENHANCED: Add memo instruction for withdrawal display
+        const competition = await this.getCompetitionDetails(competitionId);
+        const memoText = `TokenWars Withdrawal: Claim winnings from ${competition.token_a_symbol || 'Token A'} vs ${competition.token_b_symbol || 'Token B'}`;
+        const memoInstruction = new solanaWeb3.TransactionInstruction({
+            keys: [],
+            programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+            data: Buffer.from(memoText, 'utf8')
+        });
+        
+        // ✅ ENHANCED: Create transaction with memo + smart contract instruction
+        const transaction = new solanaWeb3.Transaction()
+            .add(memoInstruction)      // Shows description in Phantom
+            .add(instruction);         // Smart contract handles SOL transfer
         const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = wallet.publicKey;
@@ -1399,30 +1410,37 @@ validateAndFormatSOLAmount(amount, context = 'transaction') {
 }
 
 /**
- * ✅ NEW: Build memo text for bet transactions with actual token names
+ * ✅ ENHANCED: Build memo text for bet transactions with actual token names
  */
 buildBetMemoText(betAmount, tokenChoice, competitionId) {
     try {
-        // Get competition data from app's global state or database
-        let tokenName = `Token ${tokenChoice}`;
-        let tokenSymbol = tokenChoice;
+        // Get competition data from app's global state
+        let tokenASymbol = 'Token A';
+        let tokenBSymbol = 'Token B';
+        let chosenTokenName = `Token ${tokenChoice}`;
         
-        // Try to get actual token information from CompetitionState (if available)
+        // Try to get actual token information from CompetitionState
         if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
             const competition = window.CompetitionState.selectedCompetition;
+            if (competition.tokenA && competition.tokenA.symbol) {
+                tokenASymbol = competition.tokenA.symbol;
+            }
+            if (competition.tokenB && competition.tokenB.symbol) {
+                tokenBSymbol = competition.tokenB.symbol;
+            }
+            
+            // Set the chosen token name based on choice
             if (tokenChoice === 'A' && competition.tokenA) {
-                tokenName = competition.tokenA.name || competition.tokenA.symbol || 'Token A';
-                tokenSymbol = competition.tokenA.symbol || 'A';
+                chosenTokenName = competition.tokenA.symbol || competition.tokenA.name || 'Token A';
             } else if (tokenChoice === 'B' && competition.tokenB) {
-                tokenName = competition.tokenB.name || competition.tokenB.symbol || 'Token B';
-                tokenSymbol = competition.tokenB.symbol || 'B';
+                chosenTokenName = competition.tokenB.symbol || competition.tokenB.name || 'Token B';
             }
         }
         
-        // Build descriptive memo text
-        const memoText = `TokenWars Bet: ${betAmount} SOL on ${tokenSymbol} (${tokenName})`;
+        // Build VERY descriptive memo text that Phantom will display prominently
+        const memoText = `TokenWars Bet: ${betAmount} SOL → ${chosenTokenName} (${tokenASymbol} vs ${tokenBSymbol})`;
         
-        console.log('📝 Built bet memo text:', memoText);
+        console.log('📝 Enhanced bet memo for Phantom display:', memoText);
         return memoText;
         
     } catch (error) {
@@ -1431,40 +1449,41 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
     }
 }
 
-        buildCompetitionMemoText(rentAmount, competitionId) {
-            try {
-                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
-                
-                // Try to get token pair information from admin state or competition data
-                let tokenPairText = 'Competition';
-                
-                if (typeof window !== 'undefined') {
-                    // Try to get from AdminState (admin panel)
-                    if (window.AdminState?.selectedTokens?.selectedPairId && window.AdminState?.pairState?.allPairs) {
-                        const selectedPair = window.AdminState.pairState.allPairs.find(
-                            p => p.id === window.AdminState.selectedTokens.selectedPairId
-                        );
-                        if (selectedPair) {
-                            tokenPairText = `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`;
-                        }
-                    }
-                    // Try to get from global selectedPair (competition creation)
-                    else if (window.selectedPair) {
-                        tokenPairText = `${window.selectedPair.token_a_symbol} vs ${window.selectedPair.token_b_symbol}`;
-                    }
+buildCompetitionMemoText(rentAmount, competitionId) {
+    try {
+        const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+        
+        // Try to get token pair information from admin state or competition data
+        let tokenPairText = 'Competition';
+        
+        if (typeof window !== 'undefined') {
+            // Try to get from AdminState (admin panel)
+            if (window.AdminState?.selectedTokens?.selectedPairId && window.AdminState?.pairState?.allPairs) {
+                const selectedPair = window.AdminState.pairState.allPairs.find(
+                    p => p.id === window.AdminState.selectedTokens.selectedPairId
+                );
+                if (selectedPair) {
+                    tokenPairText = `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`;
                 }
-                
-                const memoText = `TokenWars: Create ${tokenPairText} (Rent: ${rentSol} SOL)`;
-                
-                console.log('📝 Built competition memo text:', memoText);
-                return memoText;
-                
-            } catch (error) {
-                console.warn('⚠️ Error building competition memo text, using fallback:', error);
-                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
-                return `TokenWars: Create Competition (Rent: ${rentSol} SOL)`;
+            }
+            // Try to get from global selectedPair (competition creation)
+            else if (window.selectedPair) {
+                tokenPairText = `${window.selectedPair.token_a_symbol} vs ${window.selectedPair.token_b_symbol}`;
             }
         }
+        
+        // Enhanced memo text for Phantom display
+        const memoText = `TokenWars: Create ${tokenPairText} Competition (Rent: ${rentSol} SOL)`;
+        
+        console.log('📝 Enhanced competition memo for Phantom display:', memoText);
+        return memoText;
+        
+    } catch (error) {
+        console.warn('⚠️ Error building competition memo text, using fallback:', error);
+        const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+        return `TokenWars: Create Competition (Rent: ${rentSol} SOL)`;
+    }
+}
 
 /**
      * Get competition details for messaging (NEW METHOD)
