@@ -206,6 +206,27 @@ async testTransaction() {
     // CORRECTED: createCompetitionEscrow with proper variable ordering and Anchor init handling
     async createCompetitionEscrow(competitionId, tokenAAddress, tokenBAddress, adminWallet, betAmount, platformFeeBps, votingEndTimeUnix, competitionEndTimeUnix) {
         try {
+                        // ✅ NEW: Store token pair data for memo text generation
+            if (typeof window !== 'undefined') {
+                // Try admin state first (admin panel)
+                if (window.AdminState?.selectedTokens?.selectedPairId && window.AdminState?.pairState?.allPairs) {
+                    const selectedPair = window.AdminState.pairState.allPairs.find(
+                        p => p.id === window.AdminState.selectedTokens.selectedPairId
+                    );
+                    this.currentTokenPair = selectedPair;
+                }
+                // Fallback to global selectedPair
+                else if (window.selectedPair) {
+                    this.currentTokenPair = window.selectedPair;
+                }
+                
+                if (this.currentTokenPair) {
+                    console.log('📊 Token pair data available for memo:', {
+                        tokenA: this.currentTokenPair.token_a_symbol,
+                        tokenB: this.currentTokenPair.token_b_symbol
+                    });
+                }
+            }
             console.log('📊 Creating competition escrow with CORRECTED Anchor integration...');
             console.log('🔍 Input validation:', {
                 competitionId: competitionId?.length || 'undefined',
@@ -281,16 +302,38 @@ async testTransaction() {
             console.log('🔑 Escrow PDA:', instructionResult.escrowPDA.toString());
             console.log('🔑 Bump seed:', instructionResult.bump);
             
-            // Create and configure transaction with single instruction
-            const transaction = new solanaWeb3.Transaction();
-            transaction.add(instructionResult.instruction);
             
-            console.log('📦 Transaction created with', transaction.instructions.length, 'instruction');
+            // ✅ CORRECT: Calculate account rent only (no additional funding)
+            const rentExemptAmount = await this.connection.getMinimumBalanceForRentExemption(1240);
+            
+            // ✅ CORRECT: Add memo instruction with actual token names
+            const memoText = this.buildCompetitionMemoText(rentExemptAmount, competitionId);
+            const memoInstruction = new solanaWeb3.TransactionInstruction({
+                keys: [],
+                programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+                data: Buffer.from(memoText, 'utf8')
+            });
+            
+            // ✅ CORRECT: Build transaction with memo + smart contract instruction only
+            const transaction = new solanaWeb3.Transaction()
+                .add(memoInstruction)                    // Shows description in Phantom
+                .add(instructionResult.instruction);     // Your existing smart contract logic (includes rent payment)
             
             console.log('⏳ Getting recent blockhash...');
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
+            
+            console.log('🔍 ENHANCED ESCROW CREATION DEBUG:');
+            console.log('Transaction instructions:', transaction.instructions.length);
+            console.log('1. Memo instruction:', memoText);
+            console.log('2. Smart contract instruction for escrow creation (includes rent payment)');
+            console.log('Account rent required:', (rentExemptAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3), 'SOL');
+            console.log('Total SOL to deduct: Account rent (~0.002 SOL) + transaction fees (~0.001 SOL)');
+            console.log('Competition being created:', {
+                tokenPair: memoText.includes('Create ') ? memoText.split('Create ')[1].split(' (')[0] : 'Competition',
+                rentCost: `${(rentExemptAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3)} SOL`
+            });
             
             console.log('🔗 Transaction configured:', {
                 recentBlockhash: blockhash,
@@ -660,26 +703,20 @@ async updatePriceSample(competitionId, tokenAPrice, tokenBPrice) {
         console.log('🔑 Bump seed:', bump);
         
         // STEP 2: Build account keys in exact order as Rust CreateEscrow struct
+        // ✅ ENHANCED: Updated account keys to handle SOL transfers
         const keys = [
-            // 1. escrow: PDA that will be created by Anchor init
-            { 
-                pubkey: escrowPDA, 
-                isSigner: false, 
-                isWritable: true  // Will be initialized by Anchor
-            },
-            // 2. authority: Signer and payer (as defined by payer = authority in Rust)
-            { 
-                pubkey: accounts.authority, 
-                isSigner: true, 
-                isWritable: true  // Pays for account creation
-            },
-            // 3. system_program: Required by Anchor init
-            { 
-                pubkey: accounts.systemProgram, 
-                isSigner: false, 
-                isWritable: false 
-            }
+            { pubkey: escrowPDA, isSigner: false, isWritable: true },           // Escrow account (receives SOL)
+            { pubkey: accounts.authority, isSigner: true, isWritable: true },   // Admin wallet (pays SOL)
+            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
         ];
+        
+        console.log('🔑 Enhanced account keys for SOL transfer support:', keys.map(k => ({
+            pubkey: k.pubkey.toString(),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+            role: k.pubkey.equals(escrowPDA) ? 'Escrow (receives SOL)' : 
+                  k.pubkey.equals(accounts.authority) ? 'Admin (pays SOL)' : 'System Program'
+        })));
         
         console.log('📋 Account keys:', keys.map(k => ({
             pubkey: k.pubkey.toString(),
@@ -847,6 +884,17 @@ async buildUpdatePriceSampleInstruction(accounts) {
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
         try {
+                        // ✅ NEW: Store competition data for memo text generation
+                if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
+                    this.currentCompetition = window.CompetitionState.selectedCompetition;
+                    console.log('📊 Competition data available for memo:', {
+                        tokenA: this.currentCompetition.tokenA?.symbol,
+                        tokenB: this.currentCompetition.tokenB?.symbol
+                    });
+                } else {
+                    console.warn('⚠️ Competition data not available for memo text');
+                }
+            
             console.log('🎯 Placing bet on-chain:', { competitionId, tokenChoice, betAmount });
             
             const wallet = await this.getConnectedWallet();
@@ -877,10 +925,46 @@ async buildUpdatePriceSampleInstruction(accounts) {
             });
             
             // Create and send transaction
-            const transaction = new solanaWeb3.Transaction().add(instruction);
+            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
+            // ✅ NEW: Validate bet amount before processing
+            const validatedAmount = this.validateAndFormatSOLAmount(betAmount, 'bet');
+            console.log('💰 Validated bet amount:', validatedAmount);
+            
+            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
+            const transferInstruction = solanaWeb3.SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: escrowAccount,
+                lamports: betAmount * solanaWeb3.LAMPORTS_PER_SOL
+            });
+            
+            // ✅ NEW: Add memo instruction with actual token names
+            const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId);
+            const memoInstruction = new solanaWeb3.TransactionInstruction({
+                keys: [],
+                programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+                data: Buffer.from(memoText, 'utf8')
+            });
+            
+            // ✅ MODIFIED: Build transaction with multiple instructions
+            const transaction = new solanaWeb3.Transaction()
+                .add(transferInstruction)  // Shows SOL amount in Phantom  
+                .add(memoInstruction)      // Shows description in Phantom
+                .add(instruction);         // Your existing smart contract logic
+            
             const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = wallet.publicKey;
+            
+            console.log('🔍 ENHANCED TRANSACTION DEBUG:');
+            console.log('Transaction instructions:', transaction.instructions.length);
+            console.log('1. Memo instruction:', memoText);
+            console.log('2. Transfer instruction:', betAmount, 'SOL to', escrowAccount.toString());
+            console.log('3. Smart contract instruction:', instruction.programId.toString());
+            console.log('Total SOL to deduct:', betAmount, 'SOL + ~0.001 SOL fees');
+            console.log('Token being bet on:', {
+                choice: tokenChoice,
+                memoText: memoText.includes('(') ? memoText.split('(')[1].replace(')', '') : `Token ${tokenChoice}`
+            });
             
             console.log('📤 Sending bet transaction...');
             console.log('🔍 TRANSACTION DEBUG:');
@@ -926,11 +1010,20 @@ async buildUpdatePriceSampleInstruction(accounts) {
 
     // Complete buildPlaceBetInstruction method
     async buildPlaceBetInstruction(accounts) {
+        // ✅ ENHANCED: Updated account keys to handle SOL transfers in bets
         const keys = [
-            { pubkey: accounts.escrow, isSigner: false, isWritable: true },
-            { pubkey: accounts.user, isSigner: true, isWritable: true },
+            { pubkey: accounts.escrow, isSigner: false, isWritable: true },     // Escrow (receives bet SOL)
+            { pubkey: accounts.user, isSigner: true, isWritable: true },       // User wallet (pays bet SOL)  
             { pubkey: accounts.systemProgram, isSigner: false, isWritable: false }
         ];
+        
+        console.log('🔑 Enhanced bet account keys for SOL transfer support:', keys.map(k => ({
+            pubkey: k.pubkey.toString(),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+            role: k.pubkey.equals(accounts.escrow) ? 'Escrow (receives bet SOL)' : 
+                  k.pubkey.equals(accounts.user) ? 'User (pays bet SOL)' : 'System Program'
+        })));
         
         // Serialize instruction data
         const tokenChoiceValue = accounts.tokenChoice === 'A' ? 0 : 1;
@@ -1222,6 +1315,121 @@ async withdrawRefund(competitionId, userWallet) {
         }
     }
 
+/**
+ * Validate and format SOL amounts for Phantom display
+ * ✅ NEW: Helper function for consistent amount handling
+ */
+validateAndFormatSOLAmount(amount, context = 'transaction') {
+    try {
+        // Validate amount is a number
+        if (typeof amount !== 'number' || isNaN(amount)) {
+            throw new Error(`Invalid ${context} amount: must be a number`);
+        }
+        
+        // Validate minimum amount (0.001 SOL minimum for most operations)
+        if (amount < 0.001) {
+            throw new Error(`${context} amount too small: minimum 0.001 SOL`);
+        }
+        
+        // Validate maximum amount (reasonable limit)
+        if (amount > 1000) {
+            throw new Error(`${context} amount too large: maximum 1000 SOL`);
+        }
+        
+        // Convert to lamports
+        const lamports = Math.floor(amount * solanaWeb3.LAMPORTS_PER_SOL);
+        
+        // Validate lamports conversion
+        if (lamports <= 0) {
+            throw new Error(`${context} amount conversion failed`);
+        }
+        
+        console.log(`✅ ${context} amount validated:`, {
+            sol: amount,
+            lamports: lamports,
+            formatted: `${amount.toFixed(3)} SOL`
+        });
+        
+        return {
+            sol: amount,
+            lamports: lamports,
+            formatted: `${amount.toFixed(3)} SOL`
+        };
+        
+    } catch (error) {
+        console.error(`❌ Amount validation failed for ${context}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * ✅ NEW: Build memo text for bet transactions with actual token names
+ */
+buildBetMemoText(betAmount, tokenChoice, competitionId) {
+    try {
+        // Get competition data from app's global state or database
+        let tokenName = `Token ${tokenChoice}`;
+        let tokenSymbol = tokenChoice;
+        
+        // Try to get actual token information from CompetitionState (if available)
+        if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
+            const competition = window.CompetitionState.selectedCompetition;
+            if (tokenChoice === 'A' && competition.tokenA) {
+                tokenName = competition.tokenA.name || competition.tokenA.symbol || 'Token A';
+                tokenSymbol = competition.tokenA.symbol || 'A';
+            } else if (tokenChoice === 'B' && competition.tokenB) {
+                tokenName = competition.tokenB.name || competition.tokenB.symbol || 'Token B';
+                tokenSymbol = competition.tokenB.symbol || 'B';
+            }
+        }
+        
+        // Build descriptive memo text
+        const memoText = `TokenWars Bet: ${betAmount} SOL on ${tokenSymbol} (${tokenName})`;
+        
+        console.log('📝 Built bet memo text:', memoText);
+        return memoText;
+        
+    } catch (error) {
+        console.warn('⚠️ Error building bet memo text, using fallback:', error);
+        return `TokenWars Bet: ${betAmount} SOL on Token ${tokenChoice}`;
+    }
+}
+
+        buildCompetitionMemoText(rentAmount, competitionId) {
+            try {
+                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+                
+                // Try to get token pair information from admin state or competition data
+                let tokenPairText = 'Competition';
+                
+                if (typeof window !== 'undefined') {
+                    // Try to get from AdminState (admin panel)
+                    if (window.AdminState?.selectedTokens?.selectedPairId && window.AdminState?.pairState?.allPairs) {
+                        const selectedPair = window.AdminState.pairState.allPairs.find(
+                            p => p.id === window.AdminState.selectedTokens.selectedPairId
+                        );
+                        if (selectedPair) {
+                            tokenPairText = `${selectedPair.token_a_symbol} vs ${selectedPair.token_b_symbol}`;
+                        }
+                    }
+                    // Try to get from global selectedPair (competition creation)
+                    else if (window.selectedPair) {
+                        tokenPairText = `${window.selectedPair.token_a_symbol} vs ${window.selectedPair.token_b_symbol}`;
+                    }
+                }
+                
+                const memoText = `TokenWars: Create ${tokenPairText} (Rent: ${rentSol} SOL)`;
+                
+                console.log('📝 Built competition memo text:', memoText);
+                return memoText;
+                
+            } catch (error) {
+                console.warn('⚠️ Error building competition memo text, using fallback:', error);
+                const rentSol = (rentAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(3);
+                return `TokenWars: Create Competition (Rent: ${rentSol} SOL)`;
+            }
+        }
+    
     // Enhanced sendTransaction method with better error handling
     async sendTransaction(transaction, wallet) {
         try {

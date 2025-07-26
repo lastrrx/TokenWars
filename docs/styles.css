@@ -1140,6 +1140,35 @@ body {
     box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
 }
 
+/* Welcome Message Styles for Connected Users */
+.trader-welcome-enhanced {
+    margin: 2rem 0;
+}
+
+.welcome-message {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1rem;
+}
+
+.welcome-trader {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    text-align: center;
+}
+
+.trader-name-highlight {
+    background: linear-gradient(135deg, #c084fc 0%, #a855f7 25%, #7c3aed 50%, #6366f1 75%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
 .btn-secondary {
     background: transparent;
     border: 2px solid var(--accent-purple);
@@ -4004,4 +4033,751 @@ body {
    transform: translateY(-2px);
    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
    background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+}
+
+/* ===================================== */
+/* LEADERBOARD TABLE STYLES */
+/* ===================================== */
+
+.leaderboard-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 2rem;
+}
+
+.leaderboard-header {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 80px 80px 80px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 80px 80px 80px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s ease;
+    align-items: center;
+}
+
+.leaderboard-row:hover {
+    background: rgba(139, 92, 246, 0.05);
+    transform: translateX(2px);
+}
+
+.leaderboard-row:last-child {
+    border-bottom: none;
+}
+
+.leaderboard-row.top-player {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), transparent);
+    border-left: 3px solid var(--accent-purple);
+}
+
+/* Rank Column */
+.rank-col {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.rank-number {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.rank-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+}
+
+/* User Column */
+.user-col {
+    display: flex;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.username {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.wallet-address {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Winnings Column */
+.winnings-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.winnings-amount {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.profit-amount {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-green);
+    opacity: 0.8;
+}
+
+/* Win Rate Column */
+.rate-col {
+    text-align: center;
+}
+
+.win-rate {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* Streak Column */
+.streak-col {
+    text-align: center;
+}
+
+.streak-number {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.streak-number.positive {
+    color: var(--accent-green);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.streak-number.neutral {
+    color: var(--text-secondary);
+}
+
+/* Games Column */
+.games-col {
+    text-align: center;
+}
+
+.games-count {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* Leaderboard States */
+.loading-state, .empty-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.empty-icon, .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.empty-state h3, .error-state h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.empty-state p, .error-state p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 300px;
+}
+
+.leaderboard-note {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background: var(--surface-elevated);
+    border-top: 1px solid var(--border);
+}
+
+/* ===================================== */
+/* RESPONSIVE LEADERBOARD */
+/* ===================================== */
+
+@media (max-width: 768px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 50px 1fr 100px 70px;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    /* Hide streak and games columns on mobile */
+    .streak-col,
+    .games-col {
+        display: none;
+    }
+    
+    .leaderboard-header {
+        font-size: 0.75rem;
+    }
+    
+    .username {
+        font-size: 0.875rem;
+    }
+    
+    .wallet-address {
+        font-size: 0.7rem;
+    }
+    
+    .winnings-amount {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 40px 1fr 80px;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    /* Hide win rate on very small screens */
+    .rate-col {
+        display: none;
+    }
+    
+    .user-info {
+        gap: 0.125rem;
+    }
+    
+    .profit-amount {
+        display: none;
+    }
+}
+
+/* ===================================== */
+/* CLICKABLE USERNAMES IN LEADERBOARD */
+/* ===================================== */
+
+.clickable-username {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    text-decoration: none;
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+.clickable-username:hover {
+    color: var(--accent-purple) !important;
+    background: rgba(139, 92, 246, 0.1);
+    transform: translateX(2px);
+}
+
+.clickable-username::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+    transition: width 0.3s ease;
+}
+
+.clickable-username:hover::after {
+    width: 100%;
+}
+
+/* ===================================== */
+/* USER PROFILE CARD MODAL */
+/* ===================================== */
+
+.user-card-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.user-card-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.user-card-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.user-card-container {
+    position: relative;
+    z-index: 1;
+    transform: translateY(30px) scale(0.9);
+    transition: all 0.3s ease;
+}
+
+.user-card-modal.active .user-card-container {
+    transform: translateY(0) scale(1);
+}
+
+.user-card {
+    background: linear-gradient(145deg, var(--surface) 0%, var(--surface-elevated) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* Card Header */
+.user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.user-card-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.user-card-close:hover {
+    color: var(--text-primary);
+    background: var(--surface-elevated);
+    transform: scale(1.1);
+}
+
+.user-card-rank {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+/* User Profile Section */
+.user-card-profile {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.user-card-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin: 0 auto 1rem;
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+    animation: avatarGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes avatarGlow {
+    0% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); }
+    100% { box-shadow: 0 0 60px rgba(139, 92, 246, 0.6), 0 0 80px rgba(59, 130, 246, 0.3); }
+}
+
+.user-card-name {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.user-card-title {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0 0 0.25rem 0;
+    font-weight: 500;
+}
+
+.user-card-member {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Stats Grid */
+.user-card-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.user-stat {
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.user-stat:hover {
+    transform: translateY(-2px);
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(139, 92, 246, 0.08);
+}
+
+.user-stat .stat-icon {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.3));
+}
+
+.user-stat .stat-content {
+    flex: 1;
+}
+
+.user-stat .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    line-height: 1;
+}
+
+.user-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
+}
+
+/* Card Sections */
+.user-card-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.user-card-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-title::before {
+    content: '';
+    width: 3px;
+    height: 1.1rem;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    border-radius: 2px;
+}
+
+/* Recent Performance */
+.recent-performance {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.performance-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    cursor: help;
+    transition: all 0.3s ease;
+}
+
+.performance-dot.w {
+    background: linear-gradient(135deg, var(--accent-green), #16a34a);
+}
+
+.performance-dot.l {
+    background: linear-gradient(135deg, var(--accent-red), #dc2626);
+}
+
+.performance-dot.p {
+    background: linear-gradient(135deg, var(--accent-yellow), #d97706);
+}
+
+.performance-dot:hover {
+    transform: scale(1.2);
+}
+
+/* Achievements */
+.user-achievements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.achievement-badge {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: help;
+    transition: all 0.3s ease;
+}
+
+.achievement-badge:hover {
+    transform: translateY(-2px);
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(139, 92, 246, 0.15);
+}
+
+.achievement-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.3));
+}
+
+.achievement-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Best Streak Display */
+.best-streak-display {
+    text-align: center;
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.best-streak-number {
+    display: block;
+    font-size: 3rem;
+    font-weight: 900;
+    font-family: var(--font-mono);
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.best-streak-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Loading and Error States */
+.user-card.loading,
+.user-card.error {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.user-card.loading .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.user-card.error .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.user-card.error h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.user-card.error p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.user-card.error .error-details {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    background: var(--surface-elevated);
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+}
+
+/* ===================================== */
+/* RESPONSIVE USER CARDS */
+/* ===================================== */
+
+@media (max-width: 768px) {
+    .user-card {
+        padding: 1.5rem;
+        margin: 0.5rem;
+    }
+    
+    .user-card-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 2.5rem;
+    }
+    
+    .user-card-name {
+        font-size: 1.5rem;
+    }
+    
+    .user-card-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .user-stat {
+        padding: 0.75rem;
+    }
+    
+    .best-streak-number {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-card-modal {
+        padding: 0.5rem;
+    }
+    
+    .user-card {
+        padding: 1rem;
+    }
+    
+    .recent-performance {
+        gap: 0.25rem;
+    }
+    
+    .performance-dot {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+    
+    .achievement-badge {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    
+    .achievement-icon {
+        font-size: 1rem;
+    }
 }

@@ -1,0 +1,314 @@
+/* charts.css - TokenWars Chart Styling */
+
+/* ===================================== */
+/* CHART CONTAINERS */
+/* ===================================== */
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: var(--surface, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1rem;
+    overflow: hidden;
+}
+
+.chart-container.mini {
+    height: 150px;
+    padding: 0.5rem;
+}
+
+.chart-container.micro {
+    height: 80px;
+    padding: 0.25rem;
+}
+
+/* Chart Loading States */
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chart-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border, #334155);
+    border-top: 3px solid var(--accent-purple, #8b5cf6);
+    border-radius: 50%;
+    animation: chartSpin 1s linear infinite;
+}
+
+@keyframes chartSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.chart-loading-text {
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.875rem;
+}
+
+/* Chart Placeholders */
+.chart-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--text-secondary, #94a3b8);
+    text-align: center;
+}
+
+.placeholder-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+.placeholder-text {
+    font-size: 0.875rem;
+    max-width: 200px;
+}
+
+/* ===================================== */
+/* PORTFOLIO CHART GRID */
+/* ===================================== */
+
+.portfolio-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.portfolio-chart-card {
+    background: var(--surface, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.portfolio-chart-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-purple, #8b5cf6);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.1);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.chart-card-icon {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.3));
+}
+
+.chart-card-title {
+    color: var(--text-primary, #f8fafc);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.chart-card-subtitle {
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0 0;
+}
+
+/* ===================================== */
+/* USER CARD MINI CHARTS */
+/* ===================================== */
+
+.user-card-chart {
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.75rem;
+    margin: 1rem 0;
+}
+
+.mini-chart-container {
+    position: relative;
+    width: 100%;
+    height: 80px;
+}
+
+.mini-chart-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #94a3b8);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===================================== */
+/* CHART RESPONSIVE DESIGN */
+/* ===================================== */
+
+@media (max-width: 768px) {
+    .portfolio-charts-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+        padding: 0.75rem;
+    }
+    
+    .portfolio-chart-card {
+        padding: 1rem;
+    }
+    
+    .chart-card-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-container {
+        height: 200px;
+        padding: 0.5rem;
+    }
+    
+    .mini-chart-container {
+        height: 60px;
+    }
+    
+    .chart-card-icon {
+        font-size: 1.25rem;
+    }
+    
+    .chart-card-title {
+        font-size: 1rem;
+    }
+}
+
+/* ===================================== */
+/* CHART ANIMATIONS */
+/* ===================================== */
+
+.chart-container canvas {
+    animation: chartFadeIn 0.6s ease-out;
+}
+
+@keyframes chartFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portfolio-chart-card {
+    animation: chartCardSlideIn 0.4s ease-out;
+}
+
+@keyframes chartCardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ===================================== */
+/* CHART LEGEND STYLING */
+/* ===================================== */
+
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #94a3b8);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+/* ===================================== */
+/* SPECIAL CHART TYPES */
+/* ===================================== */
+
+/* Streak Visualization */
+.streak-chart {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    align-items: end;
+    height: 40px;
+    padding: 0.5rem;
+}
+
+.streak-bar {
+    width: 8px;
+    height: 100%;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.streak-bar.win {
+    background: linear-gradient(to top, var(--accent-green, #22c55e), #16a34a);
+}
+
+.streak-bar.loss {
+    background: linear-gradient(to top, var(--accent-red, #ef4444), #dc2626);
+    height: 60%;
+}
+
+.streak-bar:hover {
+    transform: scaleY(1.1);
+}
+
+/* Performance Indicator */
+.performance-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.performance-indicator.positive {
+    color: var(--accent-green, #22c55e);
+}
+
+.performance-indicator.negative {
+    color: var(--accent-red, #ef4444);
+}
+
+.performance-indicator.neutral {
+    color: var(--text-secondary, #94a3b8);
+}

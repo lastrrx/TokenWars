@@ -199,17 +199,17 @@ window.refreshLeaderboard = async function() {
         // Build query based on filters
         let query = window.supabase
             .from('leaderboards')
-            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking, updated_at');
+            .select('username, total_winnings, win_percentage, current_streak, competitions_participated, ranking, last_updated');
         
         // Apply time filtering
         if (periodFilter === 'weekly') {
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            query = query.gte('updated_at', oneWeekAgo.toISOString());
+            query = query.gte('last_updated', oneWeekAgo.toISOString());
         } else if (periodFilter === 'monthly') {
             const oneMonthAgo = new Date();
             oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            query = query.gte('updated_at', oneMonthAgo.toISOString());
+            query = query.gte('last_updated', oneMonthAgo.toISOString());
         }
         
         // Apply sorting
@@ -240,7 +240,7 @@ window.refreshLeaderboard = async function() {
                 return `
                     <div class="leaderboard-row ${isTopThree ? 'top-performer' : ''}" data-rank="${rank}">
                         <div class="rank-badge ${isTopThree ? 'medal' : 'number'}">${rankBadge}</div>
-                        <div class="username">${user.username || 'Anonymous'}</div>
+                        <div class="username clickable-username" onclick="showUserProfileCard('${user.user_wallet}', '${user.username || 'Anonymous'}')" title="Click to view profile">${user.username || 'Anonymous'}</div>
                         <div class="winnings">${(user.total_winnings || 0).toFixed(2)} SOL</div>
                         <div class="win-rate">${(user.win_percentage || 0).toFixed(1)}%</div>
                         <div class="streak">${user.current_streak || 0}</div>
@@ -292,6 +292,437 @@ window.refreshLeaderboard = async function() {
         `;
     }
 };
+
+// ==============================================
+// USER PROFILE CARDS - ADD TO app.js
+// ==============================================
+
+/**
+ * Show User Profile Card Modal
+ */
+async function showUserProfileCard(userWallet, username) {
+    console.log('👤 Opening user profile card for:', username);
+    
+    try {
+        // Show loading modal first
+        showUserCardLoadingModal(username);
+        
+        // Fetch user data from database
+        const userData = await fetchUserProfileData(userWallet);
+        
+        // Display the full user card
+        displayUserProfileCard(userData);
+        
+    } catch (error) {
+        console.error('❌ Error loading user profile:', error);
+        showUserCardErrorModal(username, error.message);
+    }
+}
+
+/**
+ * Fetch User Profile Data from Database
+ */
+async function fetchUserProfileData(userWallet) {
+    if (!window.supabase) {
+        throw new Error('Database not available');
+    }
+    
+    console.log('📊 Fetching profile data for wallet:', userWallet);
+    
+    // Fetch user data in parallel
+    const [leaderboardResult, betsResult, userResult] = await Promise.allSettled([
+        // Get leaderboard data
+        window.supabase
+            .from('leaderboards')
+            .select('*')
+            .eq('user_wallet', userWallet)
+            .single(),
+        
+        // Get recent bets (for streak calculation)
+        window.supabase
+            .from('bets')
+            .select('status, timestamp, chosen_token')
+            .eq('user_wallet', userWallet)
+            .order('timestamp', { ascending: false })
+            .limit(20),
+        
+        // Get user profile
+        window.supabase
+            .from('users')
+            .select('username, created_at')
+            .eq('wallet_address', userWallet)
+            .single()
+    ]);
+    
+    // Process results
+    const userData = {
+        wallet: userWallet,
+        username: 'Anonymous',
+        ranking: '--',
+        totalWinnings: 0,
+        winPercentage: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+        competitionsParticipated: 0,
+        memberSince: null,
+        recentResults: [],
+        achievements: []
+    };
+    
+    // Process leaderboard data
+    if (leaderboardResult.status === 'fulfilled' && leaderboardResult.value.data) {
+        const leaderboard = leaderboardResult.value.data;
+        userData.ranking = leaderboard.ranking || '--';
+        userData.totalWinnings = leaderboard.total_winnings || 0;
+        userData.winPercentage = leaderboard.win_percentage || 0;
+        userData.currentStreak = leaderboard.current_streak || 0;
+        userData.bestStreak = leaderboard.best_streak || 0;
+        userData.competitionsParticipated = leaderboard.competitions_participated || 0;
+    }
+    
+    // Process user data
+    if (userResult.status === 'fulfilled' && userResult.value.data) {
+        const user = userResult.value.data;
+        userData.username = user.username || 'Anonymous';
+        userData.memberSince = user.created_at;
+    }
+    
+    // Process recent bets for streak visualization
+    if (betsResult.status === 'fulfilled' && betsResult.value.data) {
+        const bets = betsResult.value.data;
+        userData.recentResults = bets.slice(0, 10).map(bet => 
+            bet.status === 'WON' ? 'W' : bet.status === 'LOST' ? 'L' : 'P'
+        );
+    }
+    
+    // Calculate achievements
+    userData.achievements = calculateUserAchievements(userData);
+    
+    console.log('✅ User profile data loaded:', userData);
+    return userData;
+}
+
+/**
+ * Calculate User Achievements
+ */
+function calculateUserAchievements(userData) {
+    const achievements = [];
+    
+    // First Win
+    if (userData.totalWinnings > 0) {
+        achievements.push({
+            icon: '🏆',
+            name: 'First Victory',
+            description: 'Won your first competition'
+        });
+    }
+    
+    // High Win Rate
+    if (userData.winPercentage >= 70 && userData.competitionsParticipated >= 5) {
+        achievements.push({
+            icon: '🎯',
+            name: 'Sharp Shooter',
+            description: '70%+ win rate'
+        });
+    }
+    
+    // Long Streak
+    if (userData.bestStreak >= 5) {
+        achievements.push({
+            icon: '🔥',
+            name: 'On Fire',
+            description: '5+ win streak'
+        });
+    }
+    
+    // High Earner
+    if (userData.totalWinnings >= 10) {
+        achievements.push({
+            icon: '💰',
+            name: 'Big Winner',
+            description: '10+ SOL earned'
+        });
+    }
+    
+    // Veteran
+    if (userData.competitionsParticipated >= 50) {
+        achievements.push({
+            icon: '🎖️',
+            name: 'Veteran Trader',
+            description: '50+ competitions'
+        });
+    }
+    
+    return achievements;
+}
+
+/**
+ * Display User Profile Card Modal
+ */
+function displayUserProfileCard(userData) {
+    // Remove any existing modal
+    removeUserCardModal();
+    
+    const modal = document.createElement('div');
+    modal.className = 'user-card-modal';
+    modal.innerHTML = `
+        <div class="user-card-backdrop" onclick="closeUserCardModal()"></div>
+        <div class="user-card-container">
+            <div class="user-card">
+                <!-- Card Header -->
+                <div class="user-card-header">
+                    <button class="user-card-close" onclick="closeUserCardModal()">×</button>
+                    <div class="user-card-rank">
+                        ${userData.ranking !== '--' ? `#${userData.ranking}` : 'Unranked'}
+                        ${getRankMedal(userData.ranking)}
+                    </div>
+                </div>
+                
+                <!-- User Info -->
+                <div class="user-card-profile">
+                    <div class="user-card-avatar">🎯</div>
+                    <h2 class="user-card-name">${userData.username}</h2>
+                    <p class="user-card-title">TokenWars Trader</p>
+                    ${userData.memberSince ? `<p class="user-card-member">Member since ${new Date(userData.memberSince).toLocaleDateString()}</p>` : ''}
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="user-card-stats">
+                    <div class="user-stat">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${formatSOL(userData.totalWinnings)} SOL</div>
+                            <div class="stat-label">Total Winnings</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-stat">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${userData.winPercentage.toFixed(1)}%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-stat">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${userData.currentStreak}</div>
+                            <div class="stat-label">Current Streak</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-stat">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-content">
+                            <div class="stat-value">${userData.competitionsParticipated}</div>
+                            <div class="stat-label">Competitions</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Performance -->
+                ${userData.recentResults.length > 0 ? `
+                    <div class="user-card-section">
+                        <h3 class="section-title">Recent Performance</h3>
+                        <div class="recent-performance">
+                            ${userData.recentResults.map(result => `
+                                <div class="performance-dot ${result.toLowerCase()}" title="${getResultTitle(result)}">
+                                    ${result}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Achievements -->
+                ${userData.achievements.length > 0 ? `
+                    <div class="user-card-section">
+                        <h3 class="section-title">Achievements</h3>
+                        <div class="user-achievements">
+                            ${userData.achievements.map(achievement => `
+                                <div class="achievement-badge" title="${achievement.description}">
+                                    <span class="achievement-icon">${achievement.icon}</span>
+                                    <span class="achievement-name">${achievement.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Best Streak -->
+                <div class="user-card-section">
+                    <h3 class="section-title">Best Streak Record</h3>
+                    <div class="best-streak-display">
+                        <span class="best-streak-number">${userData.bestStreak}</span>
+                        <span class="best-streak-label">consecutive wins</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Animate in
+    setTimeout(() => {
+        modal.classList.add('active');
+    }, 10);
+}
+
+/**
+ * Show Loading Modal
+ */
+function showUserCardLoadingModal(username) {
+    removeUserCardModal();
+    
+    const modal = document.createElement('div');
+    modal.className = 'user-card-modal';
+    modal.innerHTML = `
+        <div class="user-card-backdrop" onclick="closeUserCardModal()"></div>
+        <div class="user-card-container">
+            <div class="user-card loading">
+                <div class="loading-spinner"></div>
+                <p>Loading ${username}'s profile...</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('active'), 10);
+}
+
+/**
+ * Show Error Modal
+ */
+function showUserCardErrorModal(username, errorMessage) {
+    removeUserCardModal();
+    
+    const modal = document.createElement('div');
+    modal.className = 'user-card-modal';
+    modal.innerHTML = `
+        <div class="user-card-backdrop" onclick="closeUserCardModal()"></div>
+        <div class="user-card-container">
+            <div class="user-card error">
+                <div class="error-icon">⚠️</div>
+                <h3>Error Loading Profile</h3>
+                <p>Could not load ${username}'s profile</p>
+                <p class="error-details">${errorMessage}</p>
+                <button class="btn-primary" onclick="closeUserCardModal()">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('active'), 10);
+}
+
+/**
+ * Close User Card Modal
+ */
+function closeUserCardModal() {
+    const modal = document.querySelector('.user-card-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            removeUserCardModal();
+        }, 300);
+    }
+}
+
+/**
+ * Remove User Card Modal
+ */
+function removeUserCardModal() {
+    const existingModal = document.querySelector('.user-card-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+}
+
+/**
+ * Helper Functions
+ */
+function getRankMedal(ranking) {
+    if (ranking === 1) return '🥇';
+    if (ranking === 2) return '🥈';
+    if (ranking === 3) return '🥉';
+    if (ranking <= 10) return '🏆';
+    return '';
+}
+
+function getResultTitle(result) {
+    switch(result) {
+        case 'W': return 'Win';
+        case 'L': return 'Loss';
+        case 'P': return 'Pending';
+        default: return 'Unknown';
+    }
+}
+
+/**
+ * Update Leaderboard to Make Usernames Clickable
+ * INSTRUCTIONS: Replace the existing displayLeaderboardData function with this enhanced version
+ */
+function displayLeaderboardDataWithClickableUsers(data) {
+    const leaderboardContent = document.getElementById('leaderboard-content');
+    if (!leaderboardContent) return;
+    
+    const html = `
+        <div class="leaderboard-table">
+            <div class="leaderboard-header">
+                <div class="rank-col">Rank</div>
+                <div class="user-col">Player</div>
+                <div class="winnings-col">Total Winnings</div>
+                <div class="rate-col">Win Rate</div>
+                <div class="streak-col">Streak</div>
+                <div class="games-col">Games</div>
+            </div>
+            <div class="leaderboard-body">
+                ${data.map((user, index) => `
+                    <div class="leaderboard-row ${index < 3 ? 'top-player' : ''}" data-rank="${index + 1}">
+                        <div class="rank-col">
+                            <span class="rank-number">${index + 1}</span>
+                            ${index === 0 ? '<span class="rank-icon">🥇</span>' : ''}
+                            ${index === 1 ? '<span class="rank-icon">🥈</span>' : ''}
+                            ${index === 2 ? '<span class="rank-icon">🥉</span>' : ''}
+                        </div>
+                        <div class="user-col">
+                            <div class="user-info">
+                                <span class="username clickable-username" 
+                                      onclick="showUserProfileCard('${user.user_wallet}', '${user.username || 'Anonymous'}')"
+                                      title="Click to view profile">
+                                    ${user.username || 'Anonymous'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="winnings-col">
+                            <span class="winnings-amount">${formatSOL(user.total_winnings || 0)} SOL</span>
+                        </div>
+                        <div class="rate-col">
+                            <span class="win-rate">${formatPercentage(user.win_percentage || 0)}%</span>
+                        </div>
+                        <div class="streak-col">
+                            <span class="streak-number ${(user.current_streak || 0) > 0 ? 'positive' : 'neutral'}">${user.current_streak || 0}</span>
+                        </div>
+                        <div class="games-col">
+                            <span class="games-count">${user.competitions_participated || 0}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        ${data.length >= 50 ? '<div class="leaderboard-note">Showing top 50 players • Click usernames to view profiles</div>' : ''}
+    `;
+    
+    leaderboardContent.innerHTML = html;
+}
+
+// Export functions globally
+window.showUserProfileCard = showUserProfileCard;
+window.closeUserCardModal = closeUserCardModal;
+window.displayLeaderboardDataWithClickableUsers = displayLeaderboardDataWithClickableUsers;
 
 // ==============================================
 // GLOBAL STATE
@@ -361,10 +792,41 @@ function showPageFixed(pageName, updateHash = true) {
     
     // Load content progressively (non-blocking)
     setTimeout(() => {
-        loadPageContentProgressive(pageName);
+        loadPageContentProgressiveEnhanced(pageName);
     }, 50);
     
     console.log(`✅ Navigation to ${pageName} complete`);
+}
+
+/**
+ * Enhanced page content loading that checks wallet state
+ */
+function loadPageContentProgressiveEnhanced(pageName) {
+    console.log(`🔄 Loading ${pageName} content with wallet state awareness...`);
+    
+    // Check wallet connection state before loading
+    const isConnected = isWalletConnected();
+    console.log(`🔗 Wallet connection state: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    
+    switch (pageName) {
+        case 'competitions':
+            loadCompetitionsPageProgressive().catch(error => {
+                console.error('Error loading competitions page:', error);
+                hidePageLoadingState('competitions');
+            });
+            break;
+        case 'leaderboard':
+            loadLeaderboardPageProgressive();
+            break;
+        case 'portfolio':
+            loadPortfolioPageProgressive();
+            break;
+        case 'home':
+            loadHomePageProgressive();
+            break;
+        default:
+            hidePageLoadingState(pageName);
+    }
 }
 
 function hideAllPages() {
@@ -1176,12 +1638,18 @@ async function placeBetWithSmartContract() {
                 
                 showNotificationFixed(`Placing ${betAmount.toFixed(2)} SOL bet on-chain...`, 'info');
                 
-                transactionSignature = await window.smartContractService.placeBet(
-                    competition.competitionId,
-                    walletAddress,
-                    CompetitionState.selectedToken, // 'A' or 'B'
-                    betAmount
-                );
+            // ✅ ENHANCED: Ensure competition data is available before calling smart contract
+            console.log('📊 Passing competition data to smart contract service');
+            if (window.smartContractService) {
+                window.smartContractService.currentCompetition = competition;
+            }
+            
+            transactionSignature = await window.smartContractService.placeBet(
+                competition.competitionId,
+                walletAddress,
+                CompetitionState.selectedToken, // 'A' or 'B'
+                betAmount
+            );
                 
                 console.log('✅ On-chain bet placed successfully:', transactionSignature);
                 showNotificationFixed('Bet placed on-chain, saving to database...', 'info');
@@ -1206,8 +1674,33 @@ async function placeBetWithSmartContract() {
                 
                 // Reset button and exit - don't proceed with database if on-chain fails
                 if (placeBetButton) {
-                    placeBetButton.disabled = false;
+                    // ✅ ENHANCED: Show total cost including approximate fees
+                    const approximateFees = 0.002; // ~0.002 SOL for multiple instructions
+                    const totalCost = betAmount + approximateFees;
+                    
                     placeBetButton.textContent = `Place ${betAmount.toFixed(2)} SOL Bet`;
+                    placeBetButton.disabled = false;
+                    
+                    // ✅ NEW: Add cost breakdown tooltip or subtitle
+                    const existingSubtext = placeBetButton.parentElement.querySelector('.bet-cost-breakdown');
+                    if (existingSubtext) {
+                        existingSubtext.remove();
+                    }
+                    
+                    const costBreakdown = document.createElement('div');
+                    costBreakdown.className = 'bet-cost-breakdown';
+                    costBreakdown.style.cssText = `
+                        font-size: 0.8rem; 
+                        color: var(--text-secondary); 
+                        margin-top: 0.25rem;
+                        text-align: center;
+                    `;
+                    costBreakdown.innerHTML = `
+                        Bet: ${betAmount.toFixed(2)} SOL + Fees: ~${approximateFees.toFixed(3)} SOL<br>
+                        <strong>Total: ~${totalCost.toFixed(3)} SOL</strong>
+                    `;
+                    
+                    placeBetButton.parentElement.appendChild(costBreakdown);
                 }
                 return;
             }
@@ -2144,15 +2637,16 @@ async function completedOnboardingFixed() {
         closeWalletModalFixed();
         
         // Update UI
-        updateUIForConnectedUser();
+        updateUIForConnectedUserEnhanced();
         
         // Show success
         showNotificationFixed('Welcome to TokenWars! Your wallet is connected.', 'success');
         
-        // Navigate to competitions
+        // Stay on landing page and refresh hero section
         setTimeout(() => {
-            showPageFixed('competitions');
-        }, 1000);
+            updateHeroSections(true);
+            updateTraderDisplay();
+        }, 500);
         
     } catch (error) {
         console.error('❌ Error completing onboarding:', error);
@@ -2172,7 +2666,7 @@ async function disconnectWalletFixed() {
         connectedUser = null;
         
         // Update UI
-        updateUIForDisconnectedUser();
+        updateUIForDisconnectedUserEnhanced();
         
         showNotificationFixed('Wallet disconnected', 'info');
         showPageFixed('home');
@@ -3039,6 +3533,143 @@ function showNotificationFixed(message, type = 'info') {
         console.error('❌ Error showing notification:', error);
     }
 }
+
+// ==============================================
+// GLOBAL WALLET STATE MANAGEMENT
+// ==============================================
+
+// Global wallet state listeners
+let walletStateListeners = [];
+
+/**
+ * Add listener for wallet state changes
+ */
+function addWalletStateListener(callback) {
+    walletStateListeners.push(callback);
+    console.log(`📡 Wallet state listener added. Total: ${walletStateListeners.length}`);
+}
+
+/**
+ * Remove wallet state listener
+ */
+function removeWalletStateListener(callback) {
+    walletStateListeners = walletStateListeners.filter(listener => listener !== callback);
+    console.log(`📡 Wallet state listener removed. Total: ${walletStateListeners.length}`);
+}
+
+/**
+ * Broadcast wallet state change to all listeners
+ */
+function broadcastWalletStateChange(isConnected, walletData = null) {
+    console.log(`📢 Broadcasting wallet state change: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
+    
+    walletStateListeners.forEach((callback, index) => {
+        try {
+            callback(isConnected, walletData);
+        } catch (error) {
+            console.error(`❌ Error in wallet state listener ${index}:`, error);
+        }
+    });
+}
+
+/**
+ * Enhanced updateUIForConnectedUser with broadcasting
+ */
+function updateUIForConnectedUserEnhanced() {
+    try {
+        // Update UI elements
+        updateUIForConnectedUser();
+        
+        // Broadcast to all listeners
+        broadcastWalletStateChange(true, connectedUser);
+        
+        // Refresh all page content if needed
+        refreshCurrentPageContent();
+        
+        console.log('✅ Enhanced UI update for connected user complete');
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced connected user update:', error);
+    }
+}
+
+/**
+ * Enhanced updateUIForDisconnectedUser with broadcasting
+ */
+function updateUIForDisconnectedUserEnhanced() {
+    try {
+        // Update UI elements
+        updateUIForDisconnectedUser();
+        
+        // Broadcast to all listeners
+        broadcastWalletStateChange(false, null);
+        
+        // Refresh all page content if needed
+        refreshCurrentPageContent();
+        
+        console.log('✅ Enhanced UI update for disconnected user complete');
+        
+    } catch (error) {
+        console.error('❌ Error in enhanced disconnected user update:', error);
+    }
+}
+
+/**
+ * Refresh current page content based on wallet state
+ */
+function refreshCurrentPageContent() {
+    try {
+        const currentPageName = getCurrentPageName();
+        console.log(`🔄 Refreshing content for current page: ${currentPageName}`);
+        
+        // Refresh content based on current page
+        switch (currentPageName) {
+            case 'competitions':
+                loadCompetitionsPageProgressive();
+                break;
+            case 'leaderboard':
+                loadLeaderboardPageProgressive();
+                break;
+            case 'portfolio':
+                loadPortfolioPageProgressive();
+                break;
+            case 'home':
+                // Home page auto-updates via hero sections
+                break;
+            default:
+                console.log(`ℹ️ No specific refresh needed for page: ${currentPageName}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error refreshing current page content:', error);
+    }
+}
+
+/**
+ * Get current page name from URL hash or currentPage variable
+ */
+function getCurrentPageName() {
+    // Try to get from hash first
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['home', 'competitions', 'leaderboard', 'portfolio'].includes(hash)) {
+        return hash;
+    }
+    
+    // Fall back to currentPage variable
+    if (typeof currentPage !== 'undefined' && currentPage) {
+        return currentPage;
+    }
+    
+    // Default to home
+    return 'home';
+}
+
+// Export functions globally
+window.addWalletStateListener = addWalletStateListener;
+window.removeWalletStateListener = removeWalletStateListener;
+window.broadcastWalletStateChange = broadcastWalletStateChange;
+window.updateUIForConnectedUserEnhanced = updateUIForConnectedUserEnhanced;
+window.updateUIForDisconnectedUserEnhanced = updateUIForDisconnectedUserEnhanced;
 
 // ==============================================
 // MODAL HELPER FUNCTIONS (from app.js)
@@ -3986,12 +4617,12 @@ async function loadPortfolioStatistics(walletAddress) {
             <div class="stats-grid">
                 <div class="stat-chart-placeholder">
                     <h4>Win Rate Trend</h4>
-                    <div class="chart-mock">📈 Chart Coming Soon</div>
+                    <div id="winrate-chart-container" class="chart-container"></div>
                 </div>
                 
                 <div class="stat-chart-placeholder">
                     <h4>Profit/Loss Over Time</h4>
-                    <div class="chart-mock">📊 Chart Coming Soon</div>
+                    <div id="profit-chart-container" class="chart-container"></div>
                 </div>
                 
                 <div class="stat-chart-placeholder">
@@ -4001,12 +4632,21 @@ async function loadPortfolioStatistics(walletAddress) {
                 
                 <div class="stat-chart-placeholder">
                     <h4>Betting Distribution</h4>
-                    <div class="chart-mock">🥧 Chart Coming Soon</div>
+                    <div id="betting-chart-container" class="chart-container"></div>
                 </div>
             </div>
         </div>
     `;
 }
+
+// Initialize betting distribution chart
+setTimeout(() => {
+    if (window.createUserBettingDistribution && connectedUser?.walletAddress) {
+        createUserBettingDistribution('betting-chart-container', connectedUser.walletAddress);
+        createUserProfitLossChart('profit-chart-container', connectedUser.walletAddress);
+        createUserWinRateChart('winrate-chart-container', connectedUser.walletAddress);
+    }
+}, 500);
 
 async function loadAchievements(walletAddress) {
     const portfolioContent = document.getElementById('portfolio-content');
