@@ -1252,30 +1252,6 @@ saveSessionData() {
         }
     }
 
-/**
-     * Get competition details for messaging (NEW METHOD)
-     */
-    async getCompetitionDetails(competitionId) {
-        try {
-            const supabase = window.getSupabase ? window.getSupabase() : window.supabase;
-            if (!supabase) {
-                return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
-            }
-            
-            const { data: competition, error } = await supabase
-                .from('competitions')
-                .select('token_a_symbol, token_b_symbol, required_bet_amount')
-                .eq('competition_id', competitionId)
-                .single();
-            
-            if (error) throw error;
-            return competition;
-            
-        } catch (error) {
-            console.error('❌ Error getting competition details:', error);
-            return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
-        }
-    }
     
     /**
      * Enhanced transaction sending with connection parameter support
