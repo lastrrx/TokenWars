@@ -789,7 +789,7 @@ function getBetStatusInfo(bet, competition) {
 }
 
 /**
- * FIXED: Create Statistics View with null check
+ * FIXED: Create Statistics View with proper chart containers
  */
 function createStatisticsView() {
     const stats = PortfolioState.statistics;
@@ -838,6 +838,80 @@ function createStatisticsView() {
                         <div class="metric-label">Avg Bet Size</div>
                         <div class="metric-value">${formatSOL(stats.avgBetSize)} SOL</div>
                         <div class="metric-change">Total: ${stats.totalBets} bets</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NEW: Charts Section with proper container IDs -->
+            <div class="stat-section">
+                <h4>Performance Charts</h4>
+                <div class="portfolio-charts-grid">
+                    <!-- Win Rate Chart -->
+                    <div class="portfolio-chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon">📈</div>
+                            <div>
+                                <h3 class="chart-card-title">Win Rate Trend</h3>
+                                <p class="chart-card-subtitle">Your prediction accuracy over time</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="user-win-rate-chart">
+                            <div class="chart-loading">
+                                <div class="chart-loading-spinner"></div>
+                                <div class="chart-loading-text">Loading chart...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Profit/Loss Chart -->
+                    <div class="portfolio-chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon">💰</div>
+                            <div>
+                                <h3 class="chart-card-title">Profit/Loss Over Time</h3>
+                                <p class="chart-card-subtitle">Your earnings and losses by period</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="user-profit-loss-chart">
+                            <div class="chart-loading">
+                                <div class="chart-loading-spinner"></div>
+                                <div class="chart-loading-text">Loading chart...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Token Performance Chart -->
+                    <div class="portfolio-chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon">🪙</div>
+                            <div>
+                                <h3 class="chart-card-title">Token Performance</h3>
+                                <p class="chart-card-subtitle">Your success rate by token</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="user-token-performance-chart">
+                            <div class="chart-loading">
+                                <div class="chart-loading-spinner"></div>
+                                <div class="chart-loading-text">Loading chart...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Betting Distribution Chart -->
+                    <div class="portfolio-chart-card">
+                        <div class="chart-card-header">
+                            <div class="chart-card-icon">📊</div>
+                            <div>
+                                <h3 class="chart-card-title">Betting Distribution</h3>
+                                <p class="chart-card-subtitle">Your token choice preferences</p>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="user-betting-distribution-chart">
+                            <div class="chart-loading">
+                                <div class="chart-loading-spinner"></div>
+                                <div class="chart-loading-text">Loading chart...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
