@@ -932,13 +932,6 @@ async buildUpdatePriceSampleInstruction(accounts) {
             const validatedAmount = this.validateAndFormatSOLAmount(betAmount, 'bet');
             console.log('💰 Validated bet amount:', validatedAmount);
             
-            // ✅ NEW: Add explicit SOL transfer for Phantom visibility
-            const transferInstruction = solanaWeb3.SystemProgram.transfer({
-                fromPubkey: wallet.publicKey,
-                toPubkey: escrowAccount,
-                lamports: betAmount * solanaWeb3.LAMPORTS_PER_SOL
-            });
-            
             // ✅ NEW: Add memo instruction with actual token names
             const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId, competitionData);
             // ✅ FIXED: Proper memo instruction encoding for Phantom
@@ -964,10 +957,9 @@ async buildUpdatePriceSampleInstruction(accounts) {
             // ✅ PHANTOM OPTIMIZED: Structure transaction for better display
             const transaction = new solanaWeb3.Transaction();
             
-            // Add instructions in specific order for Phantom
+            // ✅ SIMPLIFIED: Only memo + smart contract
             transaction.add(memoInstruction);       // Description
-            transaction.add(transferInstruction);   // SOL transfer (visible amount)
-            transaction.add(instruction);           // Smart contract logic
+            transaction.add(instruction);           // Smart contract handles SOL transfer internally
             
             // ✅ ENHANCED: Add transaction metadata for Phantom
             transaction.addSignature = function() {
