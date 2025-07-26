@@ -1272,3 +1272,12 @@ console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
 console.log('🔧 FIXED: Added null check for statistics in createStatisticsView()');
 console.log('🔧 FIXED: Chart triggers added to displayPortfolioView()');
 console.log('🔧 FIXED: Graceful loading state when statistics are null');
+
+// Add click event listener to Statistics tab
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('portfolio-tab') && e.target.dataset.tab === 'statistics') {
+        setTimeout(() => {
+            window.displayPortfolioView('statistics');
+        }, 100);
+    }
+});
