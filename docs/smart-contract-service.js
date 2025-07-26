@@ -991,8 +991,25 @@ async buildUpdatePriceSampleInstruction(accounts) {
                 recentBlockhash: !!transaction.recentBlockhash
             });
             
-            console.log('📤 Sending bet transaction...');
-            const signature = await wallet.sendTransaction(transaction, this.connection);
+            // ✅ ENHANCED: Get competition details for messaging
+            const competition = await this.getCompetitionDetails(competitionId);
+            
+            // ✅ ENHANCED: Send transaction with message
+            const messageDetails = {
+                type: 'PLACE_BET',
+                details: {
+                    tokenASymbol: competition.token_a_symbol || 'Token A',
+                    tokenBSymbol: competition.token_b_symbol || 'Token B',
+                    amount: betAmount.toFixed(2)
+                }
+            };
+            
+            console.log('📤 Sending bet transaction with message...');
+            const signature = await window.walletService.sendTransactionWithMessage(
+                transaction, 
+                this.connection, 
+                messageDetails
+            );
             
             console.log('⏳ Confirming bet transaction...');
             await this.connection.confirmTransaction(signature, 'confirmed');
@@ -1070,8 +1087,25 @@ async withdrawWinnings(competitionId, userWallet) {
             competitionId: shortId  // ✅ Pass shortId to instruction builder
         });
         
-        // Create and send transaction (same pattern as ALL working functions)
-        const transaction = new solanaWeb3.Transaction().add(instruction);
+        // ✅ ENHANCED: Get competition details for messaging
+        const competition = await this.getCompetitionDetails(competitionId);
+        
+        // ✅ ENHANCED: Send transaction with message
+        const messageDetails = {
+            type: 'WITHDRAW_WINNINGS',
+            details: {
+                tokenASymbol: competition.token_a_symbol || 'Token A',
+                tokenBSymbol: competition.token_b_symbol || 'Token B',
+                amount: '0.00' // Will show generic amount
+            }
+        };
+        
+        console.log('📤 Sending withdrawal transaction with message...');
+        const signature = await window.walletService.sendTransactionWithMessage(
+            transaction, 
+            this.connection, 
+            messageDetails
+        );
         const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = wallet.publicKey;
@@ -1429,6 +1463,31 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
                 return `TokenWars: Create Competition (Rent: ${rentSol} SOL)`;
             }
         }
+
+/**
+     * Get competition details for messaging (NEW METHOD)
+     */
+    async getCompetitionDetails(competitionId) {
+        try {
+            const supabase = window.getSupabase ? window.getSupabase() : window.supabase;
+            if (!supabase) {
+                return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
+            }
+            
+            const { data: competition, error } = await supabase
+                .from('competitions')
+                .select('token_a_symbol, token_b_symbol, required_bet_amount')
+                .eq('competition_id', competitionId)
+                .single();
+            
+            if (error) throw error;
+            return competition;
+            
+        } catch (error) {
+            console.error('❌ Error getting competition details:', error);
+            return { token_a_symbol: 'Token A', token_b_symbol: 'Token B' };
+        }
+    }
     
     // Enhanced sendTransaction method with better error handling
     async sendTransaction(transaction, wallet) {
