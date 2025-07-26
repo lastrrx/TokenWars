@@ -1273,11 +1273,20 @@ console.log('🔧 FIXED: Added null check for statistics in createStatisticsView
 console.log('🔧 FIXED: Chart triggers added to displayPortfolioView()');
 console.log('🔧 FIXED: Graceful loading state when statistics are null');
 
-// Add click event listener to Statistics tab
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('portfolio-tab') && e.target.dataset.tab === 'statistics') {
-        setTimeout(() => {
-            window.displayPortfolioView('statistics');
-        }, 100);
-    }
-});
+// Define the switchPortfolioTab function that the HTML buttons are calling
+window.switchPortfolioTab = function(tabName) {
+    console.log(`📊 Switching to portfolio tab: ${tabName}`);
+    
+    // Update active tab styling
+    document.querySelectorAll('.portfolio-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // Switch to the view (this will trigger chart creation for statistics)
+    window.displayPortfolioView(tabName);
+};
+
+console.log('✅ switchPortfolioTab function defined - portfolio tabs should work now');
