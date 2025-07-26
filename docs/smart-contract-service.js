@@ -884,16 +884,18 @@ async buildUpdatePriceSampleInstruction(accounts) {
     // Place bet on competition
     async placeBet(competitionId, userWallet, tokenChoice, betAmount) {
         try {
-                        // ✅ NEW: Store competition data for memo text generation
-                if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
-                    this.currentCompetition = window.CompetitionState.selectedCompetition;
-                    console.log('📊 Competition data available for memo:', {
-                        tokenA: this.currentCompetition.tokenA?.symbol,
-                        tokenB: this.currentCompetition.tokenB?.symbol
-                    });
-                } else {
-                    console.warn('⚠️ Competition data not available for memo text');
-                }
+        // ✅ FIXED: Get competition data from database instead of global state
+        let competitionData = null;
+        try {
+            const competition = await this.getCompetitionDetails(competitionId);
+            competitionData = competition;
+            console.log('📊 Competition data loaded for memo:', {
+                tokenA: competition.token_a_symbol,
+                tokenB: competition.token_b_symbol
+            });
+        } catch (error) {
+            console.warn('⚠️ Could not load competition data for memo:', error);
+        }
             
             console.log('🎯 Placing bet on-chain:', { competitionId, tokenChoice, betAmount });
             
@@ -938,12 +940,12 @@ async buildUpdatePriceSampleInstruction(accounts) {
             });
             
             // ✅ NEW: Add memo instruction with actual token names
-            const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId);
-            // ✅ FIXED: Use correct memo program ID and format
+            const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId, competitionData);
+            // ✅ FIXED: Proper memo instruction encoding for Phantom
             const memoInstruction = new solanaWeb3.TransactionInstruction({
                 keys: [],
                 programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-                data: Buffer.from(memoText, 'utf8')
+                data: new TextEncoder().encode(memoText)  // Use TextEncoder instead of Buffer
             });
             
             // ✅ ENHANCED: Log memo instruction details for debugging
@@ -1421,15 +1423,20 @@ validateAndFormatSOLAmount(amount, context = 'transaction') {
     }
 }
 
-buildBetMemoText(betAmount, tokenChoice, competitionId) {
+buildBetMemoText(betAmount, tokenChoice, competitionId, competitionData = null) {
     try {
-        // Get competition data
         let tokenASymbol = 'Token A';
         let tokenBSymbol = 'Token B';
         let chosenTokenName = `Token ${tokenChoice}`;
         
-        // Try to get actual token information
-        if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
+        // ✅ FIXED: Use passed competition data first
+        if (competitionData) {
+            tokenASymbol = competitionData.token_a_symbol || 'Token A';
+            tokenBSymbol = competitionData.token_b_symbol || 'Token B';
+            chosenTokenName = tokenChoice === 'A' ? tokenASymbol : tokenBSymbol;
+        }
+        // Fallback to global state
+        else if (typeof window !== 'undefined' && window.CompetitionState?.selectedCompetition) {
             const competition = window.CompetitionState.selectedCompetition;
             if (competition.tokenA && competition.tokenA.symbol) {
                 tokenASymbol = competition.tokenA.symbol;
@@ -1437,18 +1444,13 @@ buildBetMemoText(betAmount, tokenChoice, competitionId) {
             if (competition.tokenB && competition.tokenB.symbol) {
                 tokenBSymbol = competition.tokenB.symbol;
             }
-            
-            if (tokenChoice === 'A' && competition.tokenA) {
-                chosenTokenName = competition.tokenA.symbol || 'Token A';
-            } else if (tokenChoice === 'B' && competition.tokenB) {
-                chosenTokenName = competition.tokenB.symbol || 'Token B';
-            }
+            chosenTokenName = tokenChoice === 'A' ? tokenASymbol : tokenBSymbol;
         }
         
-        // ✅ PHANTOM OPTIMIZED: Shorter, clearer memo text
+        // ✅ PHANTOM OPTIMIZED: Clear, concise memo text
         const memoText = `Bet ${betAmount} SOL on ${chosenTokenName} (${tokenASymbol} vs ${tokenBSymbol})`;
         
-        console.log('📝 Phantom-optimized memo:', memoText);
+        console.log('📝 Enhanced memo with real token names:', memoText);
         return memoText;
         
     } catch (error) {
