@@ -942,18 +942,23 @@ async buildUpdatePriceSampleInstruction(accounts) {
             // ✅ NEW: Add memo instruction with actual token names
             const memoText = this.buildBetMemoText(betAmount, tokenChoice, competitionId, competitionData);
             // ✅ FIXED: Proper memo instruction encoding for Phantom
+            // ✅ PHANTOM OPTIMIZED: Proper memo encoding for wallet display
+            const memoData = new Uint8Array(Buffer.from(memoText, 'utf8'));
             const memoInstruction = new solanaWeb3.TransactionInstruction({
                 keys: [],
                 programId: new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-                data: new TextEncoder().encode(memoText)  // Use TextEncoder instead of Buffer
+                data: memoData
             });
             
-            // ✅ ENHANCED: Log memo instruction details for debugging
-            console.log('📝 MEMO DEBUG:', {
+            // ✅ ENHANCED: Better debug logging for memo
+            console.log('📝 PHANTOM MEMO DEBUG:', {
                 programId: memoInstruction.programId.toString(),
+                programIdShort: memoInstruction.programId.toString().substring(0, 5) + '...',
                 dataLength: memoInstruction.data.length,
                 text: memoText,
-                dataAsString: Buffer.from(memoInstruction.data).toString('utf8')
+                dataAsBytes: Array.from(memoInstruction.data),
+                dataAsString: new TextDecoder().decode(memoInstruction.data),
+                isCorrectProgram: memoInstruction.programId.toString() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
             });
             
             // ✅ PHANTOM OPTIMIZED: Structure transaction for better display
