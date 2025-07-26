@@ -84,8 +84,7 @@ async function loadPortfolioData() {
         // Display portfolio based on current view
         displayPortfolioView(PortfolioState.currentView);
         
-        // FIXED: Create charts AFTER data is ready
-        await createPortfolioCharts();
+        // REMOVED: Don't create charts here - they'll be created when switching to statistics view
         
     } catch (error) {
         console.error('Failed to load portfolio data:', error);
@@ -539,7 +538,7 @@ function countConsecutiveWeeks(weeklyActivity) {
 }
 
 /**
- * Display Portfolio View Based on Current Selection
+ * FIXED: Display Portfolio View Based on Current Selection - WITH CHART TRIGGERS
  */
 function displayPortfolioView(view) {
     const portfolioContent = document.getElementById('portfolio-content');
@@ -570,6 +569,21 @@ function displayPortfolioView(view) {
     
     // Update active tab
     updateActiveTab(view);
+    
+    // FIXED: Create charts AFTER the HTML is rendered and view is switched
+    if (view === 'statistics') {
+        console.log('📊 Statistics view loaded, creating charts...');
+        
+        // Wait for DOM to update, then create charts
+        setTimeout(async () => {
+            try {
+                await createStatisticsCharts();
+                console.log('✅ Statistics charts created successfully');
+            } catch (error) {
+                console.error('❌ Error creating statistics charts:', error);
+            }
+        }, 100); // Small delay to ensure DOM is ready
+    }
 }
 
 /**
@@ -1026,6 +1040,106 @@ function createAchievementsView() {
 }
 
 /**
+ * FIXED: Create charts for statistics view - SIMPLIFIED VERSION
+ */
+async function createStatisticsCharts() {
+    try {
+        console.log('📊 Creating statistics charts...');
+        
+        const walletAddress = PortfolioState.walletService?.getWalletAddress();
+        if (!walletAddress) {
+            console.warn('📊 No wallet address available for charts');
+            return;
+        }
+        
+        // Check if chart service is available
+        if (typeof window.chartService === 'undefined') {
+            console.warn('📊 Chart service not available');
+            return;
+        }
+        
+        // Create each chart individually with error handling
+        const chartConfigs = [
+            {
+                containerId: 'user-win-rate-chart',
+                createFunction: window.createUserWinRateChart,
+                name: 'Win Rate Chart'
+            },
+            {
+                containerId: 'user-profit-loss-chart', 
+                createFunction: window.createUserProfitLossChart,
+                name: 'Profit/Loss Chart'
+            },
+            {
+                containerId: 'user-token-performance-chart',
+                createFunction: (containerId, wallet) => {
+                    // Token performance chart - use sample data for now
+                    const sampleData = window.chartService.generateSampleData().tokenPerformance;
+                    return window.chartService.createTokenPerformanceChart(containerId, sampleData);
+                },
+                name: 'Token Performance Chart'
+            },
+            {
+                containerId: 'user-betting-distribution-chart',
+                createFunction: window.createUserBettingDistribution,
+                name: 'Betting Distribution Chart'
+            }
+        ];
+        
+        // Create charts one by one
+        for (const config of chartConfigs) {
+            try {
+                console.log(`📊 Creating ${config.name}...`);
+                
+                // Check if container exists
+                const container = document.getElementById(config.containerId);
+                if (!container) {
+                    console.warn(`📊 Container ${config.containerId} not found`);
+                    continue;
+                }
+                
+                // Clear loading state
+                container.innerHTML = '';
+                
+                // Create chart
+                if (typeof config.createFunction === 'function') {
+                    await config.createFunction(config.containerId, walletAddress);
+                    console.log(`✅ ${config.name} created successfully`);
+                } else {
+                    console.warn(`📊 Function for ${config.name} not available`);
+                    // Show placeholder
+                    container.innerHTML = `
+                        <div class="chart-placeholder">
+                            <div class="placeholder-icon">📊</div>
+                            <div class="placeholder-text">Chart coming soon</div>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error creating ${config.name}:`, error);
+                
+                // Show error placeholder
+                const container = document.getElementById(config.containerId);
+                if (container) {
+                    container.innerHTML = `
+                        <div class="chart-placeholder">
+                            <div class="placeholder-icon">⚠️</div>
+                            <div class="placeholder-text">Chart unavailable</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        console.log('📊 All statistics charts processing completed');
+        
+    } catch (error) {
+        console.error('❌ Error in createStatisticsCharts:', error);
+    }
+}
+
+/**
  * Update Active Tab
  */
 function updateActiveTab(view) {
@@ -1146,78 +1260,6 @@ window.portfolio = {
     PortfolioState
 };
 
-/**
- * NEW: Create Portfolio Charts after data is loaded
- */
-async function createPortfolioCharts() {
-    try {
-        console.log('📊 Creating portfolio charts...');
-        
-        const currentUser = PortfolioState.walletService?.getWalletAddress();
-        if (!currentUser) {
-            console.warn('📊 No wallet address available for charts');
-            return;
-        }
-        
-        // Check if chart service is available
-        if (typeof window.chartService === 'undefined') {
-            console.warn('📊 Chart service not available');
-            return;
-        }
-        
-        // Try to create charts for the statistics view
-        if (PortfolioState.currentView === 'statistics') {
-            await createStatisticsCharts(currentUser);
-        }
-        
-        console.log('✅ Portfolio charts created successfully');
-        
-    } catch (error) {
-        console.error('❌ Error creating portfolio charts:', error);
-    }
-}
-
-/**
- * NEW: Create charts for statistics view
- */
-async function createStatisticsCharts(walletAddress) {
-    try {
-        // Only create charts if we're on statistics view and containers exist
-        const containers = [
-            'user-betting-distribution',
-            'user-profit-loss-chart', 
-            'user-win-rate-chart'
-        ];
-        
-        // Check if containers exist
-        const existingContainers = containers.filter(id => document.getElementById(id));
-        if (existingContainers.length === 0) {
-            console.log('📊 Chart containers not found in current view');
-            return;
-        }
-        
-        // Create charts for existing containers
-        for (const containerId of existingContainers) {
-            console.log(`📊 Creating chart for container: ${containerId}`);
-            
-            try {
-                if (containerId === 'user-betting-distribution') {
-                    await window.createUserBettingDistribution(containerId, walletAddress);
-                } else if (containerId === 'user-profit-loss-chart') {
-                    await window.createUserProfitLossChart(containerId, walletAddress);
-                } else if (containerId === 'user-win-rate-chart') {
-                    await window.createUserWinRateChart(containerId, walletAddress);
-                }
-            } catch (chartError) {
-                console.error(`❌ Error creating chart ${containerId}:`, chartError);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Error in createStatisticsCharts:', error);
-    }
-}
-
 // Also export individual functions for backward compatibility
 window.initializePortfolio = initializePortfolio;
 window.displayPortfolioView = displayPortfolioView;
@@ -1228,4 +1270,5 @@ window.refreshPortfolioData = refreshPortfolioData;
 console.log('✅ Enhanced Portfolio System loaded with Supabase integration');
 console.log('🔧 FIXED: Proper Supabase client reference (window.supabase)');
 console.log('🔧 FIXED: Added null check for statistics in createStatisticsView()');
+console.log('🔧 FIXED: Chart triggers added to displayPortfolioView()');
 console.log('🔧 FIXED: Graceful loading state when statistics are null');
