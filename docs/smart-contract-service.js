@@ -1087,6 +1087,12 @@ async withdrawWinnings(competitionId, userWallet) {
             competitionId: shortId  // ✅ Pass shortId to instruction builder
         });
         
+        // ✅ FIXED: Create transaction BEFORE trying to send it
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
+        
         // ✅ ENHANCED: Get competition details for messaging
         const competition = await this.getCompetitionDetails(competitionId);
         
@@ -1106,11 +1112,7 @@ async withdrawWinnings(competitionId, userWallet) {
             this.connection, 
             messageDetails
         );
-        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = wallet.publicKey;
         
-        const signature = await wallet.sendTransaction(transaction, this.connection);
         await this.connection.confirmTransaction(signature, 'confirmed');
         
         console.log('✅ Winnings withdrawn successfully, signature:', signature);
